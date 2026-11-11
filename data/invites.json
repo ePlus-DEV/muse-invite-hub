@@ -54,9 +54,9 @@
     "addedAt": "2026-11-11",
     "submittedBy": "pdm0809",
     "note": "Contributor shared a usage figure; it may now be stale.",
-    "reportedUses": 0,
-    "reportedCapacity": 17,
-    "usageReportedAt": "2026-11-10"
+    "usageReportedAt": "2026-11-11",
+    "reportedRemaining": 17,
+    "submittedById": 316039127
   },
   {
     "id": "jx-issue-16",

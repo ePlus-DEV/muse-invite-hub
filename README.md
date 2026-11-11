@@ -36,7 +36,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full process, supported fields a
 
 The owner reported **3 of 30 remaining** for `DPNIHH` in [Issue #14](https://github.com/ePlus-DEV/muse-invite-hub/issues/14) on **2026-11-11** (30 total minus 27 used). This is a **dated snapshot, not live Muse availability**. Counts can change without this website knowing. Clicking Copy does not redeem or consume an invitation.
 
-If you know only a remaining number, [submit that number](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml) without guessing the total. The website does not connect to private Muse account data.
+If you know only a remaining number, [submit that number](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml) without guessing the total. Remaining-only owner reports are displayed without a made-up total. The website does not connect to private Muse account data.
 
 ## Run and test locally
 
@@ -68,8 +68,8 @@ Keep the existing homepage SEO title, description and canonical unless an author
 
 The [Issue-to-Draft-PR workflow](.github/workflows/issue-to-pr.yml) runs when a supported Issue is opened, reopened or edited. It checks code formats, duplicates, contributor permissions and quota consistency, then proposes a **Draft PR** changing only `data/invites.json`. It uses the repository `GITHUB_TOKEN`, **not** a personal access token. There is no hourly schedule and no auto-merge.
 
-- **Invite:** adds an `unverified` listing; a reported total without used or remaining data does not create a guessed remaining count.
-- **Quota:** accepts a consistent dated report only from the listed code owner; incomplete or third-party reports need manual review.
+- **Invite:** adds an `unverified` listing, or proposes an **owner update** if the code already exists under the same GitHub account. Counts are dated self-reports; totals are never guessed.
+- **Quota:** accepts consistent full counts **or remaining-only** reports from the listed code owner; third-party reports need manual review. GitHub numeric IDs are saved for owner updates when available.
 - **Feedback:** proposes reported-working/not-working status for unambiguous user feedback; other cases remain for maintainer triage.
 - **Review:** auto-created Draft PRs are excluded from publicly hosted PR previews until marked ready; only reviewed merges to `main` affect production.
 

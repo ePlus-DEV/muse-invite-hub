@@ -13,7 +13,7 @@ Thanks for helping! **You can share an invite, report feedback or update a count
 3. Add any useful non-sensitive notes or public context. If your account shows an invite total and used count, you may supply the **actual** values; never guess.
 4. Check both permission/privacy confirmations, then submit.
 
-Actions checks the code and duplicates and can prepare an **automated Draft PR**. A maintainer reviews the data, marks the PR ready and merges it when appropriate. **An Issue never automatically publishes a code.** Community submissions start as `unverified`, and total quota alone never implies all invites remain.
+If your code is already listed under the same GitHub username, resubmitting an updated count (including a remaining-only number) can prepare an **update Draft PR**, not a duplicate listing. Existing listing IDs, contributor attribution and original listing dates are preserved. Numeric GitHub IDs help protect subsequent updates from username reuse. Actions checks the code and duplicates and can prepare an **automated Draft PR**. A maintainer reviews the data, marks the PR ready and merges it when appropriate. **An Issue never automatically publishes a code.** Community submissions start as `unverified`, and total quota alone never implies all invites remain.
 
 ## Report code feedback
 
@@ -33,7 +33,7 @@ If you own the public invite, use [Update invite count](https://github.com/ePlus
 | Remaining invites | 3 |
 | Used invites (30 − 3) | 27 |
 
-If only a remaining number is shown, report it without inventing the total. The public catalog stores `reportedCapacity`, `reportedUses` and `usageReportedAt` **together**; all three are required to display a computed remaining/total number. The trusted workflow proposes a **Draft PR** only when the reporter matches the listed code owner and the figures are complete and consistent. A maintainer must review and merge the proposal before publication.
+If only a remaining number is shown, report it without inventing the total. The public catalog stores either the complete `reportedCapacity` + `reportedUses` + `usageReportedAt` snapshot, **or** `reportedRemaining` + `usageReportedAt` when only the remaining count is known. The latter displays the remaining number without inventing a total. The trusted workflow proposes a **Draft PR** only when the reporter matches the listed code owner and the figures are consistent. A maintainer must review and merge the proposal before publication.
 
 Amounts are **dated self-reported snapshots**, not live Muse availability. Copying a code is not redeeming it. Missing or incomplete values display **Not reported**.
 
@@ -109,7 +109,9 @@ Use the real code, authorized contributor handle and actual addition date, never
 | `submittedBy` | Optional public GitHub username, with permission to attribute |
 | `note` | Optional plain-text note, max 180 characters |
 | `checkedAt` | Optional date of last reviewed community feedback |
-| `reportedUses` / `reportedCapacity` / `usageReportedAt` | Optional **as a group**: used ≥ 0, capacity 1–1000, used ≤ capacity, real date `YYYY-MM-DD` |
+| `reportedUses` / `reportedCapacity` / `usageReportedAt` | Optional full snapshot: used ≥ 0, capacity 1–1000, used ≤ capacity, real date `YYYY-MM-DD` |
+| `reportedRemaining` / `usageReportedAt` | Alternative remaining-only snapshot: 0–1000, real date; cannot mix with full snapshot |
+| `submittedById` | Optional positive GitHub numeric account ID recorded on authorized owner updates; protects against future username reuse |
 | `sourceUrl` | Optional **public** HTTPS context link; not displayed on cards but visible in JSON/Git history. No private data or unrelated GitHub repository URLs |
 | `featured` | Optional boolean; at most one featured code |
 | `ownerConfirmed` | Optional boolean; `true` reserved for featured owner code submitted by `hoangsvit`, not redemption verification |

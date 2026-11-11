@@ -36,6 +36,13 @@ test("undated, invalid, or exaggerated usage claims are rejected", () => {
   assert.ok(validateCatalog([{ ...sample(), reportedUses: -1, reportedCapacity: 30, usageReportedAt: "2026-11-11" }]).some(e => e.includes("non-negative")));
 });
 
+test("remaining-only reports with a date and GitHub numeric owner ID are supported", () => {
+  assert.deepEqual(validateCatalog([{...sample(),reportedRemaining:17,usageReportedAt:"2026-11-11",submittedById:316039127}]),[]);
+  assert.ok(validateCatalog([{...sample(),reportedRemaining:17}]).some(e=>e.includes("usageReportedAt")));
+  assert.ok(validateCatalog([{...sample(),reportedRemaining:-1,usageReportedAt:"2026-11-11"}]).some(e=>e.includes("reportedRemaining")));
+  assert.ok(validateCatalog([{...sample(),reportedRemaining:18,reportedCapacity:30,reportedUses:12,usageReportedAt:"2026-11-11"}]).some(e=>e.includes("either full")));
+  assert.ok(validateCatalog([{...sample(),submittedById:0}]).some(e=>e.includes("submittedById")));
+});
 test("one unverified featured owner-submitted code is valid", () => {
   assert.deepEqual(validateCatalog([{ ...sample(), featured: true }]), []);
 });

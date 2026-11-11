@@ -57,18 +57,16 @@
     return code ? base + "&invite_code=" + encodeURIComponent(code) : base;
   }
   function reportedRemaining(item) {
-    if (!item ||
-      !Number.isInteger(item.reportedUses) ||
+    if (!item || typeof item.usageReportedAt !== "string") return null;
+    const date=formatDate(item.usageReportedAt);
+    if (Number.isInteger(item.reportedRemaining) && item.reportedRemaining >= 0) {
+      return { remaining:item.reportedRemaining, total:null, date };
+    }
+    if (!Number.isInteger(item.reportedUses) ||
       !Number.isInteger(item.reportedCapacity) ||
-      item.reportedCapacity <= 0 ||
-      item.reportedUses < 0 ||
-      item.reportedUses > item.reportedCapacity ||
-      typeof item.usageReportedAt !== "string") return null;
-    return {
-      remaining: item.reportedCapacity - item.reportedUses,
-      total: item.reportedCapacity,
-      date: formatDate(item.usageReportedAt)
-    };
+      item.reportedCapacity <= 0 || item.reportedUses < 0 ||
+      item.reportedUses > item.reportedCapacity) return null;
+    return {remaining:item.reportedCapacity-item.reportedUses,total:item.reportedCapacity,date};
   }
   function updateFeatured() {
     featuredInvite = codes.find(item => item.featured === true) || null;
@@ -80,7 +78,7 @@
       const snapshot = reportedRemaining(featuredInvite);
       featuredRemaining.textContent = snapshot ? snapshot.remaining.toLocaleString("en-US") : "Not reported";
       featuredRemainingDetail.textContent = snapshot
-        ? "of " + snapshot.total.toLocaleString("en-US") + " reported total slots"
+        ? (snapshot.total === null ? "Total not provided" : "of " + snapshot.total.toLocaleString("en-US") + " reported total slots")
         : "No remaining-slot figures have been supplied.";
       featuredRemainingUpdated.textContent = snapshot
         ? "Owner-reported on " + snapshot.date + " · Not live"
@@ -156,7 +154,7 @@
     const snapshot = reportedRemaining(item);
     let usageNote = null;
     if (snapshot) {
-      usageNote = el("p", "card-usage", "Reported remaining: " + snapshot.remaining + " / " + snapshot.total + " · " + snapshot.date + " · Not live");
+      usageNote = el("p", "card-usage", "Reported remaining: " + snapshot.remaining + (snapshot.total === null ? "" : " / " + snapshot.total) + " · " + snapshot.date + " · Not live");
     } else {
       usageNote = el("p", "card-usage card-usage-unknown", "Remaining: Not reported");
     }
