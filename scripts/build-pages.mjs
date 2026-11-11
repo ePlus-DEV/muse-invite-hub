@@ -117,8 +117,9 @@ for (const pr of (await listOpenPRs()).slice(0, MAX_PREVIEWS)) {
     }
     const files = mergeFiles(mergeSha);
     const dest = join(output, "pr-preview", "pr-" + pr.number);
-    buildPreview({ files, readFile: file => readMergeFile(mergeSha, file), dest,
+    const built = buildPreview({ files, readFile: file => readMergeFile(mergeSha, file), dest,
       number: pr.number, sha: head, mergeSha, origin: ORIGIN });
+    record.detail_pages = built.detail_pages;
     // Parse JavaScript but never execute scripts from the untrusted PR ref.
     const syntax = spawnSync(process.execPath, ["--check", join(dest, "assets/app.js")],
       { encoding: "utf8", timeout: 15000 });

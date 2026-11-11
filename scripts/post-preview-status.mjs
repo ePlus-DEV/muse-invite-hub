@@ -43,7 +43,7 @@ async function verifyLive(record) {
   for (let attempt = 1; attempt <= 6; attempt++) {
     try {
       const suffix = "?verify=" + record.head_sha.slice(0, 12) + "-" + attempt;
-      const names = ["preview-meta.json", "index.html", "assets/styles.css", "assets/app.js", "data/invites.json", "assets/detail.js", "assets/social-preview.png", "codes/DPNIHH/index.html"];
+      const names = ["preview-meta.json", "index.html", "assets/styles.css", "assets/app.js", "data/invites.json"];
       const results = await Promise.all(names.map(async path => {
         const response = await fetch(root + path + suffix, {
           cache: "no-store", signal: AbortSignal.timeout(12000)
@@ -58,10 +58,37 @@ async function verifyLive(record) {
           !html.includes('muse-preview-head" content="' + record.head_sha + '"')) throw Error("Missing noindex or correct commit");
       const list = await results[4].json();
       if (!Array.isArray(list)) throw Error("Invalid published data file");
-      const detail = await results[7].text();
-      if (!detail.includes('noindex,nofollow,noarchive') ||
-          !detail.includes('DPNIHH') ||
-          !detail.includes('../../assets/styles.css')) throw Error("Broken detail preview or noindex");
+      if (meta.detail_pages !== (record.detail_pages ?? 0)) {
+        throw Error("Preview detail count did not match published manifest");
+      }
+      if (meta.detail_pages > 0) {
+        if (meta.detail_pages !== list.length) throw Error("Missing rendered detail pages");
+        const featured = list.find(item => item.featured === true) || list[0];
+        if (!featured || !/^[A-Z0-9-]{4,32}$/.test(featured.code)) {
+          throw Error("No valid detail sample for live checks");
+        }
+        const prefix = "codes/" + featured.code + "/";
+        const extraPaths = [
+          "assets/detail.js", "assets/social-preview.png",
+          prefix, prefix + "index.html"
+        ];
+        const extras = await Promise.all(extraPaths.map(async path => {
+          const response = await fetch(root + path + suffix, {
+            cache: "no-store", signal: AbortSignal.timeout(12000)
+          });
+          if (!response.ok) throw Error("Nested preview " + path + " HTTP " + response.status);
+          return response;
+        }));
+        for (const result of extras.slice(2)) {
+          const page = await result.text();
+          if (!page.includes('noindex,nofollow,noarchive') ||
+              !page.includes(featured.code) ||
+              !page.includes('../../assets/styles.css') ||
+              !page.includes('../../assets/detail.js')) {
+            throw Error("Nested preview document does not contain expected content");
+          }
+        }
+      }
       return true;
     } catch (error) {
       console.log("Preview #" + record.number + " verification " + attempt + "/6: " + error.message);
@@ -79,7 +106,7 @@ for (const record of manifest.previews) {
     status = verified
       ? "**[Open live preview](" + ORIGIN + "/pr-preview/pr-" + record.number + "/)**\n\n" +
         "Published PR head: " + record.head_sha.slice(0, 12) + ". Preview pages are noindex and isolated from production."
-      : "⚠️ **Preview build succeeded, but the public URL was not verified yet.** No live link is posted until index.html, JavaScript, CSS and catalog all respond correctly.";
+      : "⚠️ **Preview build succeeded, but the public URL was not verified yet.** No live link is posted until homepage, data and nested detail routes (where present) respond correctly.";
   } else {
     status = "⏳ **Preview unavailable until this PR passes the validate check and can be merged cleanly into main.**" +
       (record.reason ? "\n\nBuild reason: " + record.reason.replace(/[\r\n]/g, " ") : "");

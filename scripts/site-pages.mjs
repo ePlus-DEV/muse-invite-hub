@@ -96,7 +96,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '  <meta property="og:title" content="' + escapeHtml(title) + '">\n' +
     '  <meta property="og:description" content="' + escapeHtml(description) + '">\n' +
     '  <meta property="og:url" content="' + escapeHtml(pageUrl) + '">\n' +
-    '  <meta property="og:image" content="' + root + '/assets/social-preview.png">\n' +
+    '  <meta property="og:image" content="' + root + base.slice(0, -1) + '/assets/social-preview.png">\n' +
     '  <meta name="twitter:card" content="summary_large_image">\n' +
     '  <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">\n' +
     '  <link rel="stylesheet" href="../../assets/styles.css">\n' +
