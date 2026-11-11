@@ -61,7 +61,7 @@ async function listOpenPRs() {
 }
 function git(args, options = {}) {
   return execFileSync("git", args, {
-    cwd: process.cwd(), encoding: options.encoding || "utf8",
+    cwd: process.cwd(), ...(options.binary ? {} : { encoding: "utf8" }),
     maxBuffer: 8 * 1024 * 1024, timeout: 30000,
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -80,7 +80,7 @@ function mergeFiles(mergeSha) {
 }
 function readMergeFile(mergeSha, path) {
   // execFileSync uses an argv array: no shell or PR-supplied command execution.
-  return git(["show", mergeSha + ":" + path], { encoding: "buffer" });
+  return git(["show", mergeSha + ":" + path], { binary: true });
 }
 const state = {
   production_head: git(["rev-parse", "HEAD"]).trim(),

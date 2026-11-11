@@ -24,3 +24,19 @@ jobs:
         run: node scripts/validate.mjs
       - name: Run catalog validation tests
         run: node --test scripts/validate.test.mjs
+      - name: Verify PR preview renderer
+        run: node --test scripts/preview.test.mjs
+      - name: Build downloadable PR preview
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/build-offline-preview.mjs
+      - name: Upload downloadable PR preview
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/upload-artifact@v4
+        with:
+          name: muse-invite-hub-pr-preview-${{ github.event.pull_request.number }}
+          path: _offline-preview/
+          if-no-files-found: error
+          retention-days: 14

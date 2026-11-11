@@ -47,3 +47,10 @@ Run all checks listed in README.md before opening a PR. Keep PRs focused and pre
 ## Community standards
 
 Respect participants. Avoid spam, false reward promises, paid code offers, misleading brand association, or instructions to evade regional/account restrictions. Only Muse controls redemption eligibility and outcomes.
+
+
+## Preview your PR
+
+Open a focused PR targeting main. The validation job attaches an offline preview ZIP named muse-invite-hub-pr-preview-N (serve its extracted contents over HTTP, not via file://). After the PR-preview publisher is installed on main, the trusted Pages workflow posts a live link at https://muse.eplus.dev/pr-preview/pr-N/ **only after it confirms that the current PR revision and required assets are served correctly**.
+
+Live previews contain only PR static site files and use a noindex tag. They are not public production updates. Previews are removed when the PR closes; a new push requires fresh validation before a replacement is advertised. Fork PRs are deliberately excluded from same-origin public publishing.

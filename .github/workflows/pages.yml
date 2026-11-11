@@ -1,38 +1,105 @@
 name: Deploy website to GitHub Pages
 
+# Always publish production from trusted main. Unmerged PR files are treated
+# ONLY as static data. Their scripts are never executed in a privileged job.
 on:
   push:
     branches: [main]
   workflow_dispatch:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, closed]
+  workflow_run:
+    workflows: ["Validate website and invite catalog"]
+    types: [completed]
 
 permissions:
   contents: read
+  checks: read
+  pull-requests: write
   pages: write
   id-token: write
 
 concurrency:
-  group: github-pages
+  group: muse-invite-hub-pages-publish
   cancel-in-progress: false
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment:
       name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
+      - name: Checkout trusted production source
         uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Validate production data and preview utilities
+        run: |
+          node scripts/validate.mjs
+          node --test scripts/validate.test.mjs scripts/preview.test.mjs
+          node --check assets/app.js
+          node --check scripts/build-pages.mjs
+          node --check scripts/post-preview-status.mjs
+      - name: Build main site and eligible PR previews
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/build-pages.mjs
+      - name: Verify production and generated preview files
+        run: |
+          test -s _site/index.html
+          test -s _site/assets/app.js
+          test -s _site/assets/styles.css
+          test -s _site/data/invites.json
+          test -s _site/pr-preview/manifest.json
+          grep -Fq 'rel="canonical" href="https://muse.eplus.dev/"' _site/index.html
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const doc = JSON.parse(fs.readFileSync('_site/pr-preview/manifest.json','utf8'));
+          for (const preview of doc.previews.filter(pr => pr.status === 'ready')) {
+            const path = '_site/pr-preview/pr-'+preview.number+'/';
+            const html = fs.readFileSync(path+'index.html','utf8');
+            if (!html.includes('name="robots" content="noindex,nofollow,noarchive"') ||
+                !html.includes('<base href="/pr-preview/pr-'+preview.number+'/">') ||
+                !fs.existsSync(path+'assets/styles.css') ||
+                !fs.existsSync(path+'assets/app.js') ||
+                !fs.existsSync(path+'data/invites.json') ||
+                JSON.parse(fs.readFileSync(path+'preview-meta.json','utf8')).head_sha !== preview.head_sha) {
+              throw Error('Invalid or incomplete preview #'+preview.number);
+            }
+          }
+          console.log('Checked '+doc.previews.length+' eligible PRs');
+          NODE
+      - name: Refuse stale production deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          expected="$(git rev-parse HEAD)"
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq '.commit.sha')"
+          if [ "$expected" != "$latest" ]; then
+            echo "::error::Main changed while preparing Pages; a newer run will publish it."
+            exit 1
+          fi
       - name: Configure Pages
         uses: actions/configure-pages@v5
-      - name: Prepare static site
-        run: |
-          mkdir -p _site/assets _site/data
-          cp index.html .nojekyll CNAME robots.txt sitemap.xml _site/
-          cp -R assets/. _site/assets/
-          cp data/invites.json _site/data/
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload complete site with current PR previews
+        uses: actions/upload-pages-artifact@v4
         with:
           path: _site
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
+      - name: Post preview links only after live asset checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/post-preview-status.mjs
