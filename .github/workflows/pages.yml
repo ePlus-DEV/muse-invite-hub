@@ -47,6 +47,7 @@ jobs:
         run: |
           node scripts/validate.mjs
           node --test scripts/validate.test.mjs scripts/preview.test.mjs
+          node --check scripts/site-pages.mjs
           node --check assets/app.js
           node --check scripts/build-pages.mjs
           node --check scripts/post-preview-status.mjs
@@ -75,6 +76,21 @@ jobs:
                 !fs.existsSync(path+'data/invites.json') ||
                 JSON.parse(fs.readFileSync(path+'preview-meta.json','utf8')).head_sha !== preview.head_sha) {
               throw Error('Invalid or incomplete preview #'+preview.number);
+            }
+            const metadata = JSON.parse(fs.readFileSync(path+'preview-meta.json','utf8'));
+            if (metadata.detail_pages !== (preview.detail_pages ?? 0)) {
+              throw Error('Mismatched deep-preview count #'+preview.number);
+            }
+            if (metadata.detail_pages > 0) {
+              const list = JSON.parse(fs.readFileSync(path+'data/invites.json','utf8'));
+              const example = list.find(item => item.featured === true) || list[0];
+              const deep = path+'codes/'+example.code+'/index.html';
+              if (!fs.existsSync(path+'assets/detail.js') ||
+                  !fs.existsSync(path+'assets/social-preview.png') ||
+                  !fs.existsSync(deep) ||
+                  !fs.readFileSync(deep,'utf8').includes('noindex,nofollow,noarchive')) {
+                throw Error('Missing nested code detail preview #'+preview.number);
+              }
             }
           }
           console.log('Checked '+doc.previews.length+' eligible PRs');
