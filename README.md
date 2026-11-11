@@ -12,7 +12,7 @@
 - Catalog stats based on published community-submitted entries
 - Featured owner's invite `DPNIHH` shown prominently in the hero and pinned above community codes with a **Verified Owner** badge. This confirms only the site owner's declaration of ownership, not successful redemption on Muse.
 - GitHub Issue Forms for contributing codes and reporting success/failure feedback
-- Original source links and dated contributor-reported usage snapshots (never live availability)
+- Original source links and dated contributor-reported usage snapshots, including **remaining slots = capacity − used** (never live availability)
 - Maintainer-reviewed changes to the public JSON catalog (no auto-publication)
 - CI validation, automated tests, GitHub Pages deployment on main, and isolated PR previews under /pr-preview/pr-N/
 - No backend, external account connection, credentials or npm dependencies
@@ -27,6 +27,14 @@
 **Source-backed launch catalog:** The site includes 11 codes explicitly published in the public [Muse Use Cases](https://github.com/jaxxchen003/muse-use-cases) README or [invite-code issues](https://github.com/jaxxchen003/muse-use-cases/issues). Each card links to its source. All are **unverified**; we have not tested redemption or confirmed current availability with Muse. The site owner has separately supplied and confirmed ownership of `DPNIHH`; it is featured with a **Verified Owner** badge, but its redemption status remains `unverified` until a genuine Muse redemption result is provided.
 
 The upstream repository inspired the GitHub Issue workflow and feedback model. Muse Invite Hub does not mirror its use-case catalog. See [CONTRIBUTING.md](CONTRIBUTING.md) for review rules.
+
+## Updating remaining invite slots
+
+The featured owner code `DPNIHH` has no slot count reported yet. It therefore shows **Not reported**, never a made-up 30/30 or a live estimate.
+
+Open the [Update remaining slots GitHub Issue Form](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml&invite_code=DPNIHH) with the total invite capacity and actual number already used displayed by the owner’s Muse account. A maintainer checks the report and updates `reportedCapacity`, `reportedUses` and `usageReportedAt` in `data/invites.json` via a PR. Once merged, the page shows **reported remaining = capacity − uses**, with the reporting date and **Not live** label.
+
+Counts vary by account and may change after a report; copying a code does not consume or confirm a redemption. There is no integration with Muse's private referral dashboard and no automatic balance sync.
 
 ## Run locally
 

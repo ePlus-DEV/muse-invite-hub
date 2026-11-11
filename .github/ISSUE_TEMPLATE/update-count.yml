@@ -1,0 +1,57 @@
+name: "↻ Update invite code remaining count"
+description: "Share a dated quota/usage snapshot from your own Muse Invite screen."
+title: "[Count update] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help keep invitation availability useful. GitHub Issues are public.
+        Share only **numbers shown in your own Muse account**, not credentials or private account screenshots.
+        Updates are reviewed before changing the site. Counts are snapshots, NOT live Muse availability.
+  - type: input
+    id: invite_code
+    attributes:
+      label: Invite code
+      description: "The public code whose count you want to update."
+      placeholder: "DPNIHH"
+    validations:
+      required: true
+  - type: input
+    id: remaining
+    attributes:
+      label: Remaining invites shown by Muse
+      description: "Enter a non-negative number displayed by your Invite screen. If you do not know, describe what you see below instead."
+      placeholder: "e.g. 25"
+    validations:
+      required: false
+  - type: input
+    id: total
+    attributes:
+      label: Total invite quota shown by Muse (if known)
+      description: "Only enter if visible. No assumed 30-invite limit."
+      placeholder: "e.g. 30"
+    validations:
+      required: false
+  - type: input
+    id: used
+    attributes:
+      label: Already used invites (if known)
+      description: "Only enter if visible or consistently calculated from Muse's displayed total and remaining."
+      placeholder: "e.g. 5"
+    validations:
+      required: false
+  - type: textarea
+    id: details
+    attributes:
+      label: Additional context (optional)
+      description: "When did you see the values? No account-sensitive details, tokens or private screenshots."
+      placeholder: "Date and non-sensitive context..."
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: "I confirm that these figures came from a Muse invite screen, not from copy-click counts or guesses."
+          required: true
