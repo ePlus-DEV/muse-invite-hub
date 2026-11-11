@@ -82,3 +82,27 @@ test("generateSite creates all detail pages and only the vetted canonical sitema
     assert.doesNotMatch(map, /TEST42/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test("header, footer, favicon and nav use the same logo asset on home and detail pages", () => {
+  const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const favicon = readFileSync(new URL("../assets/favicon.svg", import.meta.url), "utf8");
+  const detail = renderDetailPage(owner());
+  const preview = renderDetailPage(owner(), {
+    preview: true, basePath: "/pr-preview/pr-25/"
+  });
+  assert.match(favicon, /viewBox="0 0 64 64"/);
+  assert.equal((home.match(/<img src="\.\/assets\/favicon\.svg"/g) || []).length, 2);
+  assert.match(home, /<link rel="icon" type="image\/svg\+xml" href="\.\/assets\/favicon\.svg">/);
+  assert.doesNotMatch(home, /<svg viewBox="0 0 64 64"/);
+
+  for (const page of [detail, preview]) {
+    assert.equal((page.match(/<img src="\.\.\/\.\.\/assets\/favicon\.svg"/g) || []).length, 2);
+    assert.match(page, /<link rel="icon" type="image\/svg\+xml" href="\.\.\/\.\.\/assets\/favicon\.svg">/);
+    assert.match(page, /<div class="container footer-inner">/);
+    assert.match(page, /href="https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github"/);
+    assert.match(page, /font-awesome\/6\.5\.2\/css\/all\.min\.css/);
+    assert.doesNotMatch(page, /<svg viewBox="0 0 64 64"/);
+  }
+  assert.match(home, /href="\.\/" aria-label="Muse Invite Hub homepage"/);
+  assert.match(detail, /href="\.\.\/\.\.\/" aria-label="Muse Invite Hub homepage"/);
+});
