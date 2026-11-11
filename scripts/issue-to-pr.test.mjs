@@ -9,6 +9,8 @@ const share = [
   "### Public confirmation or context (optional)","","_No response_","",
   "### Uses so far (optional; self-reported)","","_No response_","",
   "### Invite limit (optional; self-reported)","","30","",
+  "### Remaining invites (optional; self-reported)","","_No response_","",
+  "### Notes (optional)","","_No response_","",
   "### Contributor checklist","",
   "- [x] I am authorized to share this code publicly and understand this issue is public.",
   "- [x] This code is not a password, 2FA code, session token or private credential."
@@ -42,6 +44,7 @@ test("GitHub Issue Forms are parsed by headings, not arbitrary user code",()=>{
   assert.equal(f["Invite code"],"PNSMZZ");
   assert.equal(f["Invite limit (optional; self-reported)"],"30");
   assert.equal(f["Uses so far (optional; self-reported)"],"");
+  assert.equal(f["Remaining invites (optional; self-reported)"],"");
 });
 test("new invited code becomes an unverified draft proposal, never 30 remaining by assumption",()=>{
   const old=[item];
@@ -67,6 +70,48 @@ test("already published code is never duplicated",()=>{
   const p=planIssueChange(issue(26,"[Invite]",share),[item,community]);
   assert.equal(p.outcome,"duplicate");
 });
+test("existing code can be updated by its GitHub owner from Issue #28 Notes",()=>{
+  const existing={ ...community, code:"ARKHZZ", id:"jx-issue-19", submittedBy:"pdm0809",
+    reportedCapacity:17, reportedUses:0, usageReportedAt:"2026-11-10" };
+  const body=share.replace("PNSMZZ","ARKHZZ")
+    .replace("### Notes (optional)\n\n_No response_",
+      "### Notes (optional)\n\nInvite code ARKHZZ — 17 uses left. Enter it within 48 hours.");
+  const ownerIssue={...issue(28,"[Invite] ARKHZZ",body,"pdm0809"),user:{login:"pdm0809",id:316039127}};
+  const p=planIssueChange(ownerIssue,[item,existing]);
+  assert.equal(p.outcome,"proposal");
+  assert.equal(p.action,"update owner report");
+  const updated=p.data.find(x=>x.code==="ARKHZZ");
+  assert.equal(p.data.length,2);
+  assert.equal(updated.reportedRemaining,17);
+  assert.equal(updated.reportedCapacity,undefined);
+  assert.equal(updated.reportedUses,undefined);
+  assert.equal(updated.usageReportedAt,"2026-11-11");
+  assert.equal(updated.submittedBy,"pdm0809");
+  assert.equal(updated.submittedById,316039127);
+  assert.equal(updated.id,"jx-issue-19");
+  assert.deepEqual(validateCatalog(p.data),[]);
+  assert.equal(planIssueChange(ownerIssue,p.data).outcome,"duplicate");
+});
+test("duplicate from a different owner requires manual review",()=>{
+  const body=share.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+    "### Remaining invites (optional; self-reported)\n\n11");
+  const p=planIssueChange(issue(28,"[Invite]",body),[item,community]);
+  assert.equal(p.outcome,"needs-review");
+});
+test("a bound GitHub numeric ID blocks an impostor with the same username",()=>{
+  const bound={...community,submittedById:42};
+  const body=share.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+    "### Remaining invites (optional; self-reported)\n\n11");
+  const p=planIssueChange({...issue(28,"[Invite]",body),user:{login:"YHresearcher",id:77}},[item,bound]);
+  assert.equal(p.outcome,"needs-review");
+});
+test("newer owner reports cannot be overwritten by an older Issue",()=>{
+  const old={...community,reportedRemaining:5,usageReportedAt:"2026-11-12"};
+  const body=share.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+    "### Remaining invites (optional; self-reported)\n\n11");
+  const p=planIssueChange(issue(28,"[Invite]",body),[item,old]);
+  assert.equal(p.outcome,"needs-review");
+});
 test("permission confirmations are mandatory and untrusted numbers fail closed",()=>{
   const invalid=share.replace("[x] I am authorized","[ ] I am authorized");
   assert.throws(()=>planIssueChange(issue(26,"[Invite]",invalid),[item]),/confirmations/);
@@ -83,7 +128,10 @@ test("count updates require owner confirmation, known total and internally consi
   const wrongOwner=planIssueChange(issue(16,"[Count update]",count()),[item,community]);
   assert.equal(wrongOwner.outcome,"needs-review");
   const noTotal=planIssueChange(issue(17,"[Count update]",count({total:"_No response_"}),"hoangsvit"),[item,community]);
-  assert.equal(noTotal.outcome,"needs-review");
+  assert.equal(noTotal.outcome,"proposal");
+  assert.equal(noTotal.data[0].reportedRemaining,3);
+  assert.equal(noTotal.data[0].reportedCapacity,undefined);
+  assert.equal(noTotal.data[0].reportedUses,undefined);
   assert.throws(()=>planIssueChange(issue(14,"[Count update]",
     count({used:"6"}),"hoangsvit"),[item]),/inconsistent/);
 });
