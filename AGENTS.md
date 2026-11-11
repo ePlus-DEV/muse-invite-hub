@@ -19,7 +19,7 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. No npm dependenc
 - Keep relative asset paths so GitHub Pages works with project subpaths and custom domains.
 - Treat PR preview inputs as untrusted data: copy approved static assets from the PR merge ref, but NEVER run PR scripts in a privileged publish workflow.
 - Production must be copied from trusted main on every Pages publish. Rebuild all eligible open PR preview directories together; no stale/closed PR directories.
-- Previews require green CI at the current PR head SHA and a safe merge ref. Mark generated preview HTML noindex, remove production canonical, add PR-scoped base path and preview-meta.json, and verify live HTML/CSS/JS/catalog before posting a preview link.
+- Previews require green CI at the current PR head SHA and a safe merge ref. If a PR adds detail routes, the trusted renderer must create each nested HTML route; check both the directory URL and index.html plus JS/CSS before declaring it live. Mark generated preview HTML noindex, remove production canonical, add PR-scoped base path and preview-meta.json, and verify live HTML/CSS/JS/catalog before posting a preview link.
 - Avoid personal deployment tokens, hourly preview schedules, and unverified/guessed URLs.
 
 ## Checks
