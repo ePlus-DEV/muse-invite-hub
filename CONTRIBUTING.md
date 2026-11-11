@@ -13,7 +13,7 @@ Thanks for helping! **You can share an invite, report feedback or update a count
 3. Add any useful non-sensitive notes or public context. If your account shows an invite total and used count, you may supply the **actual** values; never guess.
 4. Check both permission/privacy confirmations, then submit.
 
-The maintainer checks duplicates and evidence, and opens a PR for acceptable changes. **An Issue does not automatically publish a code.** Community listings normally start as `unverified`.
+Actions checks the code and duplicates and can prepare an **automated Draft PR**. A maintainer reviews the data, marks the PR ready and merges it when appropriate. **An Issue never automatically publishes a code.** Community submissions start as `unverified`, and total quota alone never implies all invites remain.
 
 ## Report code feedback
 
@@ -21,7 +21,7 @@ The maintainer checks duplicates and evidence, and opens a PR for acceptable cha
 2. Supply the exact code and select accepted, rejected, exhausted, no redeem option, duplicate, or other.
 3. Include the date and non-sensitive error text or context if helpful.
 
-One attempt is **community feedback**, not proof that every account or region will behave the same way. Only a reviewed report should change `status` or `checkedAt`.
+One attempt is **community feedback**, not proof that every account or region will behave the same way. Clear accepted/rejected feedback can produce an automated **Draft PR** with a community-reported status and date; ambiguous feedback stays for manual triage. Only a reviewed and merged PR should change `status` or `checkedAt`.
 
 ## Update remaining invites
 
@@ -33,9 +33,17 @@ If you own the public invite, use [Update invite count](https://github.com/ePlus
 | Remaining invites | 3 |
 | Used invites (30 − 3) | 27 |
 
-If only a remaining number is shown, report it without inventing the total. The public catalog stores `reportedCapacity`, `reportedUses` and `usageReportedAt` **together**; all three are required to display a computed remaining/total number. The maintainer reviews the report before editing JSON through a PR.
+If only a remaining number is shown, report it without inventing the total. The public catalog stores `reportedCapacity`, `reportedUses` and `usageReportedAt` **together**; all three are required to display a computed remaining/total number. The trusted workflow proposes a **Draft PR** only when the reporter matches the listed code owner and the figures are complete and consistent. A maintainer must review and merge the proposal before publication.
 
 Amounts are **dated self-reported snapshots**, not live Muse availability. Copying a code is not redeeming it. Missing or incomplete values display **Not reported**.
+
+## Automatic Issue-to-Draft-PR
+
+Supported Issue Forms trigger [Issue to Draft PR](.github/workflows/issue-to-pr.yml) when opened, edited or reopened. It uses trusted source code on `main`, treats submitted text as untrusted data, checks duplicates, and creates a separate branch named `auto/issue-<NUMBER>-<TYPE>`. It proposes a change **only to `data/invites.json`** and opens a **Draft PR**. The workflow comments on the originating Issue with the PR link or the reason the report requires manual review.
+
+No Issue content is published automatically. Draft PRs created by this workflow are **not included in publicly hosted PR previews** until a maintainer marks them ready for review. Once ready, maintainers inspect the proposal and CI/preview, then merge to `main` to deploy. Repeated Issues or conflicting values do not create duplicate proposals.
+
+**One-time setup:** if GitHub denies PR creation, enable **Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests** (subject to organization policy). No custom token is required. Retry using **Actions → Issue to Draft PR → Run workflow** and enter the original Issue number. The automation never force-pushes or auto-merges.
 
 ## Contribute code or documentation
 
@@ -65,11 +73,13 @@ node scripts/audit-links.mjs
 node --test scripts/validate.test.mjs scripts/audit-links.test.mjs scripts/preview.test.mjs scripts/site-pages.test.mjs
 node --check assets/app.js
 node --check assets/detail.js
+node --check scripts/issue-to-pr.mjs
+node --test scripts/issue-to-pr.test.mjs
 ~~~
 
 For UI changes, also inspect mobile/desktop, filtering, sorting, copy, error states and affected detail pages. The PR workflow attaches a full `muse-invite-hub-pr-preview-N` artifact for **same-repository PRs** after validation; extract it, serve the folder over HTTP and open `http://localhost:8000/codes/<CODE>/`.
 
-Same-repository PRs with green CI and a clean merge can receive a verified public preview URL at `https://muse.eplus.dev/pr-preview/pr-N/` and detail pages below `/codes/<CODE>/`. The deployment bot checks the actual commit and assets before posting a link. **Fork PRs get CI, but not automatically a hosted same-origin preview or the same-repository artifact.** All previews use `noindex` and do not alter production.
+Same-repository non-Draft PRs with green CI and a clean merge can receive a verified public preview URL at `https://muse.eplus.dev/pr-preview/pr-N/` and detail pages below `/codes/<CODE>/`. The deployment bot checks the actual commit and assets before posting a link. **Fork PRs get CI, but not automatically a hosted same-origin preview or the same-repository artifact.** All previews use `noindex` and do not alter production.
 
 ## Invite catalog format
 

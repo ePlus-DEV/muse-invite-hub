@@ -1,0 +1,107 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { planIssueChange, readIssueFields } from "./issue-to-pr.mjs";
+import { validateCatalog } from "./validate.mjs";
+
+const date="2026-11-11T10:00:00Z";
+const share = [
+  "### Invite code","","PNSMZZ","",
+  "### Public confirmation or context (optional)","","_No response_","",
+  "### Uses so far (optional; self-reported)","","_No response_","",
+  "### Invite limit (optional; self-reported)","","30","",
+  "### Contributor checklist","",
+  "- [x] I am authorized to share this code publicly and understand this issue is public.",
+  "- [x] This code is not a password, 2FA code, session token or private credential."
+].join("\n");
+const count = (values={}) => [
+  "### Invite code","","DPNIHH","",
+  "### Remaining invites shown by Muse","",values.remaining ?? "3","",
+  "### Total invite quota shown by Muse (if known)","",values.total ?? "30","",
+  "### Already used invites (if known)","",values.used ?? "_No response_","",
+  "### Confirmation","","- [x] I confirm that these figures came from a Muse invite screen, not from copy-click counts or guesses."
+].join("\n");
+const feedback = (reason) => [
+  "### Invite code","","PNSMZZ","",
+  "### What happened?","",reason,"",
+  "### Additional details (optional)","","_No response_"
+].join("\n");
+const item={
+  id:"eplus-owner-dpnihh",code:"DPNIHH",status:"unverified",
+  addedAt:"2026-11-10",submittedBy:"hoangsvit",
+  featured:true,ownerConfirmed:true
+};
+const community={
+  id:"community-issue-20",code:"PNSMZZ",status:"unverified",
+  addedAt:"2026-11-11",submittedBy:"YHresearcher"
+};
+const issue=(number,title,body,login="YHresearcher")=>({
+  number,title,body,user:{login},state:"open",created_at:date,updated_at:date
+});
+test("GitHub Issue Forms are parsed by headings, not arbitrary user code",()=>{
+  const f=readIssueFields(share);
+  assert.equal(f["Invite code"],"PNSMZZ");
+  assert.equal(f["Invite limit (optional; self-reported)"],"30");
+  assert.equal(f["Uses so far (optional; self-reported)"],"");
+});
+test("new invited code becomes an unverified draft proposal, never 30 remaining by assumption",()=>{
+  const old=[item];
+  const p=planIssueChange(issue(20,"[Invite]",share),old);
+  assert.equal(p.outcome,"proposal");
+  assert.equal(p.branch,"auto/issue-20-invite");
+  const newItem=p.data.find(x=>x.code==="PNSMZZ");
+  assert.equal(newItem.status,"unverified");
+  assert.equal(newItem.submittedBy,"YHresearcher");
+  assert.equal(newItem.reportedCapacity,undefined);
+  assert.equal(newItem.reportedUses,undefined);
+  assert.equal(old.length,1);
+  assert.deepEqual(validateCatalog(p.data),[]);
+});
+test("valid complete new owner quota is a dated, unverified report",()=>{
+  const body=share.replace("### Uses so far (optional; self-reported)\n\n_No response_",
+    "### Uses so far (optional; self-reported)\n\n27");
+  const p=planIssueChange(issue(25,"[Invite] owner",body),[item]);
+  const next=p.data.find(x=>x.code==="PNSMZZ");
+  assert.deepEqual([next.reportedCapacity,next.reportedUses,next.usageReportedAt],[30,27,"2026-11-11"]);
+});
+test("already published code is never duplicated",()=>{
+  const p=planIssueChange(issue(26,"[Invite]",share),[item,community]);
+  assert.equal(p.outcome,"duplicate");
+});
+test("permission confirmations are mandatory and untrusted numbers fail closed",()=>{
+  const invalid=share.replace("[x] I am authorized","[ ] I am authorized");
+  assert.throws(()=>planIssueChange(issue(26,"[Invite]",invalid),[item]),/confirmations/);
+  const negative=share.replace("### Uses so far (optional; self-reported)\n\n_No response_",
+    "### Uses so far (optional; self-reported)\n\n-1");
+  assert.throws(()=>planIssueChange(issue(26,"[Invite]",negative),[item]),/integer/);
+});
+test("count updates require owner confirmation, known total and internally consistent numbers",()=>{
+  const p=planIssueChange(issue(14,"[Count update]",count(),"hoangsvit"),[item,community]);
+  assert.equal(p.outcome,"proposal");
+  assert.equal(p.kind,"count");
+  const next=p.data.find(x=>x.code==="DPNIHH");
+  assert.deepEqual([next.reportedCapacity,next.reportedUses,next.usageReportedAt],[30,27,"2026-11-11"]);
+  const wrongOwner=planIssueChange(issue(16,"[Count update]",count()),[item,community]);
+  assert.equal(wrongOwner.outcome,"needs-review");
+  const noTotal=planIssueChange(issue(17,"[Count update]",count({total:"_No response_"}),"hoangsvit"),[item,community]);
+  assert.equal(noTotal.outcome,"needs-review");
+  assert.throws(()=>planIssueChange(issue(14,"[Count update]",
+    count({used:"6"}),"hoangsvit"),[item]),/inconsistent/);
+});
+test("feedback is proposed for human review, not marked as official Muse verification",()=>{
+  const p=planIssueChange(issue(30,"[Code feedback]",
+    feedback("Muse accepted the code (worked for me)")),[item,community]);
+  assert.equal(p.outcome,"proposal");
+  assert.equal(p.data.find(x=>x.code==="PNSMZZ").status,"reported-working");
+  assert.match(p.notice,/NOT confirmation by Muse/);
+  const noChange=planIssueChange(issue(31,"[Code feedback]",
+    feedback("I could not find the redeem option")),[item,community]);
+  assert.equal(noChange.outcome,"needs-review");
+  const featured=planIssueChange(issue(32,"[Code feedback]",
+    feedback("Muse did not accept the code").replace("PNSMZZ","DPNIHH")),[item]);
+  assert.equal(featured.outcome,"needs-review");
+});
+test("unsupported and unsafe issues cannot create catalog proposals",()=>{
+  assert.equal(planIssueChange(issue(20,"Support request",share),[item]).outcome,"unsupported");
+  assert.throws(()=>planIssueChange(issue(20,"[Invite]",
+    share.replace("PNSMZZ","../../evil")),[item]),/Invite code/);
+});

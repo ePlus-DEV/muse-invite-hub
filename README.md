@@ -17,7 +17,7 @@
 | **Update remaining invites** | [Update count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml) | Code, date and the real figures shown in your own Muse Invite screen |
 | **Improve UI, code or docs** | [Contributor guide](CONTRIBUTING.md#contribute-code-or-documentation) | A focused Pull Request against `main`, with tests |
 
-GitHub Issues and PRs are **public**. Never post passwords, OTPs, cookies, session tokens, login links, private invitation links or personal account information. A maintainer checks submissions and duplicates, reviews the data, and creates or approves a PR. **Submitting an Issue does not automatically publish a code or update the website.**
+GitHub Issues and PRs are **public**. Never post passwords, OTPs, cookies, session tokens, login links, private invitation links or personal account information. GitHub Actions checks new-code and complete quota submissions and can prepare **Draft PRs automatically**; clear accepted/rejected feedback can also become a Draft PR. A maintainer reviews the proposed change before merging. **An Issue never automatically publishes a code or updates production.**
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full process, supported fields and local testing.
 
@@ -28,7 +28,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full process, supported fields a
 - Show contributor attribution and community-reported code status, never official Muse validity.
 - Display dated, owner-reported invite counts, or **Not reported** when data is incomplete.
 - Feature the site owner's `DPNIHH` with **Verified Owner**, which confirms only ownership—not successful redemption.
-- Review submissions through GitHub Issue Forms and PRs, with CI and isolated PR previews.
+- Review GitHub Issue Form submissions through automatically proposed Draft PRs, CI and isolated previews after review.
 
 ### What does the remaining count mean?
 
@@ -58,9 +58,22 @@ node scripts/audit-links.mjs
 node --test scripts/validate.test.mjs scripts/audit-links.test.mjs scripts/preview.test.mjs scripts/site-pages.test.mjs
 node --check assets/app.js
 node --check assets/detail.js
+node --check scripts/issue-to-pr.mjs
+node --test scripts/issue-to-pr.test.mjs
 ~~~
 
 Keep the existing homepage SEO title, description and canonical unless an authorized change explicitly calls for editing them.
+
+## Automatic Issue → Draft PR
+
+The [Issue-to-Draft-PR workflow](.github/workflows/issue-to-pr.yml) runs when a supported Issue is opened, reopened or edited. It checks code formats, duplicates, contributor permissions and quota consistency, then proposes a **Draft PR** changing only `data/invites.json`. It uses the repository `GITHUB_TOKEN`, **not** a personal access token. There is no hourly schedule and no auto-merge.
+
+- **Invite:** adds an `unverified` listing; a reported total without used or remaining data does not create a guessed remaining count.
+- **Quota:** accepts a consistent dated report only from the listed code owner; incomplete or third-party reports need manual review.
+- **Feedback:** proposes reported-working/not-working status for unambiguous user feedback; other cases remain for maintainer triage.
+- **Review:** auto-created Draft PRs are excluded from publicly hosted PR previews until marked ready; only reviewed merges to `main` affect production.
+
+**One-time GitHub setting:** In **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests** (if allowed by the organization). If disabled, the workflow explains the blocked PR on the Issue. After enabling it, manually rerun **Issue to Draft PR → Run workflow** with the Issue number. [Full process](CONTRIBUTING.md#automatic-issue-to-draft-pr).
 
 ## Pull request previews
 
