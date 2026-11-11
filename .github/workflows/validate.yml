@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: read
+  checks: read
+  pull-requests: read
 
 jobs:
   validate:
@@ -26,6 +28,26 @@ jobs:
         run: node --test scripts/validate.test.mjs
       - name: Verify PR preview renderer
         run: node --test scripts/preview.test.mjs
+      - name: Dry-run production and live preview bundle (read-only)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/build-pages.mjs
+          test -s _site/index.html
+          test -s _site/pr-preview/manifest.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const manifest = JSON.parse(fs.readFileSync('_site/pr-preview/manifest.json','utf8'));
+          for(const pr of manifest.previews.filter(pr=>pr.status==='ready')){
+            const dir = '_site/pr-preview/pr-'+pr.number+'/';
+            const html = fs.readFileSync(dir+'index.html','utf8');
+            if(!html.includes('name="robots" content="noindex,nofollow,noarchive"')) throw Error('Missing noindex on '+pr.number);
+            if(!fs.existsSync(dir+'assets/app.js') || !fs.existsSync(dir+'assets/styles.css') || !fs.existsSync(dir+'data/invites.json')) throw Error('Missing assets on '+pr.number);
+            if(JSON.parse(fs.readFileSync(dir+'preview-meta.json','utf8')).head_sha !== pr.head_sha) throw Error('Wrong preview head '+pr.number);
+          }
+          console.log('Read-only Pages bundle dry-run passed: '+manifest.previews.length+' PRs');
+          NODE
       - name: Build downloadable PR preview
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         env:
