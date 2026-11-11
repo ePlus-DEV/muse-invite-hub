@@ -2,193 +2,184 @@
   "use strict";
   const REPO = "https://github.com/ePlus-DEV/muse-invite-hub";
   const STATUS = {
-    "reported-working": { label: "Reported working", className: "status-reported-working", description: "Community reported this code worked; not verified by Muse." },
-    "unverified": { label: "Unverified", className: "", description: "Shared by the community; no redemption feedback yet." },
-    "reported-not-working": { label: "Reported not working", className: "status-reported-not-working", description: "Community has reported a problem with this code." }
+    "reported-working": { label: "Reported working", description: "A community member reported this code worked; not verified by Muse." },
+    "unverified": { label: "Unverified", description: "Shared by the community; no confirmed redemption feedback." },
+    "reported-not-working": { label: "Reported not working", description: "A community member reported a redemption problem." }
   };
   const grid = document.getElementById("code-grid");
-  const featuredPanel = document.getElementById("featured-invite");
-  const featuredCode = document.getElementById("featured-code");
-  const featuredCopy = document.getElementById("featured-copy");
-  const featuredDetailLink = document.getElementById("featured-detail-link");
-  const featuredRemaining = document.getElementById("featured-remaining");
-  const featuredRemainingDetail = document.getElementById("featured-remaining-detail");
-  const featuredRemainingUpdated = document.getElementById("featured-remaining-updated");
-  const empty = document.getElementById("empty-state");
   const searchInput = document.getElementById("code-search");
   const sortInput = document.getElementById("sort-codes");
   const resultCount = document.getElementById("result-count");
   const more = document.getElementById("directory-more");
   const moreButton = document.getElementById("load-more-codes");
+  const empty = document.getElementById("empty-state");
+  const announcer = document.getElementById("live-message");
   const PAGE_SIZE = 6;
   let displayLimit = PAGE_SIZE;
-  const announcer = document.getElementById("live-message");
-  const filters = Array.from(document.querySelectorAll("[data-filter]"));
   let codes = [];
-  let featuredInvite = null;
-  let filter = "all";
   let loadFailed = false;
-  const el = (tag, className, text) => {
+
+  function el(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
     if (text !== undefined) node.textContent = text;
     return node;
-  };
-  const iconElement = className => {
-    const icon = document.createElement("i");
-    icon.className = className;
-    icon.setAttribute("aria-hidden", "true");
-    return icon;
-  };
-  const setButtonContent = (button, iconClass, text) => {
-    button.replaceChildren(iconElement(iconClass), document.createTextNode(" " + text));
-  };
-  function announce(message) {
-    announcer.textContent = message;
+  }
+  function icon(className) {
+    const node = el("i", className);
+    node.setAttribute("aria-hidden", "true");
+    return node;
   }
   function formatDate(date) {
     if (!date) return "Date unknown";
     const parsed = new Date(date + "T00:00:00Z");
     if (Number.isNaN(parsed.getTime())) return "Date unknown";
-    return parsed.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+    return parsed.toLocaleDateString("en-US", {
+      year: "numeric", month: "short", day: "numeric", timeZone: "UTC"
+    });
   }
   function issueUrl(template, code) {
-    const base = REPO + "/issues/new?template=" + encodeURIComponent(template);
-    return code ? base + "&invite_code=" + encodeURIComponent(code) : base;
+    const url = REPO + "/issues/new?template=" + encodeURIComponent(template);
+    return code ? url + "&invite_code=" + encodeURIComponent(code) : url;
   }
   function reportedRemaining(item) {
     if (!item || typeof item.usageReportedAt !== "string") return null;
-    const date=formatDate(item.usageReportedAt);
+    const date = formatDate(item.usageReportedAt);
     if (Number.isInteger(item.reportedRemaining) && item.reportedRemaining >= 0) {
-      return { remaining:item.reportedRemaining, total:null, date };
+      return { remaining: item.reportedRemaining, total: null, date };
     }
     if (!Number.isInteger(item.reportedUses) ||
-      !Number.isInteger(item.reportedCapacity) ||
-      item.reportedCapacity <= 0 || item.reportedUses < 0 ||
-      item.reportedUses > item.reportedCapacity) return null;
-    return {remaining:item.reportedCapacity-item.reportedUses,total:item.reportedCapacity,date};
-  }
-  function updateFeatured() {
-    featuredInvite = codes.find(item => item.featured === true) || null;
-    featuredPanel.hidden = !featuredInvite;
-    if (featuredInvite) {
-      featuredCode.textContent = featuredInvite.code;
-      featuredDetailLink.href = "./codes/" + encodeURIComponent(featuredInvite.code) + "/";
-      featuredCopy.setAttribute("aria-label", "Copy featured Muse invite code " + featuredInvite.code);
-      const snapshot = reportedRemaining(featuredInvite);
-      featuredRemaining.textContent = snapshot ? snapshot.remaining.toLocaleString("en-US") : "Not reported";
-      featuredRemainingDetail.textContent = snapshot
-        ? (snapshot.total === null ? "Total not provided" : "of " + snapshot.total.toLocaleString("en-US") + " reported total slots")
-        : "No remaining-slot figures have been supplied.";
-      featuredRemainingUpdated.textContent = snapshot
-        ? "Owner-reported on " + snapshot.date + " · Not live"
-        : "Awaiting an owner-reported snapshot · Not live";
-    }
-  }
-  featuredCopy.addEventListener("click", () => {
-    if (featuredInvite) copyCode(featuredInvite.code, featuredCopy);
-  });
-  function updateStats() {
-    const setText = (id, value) => {
-      const element = document.getElementById(id);
-      if (element) element.textContent = value;
+        !Number.isInteger(item.reportedCapacity) ||
+        item.reportedCapacity < 1 || item.reportedUses < 0 ||
+        item.reportedUses > item.reportedCapacity) return null;
+    return {
+      remaining: item.reportedCapacity - item.reportedUses,
+      total: item.reportedCapacity, date
     };
-    setText("stat-total", codes.length.toLocaleString("en-US"));
-    setText("stat-working", codes.filter(c => c.status === "reported-working").length.toLocaleString("en-US"));
-    setText("stat-unverified", codes.filter(c => c.status === "unverified").length.toLocaleString("en-US"));
   }
-  function fallbackCopy(text) {
-    const input = document.createElement("textarea");
-    input.value = text;
-    input.setAttribute("readonly", "");
+  function setStat(id, value) {
+    const target = document.getElementById(id);
+    if (target) target.textContent = value;
+  }
+  function updateStats() {
+    if (loadFailed) {
+      ["stat-total", "stat-contributors", "stat-reported"].forEach(id => setStat(id, "—"));
+      return;
+    }
+    const contributors = new Set(codes.map(c => c.submittedBy).filter(Boolean));
+    const reported = codes.filter(c => reportedRemaining(c) !== null);
+    setStat("stat-total", codes.length.toLocaleString("en-US"));
+    setStat("stat-contributors", contributors.size.toLocaleString("en-US"));
+    setStat("stat-reported", reported.length.toLocaleString("en-US"));
+  }
+  function fallbackCopy(value) {
+    const input = el("textarea");
+    input.value = value;
+    input.readOnly = true;
     input.style.position = "fixed";
     input.style.left = "-9999px";
     document.body.append(input);
     input.select();
-    const ok = document.execCommand("copy");
+    const copied = document.execCommand("copy");
     input.remove();
-    return ok;
+    return copied;
   }
-  async function copyCode(code, button) {
+  async function copyCode(value, button) {
     try {
-      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(code);
-      else if (!fallbackCopy(code)) throw new Error("Copy failed");
-      setButtonContent(button, "fa-solid fa-check", "Copied!");
-      announce("Copied invite code " + code + ". Paste it in Muse to try redeeming.");
-      window.setTimeout(() => { if (button.isConnected) setButtonContent(button, "fa-regular fa-copy", "Copy code"); }, 2200);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+      } else if (!fallbackCopy(value)) {
+        throw Error("Copy failed");
+      }
+      button.replaceChildren(icon("fa-solid fa-check"), document.createTextNode(" Copied!"));
+      announcer.textContent = "Copied " + value + ". Paste it into Muse to check redemption.";
     } catch {
-      announce("Unable to copy automatically. Select the displayed code to copy it.");
-      setButtonContent(button, "fa-solid fa-xmark", "Copy failed");
-      window.setTimeout(() => { if (button.isConnected) setButtonContent(button, "fa-regular fa-copy", "Copy code"); }, 2200);
+      button.replaceChildren(icon("fa-solid fa-xmark"), document.createTextNode(" Copy failed"));
+      announcer.textContent = "Unable to copy automatically. Open details to select the code.";
     }
+    window.setTimeout(() => {
+      if (button.isConnected) {
+        button.replaceChildren(icon("fa-regular fa-copy"), document.createTextNode(" Copy code"));
+      }
+    }, 2200);
   }
   function createCard(item) {
     const status = STATUS[item.status] || STATUS.unverified;
-    const card = el("article", item.featured ? "code-card code-card-featured" : "code-card");
-    const top = el("div", "card-topline");
-    const indicator = el("div", "card-indicator");
-    indicator.append(el("span", "dot"), el("span", "", item.featured ? "FEATURED · EPLUS.DEV" : "COMMUNITY CODE"));
-    const badge = el("span", "status-badge " + status.className, status.label);
-    if (item.ownerConfirmed === true && item.featured === true) {
-      badge.replaceChildren(iconElement("fa-solid fa-check"), document.createTextNode(" Verified Owner"));
-      badge.classList.add("status-owner-confirmed");
-      badge.title = "Owner-confirmed invite code. Redemption has not been independently tested.";
-    } else {
-      badge.title = status.description;
-    }
-    top.append(indicator, badge);
-
-    const value = el("h3", "code-value", item.code);
-    const note = el("p", "code-note", item.note || "Shared with the Muse community.");
-    const meta = el("div", "card-meta");
-    meta.append(el("span", "", "Listed " + formatDate(item.addedAt)));
+    const featured = item.featured === true;
+    const ownerConfirmed = featured && item.ownerConfirmed === true;
+    const card = el("article", featured ? "code-card code-card-featured" : "code-card");
+    const head = el("div", "card-topline");
+    const name = el("h3", "code-value");
+    const codeLink = el("a", "code-link", item.code);
+    codeLink.href = "./codes/" + encodeURIComponent(item.code) + "/";
+    codeLink.setAttribute("aria-label", "Details for Muse invite code " + item.code);
+    name.append(codeLink);
+    const badge = el("span", "status-badge " +
+      (featured ? "status-featured" : "status-" + item.status),
+      featured ? "Featured" : status.label);
+    badge.title = ownerConfirmed
+      ? "Verified Owner: ownership is confirmed; Muse redemption is unverified."
+      : status.description;
+    head.append(name, badge);
+    const contributor = el("div", "card-contributor");
+    contributor.append(icon("fa-regular fa-user"));
     if (item.submittedBy) {
       const author = el("a", "card-author", "@" + item.submittedBy);
       author.href = "https://github.com/" + encodeURIComponent(item.submittedBy);
-      author.target = "_blank";
       author.rel = "noopener noreferrer";
-      meta.append(author);
+      author.target = "_blank";
+      contributor.append(author);
     } else {
-      meta.append(el("span", "card-author", "Community listing"));
+      contributor.append(el("span", "", "Community contributor"));
     }
-    const snapshot = reportedRemaining(item);
-    let usageNote = null;
-    if (snapshot) {
-      usageNote = el("p", "card-usage", "Reported remaining: " + snapshot.remaining + (snapshot.total === null ? "" : " / " + snapshot.total) + " · " + snapshot.date + " · Not live");
-    } else {
-      usageNote = el("p", "card-usage card-usage-unknown", "Remaining: Not reported");
+    const info = el("div", "card-facts");
+    const remaining = reportedRemaining(item);
+    const amount = el("p", "card-availability");
+    amount.append(icon("fa-solid fa-chart-simple"));
+    amount.append(document.createTextNode(remaining
+      ? " " + remaining.remaining.toLocaleString("en-US") +
+          (remaining.total === null ? "" : " of " + remaining.total.toLocaleString("en-US")) +
+          " remaining (reported)"
+      : " Availability not reported"));
+    info.append(amount);
+    const date = el("p", "card-date");
+    date.append(icon("fa-regular fa-clock"));
+    date.append(document.createTextNode(remaining
+      ? " " + remaining.date + " · Not live"
+      : " Listed " + formatDate(item.addedAt)));
+    info.append(date);
+    if (ownerConfirmed) {
+      const ownership = el("p", "card-owner");
+      ownership.append(icon("fa-solid fa-circle-check"));
+      ownership.append(document.createTextNode(" Verified Owner · Redemption unverified"));
+      info.append(ownership);
     }
     const actions = el("div", "card-actions");
-    const copy = el("button");
+    const copy = el("button", "card-copy");
     copy.type = "button";
-    setButtonContent(copy, "fa-regular fa-copy", "Copy code");
-    copy.setAttribute("aria-label", "Copy invite code " + item.code);
+    copy.setAttribute("aria-label", "Copy Muse invite code " + item.code);
+    copy.append(icon("fa-regular fa-copy"), document.createTextNode(" Copy code"));
     copy.addEventListener("click", () => copyCode(item.code, copy));
-    const report = el("a", "card-feedback-link");
-    report.append(iconElement("fa-regular fa-comment"), document.createTextNode(" Give feedback"));
+    const subActions = el("div", "card-subactions");
+    const details = el("a", "card-detail-link", "View details");
+    details.href = "./codes/" + encodeURIComponent(item.code) + "/";
+    const report = el("a", "card-feedback-link", "Give feedback");
     report.href = issueUrl("report-code.yml", item.code);
     report.target = "_blank";
     report.rel = "noopener noreferrer";
-    report.setAttribute("aria-label", "Report an issue with invite code " + item.code);
-    const detail = el("a", "card-detail-link", "View details");
-    detail.append(document.createTextNode(" "), iconElement("fa-solid fa-arrow-up-right-from-square"));
-    detail.href = "./codes/" + encodeURIComponent(item.code) + "/";
-    detail.setAttribute("aria-label", "View details for Muse invite code " + item.code);
-    actions.append(copy, detail);
-    meta.append(report);
-    card.append(top, value, note);
-    if (usageNote) card.append(usageNote);
-    card.append(meta, actions);
+    subActions.append(details, report);
+    actions.append(copy, subActions);
+    card.append(head, contributor, info, actions);
     return card;
   }
   function render(resetLimit = false) {
     if (resetLimit) displayLimit = PAGE_SIZE;
     const q = searchInput.value.trim().toLowerCase();
-    const visible = codes.filter(item => (filter === "all" || item.status === filter) && (
+    const visible = codes.filter(item =>
       item.code.toLowerCase().includes(q) ||
       String(item.submittedBy || "").toLowerCase().includes(q) ||
       String(item.note || "").toLowerCase().includes(q)
-    ));
+    );
     const sort = sortInput.value;
     visible.sort((a, b) => {
       if (Boolean(a.featured) !== Boolean(b.featured)) return a.featured ? -1 : 1;
@@ -198,69 +189,51 @@
     const page = visible.slice(0, displayLimit);
     grid.replaceChildren(...page.map(createCard));
     resultCount.textContent = "Showing " + page.length.toLocaleString("en-US") +
-      " of " + visible.length.toLocaleString("en-US") +
-      " " + (visible.length === 1 ? "code" : "codes");
+      " of " + visible.length.toLocaleString("en-US") + " codes";
     more.hidden = visible.length <= displayLimit;
-    if (!more.hidden) {
-      moreButton.textContent = "Load " + Math.min(PAGE_SIZE, visible.length - displayLimit) + " more codes";
-    }
+    if (!more.hidden) moreButton.firstChild.textContent =
+      "Load " + Math.min(PAGE_SIZE, visible.length - displayLimit) + " more ";
     empty.hidden = visible.length !== 0;
+    grid.hidden = visible.length === 0;
     if (visible.length === 0) {
-      grid.hidden = true;
       const title = document.getElementById("empty-title");
-      const desc = document.getElementById("empty-description");
-      if (loadFailed) {
-        title.textContent = "Couldn't load the directory.";
-        desc.textContent = "Check your connection and try refreshing the page. You can still contribute on GitHub.";
-      } else if (codes.length === 0) {
-        title.textContent = "Your first spark starts here.";
-        desc.textContent = "No invite codes have been published yet. Be the first to share one with the community.";
-      } else {
-        title.textContent = "No matching codes.";
-        desc.textContent = "Try another search or change the filter to see more community invitations.";
-      }
-    } else {
-      grid.hidden = false;
+      const description = document.getElementById("empty-description");
+      title.textContent = loadFailed ? "Couldn't load invite codes." :
+        codes.length === 0 ? "Be the first to share." : "No matching codes.";
+      description.textContent = loadFailed ?
+        "Check your connection and refresh. You can still share codes through GitHub." :
+        codes.length === 0 ? "No invite codes have been published yet." :
+        "Try a different code or contributor.";
     }
   }
   async function initialize() {
     try {
       const response = await fetch("./data/invites.json", { cache: "no-store" });
-      if (!response.ok) throw new Error("HTTP " + response.status);
-      const data = await response.json();
-      if (!Array.isArray(data)) throw new Error("Invalid catalog format");
-      codes = data.filter(item => item && typeof item.code === "string" &&
-        typeof item.addedAt === "string" && Object.prototype.hasOwnProperty.call(STATUS, item.status));
+      if (!response.ok) throw Error("HTTP " + response.status);
+      const list = await response.json();
+      if (!Array.isArray(list)) throw Error("Invite catalog must be an array");
+      codes = list.filter(item => item && typeof item.code === "string" &&
+        typeof item.addedAt === "string" && Object.hasOwn(STATUS, item.status));
     } catch (error) {
       console.error("Could not load invite directory:", error);
       loadFailed = true;
       codes = [];
     }
     updateStats();
-    updateFeatured();
     render();
   }
-  filters.forEach(button => button.addEventListener("click", () => {
-    filter = button.dataset.filter;
-    filters.forEach(item => {
-      const isActive = item === button;
-      item.classList.toggle("active", isActive);
-      item.setAttribute("aria-pressed", String(isActive));
-    });
-    render(true);
-  }));
   searchInput.addEventListener("input", () => render(true));
   sortInput.addEventListener("change", () => render(true));
   moreButton.addEventListener("click", () => {
-    const previousCount = Math.min(displayLimit, codes.length);
+    const previousCount = grid.children.length;
     displayLimit += PAGE_SIZE;
     render();
     const next = grid.children[previousCount];
     if (next) {
-      next.setAttribute("tabindex", "-1");
+      next.tabIndex = -1;
       next.focus({ preventScroll: true });
     }
-    announce("Loaded more invite codes.");
+    announcer.textContent = "Loaded more invite codes.";
   });
   document.addEventListener("keydown", event => {
     if (event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey &&

@@ -106,3 +106,21 @@ test("header, footer, favicon and nav use the same logo asset on home and detail
   assert.match(home, /href="\.\/" aria-label="Muse Invite Hub homepage"/);
   assert.match(detail, /href="\.\.\/\.\.\/" aria-label="Muse Invite Hub homepage"/);
 });
+
+test("directory redesign preserves SEO, GA4, a single featured listing and verified-owner meaning", () => {
+  const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
+  assert.match(home, /<title>Muse Invite Hub — Share the spark<\/title>/);
+  assert.match(home, /href="https:\/\/muse.eplus.dev\/"/);
+  assert.match(home, /G-N1MZ8YLNLJ/);
+  assert.match(home, /id="stat-contributors"/);
+  assert.match(home, /id="stat-reported"/);
+  assert.match(home, /id="code-grid"/);
+  assert.match(home, /id="load-more-codes"/);
+  assert.doesNotMatch(home, /id="featured-invite"/);
+  assert.match(app, /new Set\(codes\.map/);
+  assert.match(app, /ownerConfirmed/);
+  assert.match(app, /Redemption unverified/);
+  assert.match(app, /visible\.slice\(0, displayLimit\)/);
+  assert.match(renderDetailPage(owner()), /G-N1MZ8YLNLJ/);
+});
