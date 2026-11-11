@@ -45,9 +45,16 @@ jobs:
             const dir = '_site/pr-preview/pr-'+pr.number+'/';
             const html = fs.readFileSync(dir+'index.html','utf8');
             if(!html.includes('name="robots" content="noindex,nofollow,noarchive"')) throw Error('Missing noindex on '+pr.number);
-            if(!fs.existsSync(dir+'assets/app.js') || !fs.existsSync(dir+'assets/detail.js') || !fs.existsSync(dir+'assets/styles.css') || !fs.existsSync(dir+'data/invites.json')) throw Error('Missing assets on '+pr.number);
-            if(!fs.existsSync(dir+'codes/DPNIHH/index.html') || !fs.readFileSync(dir+'codes/DPNIHH/index.html','utf8').includes('noindex,nofollow,noarchive')) throw Error('Missing private-index detail page on '+pr.number);
-            if(JSON.parse(fs.readFileSync(dir+'preview-meta.json','utf8')).head_sha !== pr.head_sha) throw Error('Wrong preview head '+pr.number);
+            if(!fs.existsSync(dir+'assets/app.js') || !fs.existsSync(dir+'assets/styles.css') || !fs.existsSync(dir+'data/invites.json')) throw Error('Missing base assets on '+pr.number);
+            const meta = JSON.parse(fs.readFileSync(dir+'preview-meta.json','utf8'));
+            if(meta.head_sha !== pr.head_sha) throw Error('Wrong preview head '+pr.number);
+            if(meta.detail_pages !== (pr.detail_pages ?? 0)) throw Error('Wrong detail page count on '+pr.number);
+            if(meta.detail_pages > 0){
+              const list = JSON.parse(fs.readFileSync(dir+'data/invites.json','utf8'));
+              const selected = list.find(item=>item.featured===true) || list[0];
+              const detail = dir+'codes/'+selected.code+'/index.html';
+              if(meta.detail_pages !== list.length || !fs.existsSync(dir+'assets/detail.js') || !fs.existsSync(detail) || !fs.readFileSync(detail,'utf8').includes('noindex,nofollow,noarchive')) throw Error('Missing verified nested detail page on '+pr.number);
+            }
           }
           console.log('Read-only Pages bundle dry-run passed: '+manifest.previews.length+' PRs');
           NODE
