@@ -6,6 +6,8 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. No npm dependenc
 
 - Never invent invite codes, redemptions, reward amounts, account eligibility or live validity.
 - Treat code statuses as community-reported, potentially outdated.
+- External public codes require attributable source URLs; never imply upstream endorsement.
+- Self-reported usage limits are snapshots. Do not calculate or claim live remaining slots.
 - Never automatically publish user-submitted GitHub Issue content. Review and deduplicate before modifying data/invites.json.
 - Never request, store or publish passwords, OTPs, access tokens, private login links, cookies or personal data.
 - Render untrusted data using textContent only; never inject raw HTML or execute user submissions.
