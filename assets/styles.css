@@ -87,7 +87,7 @@ button{cursor:pointer}
 .search-field,.sort-field{min-height:52px;display:flex;align-items:center;border:1px solid var(--line);background:#fff;border-radius:999px;color:var(--muted);box-shadow:var(--shadow-sm)}
 .search-field{flex:1;padding:0 18px;gap:11px}
 .search-field:focus-within,.sort-field:focus-within{border-color:var(--blue);box-shadow:0 0 0 4px rgba(0,100,255,.13)}
-.search-field svg{height:18px;width:18px;flex:none}
+.search-field i{font-size:16px;color:var(--muted);flex:none}
 .search-field input{background:transparent;border:0;outline:none;color:var(--ink);min-width:0;width:100%;font-size:14px}
 .search-field input::placeholder{color:var(--faint)}
 .shortcut-hint{font-size:11px;border:1px solid var(--line);background:var(--bubble);padding:0 7px;border-radius:6px;color:var(--muted)}
@@ -227,7 +227,7 @@ button{cursor:pointer}
 .detail-code-text{color:var(--blue);white-space:nowrap}
 .detail-lead{max-width:700px;color:var(--muted);font-size:16px;line-height:1.75;margin:0 0 27px}
 .detail-code-panel{position:relative;overflow:hidden;padding:26px;border:1px solid var(--blue-line);border-radius:24px;background:linear-gradient(135deg,#ebf2ff,#fff 72%);box-shadow:var(--shadow-md)}
-.detail-code-panel::after{content:"✦";position:absolute;right:10px;top:50%;transform:translateY(-50%) rotate(10deg);font-size:180px;line-height:1;color:rgba(0,100,255,.07);pointer-events:none}
+.detail-code-panel::after{content:"\f005";font-family:"Font Awesome 6 Free";font-weight:900;position:absolute;right:10px;top:50%;transform:translateY(-50%) rotate(10deg);font-size:170px;line-height:1;color:rgba(0,100,255,.07);pointer-events:none}
 .detail-code-panel>*{position:relative;z-index:1}
 .detail-code-heading{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .detail-status{font-size:11px;font-weight:800;border-radius:20px;background:var(--blue);color:#fff;padding:7px 11px}
@@ -300,3 +300,16 @@ button{cursor:pointer}
   .contribute-strip{flex-direction:column;align-items:stretch;text-align:left}
   .contribute-strip .button{text-align:center}
 }
+
+/* Font Awesome icons + feedback link placement */
+.card-author{margin-left:auto}
+.card-feedback-link{color:var(--muted);font-size:12px;font-weight:600;white-space:nowrap}
+.card-feedback-link:hover{color:var(--blue)}
+.card-feedback-link i{margin-right:4px}
+.filter i{margin-right:5px}
+.status-badge i,.owner-featured-status i,.detail-status i{margin-right:4px}
+.owner-featured-label i{margin-right:4px}
+.nav-links a i{margin-right:5px}
+.faq-items summary span i{font-size:15px}
+.directory-footnote i{margin-right:2px}
+.button i{font-size:.95em}
