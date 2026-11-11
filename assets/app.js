@@ -10,6 +10,7 @@
   const featuredPanel = document.getElementById("featured-invite");
   const featuredCode = document.getElementById("featured-code");
   const featuredCopy = document.getElementById("featured-copy");
+  const featuredDetailLink = document.getElementById("featured-detail-link");
   const featuredRemaining = document.getElementById("featured-remaining");
   const featuredRemainingDetail = document.getElementById("featured-remaining-detail");
   const featuredRemainingUpdated = document.getElementById("featured-remaining-updated");
@@ -65,6 +66,7 @@
     featuredPanel.hidden = !featuredInvite;
     if (featuredInvite) {
       featuredCode.textContent = featuredInvite.code;
+      featuredDetailLink.href = "./codes/" + encodeURIComponent(featuredInvite.code) + "/";
       featuredCopy.setAttribute("aria-label", "Copy featured Muse invite code " + featuredInvite.code);
       const snapshot = reportedRemaining(featuredInvite);
       featuredRemaining.textContent = snapshot ? snapshot.remaining.toLocaleString("en-US") : "Not reported";

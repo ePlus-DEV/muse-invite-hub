@@ -378,3 +378,6 @@ button{cursor:pointer}
 .directory-more .button{min-width:190px}
 @media(max-width:880px){.detail-layout{grid-template-columns:1fr}.detail-side{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-feedback{grid-column:span 2}}
 @media(max-width:560px){.detail-page{padding-top:26px;padding-bottom:70px}.detail-breadcrumb{margin-bottom:23px}.detail-primary h1{font-size:35px}.detail-code-panel{padding:21px 18px}.detail-code{font-size:36px;letter-spacing:2.2px}.detail-action-row{flex-direction:column}.detail-action-row .button{width:100%;justify-content:center}.detail-instructions{padding:23px 20px}.detail-side{grid-template-columns:1fr}.detail-feedback{grid-column:auto}.directory-more{margin-top:19px}.directory-more .button{width:100%}}
+
+.owner-detail-link{display:inline-flex;margin-top:12px;color:var(--blue);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.owner-detail-link:hover{color:var(--blue-hover)}
