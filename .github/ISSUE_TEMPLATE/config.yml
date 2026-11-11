@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "Official Muse website"
+    url: "https://muse.ai/"
+    about: "For official Muse account eligibility, redemption, regional access and rewards."
+  - name: "Contributing guide"
+    url: "https://github.com/ePlus-DEV/muse-invite-hub/blob/main/CONTRIBUTING.md"
+    about: "Learn how invite codes are reviewed and published."
