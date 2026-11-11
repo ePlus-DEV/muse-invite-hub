@@ -218,6 +218,13 @@ async function propose(issue,token) {
   // repository-level PR permission denial can be retried without rewriting it.
   const encoded=proposed.branch.split("/").map(encodeURIComponent).join("/");
   const existing=await api("GET","git/ref/heads/"+encoded,token,undefined,true);
+  if(existing){
+    const prepared=await getCatalog(token,existing.object.sha);
+    if(JSON.stringify(prepared)!==JSON.stringify(proposed.data)){
+      return {outcome:"needs-review",code:proposed.code,
+        reason:"An older automation branch exists with different data. A maintainer must reconcile it; the bot will not overwrite history."};
+    }
+  }
   if (!existing) {
     // The branch tree is sourced from the exact current trusted main commit.
     const base=await api("GET","git/commits/"+mainSHA,token);
