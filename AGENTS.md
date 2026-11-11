@@ -18,6 +18,7 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. No npm dependenc
 - Preserve existing SEO titles, descriptions, URLs and other content unless explicitly requested.
 - Main is production. Work through independent branches and PRs. Never force-push or stack PRs.
 - Keep relative asset paths so GitHub Pages works with project subpaths and custom domains.
+- Use assets/favicon.svg as the single brand logo asset for homepage and generated detail headers/footers. Keep mobile sizing and preview-relative paths consistent. Use identical navigation and footer elements across pages.
 - Generate detail pages via trusted scripts/site-pages.mjs from validated catalog JSON. Never claim Muse officially validated community codes.
 - Only owner-confirmed featured detail pages are indexable and appear in sitemap; unverified community details are noindex,follow and preview details noindex,nofollow,noarchive.
 - Keep homepage title, description and canonical unchanged. Pre-render detail content, escape untrusted notes and usernames, and use WebPage/BreadcrumbList JSON-LD on detail.
