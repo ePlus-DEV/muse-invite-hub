@@ -1,19 +1,32 @@
-## Summary
+## What changed?
 
-Describe the user-visible changes and any relevant Issues.
+Describe the user-visible change and why it is needed. Link related Issues (use `Closes #123` only when the PR fully resolves them).
 
-## Checks
+## Contribution type
 
-- [ ] Static frontend works on desktop and mobile
-- [ ] No fabricated code validity, quotas or reward claims
-- [ ] Current SEO text and canonical production domain preserved unless explicitly requested
+- [ ] Invite data / status / quota
+- [ ] UI / accessibility / bug fix
+- [ ] SEO / metadata
+- [ ] Documentation
+- [ ] Other
+
+## Review checklist
+
+- [ ] Read `CONTRIBUTING.md` and relevant `AGENTS.md` rules
+- [ ] No invented invite validity, ownership, quotas, status or reward claims
+- [ ] No secrets, personal account data or unrelated repository links
+- [ ] Ran `node scripts/validate.mjs` and `node scripts/audit-links.mjs`
+- [ ] Ran Node.js tests and frontend syntax checks (or noted why not)
+- [ ] For UI changes: checked desktop/mobile, filters, copy and affected detail pages
+- [ ] Preserved homepage SEO title, description and canonical unless approved
 - [ ] CI passes
-- [ ] Reviewed the downloadable PR preview artifact or the verified live preview link
 
-## Preview
+## Preview or screenshots
 
-After the PR passes CI, an automated comment contains the verified preview URL:
+For **same-repository PRs**, the bot posts a verified preview at `https://muse.eplus.dev/pr-preview/pr-N/` after CI and publication checks. The validation job also attaches an offline preview artifact.
 
-https://muse.eplus.dev/pr-preview/pr-<PR NUMBER>/
+**Fork PRs:** CI can run, but hosted same-origin previews and that artifact are not automatic. Never claim a URL is working before it has been verified.
 
-The preview link is published only after the preview pipeline is active on main and verifies the actual deployed content. Until then, download the offline preview artifact from the Validate workflow.
+## Reviewer notes
+
+Mention any known limitations or behavior changes. PR changes go live only after a maintainer merges them to `main`.

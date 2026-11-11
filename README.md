@@ -1,96 +1,98 @@
 # ✦ Muse Invite Hub
 
-**Share the spark.** A community-powered, open-source directory of [Muse](https://muse.ai/) invitation and referral codes from [ePlus.DEV](https://eplus.dev).
+**Share the spark.** A free, open-source directory of community-shared [Muse](https://muse.ai/) invitation codes, maintained by [ePlus.DEV](https://eplus.dev).
 
-[Open the website](https://muse.eplus.dev/) · [Share a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml)
+[**Visit the website**](https://muse.eplus.dev/) · [**Contribute**](CONTRIBUTING.md) · [**Report a problem**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) · [**Security**](SECURITY.md)
 
-> Muse Invite Hub is independent and not affiliated with Meta or Muse. Entries are community listings or owner reports, not a promise of live validity, access or token rewards.
-
-## Features
-
-- Responsive static site with search, filters, sorting, accessible 6-at-a-time Load more and copy-to-clipboard
-- Pre-rendered /codes/CODE/ detail pages for all published invites; owner-confirmed pages are indexable, unverified community pages carry noindex
-- Site-specific WebSite and BreadcrumbList structured data, social preview image, and generated SEO sitemap
-- Catalog stats based on published invite entries
-- Featured owner's invite `DPNIHH` shown prominently in the hero and pinned above community codes with a **Verified Owner** badge. This confirms only the site owner's declaration of ownership, not successful redemption on Muse.
-- GitHub Issue Forms for contributing codes and reporting success/failure feedback
-- Contributor attribution and dated owner-reported invitation counts, including **remaining slots = capacity − used** (never live availability)
-- Maintainer-reviewed changes to the public JSON catalog (no auto-publication)
-- CI validation, automated tests, GitHub Pages deployment on main, and isolated PR previews under /pr-preview/pr-N/
-- No backend, external account connection, credentials or npm dependencies
+> **Independent community project.** Muse Invite Hub is not affiliated with or endorsed by Muse or Meta. Codes, usage reports and listed rewards are not guarantees of access, availability or redemption. Only Muse can confirm redemption.
 
 ## How to contribute
 
-1. Open the [Share code issue form](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml).
-2. Provide only a public invite code you are authorized to share. Do not include credentials.
-3. A maintainer checks for duplicates, reviews the issue, and updates [data/invites.json](data/invites.json) via a PR.
-4. Report broken codes using [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml).
+**You don't need to code.** Choose an Issue Form for what you want to share:
 
-**Community catalog:** The directory contains 11 community-shared codes and the featured owner code `DPNIHH`. The community entries were curated from earlier public postings, and credited contributor usernames are retained. Listing a code does **not** mean its contributor submitted it directly to this website or that Muse confirmed redemption. These entries remain `unverified` until actual feedback is reviewed. The site owner confirmed ownership of `DPNIHH`; its **Verified Owner** badge confirms only this declaration, not active redemption.
+| Contribution | Action | Information needed |
+| --- | --- | --- |
+| **Share my invite code** | [Submit a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) | Public code you own or are authorized to share; optional context |
+| **Report whether a code works** | [Send feedback](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) | Code, what happened in Muse, date and non-sensitive details |
+| **Update remaining invites** | [Update count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml) | Code, date and the real figures shown in your own Muse Invite screen |
+| **Improve UI, code or docs** | [Contributor guide](CONTRIBUTING.md#contribute-code-or-documentation) | A focused Pull Request against `main`, with tests |
 
-## Updating remaining invite slots
+GitHub Issues and PRs are **public**. Never post passwords, OTPs, cookies, session tokens, login links, private invitation links or personal account information. A maintainer checks submissions and duplicates, reviews the data, and creates or approves a PR. **Submitting an Issue does not automatically publish a code or update the website.**
 
-**DPNIHH**: the owner reported **3 of 30 invitations remaining** in [issue #14](https://github.com/ePlus-DEV/muse-invite-hub/issues/14) on **2026-11-11**. This is a dated, owner-reported snapshot, not live Muse availability. The catalog stores `reportedCapacity: 30`, `reportedUses: 27` (calculated as 30 − 3), and `usageReportedAt: 2026-11-11`.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full process, supported fields and local testing.
 
-Open the [Update remaining slots GitHub Issue Form](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml&invite_code=DPNIHH) with the total invite capacity and actual number already used displayed by the owner’s Muse account. A maintainer checks the report and updates `reportedCapacity`, `reportedUses` and `usageReportedAt` in `data/invites.json` via a PR. Once merged, the page shows **reported remaining = capacity − uses**, with the reporting date and **Not live** label.
+## Features
 
-Counts vary by account and may change after a report; copying a code does not consume or confirm a redemption. There is no integration with Muse's private referral dashboard and no automatic balance sync.
+- Search, filter, sort and browse the directory with **Load more** (six codes per batch).
+- Open pre-rendered code detail pages at `/codes/<CODE>/` for sharing, copying and reporting feedback.
+- Show contributor attribution and community-reported code status, never official Muse validity.
+- Display dated, owner-reported invite counts, or **Not reported** when data is incomplete.
+- Feature the site owner's `DPNIHH` with **Verified Owner**, which confirms only ownership—not successful redemption.
+- Review submissions through GitHub Issue Forms and PRs, with CI and isolated PR previews.
 
-## Run locally
+### What does the remaining count mean?
 
-No build is required. Serve the repository directory over HTTP:
+`Reported remaining = reportedCapacity − reportedUses`
 
-    python -m http.server 8000
+The owner reported **3 of 30 remaining** for `DPNIHH` in [Issue #14](https://github.com/ePlus-DEV/muse-invite-hub/issues/14) on **2026-11-11** (30 total minus 27 used). This is a **dated snapshot, not live Muse availability**. Counts can change without this website knowing. Clicking Copy does not redeem or consume an invitation.
 
-Open http://localhost:8000/ . Avoid opening a file URL directly because browsers restrict local JSON requests.
+If you know only a remaining number, [submit that number](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml) without guessing the total. The website does not connect to private Muse account data.
 
-Run checks before opening a PR:
+## Run and test locally
 
-    node scripts/validate.mjs
-    node scripts/audit-links.mjs
-    node --test scripts/validate.test.mjs scripts/preview.test.mjs scripts/audit-links.test.mjs scripts/site-pages.test.mjs
-    node --check assets/app.js
-    node --check assets/detail.js
+The homepage is a static HTML/CSS/JavaScript/JSON site with **no npm install or backend**. From the repository root:
 
-Node 24 is used by CI.
+~~~sh
+python -m http.server 8000
+~~~
 
-## Details, indexing and progressive loading
+Open http://localhost:8000/. Use HTTP rather than `file://` because the homepage fetches the JSON catalog.
 
-Each approved catalog entry gets a pre-rendered page at `/codes/<CODE>/` through the trusted `scripts/site-pages.mjs` generator at deployment (no additional backend). Detail pages show the owner/reporting status, dated quota, copy/redeem steps and feedback link. Static pages are accessible without client-side JavaScript. Details are generated from reviewed `data/invites.json`, not arbitrary issue text.
+**Detail pages are generated by the Pages build**, not stored in the source tree. To inspect the full rendered site before a merge, download the `muse-invite-hub-pr-preview-N` artifact from the PR's Validate workflow, extract it, and run an HTTP server inside the extracted folder.
 
-**SEO quality gate:** Only the featured, owner-confirmed code is included in the generated sitemap and allowed to be indexed. Other unverified community-code detail pages use `noindex,follow` until additional unique, substantiated information is available. Preview pages use `noindex,nofollow,noarchive`. The original homepage title, description and canonical URL are unchanged. The homepage adds WebSite structured data and a social preview image; details use WebPage and BreadcrumbList schema.
+For consistency with CI, use **Node.js 24** and run:
 
-The directory initially shows 6 cards. Load more reveals another 6 without changing the entire catalog, and a new search/filter/sort resets the visible limit.
+~~~sh
+node scripts/validate.mjs
+node scripts/audit-links.mjs
+node --test scripts/validate.test.mjs scripts/audit-links.test.mjs scripts/preview.test.mjs scripts/site-pages.test.mjs
+node --check assets/app.js
+node --check assets/detail.js
+~~~
+
+Keep the existing homepage SEO title, description and canonical unless an authorized change explicitly calls for editing them.
 
 ## Pull request previews
 
-Every **same-repository PR targeting main** is eligible for a shareable preview after the Validate website and invite catalog check passes.
+Open focused PRs against `main`. After a **same-repository PR** passes CI, the trusted Pages workflow rebuilds its preview at `https://muse.eplus.dev/pr-preview/pr-N/` and posts a link **only after verifying the deployed files and commit**. Generated detail pages appear below `/pr-preview/pr-N/codes/<CODE>/`. Do not assume a guessed preview URL is ready.
 
-- Preview URL: https://muse.eplus.dev/pr-preview/pr-123/ (replace 123 with the PR number). The workflow **comments the actual URL on the PR only after it verifies the published revision and all critical assets**. Do not assume a guessed URL is ready.
-- Production content always comes from trusted main. The publisher fetches the GitHub-generated PR merge revision and copies only approved static site files into a dedicated directory. It **does not execute PR scripts** or use a personal access token.
-- Every preview has a noindex meta tag, a PR-specific base path, and a preview-meta.json file containing the PR head SHA. The trusted renderer pre-renders nested `/codes/<CODE>/` paths for PRs with `assets/detail.js` and verifies the nested public URL before posting a successful preview comment. Previews do not inherit production canonical URLs. Production SEO and the CNAME stay at the root of the deployment.
-- On a new push, the previous preview is invalidated until CI passes on the latest commit; on PR closure, the preview directory is removed during the next Pages deployment. The bot updates its PR comment.
-- GitHub Pages publishes an **entire-site artifact** each time. The trusted workflow rebuilds the latest main site plus all currently eligible open PR previews together, so deploying one PR does not delete previews for other open PRs.
-- A new PR also gets a downloadable **muse-invite-hub-pr-preview-N** artifact from its read-only Validate workflow. To inspect an offline artifact, extract it, serve it with a local HTTP server and open localhost; file:// cannot load the JSON catalog.
-- Fork PRs receive normal CI but do not automatically receive public same-origin previews. This prevents arbitrary external contributions from being published under the production domain.
+Same-repository PRs also receive a downloadable `muse-invite-hub-pr-preview-N` artifact. Fork PRs receive CI but **do not automatically receive hosted same-origin previews or that artifact**. Preview pages use `noindex` and disappear after a PR closes; **only merged changes on `main` affect production**.
 
+## Project layout
 
-## Publish
+| Path | What it does |
+| --- | --- |
+| `index.html` and `assets/` | Homepage, frontend controls, detail assets and social image |
+| `data/invites.json` | Maintainer-reviewed public invite catalog |
+| `scripts/validate.mjs` | Validate data, duplicates and statuses |
+| `scripts/audit-links.mjs` | Check repository links |
+| `scripts/site-pages.mjs` | Generate detail HTML and SEO sitemap |
+| `scripts/preview-core.mjs` and `scripts/build-pages.mjs` | Assemble isolated PR previews and production output |
+| `.github/ISSUE_TEMPLATE/` | Forms for sharing codes, feedback and count updates |
+| `.github/workflows/` | CI and GitHub Pages deployment |
 
-In GitHub repository **Settings → Pages**, use **Source: GitHub Actions** and set **Custom domain** to `muse.eplus.dev`. **Production domain:** https://muse.eplus.dev/. The root `CNAME` records the hostname, while GitHub Pages settings control the actual custom-domain connection. Deployments and preview publication run through the existing Pages workflow.
+The homepage has WebSite structured data and an OG image. Detail pages have individual metadata and WebPage/BreadcrumbList schema. Only the featured owner-confirmed code is currently included in the sitemap for indexing; unverified detail pages have `noindex,follow`. All previews have `noindex,nofollow,noarchive`. Indexing is not a claim that Muse has accepted a code.
 
-Configure DNS for the `eplus.dev` zone:
+## Deployment
 
-| Type | Name | Target | Proxy |
-| --- | --- | --- | --- |
-| CNAME | `muse` | `eplus-dev.github.io` | DNS only (if Cloudflare is used, at least during initial verification) |
+Production: https://muse.eplus.dev/. The site is published from `main` using GitHub Actions and GitHub Pages. **Settings → Pages** uses **Source: GitHub Actions** with custom domain `muse.eplus.dev`; the repository's `CNAME` records the hostname.
 
-Do not point DNS to `eplus-dev.github.io/muse-invite-hub`; DNS CNAMEs have no path. Add the custom domain in GitHub Pages **before** pointing DNS to avoid accidental domain takeover. Once DNS and certificate issuance settle, enable **Enforce HTTPS** in Pages settings and verify https://muse.eplus.dev/ directly.
+For the `eplus.dev` DNS zone, set `muse` as a CNAME to `eplus-dev.github.io` (DNS only during initial verification if using a proxy provider). A CNAME target has no URL path. Configure the custom domain in GitHub Pages before changing DNS, then enforce HTTPS when the certificate is ready. Domain and DNS settings are managed outside the repository.
 
-The site uses relative asset paths and now sets canonical and social sharing URLs to the production domain. Its sitemap and robots.txt also reference the production domain. DNS is managed outside this repository; creating a PR here alone cannot change DNS or the GitHub Pages setting.
+The production publisher uses trusted code from `main` and builds previews from reviewed static inputs without executing unmerged PR scripts in the deployment job.
 
 ## License and policies
 
-[MIT](LICENSE) · [Security](SECURITY.md) · [Agent rules](AGENTS.md)
+[MIT](LICENSE) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Agent rules](AGENTS.md)
 
-© 2026 ePlus.DEV. No affiliation with Meta or Muse.
+© 2026 ePlus.DEV. No affiliation with Muse or Meta.
