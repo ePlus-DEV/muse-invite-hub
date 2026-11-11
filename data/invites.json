@@ -13,6 +13,14 @@
     "usageReportedAt": "2026-11-11"
   },
   {
+    "id": "community-issue-20",
+    "code": "PNSMZZ",
+    "status": "unverified",
+    "addedAt": "2026-11-11",
+    "submittedBy": "YHresearcher",
+    "note": "Submitted by the contributor in issue #20; redemption has not been independently verified."
+  },
+  {
     "id": "jx-issue-63",
     "code": "UPWS4W",
     "status": "unverified",
