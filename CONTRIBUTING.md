@@ -30,6 +30,7 @@ The file data/invites.json holds an array of entries with these fields:
 | reportedCapacity | No | Positive integer invite quota from the owner; NOT a live remaining count |
 | usageReportedAt | Conditional | YYYY-MM-DD date of the owner's usage report; required with counts |
 | featured | No | At most one owner-approved code; pin to homepage, not proof of redemption |
+| ownerConfirmed | No | Boolean owner assertion, reserved for the featured `hoangsvit` code. Shows Verified Owner only, not redemption verification. |
 
 Community statuses do **not** indicate official Muse verification:
 

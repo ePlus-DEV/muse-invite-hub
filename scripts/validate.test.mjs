@@ -50,3 +50,12 @@ test("featured must be boolean and cannot be reported not working", () => {
   assert.ok(validateCatalog([{ ...sample(), featured: "true" }]).some(e => e.includes("must be a boolean")));
   assert.ok(validateCatalog([{ ...sample(), featured: true, status: "reported-not-working" }]).some(e => e.includes("do not feature")));
 });
+
+test("featured code can have confirmed owner without claiming Muse redemption", () => {
+  assert.deepEqual(validateCatalog([{ ...sample(), submittedBy: "hoangsvit", featured: true, ownerConfirmed: true, status: "unverified" }]), []);
+});
+test("non-owner or nonfeatured codes cannot claim owner confirmation", () => {
+  assert.ok(validateCatalog([{ ...sample(), featured: true, ownerConfirmed: true }]).some(e => e.includes("only the featured")));
+  assert.ok(validateCatalog([{ ...sample(), submittedBy: "hoangsvit", ownerConfirmed: true }]).some(e => e.includes("only the featured")));
+  assert.ok(validateCatalog([{ ...sample(), ownerConfirmed: "true" }]).some(e => e.includes("must be a boolean")));
+});

@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
 const statuses = new Set(["unverified", "reported-working", "reported-not-working"]);
-const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "usageReportedAt", "featured"]);
+const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "usageReportedAt", "featured", "ownerConfirmed"]);
 
 function validDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -41,6 +41,8 @@ export function validateCatalog(data) {
 
     if (!statuses.has(item.status)) errors.push(at + ": invalid community status.");
     if (item.featured !== undefined && typeof item.featured !== "boolean") errors.push(at + ": featured must be a boolean.");
+    if (item.ownerConfirmed !== undefined && typeof item.ownerConfirmed !== "boolean") errors.push(at + ": ownerConfirmed must be a boolean.");
+    if (item.ownerConfirmed === true && (item.featured !== true || item.submittedBy !== "hoangsvit")) errors.push(at + ": only the featured ePlus.DEV owner code may be ownerConfirmed.");
     if (item.featured === true) {
       featuredCount += 1;
       if (item.status !== "unverified" && item.status !== "reported-working") errors.push(at + ": do not feature a code reported not working.");
