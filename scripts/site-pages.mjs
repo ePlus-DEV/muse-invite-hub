@@ -31,9 +31,13 @@ function jsonLd(data) {
   return JSON.stringify(data).replace(/</g, "\\u003c").replace(/>/g, "\\u003e");
 }
 function reportedSlots(item) {
-  const { reportedCapacity: capacity, reportedUses: used, usageReportedAt: at } = item;
+  const { reportedCapacity: capacity, reportedUses: used, reportedRemaining: remaining, usageReportedAt: at } = item;
+  if (!at) return null;
+  if (Number.isInteger(remaining) && remaining >= 0) {
+    return { remaining, capacity: null, date: dateText(at) };
+  }
   if (!Number.isInteger(capacity) || capacity < 1 ||
-      !Number.isInteger(used) || used < 0 || used > capacity || !at) return null;
+      !Number.isInteger(used) || used < 0 || used > capacity) return null;
   return { remaining: capacity - used, capacity, date: dateText(at) };
 }
 function detailDescription(item) {
@@ -41,7 +45,7 @@ function detailDescription(item) {
     "Community-shared listing; redemption has not been verified.";
   const quota = reportedSlots(item);
   const slots = quota
-    ? " " + quota.remaining + " of " + quota.capacity + " invites remained in a report dated " + quota.date + " (not live)."
+    ? " " + quota.remaining + (quota.capacity === null ? " invites remained (total not provided)" : " of " + quota.capacity + " invites remained") + " in a report dated " + quota.date + " (not live)."
     : " Remaining invite availability has not been reported.";
   return "Explore Muse invite code " + item.code + ". " + owner + slots;
 }
@@ -59,8 +63,8 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     item.status === "reported-not-working" ? "Reported not working" : "Unverified";
   const quota = reportedSlots(item);
   const usage = quota
-    ? '<strong class="detail-slots-number">' + escapeHtml(quota.remaining) + ' / ' +
-      escapeHtml(quota.capacity) + '</strong><span class="detail-slots-caption">invites remaining, reported ' +
+    ? '<strong class="detail-slots-number">' + escapeHtml(quota.remaining) +
+      (quota.capacity === null ? '' : ' / ' + escapeHtml(quota.capacity)) + '</strong><span class="detail-slots-caption">invites remaining, reported ' +
       escapeHtml(quota.date) + ' · Not live</span>'
     : '<strong class="detail-slots-number">Not reported</strong><span class="detail-slots-caption">No confirmed remaining-slot data</span>';
   const author = item.submittedBy ? '@' + item.submittedBy : 'Community contributor';
