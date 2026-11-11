@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const REPO = "https://github.com/ePlus-DEV/-muse-invite-hub";
+  const REPO = "https://github.com/ePlus-DEV/muse-invite-hub";
   const STATUS = {
     "reported-working": { label: "Reported working", className: "status-reported-working", description: "Community reported this code worked; not verified by Muse." },
     "unverified": { label: "Unverified", className: "", description: "Shared by the community; no redemption feedback yet." },

@@ -1,0 +1,26 @@
+name: Validate website and invite catalog
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Check frontend JavaScript syntax
+        run: node --check assets/app.js
+      - name: Validate public invite catalog
+        run: node scripts/validate.mjs
+      - name: Run catalog validation tests
+        run: node --test scripts/validate.test.mjs

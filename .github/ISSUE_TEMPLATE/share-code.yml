@@ -1,0 +1,40 @@
+name: "✦ Share a Muse invite code"
+description: "Contribute a publicly shareable Muse invite/referral code."
+title: "[Invite] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing! Issues are public. Provide only a public invite/referral code you are authorized to share, never a password, authentication code, session token, cookie or private account detail. Maintainers review submissions before publication.
+  - type: input
+    id: invite_code
+    attributes:
+      label: Invite code
+      description: "A public Muse invite/referral code, not a login or verification code."
+      placeholder: "Your Muse invite code"
+    validations:
+      required: true
+  - type: input
+    id: source_url
+    attributes:
+      label: Public reference (optional)
+      description: "Optional public HTTPS URL for context. Never a private invite or login link."
+      placeholder: "https://..."
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes (optional)
+      description: "Additional conditions or observations; do not promise rewards."
+    validations:
+      required: false
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Contributor checklist
+      options:
+        - label: "I am authorized to share this code publicly and understand this issue is public."
+          required: true
+        - label: "This code is not a password, 2FA code, session token or private credential."
+          required: true
