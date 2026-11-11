@@ -47,19 +47,44 @@ function codeFrom(fields) {
 function findCode(records, code) {
   return records.find(item => item.code.toUpperCase() === code) || null;
 }
+// A dated remaining-only owner report must not imply an unknown total.
+function remainingFromLegacyNotes(fields, label) {
+  const notes = field(fields,label);
+  const matches = [...notes.matchAll(/\b(0|[1-9][0-9]{0,3})\s+(?:uses?|invites?)\s+(?:left|remaining)\b/gi)];
+  return matches.length === 1 ? optionalInteger(matches[0][1],"Remaining invites") : null;
+}
 function actualQuota(fields, date, labels) {
   const total = optionalInteger(field(fields, labels.total), "Total invites");
   const used = optionalInteger(field(fields, labels.used), "Used invites");
-  const remaining = labels.remaining
+  let remaining = labels.remaining
     ? optionalInteger(field(fields, labels.remaining), "Remaining invites") : null;
-  if (total === null) return null;
-  if (total === 0) throw Error("Total invite quota must be positive.");
-  const count = used !== null ? used : remaining !== null ? total - remaining : null;
-  if (count === null) return null;
-  if (count < 0 || count > total || (remaining !== null && total - count !== remaining)) {
-    throw Error("Reported total, used and remaining figures are inconsistent.");
+  if (remaining === null && labels.notes) remaining = remainingFromLegacyNotes(fields,labels.notes);
+  if (total !== null) {
+    if (total === 0) throw Error("Total invite quota must be positive.");
+    const count = used !== null ? used : remaining !== null ? total - remaining : null;
+    if (count === null) return null;
+    if (count < 0 || count > total || (remaining !== null && total - count !== remaining)) {
+      throw Error("Reported total, used and remaining figures are inconsistent.");
+    }
+    return { reportedCapacity: total, reportedUses: count, usageReportedAt: date };
   }
-  return { reportedCapacity: total, reportedUses: count, usageReportedAt: date };
+  if (remaining !== null) return { reportedRemaining: remaining, usageReportedAt: date };
+  return null;
+}
+function ownerMatches(existing, issue) {
+  if (Number.isSafeInteger(existing.submittedById)) return existing.submittedById === issue.user?.id;
+  return String(existing.submittedBy || "").toLowerCase() === issue.user?.login?.toLowerCase();
+}
+function updateQuota(target, quota, date) {
+  if (target.usageReportedAt && target.usageReportedAt > date) return "stale";
+  const keys=["reportedCapacity","reportedUses","reportedRemaining","usageReportedAt"];
+  if (keys.every(key=>target[key]===quota[key])) return "duplicate";
+  for (const key of keys) delete target[key];
+  Object.assign(target,quota);
+  return "updated";
+}
+function rememberOwnerId(target,issue) {
+  if (Number.isSafeInteger(issue.user?.id) && issue.user.id > 0) target.submittedById=issue.user.id;
 }
 function summary(issue, code, action) {
   return "Community Issue #" + issue.number + " (" + action + "), code " + code +
@@ -86,7 +111,27 @@ export function planIssueChange(issue, current) {
         !checklist.includes("[x] This code is not a password")) {
       throw Error("Contributor permission and privacy confirmations are required.");
     }
-    if (existing) return { outcome:"duplicate", kind, code, reason:"This code is already in the published catalog." };
+    if (existing) {
+      if (!ownerMatches(existing,issue)) {
+        return {outcome:"needs-review",kind,code,
+          reason:"The code already exists under a different GitHub owner; manual review is required."};
+      }
+      const quota=actualQuota(f,date,{
+        total:"Invite limit (optional; self-reported)",
+        used:"Uses so far (optional; self-reported)",
+        remaining:"Remaining invites (optional; self-reported)",
+        notes:"Notes (optional)"
+      });
+      if (!quota) return {outcome:"needs-review",kind,code,
+        reason:"Owner confirmed, but no complete count or remaining-only value was provided."};
+      const target=data.find(item=>item.code===existing.code);
+      const state=updateQuota(target,quota,date);
+      if(state!=="updated") return {outcome:state==="stale"?"needs-review":"duplicate",kind,code,
+        reason:state==="stale"?"Newer usage data is already published.":"The published catalog already has this dated quota."};
+      rememberOwnerId(target,issue);
+      action="update owner report";
+      notice="The owner updated a dated self-reported count; this is NOT a live Muse balance.";
+    } else {
     const id = "community-issue-" + issue.number;
     if (data.some(item => item.id === id)) throw Error("Catalog ID already exists.");
     const entry = {
@@ -94,22 +139,26 @@ export function planIssueChange(issue, current) {
       submittedBy:issue.user.login,
       note:"Community-submitted in issue #" + issue.number + "; redemption not independently verified."
     };
+    rememberOwnerId(entry,issue);
     const reported = actualQuota(f,date,{
       total:"Invite limit (optional; self-reported)",
-      used:"Uses so far (optional; self-reported)"
+      used:"Uses so far (optional; self-reported)",
+      remaining:"Remaining invites (optional; self-reported)",
+      notes:"Notes (optional)"
     });
     if (reported) Object.assign(entry,reported);
     else notice = "Usage numbers were absent or incomplete; no available-slot count has been guessed.";
     const firstCommunity = data.findIndex(item => item.featured !== true);
     data.splice(firstCommunity < 0 ? data.length : firstCommunity, 0, entry);
     action = "add";
+    }
   } else if (kind === "count") {
     if (!existing) return { outcome:"needs-review",kind,code,reason:"Code not yet in the catalog; report requires manual triage." };
     const confirmation = field(f,"Confirmation");
     if (!confirmation.includes("[x] I confirm that these figures came from a Muse invite screen")) {
       throw Error("The owner must confirm the figures came from their Muse invite screen.");
     }
-    if (String(existing.submittedBy || "").toLowerCase() !== issue.user.login.toLowerCase()) {
+    if (!ownerMatches(existing,issue)) {
       return { outcome:"needs-review",kind,code,reason:"Only the cataloged code owner may submit a quota proposal automatically." };
     }
     const quota = actualQuota(f,date,{
@@ -117,14 +166,12 @@ export function planIssueChange(issue, current) {
       used:"Already used invites (if known)",
       remaining:"Remaining invites shown by Muse"
     });
-    if (!quota) return { outcome:"needs-review",kind,code,reason:"Total and used/remaining are incomplete; no quota was invented." };
+    if (!quota) return { outcome:"needs-review",kind,code,reason:"Supply remaining invites or a consistent total and used count." };
     const target=data.find(item=>item.code===existing.code);
-    if(target.reportedCapacity===quota.reportedCapacity &&
-       target.reportedUses===quota.reportedUses &&
-       target.usageReportedAt===quota.usageReportedAt) {
-       return {outcome:"duplicate",kind,code,reason:"The published catalog already has this dated quota."};
-    }
-    Object.assign(target,quota);
+    const state=updateQuota(target,quota,date);
+    if(state!=="updated") return {outcome:state==="stale"?"needs-review":"duplicate",kind,code,
+      reason:state==="stale"?"Newer usage data is already published.":"The published catalog already has this dated quota."};
+    rememberOwnerId(target,issue);
     action = "update quota";
   } else {
     if (!existing) return {outcome:"needs-review",kind,code,reason:"Code not in the catalog; feedback needs manual review."};
