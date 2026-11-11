@@ -49,7 +49,8 @@ jobs:
           node scripts/audit-links.mjs
           node --test scripts/validate.test.mjs scripts/preview.test.mjs scripts/audit-links.test.mjs
           node --check scripts/site-pages.mjs
-          node --test scripts/site-pages.test.mjs
+          node --test scripts/site-pages.test.mjs scripts/verify-production.test.mjs
+          node --check scripts/verify-production.mjs
           node --check assets/app.js
           node --check assets/detail.js
           node --check scripts/build-pages.mjs
@@ -123,6 +124,8 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify live production detail, assets and sitemap after deployment
+        run: node scripts/verify-production.mjs
       - name: Post preview links only after live asset checks
         env:
           GH_TOKEN: ${{ github.token }}
