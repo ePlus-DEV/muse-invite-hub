@@ -10,6 +10,9 @@
   const featuredPanel = document.getElementById("featured-invite");
   const featuredCode = document.getElementById("featured-code");
   const featuredCopy = document.getElementById("featured-copy");
+  const featuredRemaining = document.getElementById("featured-remaining");
+  const featuredRemainingDetail = document.getElementById("featured-remaining-detail");
+  const featuredRemainingUpdated = document.getElementById("featured-remaining-updated");
   const empty = document.getElementById("empty-state");
   const searchInput = document.getElementById("code-search");
   const sortInput = document.getElementById("sort-codes");
@@ -39,12 +42,34 @@
     const base = REPO + "/issues/new?template=" + encodeURIComponent(template);
     return code ? base + "&invite_code=" + encodeURIComponent(code) : base;
   }
+  function reportedRemaining(item) {
+    if (!item ||
+      !Number.isInteger(item.reportedUses) ||
+      !Number.isInteger(item.reportedCapacity) ||
+      item.reportedCapacity <= 0 ||
+      item.reportedUses < 0 ||
+      item.reportedUses > item.reportedCapacity ||
+      typeof item.usageReportedAt !== "string") return null;
+    return {
+      remaining: item.reportedCapacity - item.reportedUses,
+      total: item.reportedCapacity,
+      date: formatDate(item.usageReportedAt)
+    };
+  }
   function updateFeatured() {
     featuredInvite = codes.find(item => item.featured === true) || null;
     featuredPanel.hidden = !featuredInvite;
     if (featuredInvite) {
       featuredCode.textContent = featuredInvite.code;
       featuredCopy.setAttribute("aria-label", "Copy featured Muse invite code " + featuredInvite.code);
+      const snapshot = reportedRemaining(featuredInvite);
+      featuredRemaining.textContent = snapshot ? snapshot.remaining.toLocaleString("en-US") : "Not reported";
+      featuredRemainingDetail.textContent = snapshot
+        ? "of " + snapshot.total.toLocaleString("en-US") + " reported total slots"
+        : "No remaining-slot figures have been supplied.";
+      featuredRemainingUpdated.textContent = snapshot
+        ? "Owner-reported on " + snapshot.date + " · Not live"
+        : "Awaiting an owner-reported snapshot · Not live";
     }
   }
   featuredCopy.addEventListener("click", () => {
@@ -122,9 +147,12 @@
         }
       } catch { /* Malformed source references are discarded. */ }
     }
+    const snapshot = reportedRemaining(item);
     let usageNote = null;
-    if (Number.isInteger(item.reportedUses) && Number.isInteger(item.reportedCapacity) && item.usageReportedAt) {
-      usageNote = el("p", "card-usage", "Owner-reported uses: " + item.reportedUses + "/" + item.reportedCapacity + " · " + formatDate(item.usageReportedAt) + " · Not live");
+    if (snapshot) {
+      usageNote = el("p", "card-usage", "Reported remaining: " + snapshot.remaining + " / " + snapshot.total + " · " + snapshot.date + " · Not live");
+    } else {
+      usageNote = el("p", "card-usage card-usage-unknown", "Remaining: Not reported");
     }
     const actions = el("div", "card-actions");
     const copy = el("button", "", "Copy code");

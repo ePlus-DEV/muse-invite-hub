@@ -185,3 +185,14 @@ button{cursor:pointer}
 .code-card-featured .card-indicator .dot{background:#d8b7ff}
 @media(max-width:560px){.owner-featured{padding:15px}.owner-featured-main{align-items:stretch}.owner-featured-copy{padding:9px 12px;min-height:42px;align-self:flex-end}.owner-featured-code{font-size:31px;letter-spacing:2px}.owner-featured-status{font-size:9px}}
 @media(max-width:360px){.owner-featured-main{flex-wrap:wrap}.owner-featured-copy{width:100%}}
+
+/* Dated, owner-reported remaining invitation slots */
+.owner-remaining-panel{margin:15px 0 0;padding:15px 16px;background:#0c0d2277;border:1px solid #b8a5ff4f;border-radius:12px}
+.owner-remaining-main{display:flex;flex-wrap:wrap;align-items:baseline;gap:5px 12px}
+.owner-remaining-kicker{color:#c3b0f1;font-size:12px;font-weight:700;width:100%}
+.owner-remaining-number{font-family:"Space Grotesk",sans-serif;font-size:clamp(21px,2.8vw,28px);line-height:1.4;color:#fff}
+.owner-remaining-detail{color:#a9a8c6;font-size:12px}
+.owner-remaining-meta{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;margin-top:7px;color:#aaa6cb;font-size:11px}
+.owner-remaining-meta a{color:#dec8ff;text-decoration:underline;text-underline-offset:3px}
+.owner-remaining-meta a:hover{color:white}
+.card-usage-unknown{background:transparent;border-style:dashed;color:#9d9bb3}

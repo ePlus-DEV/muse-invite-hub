@@ -59,3 +59,12 @@ test("non-owner or nonfeatured codes cannot claim owner confirmation", () => {
   assert.ok(validateCatalog([{ ...sample(), submittedBy: "hoangsvit", ownerConfirmed: true }]).some(e => e.includes("only the featured")));
   assert.ok(validateCatalog([{ ...sample(), ownerConfirmed: "true" }]).some(e => e.includes("must be a boolean")));
 });
+
+test("full allocation is allowed and means zero reported remaining", () => {
+  const entry = { ...sample(), reportedUses: 30, reportedCapacity: 30, usageReportedAt: "2026-11-11" };
+  assert.deepEqual(validateCatalog([entry]), []);
+  assert.equal(entry.reportedCapacity - entry.reportedUses, 0);
+});
+test("reported usage must never be greater than capacity", () => {
+  assert.ok(validateCatalog([{ ...sample(), reportedUses: 31, reportedCapacity: 30, usageReportedAt: "2026-11-11" }]).some(e => e.includes("cannot exceed")));
+});
