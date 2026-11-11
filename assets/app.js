@@ -17,6 +17,10 @@
   const searchInput = document.getElementById("code-search");
   const sortInput = document.getElementById("sort-codes");
   const resultCount = document.getElementById("result-count");
+  const more = document.getElementById("directory-more");
+  const moreButton = document.getElementById("load-more-codes");
+  const PAGE_SIZE = 6;
+  let displayLimit = PAGE_SIZE;
   const announcer = document.getElementById("live-message");
   const filters = Array.from(document.querySelectorAll("[data-filter]"));
   let codes = [];
@@ -164,13 +168,17 @@
     report.target = "_blank";
     report.rel = "noopener noreferrer";
     report.setAttribute("aria-label", "Report an issue with invite code " + item.code);
-    actions.append(copy, report);
+    const detail = el("a", "card-detail-link", "View details ↗");
+    detail.href = "./codes/" + encodeURIComponent(item.code) + "/";
+    detail.setAttribute("aria-label", "View details for Muse invite code " + item.code);
+    actions.append(copy, detail, report);
     card.append(top, value, note);
     if (usageNote) card.append(usageNote);
     card.append(meta, actions);
     return card;
   }
-  function render() {
+  function render(resetLimit = false) {
+    if (resetLimit) displayLimit = PAGE_SIZE;
     const q = searchInput.value.trim().toLowerCase();
     const visible = codes.filter(item => (filter === "all" || item.status === filter) && (
       item.code.toLowerCase().includes(q) ||
@@ -183,8 +191,15 @@
       return sort === "code" ? a.code.localeCompare(b.code) : sort === "oldest"
         ? a.addedAt.localeCompare(b.addedAt) : b.addedAt.localeCompare(a.addedAt);
     });
-    grid.replaceChildren(...visible.map(createCard));
-    resultCount.textContent = visible.length.toLocaleString("en-US") + " " + (visible.length === 1 ? "code" : "codes") + " found";
+    const page = visible.slice(0, displayLimit);
+    grid.replaceChildren(...page.map(createCard));
+    resultCount.textContent = "Showing " + page.length.toLocaleString("en-US") +
+      " of " + visible.length.toLocaleString("en-US") +
+      " " + (visible.length === 1 ? "code" : "codes");
+    more.hidden = visible.length <= displayLimit;
+    if (!more.hidden) {
+      moreButton.textContent = "Load " + Math.min(PAGE_SIZE, visible.length - displayLimit) + " more codes";
+    }
     empty.hidden = visible.length !== 0;
     if (visible.length === 0) {
       grid.hidden = true;
@@ -228,10 +243,21 @@
       item.classList.toggle("active", isActive);
       item.setAttribute("aria-pressed", String(isActive));
     });
-    render();
+    render(true);
   }));
-  searchInput.addEventListener("input", render);
-  sortInput.addEventListener("change", render);
+  searchInput.addEventListener("input", () => render(true));
+  sortInput.addEventListener("change", () => render(true));
+  moreButton.addEventListener("click", () => {
+    const previousCount = Math.min(displayLimit, codes.length);
+    displayLimit += PAGE_SIZE;
+    render();
+    const next = grid.children[previousCount];
+    if (next) {
+      next.setAttribute("tabindex", "-1");
+      next.focus({ preventScroll: true });
+    }
+    announce("Loaded more invite codes.");
+  });
   document.addEventListener("keydown", event => {
     if (event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey &&
       !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) {

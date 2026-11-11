@@ -1,9 +1,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { validateCatalog } from "./validate.mjs";
+import { generateSite } from "./site-pages.mjs";
 
 export const PREVIEW_PREFIX = "pr-preview";
-export const REQUIRED_FILES = ["index.html", "assets/app.js", "assets/styles.css", "data/invites.json"];
+export const REQUIRED_FILES = ["index.html", "assets/app.js", "assets/detail.js", "assets/styles.css", "data/invites.json"];
 const ALLOWED = /^(?:index\.html|assets\/[a-zA-Z0-9_./-]+\.(?:js|css|svg|png|jpg|jpeg|webp|avif)|data\/[a-zA-Z0-9_./-]+\.json)$/;
 
 export function isSafeSiteFile(path) {
@@ -62,6 +63,13 @@ export function buildPreview({ files, readFile, dest, number, sha, mergeSha = nu
     }
   }
   writeFileSync(join(dest, ".nojekyll"), "");
+  // Trusted renderer reads PR JSON as data and writes all static detail pages.
+  // Never evaluate script files supplied by the PR in this privileged job.
+  generateSite(dest, {
+    origin,
+    basePath: hosted ? "/pr-preview/pr-" + number + "/" : "/",
+    preview: true
+  });
   const metadata = {
     pr_number: number,
     head_sha: sha,

@@ -9,6 +9,7 @@ const head = "a".repeat(40);
 const source = new Map([
   ["index.html", Buffer.from('<!doctype html><html><head><link rel="canonical" href="https://muse.eplus.dev/"><meta property="og:url" content="https://muse.eplus.dev/"><title>Test</title></head><body><a href="#codes">Codes</a><script src="./assets/app.js"></script></body></html>')],
   ["assets/app.js", Buffer.from('console.log("preview test")')],
+  ["assets/detail.js", Buffer.from('console.log("detail test")')],
   ["assets/styles.css", Buffer.from('body{color:red}')],
   ["data/invites.json", Buffer.from("[]")]
 ]);

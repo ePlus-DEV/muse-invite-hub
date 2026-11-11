@@ -17,6 +17,10 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. No npm dependenc
 - Preserve existing SEO titles, descriptions, URLs and other content unless explicitly requested.
 - Main is production. Work through independent branches and PRs. Never force-push or stack PRs.
 - Keep relative asset paths so GitHub Pages works with project subpaths and custom domains.
+- Generate detail pages via trusted scripts/site-pages.mjs from validated catalog JSON. Never claim Muse officially validated community codes.
+- Only owner-confirmed featured detail pages are indexable and appear in sitemap; unverified community details are noindex,follow and preview details noindex,nofollow,noarchive.
+- Keep homepage title, description and canonical unchanged. Pre-render detail content, escape untrusted notes and usernames, and use WebPage/BreadcrumbList JSON-LD on detail.
+- Directory Load more must preserve filtering and sorting, reset limit on changes, and work without adding query-string pagination or duplicate SEO pages.
 - Treat PR preview inputs as untrusted data: copy approved static assets from the PR merge ref, but NEVER run PR scripts in a privileged publish workflow.
 - Production must be copied from trusted main on every Pages publish. Rebuild all eligible open PR preview directories together; no stale/closed PR directories.
 - Previews require green CI at the current PR head SHA and a safe merge ref. Mark generated preview HTML noindex, remove production canonical, add PR-scoped base path and preview-meta.json, and verify live HTML/CSS/JS/catalog before posting a preview link.

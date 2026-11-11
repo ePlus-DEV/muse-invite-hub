@@ -48,6 +48,8 @@ jobs:
           node scripts/validate.mjs
           node --test scripts/validate.test.mjs scripts/preview.test.mjs
           node --check assets/app.js
+          node --check assets/detail.js
+          node --test scripts/site-pages.test.mjs
           node --check scripts/build-pages.mjs
           node --check scripts/post-preview-status.mjs
       - name: Build main site and eligible PR previews
@@ -60,7 +62,12 @@ jobs:
           test -s _site/assets/app.js
           test -s _site/assets/styles.css
           test -s _site/data/invites.json
+          test -s _site/codes/DPNIHH/index.html
+          test -s _site/assets/detail.js
+          test -s _site/assets/social-preview.png
           test -s _site/pr-preview/manifest.json
+          grep -Fq 'https://muse.eplus.dev/codes/DPNIHH/' _site/sitemap.xml
+          grep -Fq 'noindex,follow' _site/codes/UPWS4W/index.html
           grep -Fq 'rel="canonical" href="https://muse.eplus.dev/"' _site/index.html
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
@@ -73,6 +80,9 @@ jobs:
                 !fs.existsSync(path+'assets/styles.css') ||
                 !fs.existsSync(path+'assets/app.js') ||
                 !fs.existsSync(path+'data/invites.json') ||
+                !fs.existsSync(path+'assets/detail.js') ||
+                !fs.existsSync(path+'codes/DPNIHH/index.html') ||
+                !fs.readFileSync(path+'codes/DPNIHH/index.html','utf8').includes('noindex,nofollow,noarchive') ||
                 JSON.parse(fs.readFileSync(path+'preview-meta.json','utf8')).head_sha !== preview.head_sha) {
               throw Error('Invalid or incomplete preview #'+preview.number);
             }
