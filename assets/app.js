@@ -87,7 +87,13 @@
     const indicator = el("div", "card-indicator");
     indicator.append(el("span", "dot"), el("span", "", item.featured ? "FEATURED · EPLUS.DEV" : "COMMUNITY CODE"));
     const badge = el("span", "status-badge " + status.className, status.label);
-    badge.title = status.description;
+    if (item.ownerConfirmed === true && item.featured === true) {
+      badge.textContent = "✓ Verified Owner";
+      badge.classList.add("status-owner-confirmed");
+      badge.title = "Owner-confirmed invite code. Redemption has not been independently tested.";
+    } else {
+      badge.title = status.description;
+    }
     top.append(indicator, badge);
 
     const value = el("h3", "code-value", item.code);
