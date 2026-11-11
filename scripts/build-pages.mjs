@@ -60,6 +60,7 @@ async function listOpenPRs() {
   return prs.filter(pr => pr.base?.ref === "main" &&
     pr.head?.repo?.full_name === REPO &&
     pr.head?.ref !== "main" &&
+    !(pr.draft === true && pr.head.ref.startsWith("auto/issue-")) &&
     Number.isSafeInteger(pr.number));
 }
 function git(args, options = {}) {

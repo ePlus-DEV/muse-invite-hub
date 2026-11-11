@@ -11,7 +11,7 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. No npm dependenc
 - Preserve attributed contributor handles for historical public code listings; do not imply contributors submitted directly to this site or that Muse validated a code.
 - Do not mention, promote or link unrelated GitHub repositories in website content, catalogs, README, forms or generated artifacts. Do not add external repo URLs to sourceUrl. Preserve historical provenance in Git commit history.
 - Self-reported usage limits are snapshots. You MAY display dated **reported remaining = reportedCapacity − reportedUses** if both counts and the report date are present, clearly labeled **Not live**. Never guess capacity/usage or call it live available slots. If absent, display **Not reported**.
-- Never automatically publish user-submitted GitHub Issue content. Review and deduplicate before modifying data/invites.json.
+- Never automatically publish user-submitted GitHub Issue content. The trusted Issue automation may propose a reviewed-only Draft PR changing data/invites.json, but must not merge, force-push or expose automated Draft content through public Pages previews. Validate and deduplicate before proposing changes.
 - Never request, store or publish passwords, OTPs, access tokens, private login links, cookies or personal data.
 - Render untrusted data using textContent only; never inject raw HTML or execute user submissions.
 - Never claim affiliation with or endorsement by Meta or Muse.

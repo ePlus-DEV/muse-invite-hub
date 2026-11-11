@@ -1,0 +1,54 @@
+name: Issue to Draft PR
+
+# Only trusted default-branch code executes with write access.
+# Untrusted Issue text is read as data and is NEVER embedded in shell commands.
+on:
+  issues:
+    types: [opened, edited, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Open GitHub Issue number to reprocess"
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: muse-issue-automation-${{ github.event.issue.number || inputs.issue_number }}
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request == null &&
+       (startsWith(github.event.issue.title, '[Invite]') ||
+        startsWith(github.event.issue.title, '[Count update]') ||
+        startsWith(github.event.issue.title, '[Code feedback]')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Verify automation and catalog
+        run: |
+          node --check scripts/issue-to-pr.mjs
+          node --test scripts/issue-to-pr.test.mjs
+          node scripts/validate.mjs
+      - name: Propose review-only Draft PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+        run: node scripts/issue-to-pr.mjs
