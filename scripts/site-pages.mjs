@@ -99,17 +99,18 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '  <meta property="og:image" content="' + root + base.slice(0, -1) + '/assets/social-preview.png">\n' +
     '  <meta name="twitter:card" content="summary_large_image">\n' +
     '  <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">\n' +
+    '  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">\n' +
     '  <link rel="stylesheet" href="../../assets/styles.css">\n' +
     '  <script type="application/ld+json">' + jsonLd(graph) + '</script>\n' +
     '  <script src="../../assets/detail.js" defer></script>\n' +
     '</head>\n<body>\n' +
     '  <a class="skip-link" href="#detail-title">Skip to invite details</a>\n' +
     '  <header class="site-header"><div class="container nav-shell">' +
-    '    <a class="brand" href="../../" aria-label="Muse Invite Hub homepage"><span class="brand-icon" aria-hidden="true">✦</span>' +
+    '    <a class="brand" href="../../" aria-label="Muse Invite Hub homepage"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M13 45C16 31 19 21 23 21.5C27 22 26.5 33 25.5 41C28 29 32 20.5 36 21C40 21.5 39.5 33 38.5 41C41.5 31 45 25 51 22" stroke="currentColor" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
     '      <span class="brand-type"><strong>Muse Invite Hub</strong><small>THE COMMUNITY HUB</small></span></a>' +
     '    <nav class="nav-links" aria-label="Main navigation"><a href="../../#codes">Explore codes</a>' +
     '      <a href="../../#how-it-works">How it works</a><a href="../../#faq">FAQ</a></nav>' +
-    '    <a class="button button-primary nav-share" href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" target="_blank" rel="noopener noreferrer">+ Share a code</a>' +
+    '    <a class="button button-primary nav-share" href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-plus" aria-hidden="true"></i> Share a code</a>' +
     '  </div></header>\n' +
     '  <main class="container detail-page">' +
     '    <nav class="detail-breadcrumb" aria-label="Breadcrumb"><a href="../../">Home</a><span aria-hidden="true">/</span>' +
@@ -120,11 +121,11 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '        <h1 id="detail-title">Invite code <span class="detail-code-text">' + escapeHtml(item.code) + '</span></h1>' +
     '        <p class="detail-lead">' + escapeHtml(description) + '</p>' +
     '        <div class="detail-code-panel">' +
-    '          <div class="detail-code-heading"><span class="detail-status">' + escapeHtml(status) + '</span>' +
+    '          <div class="detail-code-heading"><span class="detail-status">' + (item.ownerConfirmed ? '<i class="fa-solid fa-check" aria-hidden="true"></i> ' : '') + escapeHtml(status) + '</span>' +
     '            <span class="detail-owner">' + escapeHtml(author) + '</span></div>' +
     '          <p class="detail-code" id="detail-code">' + escapeHtml(item.code) + '</p>' +
-    '          <div class="detail-action-row"><button class="button button-primary" type="button" id="detail-copy">Copy invite code</button>' +
-    '            <a class="button button-outlined" href="https://muse.ai/join" target="_blank" rel="noopener noreferrer">Open Muse ↗</a></div>' +
+    '          <div class="detail-action-row"><button class="button button-primary" type="button" id="detail-copy"><i class="fa-regular fa-copy" aria-hidden="true"></i> <span class="detail-copy-label">Copy invite code</span></button>' +
+    '            <a class="button button-outlined" href="https://muse.ai/join" target="_blank" rel="noopener noreferrer">Open Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div>' +
     '          <p class="detail-caution">' + escapeHtml(ownerText) + '</p>' +
     '        </div>' + notes +
     '        <section class="detail-instructions" aria-labelledby="how-to-redeem"><h2 id="how-to-redeem">How to use this code</h2>' +
@@ -143,9 +144,9 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '            <div><dt>Redemption status</dt><dd>' + escapeHtml(item.status === "unverified" ? "Unverified" : statusLine) + '</dd></div></dl>' +
     '        </div><div class="detail-info-card detail-feedback"><h2>Does this code work?</h2><p>Share your experience to help the community keep listings accurate.</p>' +
     '          <a href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml&invite_code=' +
-      encodeURIComponent(item.code) + '" target="_blank" rel="noopener noreferrer">Give feedback ↗</a></div>' +
+      encodeURIComponent(item.code) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-comment" aria-hidden="true"></i> Give feedback</a></div>' +
     '      </aside>' +
-    '    </div><a class="detail-back" href="../../#codes">← Back to all invite codes</a>' +
+    '    </div><a class="detail-back" href="../../#codes"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to all invite codes</a>' +
     '    <p class="detail-independent">Muse Invite Hub is independent and not affiliated with Muse or Meta.</p>' +
     '    <p id="detail-live" class="sr-only" role="status" aria-live="polite"></p>' +
     '  </main>\n' +

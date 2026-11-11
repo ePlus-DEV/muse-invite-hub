@@ -34,6 +34,15 @@
     if (text !== undefined) node.textContent = text;
     return node;
   };
+  const iconElement = className => {
+    const icon = document.createElement("i");
+    icon.className = className;
+    icon.setAttribute("aria-hidden", "true");
+    return icon;
+  };
+  const setButtonContent = (button, iconClass, text) => {
+    button.replaceChildren(iconElement(iconClass), document.createTextNode(" " + text));
+  };
   function announce(message) {
     announcer.textContent = message;
   }
@@ -82,9 +91,13 @@
     if (featuredInvite) copyCode(featuredInvite.code, featuredCopy);
   });
   function updateStats() {
-    document.getElementById("stat-total").textContent = codes.length.toLocaleString("en-US");
-    document.getElementById("stat-working").textContent = codes.filter(c => c.status === "reported-working").length.toLocaleString("en-US");
-    document.getElementById("stat-unverified").textContent = codes.filter(c => c.status === "unverified").length.toLocaleString("en-US");
+    const setText = (id, value) => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = value;
+    };
+    setText("stat-total", codes.length.toLocaleString("en-US"));
+    setText("stat-working", codes.filter(c => c.status === "reported-working").length.toLocaleString("en-US"));
+    setText("stat-unverified", codes.filter(c => c.status === "unverified").length.toLocaleString("en-US"));
   }
   function fallbackCopy(text) {
     const input = document.createElement("textarea");
@@ -102,13 +115,13 @@
     try {
       if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(code);
       else if (!fallbackCopy(code)) throw new Error("Copy failed");
-      button.textContent = "✓ Copied!";
+      setButtonContent(button, "fa-solid fa-check", "Copied!");
       announce("Copied invite code " + code + ". Paste it in Muse to try redeeming.");
-      window.setTimeout(() => { if (button.isConnected) button.textContent = "Copy code"; }, 2200);
+      window.setTimeout(() => { if (button.isConnected) setButtonContent(button, "fa-regular fa-copy", "Copy code"); }, 2200);
     } catch {
       announce("Unable to copy automatically. Select the displayed code to copy it.");
-      button.textContent = "Copy failed";
-      window.setTimeout(() => { if (button.isConnected) button.textContent = "Copy code"; }, 2200);
+      setButtonContent(button, "fa-solid fa-xmark", "Copy failed");
+      window.setTimeout(() => { if (button.isConnected) setButtonContent(button, "fa-regular fa-copy", "Copy code"); }, 2200);
     }
   }
   function createCard(item) {
@@ -119,7 +132,7 @@
     indicator.append(el("span", "dot"), el("span", "", item.featured ? "FEATURED · EPLUS.DEV" : "COMMUNITY CODE"));
     const badge = el("span", "status-badge " + status.className, status.label);
     if (item.ownerConfirmed === true && item.featured === true) {
-      badge.textContent = "✓ Verified Owner";
+      badge.replaceChildren(iconElement("fa-solid fa-check"), document.createTextNode(" Verified Owner"));
       badge.classList.add("status-owner-confirmed");
       badge.title = "Owner-confirmed invite code. Redemption has not been independently tested.";
     } else {
@@ -132,13 +145,13 @@
     const meta = el("div", "card-meta");
     meta.append(el("span", "", "Listed " + formatDate(item.addedAt)));
     if (item.submittedBy) {
-      const author = el("a", "", "@" + item.submittedBy);
+      const author = el("a", "card-author", "@" + item.submittedBy);
       author.href = "https://github.com/" + encodeURIComponent(item.submittedBy);
       author.target = "_blank";
       author.rel = "noopener noreferrer";
       meta.append(author);
     } else {
-      meta.append(el("span", "", "Community listing"));
+      meta.append(el("span", "card-author", "Community listing"));
     }
     const snapshot = reportedRemaining(item);
     let usageNote = null;
@@ -148,19 +161,23 @@
       usageNote = el("p", "card-usage card-usage-unknown", "Remaining: Not reported");
     }
     const actions = el("div", "card-actions");
-    const copy = el("button", "", "Copy code");
+    const copy = el("button");
     copy.type = "button";
+    setButtonContent(copy, "fa-regular fa-copy", "Copy code");
     copy.setAttribute("aria-label", "Copy invite code " + item.code);
     copy.addEventListener("click", () => copyCode(item.code, copy));
-    const report = el("a", "", "Give feedback ↗");
+    const report = el("a", "card-feedback-link");
+    report.append(iconElement("fa-regular fa-comment"), document.createTextNode(" Give feedback"));
     report.href = issueUrl("report-code.yml", item.code);
     report.target = "_blank";
     report.rel = "noopener noreferrer";
     report.setAttribute("aria-label", "Report an issue with invite code " + item.code);
-    const detail = el("a", "card-detail-link", "View details ↗");
+    const detail = el("a", "card-detail-link", "View details");
+    detail.append(document.createTextNode(" "), iconElement("fa-solid fa-arrow-up-right-from-square"));
     detail.href = "./codes/" + encodeURIComponent(item.code) + "/";
     detail.setAttribute("aria-label", "View details for Muse invite code " + item.code);
-    actions.append(copy, detail, report);
+    actions.append(copy, detail);
+    meta.append(report);
     card.append(top, value, note);
     if (usageNote) card.append(usageNote);
     card.append(meta, actions);

@@ -4,6 +4,13 @@
   const code = document.getElementById("detail-code");
   const live = document.getElementById("detail-live");
   if (!button || !code || !live) return;
+  const label = button.querySelector(".detail-copy-label");
+  const icon = button.querySelector("i");
+  const setLabel = (text, iconClass) => {
+    if (label) label.textContent = text;
+    else button.textContent = text;
+    if (icon && iconClass) icon.className = iconClass;
+  };
   button.addEventListener("click", async () => {
     const value = code.textContent.trim();
     try {
@@ -21,13 +28,13 @@
         input.remove();
         if (!copied) throw Error("Unable to copy");
       }
-      button.textContent = "✓ Copied!";
+      setLabel("Copied!", "fa-solid fa-check");
       live.textContent = "Copied invitation code " + value + ". Open Muse to try redeeming it.";
-      window.setTimeout(() => { button.textContent = "Copy invite code"; }, 2400);
+      window.setTimeout(() => { setLabel("Copy invite code", "fa-regular fa-copy"); }, 2400);
     } catch {
-      button.textContent = "Copy failed";
+      setLabel("Copy failed", "fa-solid fa-xmark");
       live.textContent = "Select and copy the code manually.";
-      window.setTimeout(() => { button.textContent = "Copy invite code"; }, 2400);
+      window.setTimeout(() => { setLabel("Copy invite code", "fa-regular fa-copy"); }, 2400);
     }
   });
 })();
