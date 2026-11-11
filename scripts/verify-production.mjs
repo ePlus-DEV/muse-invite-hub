@@ -5,7 +5,7 @@ const ORIGIN = "https://muse.eplus.dev";
 const CODE = "DPNIHH";
 const PATHS = [
   "/", "/codes/" + CODE + "/", "/codes/" + CODE + "/index.html",
-  "/assets/styles.css", "/assets/detail.js", "/assets/social-preview.png",
+  "/assets/styles.css", "/assets/detail.js", "/assets/social-preview.png", "/llms.txt",
   "/sitemap.xml"
 ];
 
@@ -34,6 +34,7 @@ export async function probeProduction({ origin = ORIGIN, get = fetch, nonce = "c
   const js = results.get("/assets/detail.js");
   const image = results.get("/assets/social-preview.png");
   const sitemap = results.get("/sitemap.xml");
+  const llms = results.get("/llms.txt");
 
   if (!homepage.includes('rel="canonical" href="' + root + '/"')) {
     throw new Error("/: missing production homepage canonical");
@@ -58,6 +59,10 @@ export async function probeProduction({ origin = ORIGIN, get = fetch, nonce = "c
     throw new Error("One or more detail assets are stale or missing expected content");
   }
   if (image.byteLength < 500) throw new Error("Social preview image too small");
+  if (!llms.startsWith("# Muse Invite Hub") || !llms.includes(root + "/") ||
+      !llms.includes("not a live code-validity feed")) {
+    throw new Error("/llms.txt: missing or incorrect AI guide");
+  }
   if (!sitemap.includes("<loc>" + root + "/codes/" + CODE + "/</loc>")) {
     throw new Error("/sitemap.xml: missing indexable detail URL");
   }

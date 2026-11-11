@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const INPUTS = ["index.html", "assets", "data", "README.md", "CONTRIBUTING.md",
-  "AGENTS.md", ".github", "scripts"];
+  "AGENTS.md", "llms.txt", ".github", "scripts"];
 const EXTENSIONS = new Set([".js", ".mjs", ".json", ".html", ".md", ".yml", ".yaml", ".css", ".txt"]);
 
 export function findUnrelatedGithubRepos(content) {

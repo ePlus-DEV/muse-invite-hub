@@ -21,6 +21,15 @@ GitHub Issues and PRs are **public**. Never post passwords, OTPs, cookies, sessi
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full process, supported fields and local testing.
 
+## AI agents, llms.txt and search discoverability
+
+- [llms.txt](https://muse.eplus.dev/llms.txt) supplies concise public navigation links for AI agents and readers, not real-time invite validation or guaranteed search visibility.
+- [AGENTS.md](AGENTS.md) documents coding-agent, SEO, and AEO safeguards.
+- Homepage SEO metadata, canonical URL, GA4, and WebSite structured data are preserved. Owner-confirmed detail pages may be indexed; unverified detail pages and PR previews retain their noindex rules.
+- Clear, accurate Q&A helps users understand how to copy and contribute codes. Google Search does not require llms.txt to appear in AI results.
+
+Run `node --test scripts/seo-aeo.test.mjs` with Node.js 24.
+
 ## Features
 
 - Search, filter, sort and browse the directory with **Load more** (six codes per batch).
