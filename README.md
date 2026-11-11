@@ -10,6 +10,7 @@
 
 - Responsive static site with search, filters, sorting and copy-to-clipboard
 - Catalog stats based on published community-submitted entries
+- Featured owner's invite `DPNIHH` shown prominently in the hero and pinned above community codes; ownership is not redemption verification
 - GitHub Issue Forms for contributing codes and reporting success/failure feedback
 - Original source links and dated contributor-reported usage snapshots (never live availability)
 - Maintainer-reviewed changes to the public JSON catalog (no auto-publication)
@@ -23,7 +24,7 @@
 3. A maintainer checks for duplicates, reviews the issue, and updates [data/invites.json](data/invites.json) via a PR.
 4. Report broken codes using [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml).
 
-**Source-backed launch catalog:** The site includes 11 codes explicitly published in the public [Muse Use Cases](https://github.com/jaxxchen003/muse-use-cases) README or [invite-code issues](https://github.com/jaxxchen003/muse-use-cases/issues). Each card links to its source. All are **unverified**; we have not tested redemption or confirmed current availability with Muse.
+**Source-backed launch catalog:** The site includes 11 codes explicitly published in the public [Muse Use Cases](https://github.com/jaxxchen003/muse-use-cases) README or [invite-code issues](https://github.com/jaxxchen003/muse-use-cases/issues). Each card links to its source. All are **unverified**; we have not tested redemption or confirmed current availability with Muse. The site owner has separately supplied `DPNIHH`; it is featured and also marked `unverified` until a real Muse redemption result is provided.
 
 The upstream repository inspired the GitHub Issue workflow and feedback model. Muse Invite Hub does not mirror its use-case catalog. See [CONTRIBUTING.md](CONTRIBUTING.md) for review rules.
 
