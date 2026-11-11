@@ -17,8 +17,8 @@ body:
   - type: input
     id: source_url
     attributes:
-      label: Public reference (optional)
-      description: "Optional public HTTPS URL for context. Never a private invite or login link."
+      label: Public confirmation or context (optional)
+      description: "Optional HTTPS page you control or official Muse reference. Do not link to unrelated GitHub projects or private invite/login links."
       placeholder: "https://..."
     validations:
       required: false

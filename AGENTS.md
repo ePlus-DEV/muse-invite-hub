@@ -8,7 +8,8 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. No npm dependenc
 - The site owner confirms ownership of the featured `DPNIHH` code. Label it **Verified Owner** via `ownerConfirmed: true`. This is an ownership assertion, not independently verified Muse redemption. Keep `status: unverified` until an actual Muse redemption result is available.
 - Keep at most one `featured: true` code. Pin it ahead of community codes regardless of sort selection.
 - Treat code statuses as community-reported, potentially outdated.
-- External public codes require attributable source URLs; never imply upstream endorsement.
+- Preserve attributed contributor handles for historical public code listings; do not imply contributors submitted directly to this site or that Muse validated a code.
+- Do not mention, promote or link unrelated GitHub repositories in website content, catalogs, README, forms or generated artifacts. Do not add external repo URLs to sourceUrl. Preserve historical provenance in Git commit history.
 - Self-reported usage limits are snapshots. You MAY display dated **reported remaining = reportedCapacity − reportedUses** if both counts and the report date are present, clearly labeled **Not live**. Never guess capacity/usage or call it live available slots. If absent, display **Not reported**.
 - Never automatically publish user-submitted GitHub Issue content. Review and deduplicate before modifying data/invites.json.
 - Never request, store or publish passwords, OTPs, access tokens, private login links, cookies or personal data.
