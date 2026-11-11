@@ -66,14 +66,16 @@ test("valid complete new owner quota is a dated, unverified report",()=>{
   const next=p.data.find(x=>x.code==="PNSMZZ");
   assert.deepEqual([next.reportedCapacity,next.reportedUses,next.usageReportedAt],[30,27,"2026-11-11"]);
 });
-test("already published code is never duplicated",()=>{
-  const p=planIssueChange(issue(26,"[Invite]",share),[item,community]);
-  assert.equal(p.outcome,"duplicate");
+test("existing codes are never duplicated under another account",()=>{
+  const p=planIssueChange(issue(26,"[Invite]",share,"another-user"),[item,community]);
+  assert.equal(p.outcome,"needs-review");
 });
 test("existing code can be updated by its GitHub owner from Issue #28 Notes",()=>{
   const existing={ ...community, code:"ARKHZZ", id:"jx-issue-19", submittedBy:"pdm0809",
     reportedCapacity:17, reportedUses:0, usageReportedAt:"2026-11-10" };
   const body=share.replace("PNSMZZ","ARKHZZ")
+    .replace("### Invite limit (optional; self-reported)\n\n30",
+      "### Invite limit (optional; self-reported)\n\n_No response_")
     .replace("### Notes (optional)\n\n_No response_",
       "### Notes (optional)\n\nInvite code ARKHZZ — 17 uses left. Enter it within 48 hours.");
   const ownerIssue={...issue(28,"[Invite] ARKHZZ",body,"pdm0809"),user:{login:"pdm0809",id:316039127}};
@@ -95,7 +97,7 @@ test("existing code can be updated by its GitHub owner from Issue #28 Notes",()=
 test("duplicate from a different owner requires manual review",()=>{
   const body=share.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
     "### Remaining invites (optional; self-reported)\n\n11");
-  const p=planIssueChange(issue(28,"[Invite]",body),[item,community]);
+  const p=planIssueChange(issue(28,"[Invite]",body,"different-user"),[item,community]);
   assert.equal(p.outcome,"needs-review");
 });
 test("a bound GitHub numeric ID blocks an impostor with the same username",()=>{
