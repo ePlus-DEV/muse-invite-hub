@@ -30,7 +30,7 @@ The upstream repository inspired the GitHub Issue workflow and feedback model. M
 
 ## Updating remaining invite slots
 
-The featured owner code `DPNIHH` has no slot count reported yet. It therefore shows **Not reported**, never a made-up 30/30 or a live estimate.
+**DPNIHH**: the owner reported **3 of 30 invitations remaining** in [issue #14](https://github.com/ePlus-DEV/muse-invite-hub/issues/14) on **2026-11-11**. This is a dated, owner-reported snapshot, not live Muse availability. The catalog stores `reportedCapacity: 30`, `reportedUses: 27` (calculated as 30 − 3), and `usageReportedAt: 2026-11-11`.
 
 Open the [Update remaining slots GitHub Issue Form](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml&invite_code=DPNIHH) with the total invite capacity and actual number already used displayed by the owner’s Muse account. A maintainer checks the report and updates `reportedCapacity`, `reportedUses` and `usageReportedAt` in `data/invites.json` via a PR. Once merged, the page shows **reported remaining = capacity − uses**, with the reporting date and **Not live** label.
 
