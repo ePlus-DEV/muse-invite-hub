@@ -82,9 +82,13 @@
     if (featuredInvite) copyCode(featuredInvite.code, featuredCopy);
   });
   function updateStats() {
-    document.getElementById("stat-total").textContent = codes.length.toLocaleString("en-US");
-    document.getElementById("stat-working").textContent = codes.filter(c => c.status === "reported-working").length.toLocaleString("en-US");
-    document.getElementById("stat-unverified").textContent = codes.filter(c => c.status === "unverified").length.toLocaleString("en-US");
+    const setText = (id, value) => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = value;
+    };
+    setText("stat-total", codes.length.toLocaleString("en-US"));
+    setText("stat-working", codes.filter(c => c.status === "reported-working").length.toLocaleString("en-US"));
+    setText("stat-unverified", codes.filter(c => c.status === "unverified").length.toLocaleString("en-US"));
   }
   function fallbackCopy(text) {
     const input = document.createElement("textarea");
