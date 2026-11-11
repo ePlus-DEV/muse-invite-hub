@@ -18,8 +18,7 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "hastur1229",
-    "note": "Publicly shared in a Muse community issue.",
-    "sourceUrl": "https://github.com/jaxxchen003/muse-use-cases/issues/63"
+    "note": "Publicly shared in a Muse community issue."
   },
   {
     "id": "jx-issue-23",
@@ -28,7 +27,6 @@
     "addedAt": "2026-11-11",
     "submittedBy": "nursery6186",
     "note": "Publicly shared; availability not independently verified.",
-    "sourceUrl": "https://github.com/jaxxchen003/muse-use-cases/issues/23",
     "reportedUses": 1,
     "reportedCapacity": 30,
     "usageReportedAt": "2026-11-11"
@@ -39,8 +37,7 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "lilaclilac09",
-    "note": "Publicly shared; Muse determines redemption eligibility.",
-    "sourceUrl": "https://github.com/jaxxchen003/muse-use-cases/issues/18"
+    "note": "Publicly shared; Muse determines redemption eligibility."
   },
   {
     "id": "jx-issue-19",
@@ -49,7 +46,6 @@
     "addedAt": "2026-11-11",
     "submittedBy": "pdm0809",
     "note": "Contributor shared a usage figure; it may now be stale.",
-    "sourceUrl": "https://github.com/jaxxchen003/muse-use-cases/issues/19",
     "reportedUses": 0,
     "reportedCapacity": 17,
     "usageReportedAt": "2026-11-10"
@@ -60,8 +56,7 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "orangebananas",
-    "note": "Public referral code, independently unverified.",
-    "sourceUrl": "https://github.com/jaxxchen003/muse-use-cases/issues/16"
+    "note": "Public referral code, independently unverified."
   },
   {
     "id": "jx-issue-13",
@@ -69,8 +64,7 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "TonyInsightOps",
-    "note": "Fourth character is the letter O, not zero.",
-    "sourceUrl": "https://github.com/jaxxchen003/muse-use-cases/issues/13"
+    "note": "Fourth character is the letter O, not zero."
   },
   {
     "id": "jx-issue-6",
@@ -78,8 +72,7 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "haiwaiid20-art",
-    "note": "Shared by a Muse community participant.",
-    "sourceUrl": "https://github.com/jaxxchen003/muse-use-cases/issues/6"
+    "note": "Shared by a Muse community participant."
   },
   {
     "id": "jx-issue-5",
@@ -87,8 +80,7 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "FeatureMarski",
-    "note": "Public referral code; not officially verified.",
-    "sourceUrl": "https://github.com/jaxxchen003/muse-use-cases/issues/5"
+    "note": "Public referral code; not officially verified."
   },
   {
     "id": "jx-issue-4",
@@ -97,7 +89,6 @@
     "addedAt": "2026-11-11",
     "submittedBy": "abstractkevin92-dotcom",
     "note": "Contributor shared a historical usage count; it may be stale.",
-    "sourceUrl": "https://github.com/jaxxchen003/muse-use-cases/issues/4",
     "reportedUses": 26,
     "reportedCapacity": 30,
     "usageReportedAt": "2026-10-31"
@@ -108,8 +99,7 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "FeatureMarski",
-    "note": "Publicly shared by its owner; status unverified.",
-    "sourceUrl": "https://github.com/jaxxchen003/muse-use-cases/issues/3"
+    "note": "Publicly shared by its owner; status unverified."
   },
   {
     "id": "jx-readme",
@@ -117,7 +107,6 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "jaxxchen003",
-    "note": "Publicly posted in the reference project's README; not live-verified.",
-    "sourceUrl": "https://github.com/jaxxchen003/muse-use-cases/blob/main/README_EN.md"
+    "note": "Publicly shared invitation; Muse redemption has not been independently verified."
   }
 ]

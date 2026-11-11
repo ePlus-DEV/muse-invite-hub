@@ -12,7 +12,7 @@
 - Catalog stats based on published community-submitted entries
 - Featured owner's invite `DPNIHH` shown prominently in the hero and pinned above community codes with a **Verified Owner** badge. This confirms only the site owner's declaration of ownership, not successful redemption on Muse.
 - GitHub Issue Forms for contributing codes and reporting success/failure feedback
-- Original source links and dated contributor-reported usage snapshots, including **remaining slots = capacity − used** (never live availability)
+- Contributor attribution and dated owner-reported invitation counts, including **remaining slots = capacity − used** (never live availability)
 - Maintainer-reviewed changes to the public JSON catalog (no auto-publication)
 - CI validation, automated tests, GitHub Pages deployment on main, and isolated PR previews under /pr-preview/pr-N/
 - No backend, external account connection, credentials or npm dependencies
@@ -24,9 +24,7 @@
 3. A maintainer checks for duplicates, reviews the issue, and updates [data/invites.json](data/invites.json) via a PR.
 4. Report broken codes using [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml).
 
-**Source-backed launch catalog:** The site includes 11 codes explicitly published in the public [Muse Use Cases](https://github.com/jaxxchen003/muse-use-cases) README or [invite-code issues](https://github.com/jaxxchen003/muse-use-cases/issues). Each card links to its source. All are **unverified**; we have not tested redemption or confirmed current availability with Muse. The site owner has separately supplied and confirmed ownership of `DPNIHH`; it is featured with a **Verified Owner** badge, but its redemption status remains `unverified` until a genuine Muse redemption result is provided.
-
-The upstream repository inspired the GitHub Issue workflow and feedback model. Muse Invite Hub does not mirror its use-case catalog. See [CONTRIBUTING.md](CONTRIBUTING.md) for review rules.
+**Community catalog:** The directory contains 11 community-shared codes and the featured owner code `DPNIHH`. The community entries were curated from earlier public postings, and credited contributor usernames are retained. Listing a code does **not** mean its contributor submitted it directly to this website or that Muse confirmed redemption. These entries remain `unverified` until actual feedback is reviewed. The site owner confirmed ownership of `DPNIHH`; its **Verified Owner** badge confirms only this declaration, not active redemption.
 
 ## Updating remaining invite slots
 

@@ -25,7 +25,7 @@ test("invalid dates, unsafe URLs and non-objects are rejected", () => {
 
 test("source-linked, dated self-reported usage is accepted", () => {
   const entry = {
-    ...sample(), sourceUrl: "https://github.com/example/repo/issues/1",
+    ...sample(), sourceUrl: "https://github.com/ePlus-DEV/muse-invite-hub/issues/14",
     reportedUses: 1, reportedCapacity: 30, usageReportedAt: "2026-11-11"
   };
   assert.deepEqual(validateCatalog([entry]), []);

@@ -24,7 +24,7 @@ The file data/invites.json holds an array of entries with these fields:
 | addedAt | Yes | Real calendar date YYYY-MM-DD |
 | submittedBy | No | GitHub username (with permission to attribute) |
 | note | No | Plain-text note, max 180 characters |
-| sourceUrl | No | Public HTTPS URL for supporting context |
+| sourceUrl | No | Optional private review reference; not linked from the public directory. External GitHub project links are not accepted. |
 | checkedAt | No | Date of last community feedback, YYYY-MM-DD |
 | reportedUses | No | Non-negative integer reported by the code owner; paired with capacity and date |
 | reportedCapacity | No | Positive integer invite quota from the owner; NOT a live remaining count |
@@ -38,9 +38,9 @@ Community statuses do **not** indicate official Muse verification:
 - **reported-working** — reported working by a user, not a live official validation
 - **reported-not-working** — reported failed by a user
 
-Initial entries were manually curated from public submissions in [jaxxchen003/muse-use-cases](https://github.com/jaxxchen003/muse-use-cases), linking to the original README or Issue. They are all **unverified** until feedback comes in. Do not invent codes, equate copy clicks with redemptions, or promise rewards. Use unverified when in doubt.
+Existing community codes were curated from earlier public submissions and retain their attributed contributor handles. Their listing does not imply a direct submission to this website, endorsement or successful redemption. Do not invent codes, treat copy events as redemptions, or promise rewards.
 
-If usage counts are provided, they must come from a dated, public owner report. They become stale quickly: never infer live remaining slots. Every externally sourced code must include its original public source link; do not imply source projects endorse this website.
+Usage figures must come from a dated report by the code owner, not from a copy button count. A displayed remaining count is a dated estimate, not a live balance. Future submissions should be reviewed through this repository's Issue Forms and relevant Muse information; public pages and catalog entries must not advertise unrelated GitHub repositories.
 
 Run all checks listed in README.md before opening a PR. Keep PRs focused and preserve SEO text unless changes are requested.
 

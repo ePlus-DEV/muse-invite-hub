@@ -132,20 +132,7 @@
       author.rel = "noopener noreferrer";
       meta.append(author);
     } else {
-      meta.append(el("span", "", "Community submitted"));
-    }
-    if (item.sourceUrl) {
-      try {
-        const source = new URL(item.sourceUrl);
-        if (source.protocol === "https:") {
-          const sourceLink = el("a", "", "Original source ↗");
-          sourceLink.href = source.href;
-          sourceLink.target = "_blank";
-          sourceLink.rel = "noopener noreferrer";
-          sourceLink.title = "Public source of this community invitation";
-          meta.append(sourceLink);
-        }
-      } catch { /* Malformed source references are discarded. */ }
+      meta.append(el("span", "", "Community listing"));
     }
     const snapshot = reportedRemaining(item);
     let usageNote = null;
