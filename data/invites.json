@@ -13,6 +13,18 @@
     "usageReportedAt": "2026-11-11"
   },
   {
+    "id": "community-issue-32",
+    "code": "0CPVCN",
+    "status": "unverified",
+    "addedAt": "2026-11-11",
+    "submittedBy": "Laguns77",
+    "note": "Community-submitted in issue #32; redemption not independently verified.",
+    "submittedById": 109600446,
+    "reportedCapacity": 30,
+    "reportedUses": 3,
+    "usageReportedAt": "2026-11-11"
+  },
+  {
     "id": "community-issue-20",
     "code": "PNSMZZ",
     "status": "unverified",
