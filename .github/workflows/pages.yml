@@ -46,7 +46,8 @@ jobs:
       - name: Validate production data and preview utilities
         run: |
           node scripts/validate.mjs
-          node --test scripts/validate.test.mjs scripts/preview.test.mjs
+          node scripts/audit-links.mjs
+          node --test scripts/validate.test.mjs scripts/preview.test.mjs scripts/audit-links.test.mjs
           node --check assets/app.js
           node --check scripts/build-pages.mjs
           node --check scripts/post-preview-status.mjs

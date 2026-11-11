@@ -4,12 +4,12 @@
 
 [Open the website](https://muse.eplus.dev/) · [Share a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml)
 
-> Muse Invite Hub is independent and not affiliated with Meta or Muse. Codes and statuses are community submissions, not a promise of live validity, access or token rewards.
+> Muse Invite Hub is independent and not affiliated with Meta or Muse. Entries are community listings or owner reports, not a promise of live validity, access or token rewards.
 
 ## Features
 
 - Responsive static site with search, filters, sorting and copy-to-clipboard
-- Catalog stats based on published community-submitted entries
+- Catalog stats based on published invite entries
 - Featured owner's invite `DPNIHH` shown prominently in the hero and pinned above community codes with a **Verified Owner** badge. This confirms only the site owner's declaration of ownership, not successful redemption on Muse.
 - GitHub Issue Forms for contributing codes and reporting success/failure feedback
 - Contributor attribution and dated owner-reported invitation counts, including **remaining slots = capacity − used** (never live availability)
@@ -45,14 +45,15 @@ Open http://localhost:8000/ . Avoid opening a file URL directly because browsers
 Run checks before opening a PR:
 
     node scripts/validate.mjs
-    node --test scripts/validate.test.mjs scripts/preview.test.mjs
+    node scripts/audit-links.mjs
+    node --test scripts/validate.test.mjs scripts/preview.test.mjs scripts/audit-links.test.mjs
     node --check assets/app.js
 
 Node 24 is used by CI.
 
 ## Pull request previews
 
-When the preview pipeline is enabled on main, every **same-repository PR targeting main** is eligible for a shareable preview after the Validate website and invite catalog check passes.
+Every **same-repository PR targeting main** is eligible for a shareable preview after the Validate website and invite catalog check passes.
 
 - Preview URL: https://muse.eplus.dev/pr-preview/pr-123/ (replace 123 with the PR number). The workflow **comments the actual URL on the PR only after it verifies the published revision and all critical assets**. Do not assume a guessed URL is ready.
 - Production content always comes from trusted main. The publisher fetches the GitHub-generated PR merge revision and copies only approved static site files into a dedicated directory. It **does not execute PR scripts** or use a personal access token.
@@ -62,11 +63,9 @@ When the preview pipeline is enabled on main, every **same-repository PR targeti
 - A new PR also gets a downloadable **muse-invite-hub-pr-preview-N** artifact from its read-only Validate workflow. To inspect that offline artifact, extract it, serve it with a local HTTP server, and open localhost; file:// cannot load the JSON catalog.
 - Fork PRs receive normal CI but do not automatically receive public same-origin previews. This prevents arbitrary external contributions from being published under the production domain.
 
-**Bootstrap:** The workflow that publishes live previews must first be merged into main, because GitHub loads trusted pull_request_target and workflow_run definitions from the default branch. This setup PR can be tested through its downloadable preview artifact before merging; subsequent open PRs get a live URL automatically.
-
 ## Publish
 
-In GitHub repository **Settings → Pages**, set **Source: GitHub Actions**. This initial one-time configuration must be done by a repository administrator. The first deployment failed at Configure Pages because Pages was not enabled; re-running with the default GITHUB_TOKEN alone cannot activate it. After enabling Pages, use **Actions → Deploy website to GitHub Pages → Run workflow** or merge a new PR to main. **Production domain: https://muse.eplus.dev/**. The previous default URL is https://eplus-dev.github.io/muse-invite-hub/ . For this site, set **Settings → Pages → Custom domain** to `muse.eplus.dev` and keep **Source: GitHub Actions**. The root `CNAME` file records the intended hostname but **does not configure the domain when deploying through GitHub Actions**; the GitHub Pages repository setting is authoritative.
+In GitHub repository **Settings → Pages**, use **Source: GitHub Actions** and set **Custom domain** to `muse.eplus.dev`. **Production domain:** https://muse.eplus.dev/. The root `CNAME` records the hostname, while GitHub Pages settings control the actual custom-domain connection. Deployments and preview publication run through the existing Pages workflow.
 
 Configure DNS for the `eplus.dev` zone:
 

@@ -24,8 +24,10 @@ jobs:
         run: node --check assets/app.js
       - name: Validate public invite catalog
         run: node scripts/validate.mjs
-      - name: Run catalog validation tests
-        run: node --test scripts/validate.test.mjs
+      - name: Audit website and repository links
+        run: node scripts/audit-links.mjs
+      - name: Run catalog and link validation tests
+        run: node --test scripts/validate.test.mjs scripts/audit-links.test.mjs
       - name: Verify PR preview renderer
         run: node --test scripts/preview.test.mjs
       - name: Dry-run production and live preview bundle (read-only)

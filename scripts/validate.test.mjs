@@ -68,3 +68,10 @@ test("full allocation is allowed and means zero reported remaining", () => {
 test("reported usage must never be greater than capacity", () => {
   assert.ok(validateCatalog([{ ...sample(), reportedUses: 31, reportedCapacity: 30, usageReportedAt: "2026-11-11" }]).some(e => e.includes("cannot exceed")));
 });
+
+test("external repository links are not accepted in public catalog references", () => {
+  const unrelated = "https://github.com/" + "someone-else" + "/" + "another-project" + "/issues/1";
+  const error = validateCatalog([{ ...sample(), sourceUrl: unrelated }]);
+  assert.ok(error.some(x => x.includes("unrelated GitHub repository")));
+  assert.deepEqual(validateCatalog([{ ...sample(), sourceUrl: "https://muse.ai/join" }]), []);
+});

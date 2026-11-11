@@ -64,6 +64,12 @@ export function validateCatalog(data) {
       try {
         const url = new URL(item.sourceUrl);
         if (url.protocol !== "https:" || !url.hostname.includes(".")) throw new Error("HTTPS only");
+        if (url.hostname.toLowerCase() === "github.com") {
+          const parts = url.pathname.split("/").filter(Boolean);
+          if (parts.length >= 2 && (parts[0].toLowerCase() !== "eplus-dev" || parts[1].toLowerCase() !== "muse-invite-hub")) {
+            errors.push(at + ": sourceUrl cannot point to an unrelated GitHub repository.");
+          }
+        }
       } catch { errors.push(at + ": sourceUrl must be a valid public HTTPS URL."); }
     }
   });
