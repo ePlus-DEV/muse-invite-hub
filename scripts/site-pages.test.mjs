@@ -19,7 +19,7 @@ const community = () => ({
 test("detail links are predictable and safely validated", () => {
   assert.equal(codePath("DPNIHH"), "/codes/DPNIHH/");
   assert.throws(() => codePath("../DPNIHH"), /Invalid/);
-  assert.equal(PAGE_SIZE, 12);
+  assert.equal(PAGE_SIZE, 6);
 });
 test("owner detail is HTML with canonical, status, structured data and dated quota", () => {
   const html = renderDetailPage(owner());

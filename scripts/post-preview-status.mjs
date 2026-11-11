@@ -43,7 +43,7 @@ async function verifyLive(record) {
   for (let attempt = 1; attempt <= 6; attempt++) {
     try {
       const suffix = "?verify=" + record.head_sha.slice(0, 12) + "-" + attempt;
-      const names = ["preview-meta.json", "index.html", "assets/styles.css", "assets/app.js", "data/invites.json"];
+      const names = ["preview-meta.json", "index.html", "assets/styles.css", "assets/app.js", "data/invites.json", "assets/detail.js", "assets/social-preview.png", "codes/DPNIHH/index.html"];
       const results = await Promise.all(names.map(async path => {
         const response = await fetch(root + path + suffix, {
           cache: "no-store", signal: AbortSignal.timeout(12000)
@@ -58,6 +58,10 @@ async function verifyLive(record) {
           !html.includes('muse-preview-head" content="' + record.head_sha + '"')) throw Error("Missing noindex or correct commit");
       const list = await results[4].json();
       if (!Array.isArray(list)) throw Error("Invalid published data file");
+      const detail = await results[7].text();
+      if (!detail.includes('noindex,nofollow,noarchive') ||
+          !detail.includes('DPNIHH') ||
+          !detail.includes('../../assets/styles.css')) throw Error("Broken detail preview or noindex");
       return true;
     } catch (error) {
       console.log("Preview #" + record.number + " verification " + attempt + "/6: " + error.message);

@@ -27,6 +27,7 @@ test("preview site uses noindex, PR origin and relative assets", () => {
     assert.doesNotMatch(html, /rel="canonical"/);
     assert.match(html, /src=".\/assets\/app.js"/);
     assert.deepEqual(JSON.parse(readFileSync(join(dir, "preview-meta.json"), "utf8")).pr_number, 42);
+    assert.match(readFileSync(join(dir, "index.html"), "utf8"), /noindex,nofollow,noarchive/);
     assert.equal(meta.head_sha, head);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

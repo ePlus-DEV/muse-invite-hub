@@ -4,7 +4,7 @@ import { validateCatalog } from "./validate.mjs";
 
 export const SITE_ORIGIN = "https://muse.eplus.dev";
 export const DETAIL_PATH = "codes";
-export const PAGE_SIZE = 12;
+export const PAGE_SIZE = 6;
 
 export function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, char =>
