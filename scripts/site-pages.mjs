@@ -105,6 +105,9 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '  <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">\n' +
     '  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">\n' +
     '  <link rel="stylesheet" href="../../assets/styles.css">\n' +
+    '  <!-- Google tag (gtag.js) -->\n' +
+    '  <script async src="https://www.googletagmanager.com/gtag/js?id=G-N1MZ8YLNLJ"></script>\n' +
+    '  <script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag(\'js\', new Date());gtag(\'config\', \'G-N1MZ8YLNLJ\');</script>\n' +
     '  <script type="application/ld+json">' + jsonLd(graph) + '</script>\n' +
     '  <script src="../../assets/detail.js" defer></script>\n' +
     '</head>\n<body>\n' +
