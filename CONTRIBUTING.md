@@ -26,6 +26,9 @@ The file data/invites.json holds an array of entries with these fields:
 | note | No | Plain-text note, max 180 characters |
 | sourceUrl | No | Public HTTPS URL for supporting context |
 | checkedAt | No | Date of last community feedback, YYYY-MM-DD |
+| reportedUses | No | Non-negative integer reported by the code owner; paired with capacity and date |
+| reportedCapacity | No | Positive integer invite quota from the owner; NOT a live remaining count |
+| usageReportedAt | Conditional | YYYY-MM-DD date of the owner's usage report; required with counts |
 
 Community statuses do **not** indicate official Muse verification:
 
@@ -33,7 +36,9 @@ Community statuses do **not** indicate official Muse verification:
 - **reported-working** — reported working by a user, not a live official validation
 - **reported-not-working** — reported failed by a user
 
-The catalog starts empty. Do not invent a working code, claim that copy clicks are redemptions, or promise rewards. Use unverified when in doubt.
+Initial entries were manually curated from public submissions in [jaxxchen003/muse-use-cases](https://github.com/jaxxchen003/muse-use-cases), linking to the original README or Issue. They are all **unverified** until feedback comes in. Do not invent codes, equate copy clicks with redemptions, or promise rewards. Use unverified when in doubt.
+
+If usage counts are provided, they must come from a dated, public owner report. They become stale quickly: never infer live remaining slots. Every externally sourced code must include its original public source link; do not imply source projects endorse this website.
 
 Run all checks listed in README.md before opening a PR. Keep PRs focused and preserve SEO text unless changes are requested.
 

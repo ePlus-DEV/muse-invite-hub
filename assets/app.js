@@ -78,7 +78,7 @@
     const value = el("h3", "code-value", item.code);
     const note = el("p", "code-note", item.note || "Shared with the Muse community.");
     const meta = el("div", "card-meta");
-    meta.append(el("span", "", "Added " + formatDate(item.addedAt)));
+    meta.append(el("span", "", "Listed " + formatDate(item.addedAt)));
     if (item.submittedBy) {
       const author = el("a", "", "@" + item.submittedBy);
       author.href = "https://github.com/" + encodeURIComponent(item.submittedBy);
@@ -88,18 +88,37 @@
     } else {
       meta.append(el("span", "", "Community submitted"));
     }
+    if (item.sourceUrl) {
+      try {
+        const source = new URL(item.sourceUrl);
+        if (source.protocol === "https:") {
+          const sourceLink = el("a", "", "Original source ↗");
+          sourceLink.href = source.href;
+          sourceLink.target = "_blank";
+          sourceLink.rel = "noopener noreferrer";
+          sourceLink.title = "Public source of this community invitation";
+          meta.append(sourceLink);
+        }
+      } catch { /* Malformed source references are discarded. */ }
+    }
+    let usageNote = null;
+    if (Number.isInteger(item.reportedUses) && Number.isInteger(item.reportedCapacity) && item.usageReportedAt) {
+      usageNote = el("p", "card-usage", "Owner-reported uses: " + item.reportedUses + "/" + item.reportedCapacity + " · " + formatDate(item.usageReportedAt) + " · Not live");
+    }
     const actions = el("div", "card-actions");
     const copy = el("button", "", "Copy code");
     copy.type = "button";
     copy.setAttribute("aria-label", "Copy invite code " + item.code);
     copy.addEventListener("click", () => copyCode(item.code, copy));
-    const report = el("a", "", "Report issue ↗");
+    const report = el("a", "", "Give feedback ↗");
     report.href = issueUrl("report-code.yml", item.code);
     report.target = "_blank";
     report.rel = "noopener noreferrer";
     report.setAttribute("aria-label", "Report an issue with invite code " + item.code);
     actions.append(copy, report);
-    card.append(top, value, note, meta, actions);
+    card.append(top, value, note);
+    if (usageNote) card.append(usageNote);
+    card.append(meta, actions);
     return card;
   }
   function render() {

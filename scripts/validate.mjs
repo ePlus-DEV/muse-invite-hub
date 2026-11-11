@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
 const statuses = new Set(["unverified", "reported-working", "reported-not-working"]);
-const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt"]);
+const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "usageReportedAt"]);
 
 function validDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -41,6 +41,15 @@ export function validateCatalog(data) {
     if (!statuses.has(item.status)) errors.push(at + ": invalid community status.");
     if (!validDate(item.addedAt)) errors.push(at + ": addedAt must be a real YYYY-MM-DD date.");
     if (item.checkedAt !== undefined && !validDate(item.checkedAt)) errors.push(at + ": checkedAt must be YYYY-MM-DD.");
+    const usagePresent = item.reportedUses !== undefined || item.reportedCapacity !== undefined || item.usageReportedAt !== undefined;
+    if (usagePresent) {
+      if (!Number.isInteger(item.reportedUses) || item.reportedUses < 0) errors.push(at + ": reportedUses must be a non-negative integer.");
+      if (!Number.isInteger(item.reportedCapacity) || item.reportedCapacity <= 0 || item.reportedCapacity > 1000) errors.push(at + ": reportedCapacity must be an integer from 1 to 1000.");
+      if (!validDate(item.usageReportedAt)) errors.push(at + ": usageReportedAt must be YYYY-MM-DD when usage data exists.");
+      if (Number.isInteger(item.reportedUses) && Number.isInteger(item.reportedCapacity) && item.reportedUses > item.reportedCapacity) {
+        errors.push(at + ": reportedUses cannot exceed reportedCapacity.");
+      }
+    }
     if (item.note !== undefined && (typeof item.note !== "string" || item.note.length > 180)) errors.push(at + ": note must contain at most 180 characters.");
     if (item.submittedBy !== undefined && (typeof item.submittedBy !== "string" || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(item.submittedBy))) errors.push(at + ": invalid GitHub username.");
     if (item.sourceUrl !== undefined) {

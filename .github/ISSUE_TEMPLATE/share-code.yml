@@ -22,6 +22,22 @@ body:
       placeholder: "https://..."
     validations:
       required: false
+  - type: input
+    id: reported_uses
+    attributes:
+      label: Uses so far (optional; self-reported)
+      description: "Only if shown in your Muse account. This is a dated snapshot, NOT a guarantee of remaining slots."
+      placeholder: "e.g. 1"
+    validations:
+      required: false
+  - type: input
+    id: reported_capacity
+    attributes:
+      label: Invite limit (optional; self-reported)
+      description: "Only if shown in your Muse account. Never guess."
+      placeholder: "e.g. 30"
+    validations:
+      required: false
   - type: textarea
     id: notes
     attributes:
