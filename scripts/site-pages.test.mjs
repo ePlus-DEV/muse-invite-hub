@@ -16,6 +16,12 @@ const community = () => ({
   status: "unverified", addedAt: "2026-11-11",
   note: "Community-shared; availability not verified."
 });
+test("directory and static generator use the same Load more batch size", () => {
+  const source = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
+  assert.match(source, new RegExp("const PAGE_SIZE = " + PAGE_SIZE + ";"));
+  assert.match(source, /visible\.slice\(0, displayLimit\)/);
+  assert.match(source, /render\(true\)/);
+});
 test("detail links are predictable and safely validated", () => {
   assert.equal(codePath("DPNIHH"), "/codes/DPNIHH/");
   assert.throws(() => codePath("../DPNIHH"), /Invalid/);
