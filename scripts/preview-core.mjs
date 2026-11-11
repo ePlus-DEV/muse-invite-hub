@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { validateCatalog } from "./validate.mjs";
+import { generateSite } from "./site-pages.mjs";
 
 export const PREVIEW_PREFIX = "pr-preview";
 export const REQUIRED_FILES = ["index.html", "assets/app.js", "assets/styles.css", "data/invites.json"];
@@ -62,12 +63,24 @@ export function buildPreview({ files, readFile, dest, number, sha, mergeSha = nu
     }
   }
   writeFileSync(join(dest, ".nojekyll"), "");
+  // The trusted generator runs only after validated JSON + static PR assets
+  // have been copied; never execute scripts from the unmerged PR branch.
+  let detailPages = 0;
+  if (paths.includes("assets/detail.js")) {
+    const built = generateSite(dest, {
+      origin, basePath: hosted ? "/pr-preview/pr-" + number + "/" : "/",
+      preview: true
+    });
+    detailPages = built.created;
+    if (detailPages !== dataset.length) throw Error("Incomplete detail preview output");
+  }
   const metadata = {
     pr_number: number,
     head_sha: sha,
     merge_sha: mergeSha,
     generated_at: new Date().toISOString(),
-    noindex: true
+    noindex: true,
+    detail_pages: detailPages
   };
   writeFileSync(join(dest, "preview-meta.json"), JSON.stringify(metadata, null, 2) + "\n");
   return metadata;

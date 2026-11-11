@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync, copyFileSync, lstatSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { buildPreview, isSafeSiteFile } from "./preview-core.mjs";
+import { generateSite } from "./site-pages.mjs";
 
 const REPO = process.env.GITHUB_REPOSITORY;
 const ORIGIN = "https://muse.eplus.dev";
@@ -34,6 +35,8 @@ for (const required of ["index.html", "assets/app.js", "assets/styles.css", "dat
 }
 const code = JSON.parse(readFileSync(join(output, "data/invites.json"), "utf8"));
 if (!Array.isArray(code)) throw Error("Production catalog is not an array");
+const productionPages = generateSite(output);
+console.log("Generated " + productionPages.created + " static invite detail pages and " + productionPages.indexed + " indexable entries.");
 
 async function api(path) {
   const res = await fetch("https://api.github.com/" + path, {
@@ -114,8 +117,9 @@ for (const pr of (await listOpenPRs()).slice(0, MAX_PREVIEWS)) {
     }
     const files = mergeFiles(mergeSha);
     const dest = join(output, "pr-preview", "pr-" + pr.number);
-    buildPreview({ files, readFile: file => readMergeFile(mergeSha, file), dest,
+    const built = buildPreview({ files, readFile: file => readMergeFile(mergeSha, file), dest,
       number: pr.number, sha: head, mergeSha, origin: ORIGIN });
+    record.detail_pages = built.detail_pages;
     // Parse JavaScript but never execute scripts from the untrusted PR ref.
     const syntax = spawnSync(process.execPath, ["--check", join(dest, "assets/app.js")],
       { encoding: "utf8", timeout: 15000 });

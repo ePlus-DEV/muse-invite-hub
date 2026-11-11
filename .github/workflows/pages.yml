@@ -48,7 +48,10 @@ jobs:
           node scripts/validate.mjs
           node scripts/audit-links.mjs
           node --test scripts/validate.test.mjs scripts/preview.test.mjs scripts/audit-links.test.mjs
+          node --check scripts/site-pages.mjs
+          node --test scripts/site-pages.test.mjs
           node --check assets/app.js
+          node --check assets/detail.js
           node --check scripts/build-pages.mjs
           node --check scripts/post-preview-status.mjs
       - name: Build main site and eligible PR previews
@@ -61,7 +64,12 @@ jobs:
           test -s _site/assets/app.js
           test -s _site/assets/styles.css
           test -s _site/data/invites.json
+          test -s _site/assets/detail.js
+          test -s _site/assets/social-preview.png
+          test -s _site/codes/DPNIHH/index.html
           test -s _site/pr-preview/manifest.json
+          grep -Fq 'https://muse.eplus.dev/codes/DPNIHH/' _site/sitemap.xml
+          grep -Fq 'noindex,follow' _site/codes/UPWS4W/index.html
           grep -Fq 'rel="canonical" href="https://muse.eplus.dev/"' _site/index.html
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
@@ -76,6 +84,21 @@ jobs:
                 !fs.existsSync(path+'data/invites.json') ||
                 JSON.parse(fs.readFileSync(path+'preview-meta.json','utf8')).head_sha !== preview.head_sha) {
               throw Error('Invalid or incomplete preview #'+preview.number);
+            }
+            const metadata = JSON.parse(fs.readFileSync(path+'preview-meta.json','utf8'));
+            if (metadata.detail_pages !== (preview.detail_pages ?? 0)) {
+              throw Error('Mismatched deep-preview count #'+preview.number);
+            }
+            if (metadata.detail_pages > 0) {
+              const list = JSON.parse(fs.readFileSync(path+'data/invites.json','utf8'));
+              const example = list.find(item => item.featured === true) || list[0];
+              const deep = path+'codes/'+example.code+'/index.html';
+              if (!fs.existsSync(path+'assets/detail.js') ||
+                  !fs.existsSync(path+'assets/social-preview.png') ||
+                  !fs.existsSync(deep) ||
+                  !fs.readFileSync(deep,'utf8').includes('noindex,nofollow,noarchive')) {
+                throw Error('Missing nested code detail preview #'+preview.number);
+              }
             }
           }
           console.log('Checked '+doc.previews.length+' eligible PRs');
