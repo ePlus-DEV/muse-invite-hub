@@ -168,3 +168,20 @@ button{cursor:pointer}
 .card-usage{margin:-7px 0 12px;font-size:11px;color:#b6a9d9;background:#ae98eb12;border:1px solid #9b82d23f;border-radius:7px;padding:6px 9px;line-height:1.5}
 .card-meta{gap:8px 14px}
 @media(max-width:700px){.redeem-banner{flex-wrap:wrap;gap:12px;padding:16px}.redeem-banner-copy{flex-basis:calc(100% - 57px)}.redeem-banner-link{margin-left:54px}}
+
+/* Featured owner code. Distinguish ownership from redeem success. */
+.owner-featured{margin:0 0 26px;padding:17px 18px 15px;border:1px solid #a997ed9c;border-radius:17px;background:linear-gradient(135deg,#2c2354 0%,#1b1c35 70%);box-shadow:0 12px 38px #8060dd26}
+.owner-featured-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.owner-featured-label{font-size:10px;font-weight:800;letter-spacing:1.3px;color:#d4bdff}
+.owner-featured-status{font-size:10px;color:#d8cee8;border:1px solid #8275a870;background:#ffffff09;border-radius:50px;padding:3px 9px}
+.owner-featured-main{display:flex;align-items:end;gap:14px;justify-content:space-between}
+.owner-featured-code-wrap{display:flex;flex-direction:column;min-width:0}
+.owner-featured-small{color:#aca9c7;font-size:11px}
+.owner-featured-code{font-family:"Space Grotesk",sans-serif;letter-spacing:3.2px;font-size:clamp(29px,3.4vw,41px);color:#fff;line-height:1.35}
+.owner-featured-copy{white-space:nowrap;flex:none}
+.owner-featured-note{font-size:11px;color:#b9b3d1;line-height:1.6;margin:12px 0 0}
+.code-card-featured{border-color:#9788d1;background:linear-gradient(145deg,#282043,#17162b 70%);box-shadow:0 12px 35px #4d337423}
+.code-card-featured .card-indicator{color:#dbc6ff}
+.code-card-featured .card-indicator .dot{background:#d8b7ff}
+@media(max-width:560px){.owner-featured{padding:15px}.owner-featured-main{align-items:stretch}.owner-featured-copy{padding:9px 12px;min-height:42px;align-self:flex-end}.owner-featured-code{font-size:31px;letter-spacing:2px}.owner-featured-status{font-size:9px}}
+@media(max-width:360px){.owner-featured-main{flex-wrap:wrap}.owner-featured-copy{width:100%}}

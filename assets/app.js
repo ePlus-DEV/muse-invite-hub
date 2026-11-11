@@ -7,6 +7,9 @@
     "reported-not-working": { label: "Reported not working", className: "status-reported-not-working", description: "Community has reported a problem with this code." }
   };
   const grid = document.getElementById("code-grid");
+  const featuredPanel = document.getElementById("featured-invite");
+  const featuredCode = document.getElementById("featured-code");
+  const featuredCopy = document.getElementById("featured-copy");
   const empty = document.getElementById("empty-state");
   const searchInput = document.getElementById("code-search");
   const sortInput = document.getElementById("sort-codes");
@@ -14,6 +17,7 @@
   const announcer = document.getElementById("live-message");
   const filters = Array.from(document.querySelectorAll("[data-filter]"));
   let codes = [];
+  let featuredInvite = null;
   let filter = "all";
   let loadFailed = false;
   const el = (tag, className, text) => {
@@ -35,6 +39,17 @@
     const base = REPO + "/issues/new?template=" + encodeURIComponent(template);
     return code ? base + "&invite_code=" + encodeURIComponent(code) : base;
   }
+  function updateFeatured() {
+    featuredInvite = codes.find(item => item.featured === true) || null;
+    featuredPanel.hidden = !featuredInvite;
+    if (featuredInvite) {
+      featuredCode.textContent = featuredInvite.code;
+      featuredCopy.setAttribute("aria-label", "Copy featured Muse invite code " + featuredInvite.code);
+    }
+  }
+  featuredCopy.addEventListener("click", () => {
+    if (featuredInvite) copyCode(featuredInvite.code, featuredCopy);
+  });
   function updateStats() {
     document.getElementById("stat-total").textContent = codes.length.toLocaleString("en-US");
     document.getElementById("stat-working").textContent = codes.filter(c => c.status === "reported-working").length.toLocaleString("en-US");
@@ -67,10 +82,10 @@
   }
   function createCard(item) {
     const status = STATUS[item.status] || STATUS.unverified;
-    const card = el("article", "code-card");
+    const card = el("article", item.featured ? "code-card code-card-featured" : "code-card");
     const top = el("div", "card-topline");
     const indicator = el("div", "card-indicator");
-    indicator.append(el("span", "dot"), el("span", "", "COMMUNITY CODE"));
+    indicator.append(el("span", "dot"), el("span", "", item.featured ? "FEATURED · EPLUS.DEV" : "COMMUNITY CODE"));
     const badge = el("span", "status-badge " + status.className, status.label);
     badge.title = status.description;
     top.append(indicator, badge);
@@ -129,8 +144,11 @@
       String(item.note || "").toLowerCase().includes(q)
     ));
     const sort = sortInput.value;
-    visible.sort((a, b) => sort === "code" ? a.code.localeCompare(b.code) : sort === "oldest" ?
-      a.addedAt.localeCompare(b.addedAt) : b.addedAt.localeCompare(a.addedAt));
+    visible.sort((a, b) => {
+      if (Boolean(a.featured) !== Boolean(b.featured)) return a.featured ? -1 : 1;
+      return sort === "code" ? a.code.localeCompare(b.code) : sort === "oldest"
+        ? a.addedAt.localeCompare(b.addedAt) : b.addedAt.localeCompare(a.addedAt);
+    });
     grid.replaceChildren(...visible.map(createCard));
     resultCount.textContent = visible.length.toLocaleString("en-US") + " " + (visible.length === 1 ? "code" : "codes") + " found";
     empty.hidden = visible.length !== 0;
@@ -166,6 +184,7 @@
       codes = [];
     }
     updateStats();
+    updateFeatured();
     render();
   }
   filters.forEach(button => button.addEventListener("click", () => {

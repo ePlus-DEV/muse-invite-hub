@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
 const statuses = new Set(["unverified", "reported-working", "reported-not-working"]);
-const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "usageReportedAt"]);
+const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "usageReportedAt", "featured"]);
 
 function validDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -16,6 +16,7 @@ export function validateCatalog(data) {
   if (!Array.isArray(data)) return ["Catalog must be a JSON array."];
   const ids = new Set();
   const codes = new Set();
+  let featuredCount = 0;
 
   data.forEach((item, index) => {
     const at = "Entry " + (index + 1);
@@ -39,6 +40,11 @@ export function validateCatalog(data) {
     } else codes.add(item.code.toUpperCase());
 
     if (!statuses.has(item.status)) errors.push(at + ": invalid community status.");
+    if (item.featured !== undefined && typeof item.featured !== "boolean") errors.push(at + ": featured must be a boolean.");
+    if (item.featured === true) {
+      featuredCount += 1;
+      if (item.status !== "unverified" && item.status !== "reported-working") errors.push(at + ": do not feature a code reported not working.");
+    }
     if (!validDate(item.addedAt)) errors.push(at + ": addedAt must be a real YYYY-MM-DD date.");
     if (item.checkedAt !== undefined && !validDate(item.checkedAt)) errors.push(at + ": checkedAt must be YYYY-MM-DD.");
     const usagePresent = item.reportedUses !== undefined || item.reportedCapacity !== undefined || item.usageReportedAt !== undefined;
@@ -59,6 +65,7 @@ export function validateCatalog(data) {
       } catch { errors.push(at + ": sourceUrl must be a valid public HTTPS URL."); }
     }
   });
+  if (featuredCount > 1) errors.push("Only one featured invite code is allowed.");
   return errors;
 }
 

@@ -35,3 +35,18 @@ test("undated, invalid, or exaggerated usage claims are rejected", () => {
   assert.ok(validateCatalog([{ ...sample(), reportedUses: 31, reportedCapacity: 30, usageReportedAt: "2026-11-11" }]).some(e => e.includes("cannot exceed")));
   assert.ok(validateCatalog([{ ...sample(), reportedUses: -1, reportedCapacity: 30, usageReportedAt: "2026-11-11" }]).some(e => e.includes("non-negative")));
 });
+
+test("one unverified featured owner-submitted code is valid", () => {
+  assert.deepEqual(validateCatalog([{ ...sample(), featured: true }]), []);
+});
+test("only one featured code is allowed", () => {
+  const errors = validateCatalog([
+    { ...sample(), featured: true },
+    { ...sample(), id: "community-002", code: "MUSE43", featured: true }
+  ]);
+  assert.ok(errors.some(e => e.includes("Only one featured")));
+});
+test("featured must be boolean and cannot be reported not working", () => {
+  assert.ok(validateCatalog([{ ...sample(), featured: "true" }]).some(e => e.includes("must be a boolean")));
+  assert.ok(validateCatalog([{ ...sample(), featured: true, status: "reported-not-working" }]).some(e => e.includes("do not feature")));
+});
