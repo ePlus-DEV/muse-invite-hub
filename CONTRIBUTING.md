@@ -54,3 +54,9 @@ Respect participants. Avoid spam, false reward promises, paid code offers, misle
 The owner's Muse Invite screen may show a total quota and used/remaining slots. Submit a [remaining-count update](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml), identifying the code and the dated values. Do not include private account details. A maintainer converts the report into a PR to update `reportedUses`, `reportedCapacity` and `usageReportedAt`. If only the remaining number is known, say so; do not invent a total.
 
 The site displays a **dated self-reported snapshot**, calculated as `reportedCapacity - reportedUses`. It does not query Muse's live quota, and copying a code does not prove it was redeemed. Missing values display **Not reported**.
+
+## Preview your PR
+
+Open a focused PR targeting main. The validation job attaches an offline preview ZIP named muse-invite-hub-pr-preview-N (serve its extracted contents over HTTP, not via file://). After the PR-preview publisher is installed on main, the trusted Pages workflow posts a live link at https://muse.eplus.dev/pr-preview/pr-N/ **only after it confirms that the current PR revision and required assets are served correctly**.
+
+Live previews contain only PR static site files and use a noindex tag. They are not public production updates. Previews are removed when the PR closes; a new push requires fresh validation before a replacement is advertised. Fork PRs are deliberately excluded from same-origin public publishing.

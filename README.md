@@ -14,7 +14,7 @@
 - GitHub Issue Forms for contributing codes and reporting success/failure feedback
 - Original source links and dated contributor-reported usage snapshots, including **remaining slots = capacity − used** (never live availability)
 - Maintainer-reviewed changes to the public JSON catalog (no auto-publication)
-- CI validation, automated tests, and GitHub Pages deployment on main
+- CI validation, automated tests, GitHub Pages deployment on main, and isolated PR previews under /pr-preview/pr-N/
 - No backend, external account connection, credentials or npm dependencies
 
 ## How to contribute
@@ -47,10 +47,24 @@ Open http://localhost:8000/ . Avoid opening a file URL directly because browsers
 Run checks before opening a PR:
 
     node scripts/validate.mjs
-    node --test scripts/validate.test.mjs
+    node --test scripts/validate.test.mjs scripts/preview.test.mjs
     node --check assets/app.js
 
 Node 24 is used by CI.
+
+## Pull request previews
+
+When the preview pipeline is enabled on main, every **same-repository PR targeting main** is eligible for a shareable preview after the Validate website and invite catalog check passes.
+
+- Preview URL: https://muse.eplus.dev/pr-preview/pr-123/ (replace 123 with the PR number). The workflow **comments the actual URL on the PR only after it verifies the published revision and all critical assets**. Do not assume a guessed URL is ready.
+- Production content always comes from trusted main. The publisher fetches the GitHub-generated PR merge revision and copies only approved static site files into a dedicated directory. It **does not execute PR scripts** or use a personal access token.
+- Every preview has a noindex meta tag, a PR-specific base path, and a preview-meta.json file containing the PR head SHA. Previews do not inherit production canonical URLs. Production SEO and the CNAME stay at the root of the deployment.
+- On a new push, the previous preview is invalidated until CI passes on the latest commit; on PR closure, the preview directory is removed during the next Pages deployment. The bot updates its PR comment.
+- GitHub Pages publishes an **entire-site artifact** each time. The trusted workflow rebuilds the latest main site plus all currently eligible open PR previews together, so deploying one PR does not delete previews for other open PRs.
+- A new PR also gets a downloadable **muse-invite-hub-pr-preview-N** artifact from its read-only Validate workflow. To inspect that offline artifact, extract it, serve it with a local HTTP server, and open localhost; file:// cannot load the JSON catalog.
+- Fork PRs receive normal CI but do not automatically receive public same-origin previews. This prevents arbitrary external contributions from being published under the production domain.
+
+**Bootstrap:** The workflow that publishes live previews must first be merged into main, because GitHub loads trusted pull_request_target and workflow_run definitions from the default branch. This setup PR can be tested through its downloadable preview artifact before merging; subsequent open PRs get a live URL automatically.
 
 ## Publish
 
