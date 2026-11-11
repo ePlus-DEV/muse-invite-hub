@@ -8,7 +8,9 @@
 
 ## Features
 
-- Responsive static site with search, filters, sorting and copy-to-clipboard
+- Responsive static site with search, filters, sorting, accessible 6-at-a-time Load more and copy-to-clipboard
+- Pre-rendered /codes/CODE/ detail pages for all published invites; owner-confirmed pages are indexable, unverified community pages carry noindex
+- Site-specific WebSite and BreadcrumbList structured data, social preview image, and generated SEO sitemap
 - Catalog stats based on published community-submitted entries
 - Featured owner's invite `DPNIHH` shown prominently in the hero and pinned above community codes with a **Verified Owner** badge. This confirms only the site owner's declaration of ownership, not successful redemption on Muse.
 - GitHub Issue Forms for contributing codes and reporting success/failure feedback
@@ -47,10 +49,19 @@ Open http://localhost:8000/ . Avoid opening a file URL directly because browsers
 Run checks before opening a PR:
 
     node scripts/validate.mjs
-    node --test scripts/validate.test.mjs scripts/preview.test.mjs
+    node --test scripts/validate.test.mjs scripts/preview.test.mjs scripts/site-pages.test.mjs
     node --check assets/app.js
+    node --check assets/detail.js
 
 Node 24 is used by CI.
+
+## Details, indexing and progressive loading
+
+Each approved catalog entry gets a pre-rendered page at `/codes/<CODE>/` through the trusted `scripts/site-pages.mjs` generator at deployment (no additional backend). Detail pages show the owner/reporting status, dated quota, copy/redeem steps and feedback link. Static pages are accessible without client-side JavaScript. Details are generated from reviewed `data/invites.json`, not arbitrary issue text.
+
+**SEO quality gate:** Only the featured, owner-confirmed code is included in the generated sitemap and allowed to be indexed. Other unverified community-code detail pages use `noindex,follow` until additional unique, substantiated information is available. Preview pages use `noindex,nofollow,noarchive`. The original homepage title, description and canonical URL are unchanged. The homepage adds WebSite structured data and a social preview image; details use WebPage and BreadcrumbList schema.
+
+The directory initially shows 6 cards. Load more reveals another 6 without changing the entire catalog, and a new search/filter/sort resets the visible limit.
 
 ## Pull request previews
 
@@ -58,10 +69,10 @@ When the preview pipeline is enabled on main, every **same-repository PR targeti
 
 - Preview URL: https://muse.eplus.dev/pr-preview/pr-123/ (replace 123 with the PR number). The workflow **comments the actual URL on the PR only after it verifies the published revision and all critical assets**. Do not assume a guessed URL is ready.
 - Production content always comes from trusted main. The publisher fetches the GitHub-generated PR merge revision and copies only approved static site files into a dedicated directory. It **does not execute PR scripts** or use a personal access token.
-- Every preview has a noindex meta tag, a PR-specific base path, and a preview-meta.json file containing the PR head SHA. The trusted renderer also pre-renders nested `/codes/<CODE>/` paths for PRs that include `assets/detail.js`; legacy PRs without detail pages continue to work. Previews do not inherit production canonical URLs. Production SEO and the CNAME stay at the root of the deployment.
+- Every preview has a noindex meta tag, a PR-specific base path, and a preview-meta.json file containing the PR head SHA. The trusted renderer pre-renders nested `/codes/<CODE>/` paths for PRs with `assets/detail.js` and verifies the nested public URL before posting a successful preview comment. Previews do not inherit production canonical URLs. Production SEO and the CNAME stay at the root of the deployment.
 - On a new push, the previous preview is invalidated until CI passes on the latest commit; on PR closure, the preview directory is removed during the next Pages deployment. The bot updates its PR comment.
 - GitHub Pages publishes an **entire-site artifact** each time. The trusted workflow rebuilds the latest main site plus all currently eligible open PR previews together, so deploying one PR does not delete previews for other open PRs.
-- A new PR also gets a downloadable **muse-invite-hub-pr-preview-N** artifact from its read-only Validate workflow. To inspect that offline artifact, extract it, serve it with a local HTTP server, and open localhost; file:// cannot load the JSON catalog.
+- A new PR also gets a downloadable **muse-invite-hub-pr-preview-N** artifact from its read-only Validate workflow. To inspect an offline artifact, extract it, serve it with a local HTTP server and open localhost; file:// cannot load the JSON catalog.
 - Fork PRs receive normal CI but do not automatically receive public same-origin previews. This prevents arbitrary external contributions from being published under the production domain.
 
 **Bootstrap:** The workflow that publishes live previews must first be merged into main, because GitHub loads trusted pull_request_target and workflow_run definitions from the default branch. This setup PR can be tested through its downloadable preview artifact before merging; subsequent open PRs get a live URL automatically.

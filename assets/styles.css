@@ -327,3 +327,57 @@ button{cursor:pointer}
   .filters{flex-wrap:wrap;overflow-x:visible;margin-right:0;padding:0}
   .owner-remaining-number{font-size:18px}
 }
+
+
+/* Invite detail pages — shares the home site's light design language. */
+.detail-page{padding-top:42px;padding-bottom:100px}
+.detail-breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:10px;color:var(--muted);font-size:13px;margin-bottom:37px}
+.detail-breadcrumb a{color:var(--blue);font-weight:600;text-decoration:none}
+.detail-breadcrumb a:hover{text-decoration:underline}
+.detail-layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(270px,0.83fr);align-items:start;gap:28px}
+.detail-primary{min-width:0}
+.detail-primary h1{font-size:clamp(34px,4.8vw,60px);letter-spacing:-1.7px;line-height:1.08;margin:14px 0 18px}
+.detail-code-text{color:var(--blue);white-space:nowrap}
+.detail-lead{max-width:700px;color:var(--muted);font-size:16px;line-height:1.75;margin:0 0 27px}
+.detail-code-panel{padding:26px;border:1px solid var(--blue-line);border-radius:24px;background:linear-gradient(135deg,#ebf2ff,#fff 72%);box-shadow:var(--shadow-md)}
+.detail-code-heading{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.detail-status{font-size:11px;font-weight:800;border-radius:20px;background:var(--blue);color:#fff;padding:7px 11px}
+.detail-owner{font-size:12px;color:var(--muted);font-weight:600}
+.detail-code{font-size:clamp(34px,6vw,60px);font-weight:800;letter-spacing:4px;color:var(--ink);margin:24px 0 26px;line-height:1.1;overflow-wrap:anywhere}
+.detail-action-row{display:flex;gap:10px;flex-wrap:wrap}
+.detail-action-row .button{min-height:44px}
+.detail-caution{font-size:12px;color:var(--muted);line-height:1.6;margin:19px 0 0}
+.detail-note{line-height:1.8;color:var(--ink);margin:22px 0}
+.detail-instructions{margin-top:34px;padding:30px 28px;background:#fff;border:1px solid var(--line);border-radius:22px}
+.detail-instructions h2{font-size:23px;letter-spacing:-.5px;margin:0 0 15px}
+.detail-instructions ol{padding-left:21px;line-height:1.9;color:var(--ink);margin:0}
+.detail-instructions li{padding-left:4px;margin-bottom:9px}
+.detail-instructions p{font-size:13px;line-height:1.7;color:var(--muted);margin-top:18px}
+.detail-side{display:grid;gap:15px}
+.detail-info-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:23px 22px;box-shadow:var(--shadow-sm)}
+.detail-info-card .section-kicker{font-size:10px;margin:0 0 17px}
+.detail-slots-number{display:block;font-size:clamp(25px,3.7vw,40px);line-height:1.2;color:var(--blue);font-weight:800}
+.detail-slots-caption{display:block;margin-top:8px;font-size:12px;color:var(--muted);line-height:1.55}
+.detail-caption{font-size:12px;color:var(--muted);line-height:1.6;margin:16px 0 0}
+.detail-meta{margin:0}
+.detail-meta div{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:12px}
+.detail-meta div:last-child{border-bottom:0}
+.detail-meta dt{color:var(--muted)}
+.detail-meta dd{margin:0;text-align:right;font-weight:700;overflow-wrap:anywhere}
+.detail-feedback h2{margin:0 0 9px;font-size:18px}
+.detail-feedback p{font-size:12px;color:var(--muted);line-height:1.65}
+.detail-feedback a,.detail-back{color:var(--blue);font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.detail-back{display:inline-block;margin-top:36px}
+.detail-independent{font-size:11px;color:var(--muted);margin-top:36px}
+.card-actions{flex-wrap:wrap;justify-content:flex-start;gap:10px 14px}
+.card-actions a{white-space:nowrap}
+.card-detail-link{display:inline-flex;align-items:center;gap:5px;color:var(--blue);font-weight:700;font-size:12px;text-decoration:none}
+.card-detail-link:hover{text-decoration:underline}
+.directory-more{display:flex;align-items:center;justify-content:center;gap:15px;margin-top:23px}
+.directory-more[hidden]{display:none}
+.directory-more .button{min-width:190px}
+@media(max-width:880px){.detail-layout{grid-template-columns:1fr}.detail-side{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-feedback{grid-column:span 2}}
+@media(max-width:560px){.detail-page{padding-top:26px;padding-bottom:70px}.detail-breadcrumb{margin-bottom:23px}.detail-primary h1{font-size:35px}.detail-code-panel{padding:21px 18px}.detail-code{font-size:36px;letter-spacing:2.2px}.detail-action-row{flex-direction:column}.detail-action-row .button{width:100%;justify-content:center}.detail-instructions{padding:23px 20px}.detail-side{grid-template-columns:1fr}.detail-feedback{grid-column:auto}.directory-more{margin-top:19px}.directory-more .button{width:100%}}
+
+.owner-detail-link{display:inline-flex;margin-top:12px;color:var(--blue);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.owner-detail-link:hover{color:var(--blue-hover)}
