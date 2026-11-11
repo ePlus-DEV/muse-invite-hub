@@ -38,6 +38,14 @@ body:
       placeholder: "e.g. 30"
     validations:
       required: false
+  - type: input
+    id: remaining
+    attributes:
+      label: Remaining invites (optional; self-reported)
+      description: "Only if shown by Muse. The total quota is not required; this will be marked as a dated owner report."
+      placeholder: "e.g. 17"
+    validations:
+      required: false
   - type: textarea
     id: notes
     attributes:
