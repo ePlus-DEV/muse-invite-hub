@@ -9,7 +9,7 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. No npm dependenc
 - Keep at most one `featured: true` code. Pin it ahead of community codes regardless of sort selection.
 - Treat code statuses as community-reported, potentially outdated.
 - External public codes require attributable source URLs; never imply upstream endorsement.
-- Self-reported usage limits are snapshots. Do not calculate or claim live remaining slots.
+- Self-reported usage limits are snapshots. You MAY display dated **reported remaining = reportedCapacity − reportedUses** if both counts and the report date are present, clearly labeled **Not live**. Never guess capacity/usage or call it live available slots. If absent, display **Not reported**.
 - Never automatically publish user-submitted GitHub Issue content. Review and deduplicate before modifying data/invites.json.
 - Never request, store or publish passwords, OTPs, access tokens, private login links, cookies or personal data.
 - Render untrusted data using textContent only; never inject raw HTML or execute user submissions.

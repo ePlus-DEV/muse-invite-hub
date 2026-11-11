@@ -301,4 +301,15 @@ button{cursor:pointer}
 .status-owner-confirmed{background:var(--blue);border-color:var(--blue);color:#fff}
 @media(max-width:560px){.owner-featured{padding:15px 16px}.owner-featured-main{flex-wrap:wrap}.owner-featured-copy{width:100%}.owner-featured-code{font-size:30px;letter-spacing:2px}}
 
+/* Dated, owner-reported remaining invitation slots (logic from PR #8) */
+.owner-remaining-panel{margin:14px 0 0;padding:14px 16px;background:#fff;border:1px solid var(--blue-line);border-radius:14px}
+.owner-remaining-main{display:flex;flex-wrap:wrap;align-items:baseline;gap:5px 12px}
+.owner-remaining-kicker{color:var(--blue);font-size:12px;font-weight:700;width:100%}
+.owner-remaining-number{font-size:clamp(21px,2.8vw,28px);line-height:1.4;color:var(--ink);font-weight:800}
+.owner-remaining-detail{color:var(--muted);font-size:12px}
+.owner-remaining-meta{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;margin-top:7px;color:var(--muted);font-size:11px}
+.owner-remaining-meta a{color:var(--blue);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.owner-remaining-meta a:hover{color:var(--blue-hover)}
+.card-usage-unknown{background:transparent;border-style:dashed;border-color:var(--line);color:var(--faint)}
+
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
