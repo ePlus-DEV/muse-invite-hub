@@ -27,10 +27,10 @@ function copyTrusted(path) {
     copyFileSync(full, to);
   }
 }
-for (const file of ["index.html", ".nojekyll", "CNAME", "robots.txt", "sitemap.xml", "assets", "data"]) {
+for (const file of ["index.html", ".nojekyll", "CNAME", "robots.txt", "sitemap.xml", "llms.txt", "assets", "data"]) {
   if (existsSync(file)) copyTrusted(file);
 }
-for (const required of ["index.html", "assets/app.js", "assets/styles.css", "data/invites.json"]) {
+for (const required of ["index.html", "llms.txt", "assets/app.js", "assets/styles.css", "data/invites.json"]) {
   if (!existsSync(join(output, required))) throw Error("Production output missing " + required);
 }
 const code = JSON.parse(readFileSync(join(output, "data/invites.json"), "utf8"));

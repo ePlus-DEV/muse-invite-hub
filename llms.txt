@@ -1,0 +1,23 @@
+# Muse Invite Hub
+
+> An independent, free, open-source directory of community-shared Muse invite codes maintained by ePlus.DEV, not affiliated with, sponsored by, or endorsed by Muse or Meta.
+
+This guide helps readers and AI agents find public information. It is not a live code-validity feed. Codes, eligibility, redemption success, rewards, and reported invite counts are not guaranteed. Owner confirmation confirms ownership only. Only Muse can confirm whether a code works.
+
+## Website
+
+- [Muse Invite Hub](https://muse.eplus.dev/): Search, copy, and browse public community-shared invite codes.
+- [Owner-confirmed invite DPNIHH](https://muse.eplus.dev/codes/DPNIHH/): Site-owner-confirmed code; redemption remains unverified, and any remaining count is a dated report.
+- [Muse official website](https://muse.ai/): Refer to Muse for current code redemption instructions, eligibility and terms.
+
+## Contribute and provide feedback
+
+- [Share a public invite code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml): Suggest a code through GitHub.
+- [Report your redemption experience](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml): Provide non-sensitive community feedback.
+- [Update a reported count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml): Submit dated, owner-reported figures.
+- [Contribution guide](https://github.com/ePlus-DEV/muse-invite-hub/blob/main/CONTRIBUTING.md): Read moderation and review rules.
+
+## Optional
+
+- [Sitemap](https://muse.eplus.dev/sitemap.xml): Lists only pages eligible for indexing.
+- [Open-source repository](https://github.com/ePlus-DEV/muse-invite-hub): View project source and documentation.

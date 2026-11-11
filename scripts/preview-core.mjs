@@ -5,7 +5,7 @@ import { generateSite } from "./site-pages.mjs";
 
 export const PREVIEW_PREFIX = "pr-preview";
 export const REQUIRED_FILES = ["index.html", "assets/app.js", "assets/styles.css", "data/invites.json"];
-const ALLOWED = /^(?:index\.html|assets\/[a-zA-Z0-9_./-]+\.(?:js|css|svg|png|jpg|jpeg|webp|avif)|data\/[a-zA-Z0-9_./-]+\.json)$/;
+const ALLOWED = /^(?:index\.html|llms\.txt|assets\/[a-zA-Z0-9_./-]+\.(?:js|css|svg|png|jpg|jpeg|webp|avif)|data\/[a-zA-Z0-9_./-]+\.json)$/;
 
 export function isSafeSiteFile(path) {
   return typeof path === "string" && path.length < 200 && !path.includes("..") &&

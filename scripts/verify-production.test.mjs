@@ -13,6 +13,7 @@ const pages = {
   "/assets/styles.css": "body{} .detail-page{}",
   "/assets/detail.js": 'document.getElementById("detail-copy")',
   "/assets/social-preview.png": "a".repeat(600),
+  "/llms.txt": "# Muse Invite Hub\n\nThis is not a live code-validity feed.\n\n- [Home](" + root + "/): Browse codes.\n",
   "/sitemap.xml": "<url><loc>" + root + "/codes/DPNIHH/</loc></url>"
 };
 function mockGet(overrides = {}) {
@@ -25,7 +26,7 @@ function mockGet(overrides = {}) {
 }
 test("verifies production directory route, explicit HTML, JS/CSS and sitemap", async () => {
   const result = await probeProduction({get:mockGet()});
-  assert.deepEqual(result, {checked:7,detailPath:"/codes/DPNIHH/"});
+  assert.deepEqual(result, {checked:8,detailPath:"/codes/DPNIHH/"});
 });
 test("fails when the pretty URL returns 404 even if index.html works", async () => {
   await assert.rejects(
@@ -48,6 +49,9 @@ test("fails if detail is noindex or sitemap lacks the page", async () => {
     probeProduction({get:mockGet({"/sitemap.xml":"<urlset/>"})}),
     /missing indexable detail URL/
   );
+});
+test("fails when the public AI discovery file is missing", async () => {
+  await assert.rejects(probeProduction({get:mockGet({"/llms.txt":null})}), /llms.txt: HTTP 404/);
 });
 test("a transient 404 can recover before production verification fails", async () => {
   let attempts=0;

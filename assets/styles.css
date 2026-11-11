@@ -238,3 +238,7 @@ button{cursor:pointer}
 .detail-side{grid-template-columns:1fr}
 .detail-feedback{grid-column:auto}
 }
+
+/* Compact, semantic answers for users and search readers. */
+.help-content #faq h3{font-size:14px;color:var(--ink);font-weight:800;margin:12px 0 4px}
+.help-content #faq p{font-size:12.5px;line-height:1.7;margin:0 0 11px}

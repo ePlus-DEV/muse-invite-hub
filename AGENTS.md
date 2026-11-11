@@ -38,3 +38,15 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. No npm dependenc
 - Verify desktop/mobile, filters/search/sort, copy, empty and network-error states.
 
 Copying a code is not the same as redeeming it.
+
+## AI agents, llms.txt, SEO and AEO
+
+- `AGENTS.md` instructs coding agents. Public `llms.txt` is a curated Markdown navigation guide, not a crawler-permissions file, live invite feed, or Google ranking requirement.
+- Never change homepage SEO title, meta description, canonical, Open Graph/Twitter metadata, or GA4 tag without express authorization. Do not edit SEO copy incidentally during layout or maintenance tasks.
+- Keep `llms.txt` concise and truthful. Its links must resolve to real, stable, publicly approved locations. Do not advertise non-indexable community detail pages as search results or claim codes work in real time.
+- Prioritize useful, visible content with direct answers to actual visitor questions. Statements about availability, limits, account eligibility and rewards must agree with the original public reports and official Muse terms; never speculate.
+- Google AI Overviews and AI Mode do not require `llms.txt`, special AI schema, or keyword-stuffed AEO text. No SEO, AEO, or LLM file guarantees indexing, referrals or AI citations.
+- Keep `robots.txt` and the production sitemap consistent. Preserve the current indexability rule: homepage and owner-confirmed featured detail only; community details `noindex,follow`; PR previews `noindex,nofollow,noarchive`.
+- Use WebSite structured data on the homepage and WebPage/BreadcrumbList structured data on details only when it matches user-visible facts. Do not add invented reviews, misleading affiliations, artificial FAQ rich-results, or unsupported `SearchAction` markup.
+- The trusted Pages build must copy `llms.txt` into the public site. PR previews may copy only approved static files and must never execute PR-supplied scripts.
+- Test with Node.js 24: `node --test scripts/seo-aeo.test.mjs`. After deploying to production, verify `https://muse.eplus.dev/llms.txt` returns the current guide (not a 404 or stale file).
