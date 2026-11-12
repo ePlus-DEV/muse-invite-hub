@@ -42,12 +42,20 @@
   const FEEDBACK_CHOICES = {
     worked: "Muse accepted my code",
     failed: "Muse rejected or could not redeem my code",
-    other: "Other feedback"
+    other: "Other feedback",
+    count: "Owner-reported invite count"
   };
 
   function feedbackComment(code, outcome) {
     if (!CODE_PATTERN.test(code)) throw Error("Invalid public invite code");
     if (!Object.hasOwn(FEEDBACK_CHOICES, outcome)) throw Error("Invalid feedback option");
+    if (outcome === "count") {
+      return "Code: " + code + "\nUpdate type: Owner count" +
+        "\nRemaining invites: [enter actual number or leave blank]" +
+        "\nTotal invites: [optional]" +
+        "\nUsed invites: [optional]" +
+        "\nOwner confirmation: [confirm this report below]";
+    }
     return "Code: " + code + "\nResult: " + FEEDBACK_CHOICES[outcome] +
       "\nWhen I tried: [add date]\nDetails: [add non-sensitive context]";
   }
@@ -93,6 +101,14 @@
     textarea.id = "feedback-comment-text";
     textarea.rows = 7;
     textarea.maxLength = 3000;
+    const ownerConfirm = document.createElement("label");
+    ownerConfirm.className = "feedback-dialog-consent";
+    const ownerCheckbox = document.createElement("input");
+    ownerCheckbox.type = "checkbox";
+    ownerConfirm.append(ownerCheckbox,
+      document.createTextNode(" I confirm these figures come from my own Muse invite screen."));
+    ownerConfirm.hidden = true;
+    let activeOutcome = "other";
     const note = document.createElement("p");
     note.className = "feedback-dialog-note";
     note.textContent = "Posting a comment on a closed Issue triggers a review/reopen workflow. A report never verifies Muse redemption automatically.";
@@ -116,13 +132,37 @@
     close.type = "button";
     close.textContent = "Close";
     controls.append(copy, open, close);
-    surface.append(heading, help, label, textarea, note, feedbackStatus, controls);
+    surface.append(heading, help, label, textarea, ownerConfirm, note, feedbackStatus, controls);
     dialog.append(surface);
     document.body.append(dialog);
     let trigger = null;
 
     copy.addEventListener("click", async () => {
-      const text = textarea.value.trim();
+      let text = textarea.value.trim();
+      if (activeOutcome === "count") {
+        if (!ownerCheckbox.checked) {
+          feedbackStatus.textContent = "Confirm that these numbers came from your own Muse account.";
+          ownerCheckbox.focus();
+          return;
+        }
+        const countFields = {};
+        for (const line of text.split(/\r?\n/)) {
+          const hit = /^(Remaining invites|Total invites|Used invites):\s*(.*)$/.exec(line.trim());
+          if (hit) countFields[hit[1]] = hit[2].trim();
+        }
+        const values = Object.values(countFields);
+        const numbers = values.filter(value => /^\d{1,4}$/.test(value));
+        if (!numbers.length || values.some(value =>
+          value && !/^\d{1,4}$/.test(value) && !/^\[(?:optional|enter actual number or leave blank)\]$/.test(value))) {
+          feedbackStatus.textContent = "Enter a real remaining count, or a consistent total and used count.";
+          textarea.focus();
+          return;
+        }
+        text = text.replace(/\[enter actual number or leave blank\]|\[optional\]/g,"").replace(
+          /Owner confirmation:.*$/m,
+          "Owner confirmation: I confirm these figures came from my own Muse invite screen.");
+        textarea.value = text;
+      }
       if (!text) {
         feedbackStatus.textContent = "Enter a comment before copying.";
         textarea.focus();
@@ -150,7 +190,14 @@
       open(code, outcome, issueNumber, opener) {
         if (!CODE_PATTERN.test(code) || !Object.hasOwn(FEEDBACK_CHOICES, outcome) ||
             !Number.isSafeInteger(issueNumber) || issueNumber <= 0) return false;
-        heading.textContent = "Report code " + code;
+        heading.textContent = outcome === "count" ?
+          "Update owner count for " + code : "Report code " + code;
+        activeOutcome = outcome;
+        ownerCheckbox.checked = false;
+        ownerConfirm.hidden = outcome !== "count";
+        help.textContent = outcome === "count" ?
+          "Only the listed GitHub owner can propose a count update. Enter numbers shown in your own Muse account, confirm ownership, then copy and comment on the ORIGINAL Issue. GitHub identity is checked before any Draft PR." :
+          "Review and copy your prepared comment, then open the existing GitHub Issue and paste it. GitHub cannot prefill comments in an existing Issue.";
         const date = new Date();
         // Local date is only a convenient editable starting point.
         const localDate = [date.getFullYear(),
