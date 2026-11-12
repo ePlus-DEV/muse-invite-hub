@@ -1,6 +1,5 @@
 (() => {
   "use strict";
-  const REPO = "https://github.com/ePlus-DEV/muse-invite-hub";
   const features = window.MuseDirectoryFeatures;
   if (!features) throw Error("Missing directory helpers");
   const STATUS = {
@@ -106,14 +105,6 @@
     return parsed.toLocaleDateString("en-US", {
       year: "numeric", month: "short", day: "numeric", timeZone: "UTC"
     });
-  }
-  function issueUrl(template, code) {
-    const params = new URLSearchParams({ template });
-    if (code) {
-      params.set("invite_code", code);
-      if (template === "report-code.yml") params.set("title", "[Code feedback] " + code);
-    }
-    return REPO + "/issues/new?" + params.toString();
   }
   function reportedRemaining(item) {
     if (!item || typeof item.usageReportedAt !== "string") return null;
