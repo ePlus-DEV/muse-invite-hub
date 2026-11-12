@@ -113,6 +113,11 @@
           </div>
         </details>
       </section>
+      <div class="source-filters" role="group" aria-label="Filter invite codes by source">
+        <button type="button" class="source-filter is-active" data-source="all" aria-pressed="true">All sources</button>
+        <button type="button" class="source-filter" data-source="github" aria-pressed="false"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</button>
+        <button type="button" class="source-filter" data-source="threads" aria-pressed="false"><i class="fa-brands fa-threads" aria-hidden="true"></i> Threads</button>
+      </div>
       <div class="cards-grid" id="code-grid" aria-live="off"><div class="loading-card">Loading community codes…</div></div>
       <div class="directory-more" id="directory-more" hidden><button type="button" class="button button-outlined" id="load-more-codes" aria-controls="code-grid">Load more <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button></div>
       <div class="empty-state" id="empty-state" hidden><div class="empty-symbol" aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></div><h3 id="empty-title">No matching codes</h3><p id="empty-description">Try another search or help the community by sharing your code.</p><a class="button button-primary" href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" target="_blank" rel="noopener noreferrer">Share a code</a></div>

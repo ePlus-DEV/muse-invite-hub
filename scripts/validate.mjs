@@ -76,6 +76,18 @@ export function validateCatalog(data) {
       try {
         const url = new URL(item.sourceUrl);
         if (url.protocol !== "https:" || !url.hostname.includes(".")) throw new Error("HTTPS only");
+        if (["threads.com", "www.threads.com"].includes(url.hostname.toLowerCase())) {
+          if (url.username || url.password || url.search || url.hash ||
+              !/^\/@[A-Za-z0-9_.]{1,30}(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.test(url.pathname)) {
+            errors.push(at + ": sourceUrl must identify a public Threads profile or post.");
+          }
+          if (item.submittedBy !== undefined) {
+            errors.push(at + ": Threads sourceUrl must not reuse submittedBy as a GitHub username.");
+          }
+          if (item.featured === true || item.ownerConfirmed === true) {
+            errors.push(at + ": Threads-listed codes cannot claim featured owner status.");
+          }
+        }
         if (url.hostname.toLowerCase() === "github.com") {
           const parts = url.pathname.split("/").filter(Boolean);
           if (parts.length >= 2 && (parts[0].toLowerCase() !== "eplus-dev" || parts[1].toLowerCase() !== "muse-invite-hub")) {

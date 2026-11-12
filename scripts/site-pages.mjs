@@ -67,7 +67,17 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
       (quota.capacity === null ? '' : ' / ' + escapeHtml(quota.capacity)) + '</strong><span class="detail-slots-caption">invites remaining, reported ' +
       escapeHtml(quota.date) + ' · Not live</span>'
     : '<strong class="detail-slots-number">Not reported</strong><span class="detail-slots-caption">No confirmed remaining-slot data</span>';
-  const author = item.submittedBy ? '@' + item.submittedBy : 'Community contributor';
+  const threadsMatch = typeof item.sourceUrl === "string" &&
+    /^https:\/\/(?:www\.)?threads\.com\/@([A-Za-z0-9_.]{1,30})(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.exec(item.sourceUrl);
+  const isThreads = Boolean(threadsMatch);
+  const platform = isThreads ? "Threads" : "GitHub";
+  const handle = isThreads ? threadsMatch[1] : item.submittedBy;
+  const author = handle ? "@" + handle : "Community contributor";
+  const sourceUrl = isThreads ? item.sourceUrl : handle ? "https://github.com/" + encodeURIComponent(handle) : null;
+  const sourceLink = sourceUrl
+    ? '<a href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener noreferrer">' +
+      escapeHtml(platform + " · " + author) + ' <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>'
+    : escapeHtml(platform);
   const ownerText = item.ownerConfirmed
     ? 'Owner-confirmed by ePlus.DEV. Ownership confirmation does not mean the code has been redeemed or validated by Muse.'
     : 'This community listing has not been independently tested. Its appearance here does not guarantee Muse access.';
@@ -148,6 +158,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '          <p class="detail-caption">These figures are dated, owner-reported snapshots—not a real-time Muse balance.</p></div>' +
     '        <div class="detail-info-card"><p class="section-kicker">LISTING DETAILS</p>' +
     '          <dl class="detail-meta"><div><dt>Contributor</dt><dd>' + escapeHtml(author) + '</dd></div>' +
+    '            <div><dt>Source</dt><dd>' + sourceLink + '</dd></div>' +
     '            <div><dt>Listed</dt><dd>' + escapeHtml(dateText(item.addedAt)) + '</dd></div>' +
     '            <div><dt>Redemption status</dt><dd>' + escapeHtml(item.status === "unverified" ? "Unverified" : statusLine) + '</dd></div></dl>' +
     '        </div><div class="detail-info-card detail-feedback"><h2>Does this code work?</h2><p>Share your experience to help the community keep listings accurate.</p>' +

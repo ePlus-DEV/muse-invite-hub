@@ -128,5 +128,21 @@
     "addedAt": "2026-11-11",
     "submittedBy": "jaxxchen003",
     "note": "Publicly shared invitation; Muse redemption has not been independently verified."
+  },
+  {
+    "id": "threads-baijiling2-18i70n",
+    "code": "18I70N",
+    "status": "unverified",
+    "addedAt": "2026-11-12",
+    "note": "User-reported Threads code; original comment and Muse redemption not independently verified.",
+    "sourceUrl": "https://www.threads.com/@baijiling2"
+  },
+  {
+    "id": "threads-zkeir1914-xz4pv6",
+    "code": "XZ4PV6",
+    "status": "unverified",
+    "addedAt": "2026-11-12",
+    "note": "User-reported Threads code; original comment and Muse redemption not independently verified.",
+    "sourceUrl": "https://www.threads.com/@zkeir1914"
   }
 ]

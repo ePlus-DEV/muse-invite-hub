@@ -13,6 +13,8 @@
   const sortCurrent = document.getElementById("sort-current");
   const sortOptions = [...sortMenu.querySelectorAll(".sort-option")];
   let sortValue = "newest";
+  const sourceFilters = [...document.querySelectorAll(".source-filter")];
+  let sourceFilter = "all";
   const resultCount = document.getElementById("result-count");
   const more = document.getElementById("directory-more");
   const moreButton = document.getElementById("load-more-codes");
@@ -70,7 +72,10 @@
       ["stat-total", "stat-contributors", "stat-reported"].forEach(id => setStat(id, "—"));
       return;
     }
-    const contributors = new Set(codes.map(c => c.submittedBy).filter(Boolean));
+    const contributors = new Set(codes.map(c => {
+      const origin = sourceInfo(c);
+      return origin.handle ? origin.platform.toLowerCase() + ":" + origin.handle.toLowerCase() : null;
+    }).filter(Boolean));
     const reported = codes.filter(c => reportedRemaining(c) !== null);
     setStat("stat-total", codes.length.toLocaleString("en-US"));
     setStat("stat-contributors", contributors.size.toLocaleString("en-US"));
@@ -107,6 +112,24 @@
       }
     }, 2200);
   }
+  function threadsSource(url) {
+    if (typeof url !== "string") return null;
+    try {
+      const parsed = new URL(url);
+      const match = /^\/@([A-Za-z0-9_.]{1,30})(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.exec(parsed.pathname);
+      if (parsed.protocol !== "https:" ||
+          !["threads.com", "www.threads.com"].includes(parsed.hostname.toLowerCase()) ||
+          parsed.username || parsed.password || parsed.search || parsed.hash || !match) return null;
+      return { platform: "Threads", handle: match[1], url: parsed.href, icon: "fa-brands fa-threads" };
+    } catch { return null; }
+  }
+  function sourceInfo(item) {
+    return threadsSource(item.sourceUrl) || {
+      platform: "GitHub", handle: item.submittedBy || null,
+      url: item.submittedBy ? "https://github.com/" + encodeURIComponent(item.submittedBy) : null,
+      icon: "fa-brands fa-github"
+    };
+  }
   function createCard(item) {
     const status = STATUS[item.status] || STATUS.unverified;
     const featured = item.featured === true;
@@ -126,12 +149,16 @@
       : status.description;
     head.append(name, badge);
     const contributor = el("div", "card-contributor");
-    contributor.append(icon("fa-regular fa-user"));
-    if (item.submittedBy) {
-      const author = el("a", "card-author", "@" + item.submittedBy);
-      author.href = "https://github.com/" + encodeURIComponent(item.submittedBy);
+    const source = sourceInfo(item);
+    const sourceTag = el("span", "card-source" + (source.platform === "Threads" ? " card-source-threads" : ""));
+    sourceTag.append(icon(source.icon), document.createTextNode(" " + source.platform));
+    contributor.append(sourceTag);
+    if (source.handle && source.url) {
+      const author = el("a", "card-author", "@" + source.handle);
+      author.href = source.url;
       author.rel = "noopener noreferrer";
       author.target = "_blank";
+      author.setAttribute("aria-label", "View " + source.platform + " profile of " + source.handle);
       contributor.append(author);
     } else {
       contributor.append(el("span", "", "Community contributor"));
@@ -180,9 +207,11 @@
     if (resetLimit) displayLimit = PAGE_SIZE;
     const q = searchInput.value.trim().toLowerCase();
     const visible = codes.filter(item =>
-      item.code.toLowerCase().includes(q) ||
-      String(item.submittedBy || "").toLowerCase().includes(q) ||
-      String(item.note || "").toLowerCase().includes(q)
+      (sourceFilter === "all" || sourceInfo(item).platform.toLowerCase() === sourceFilter) &&
+      (item.code.toLowerCase().includes(q) ||
+       String(item.submittedBy || "").toLowerCase().includes(q) ||
+       String(sourceInfo(item).handle || "").toLowerCase().includes(q) ||
+       String(item.note || "").toLowerCase().includes(q))
     );
     const sort = sortValue;
     visible.sort((a, b) => {
@@ -207,7 +236,7 @@
       description.textContent = loadFailed ?
         "Check your connection and refresh. You can still share codes through GitHub." :
         codes.length === 0 ? "No invite codes have been published yet." :
-        "Try a different code or contributor.";
+        "Try a different search term or source filter.";
     }
   }
   async function initialize() {
@@ -227,6 +256,17 @@
     render();
   }
   searchInput.addEventListener("input", () => render(true));
+  for (const button of sourceFilters) {
+    button.addEventListener("click", () => {
+      sourceFilter = button.dataset.source;
+      for (const entry of sourceFilters) {
+        const selected = entry === button;
+        entry.setAttribute("aria-pressed", String(selected));
+        entry.classList.toggle("is-active", selected);
+      }
+      render(true);
+    });
+  }
   function closeSortMenu(restoreFocus = false) {
     sortMenu.hidden = true;
     sortTrigger.setAttribute("aria-expanded", "false");
