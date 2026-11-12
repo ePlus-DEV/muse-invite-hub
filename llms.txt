@@ -13,7 +13,7 @@ This guide helps readers and AI agents find public information. It is not a live
 ## Contribute and provide feedback
 
 - [Share a public invite code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml): Suggest a code through GitHub.
-- [Report your redemption experience](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml): Provide non-sensitive community feedback.
+- [Report your redemption experience](https://muse.eplus.dev/#codes): Provide non-sensitive community feedback.
 - [Update a reported count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml): Submit dated, owner-reported figures.
 - [Contribution guide](https://github.com/ePlus-DEV/muse-invite-hub/blob/main/CONTRIBUTING.md): Read moderation and review rules.
 
