@@ -19,14 +19,14 @@ For GitHub-owned codes only: if your code is already listed under the same GitHu
 ## Report code feedback
 
 1. Open [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml).
-2. Supply the exact code and select accepted, rejected, exhausted, no redeem option, duplicate, or other.
-3. Include the date and non-sensitive error text or context if helpful.
+2. Supply the exact code, then select the **Listing platform** (GitHub or Threads) shown on that code's card, and report accepted, rejected, exhausted, no redeem option, duplicate, or other.
+3. Include the date and non-sensitive error text or context if helpful. A GitHub user and a Threads user with the same @handle are **different accounts**; the reporter's username does not override the listed source.
 
 One attempt is **community feedback**, not proof that every account or region will behave the same way. Clear accepted/rejected feedback can produce an automated **Draft PR** with a community-reported status and date; ambiguous feedback stays for manual triage. Only a reviewed and merged PR should change `status` or `checkedAt`.
 
 ## Update remaining invites
 
-If you own the public invite, use [Update invite count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml). Report the date, code, and only numbers actually shown in **your Muse Invite screen**.
+If you own the public invite, use [Update invite count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml). Select the listing platform and report the date, code, and only numbers actually shown in **your Muse Invite screen**. Matching usernames across platforms never establish owner identity.
 
 | Example | Quantity |
 | --- | ---: |
@@ -41,6 +41,8 @@ Amounts are **dated self-reported snapshots**, not live Muse availability. Copyi
 ## Automatic Issue-to-Draft-PR
 
 Supported Issue Forms trigger [Issue to Draft PR](.github/workflows/issue-to-pr.yml) when opened, edited or reopened. It uses trusted source code on `main`, treats submitted text as untrusted data, checks duplicates, and creates a separate branch named `auto/issue-<NUMBER>-<TYPE>`. It proposes a change **only to `data/invites.json`** and opens a **Draft PR**. The workflow comments on the originating Issue with the PR link or the reason the report requires manual review.
+
+New feedback and count forms require the listing platform. The Issue bot checks the selected platform against the code's cataloged source; if it conflicts, it requests manual review rather than changing the other platform's listing. Old Issues without the field remain backward compatible.
 
 Threads Issues with a verifiable-looking public post permalink may propose an **unverified** Draft PR; the maintainer must check that the post really contains the code. Profile-only, malformed, duplicated or ambiguous Threads sources are routed for manual triage, and the Issue reporter is never presented as the Threads code owner.
 
