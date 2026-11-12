@@ -124,3 +124,20 @@ test("directory redesign preserves SEO, GA4, a single featured listing and verif
   assert.match(app, /visible\.slice\(0, displayLimit\)/);
   assert.match(renderDetailPage(owner()), /G-N1MZ8YLNLJ/);
 });
+
+test("sort dropdown uses a styled accessible menu with keyboard and outside-click dismissal", () => {
+  const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../assets/styles.css", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
+  assert.doesNotMatch(home, /<select id="sort-codes"/);
+  assert.match(home, /id="sort-trigger" aria-haspopup="menu"/);
+  assert.match(home, /id="sort-menu" role="menu"/);
+  assert.equal((home.match(/role="menuitemradio"/g) || []).length, 3);
+  assert.match(home, /data-sort="newest" aria-checked="true"/);
+  assert.match(css, /\.sort-menu\{position:absolute/);
+  assert.match(css, /\.sort-option\[aria-checked="true"\]/);
+  assert.match(app, /sortValue = option\.dataset\.sort/);
+  assert.match(app, /sortMenu\.addEventListener\("keydown"/);
+  assert.match(app, /document\.addEventListener\("pointerdown"/);
+  assert.match(app, /render\(true\)/);
+});
