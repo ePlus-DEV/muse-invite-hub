@@ -14,9 +14,11 @@ export function feedbackCodeForIssue(issue, catalog) {
   if (!item) return null;
   // The historical Issue is authoritative even if its catalog entry id does
   // not carry a local issue number (e.g. owner count update or imported entry).
-  return originalIssueNumber(item) === issue.number ||
-    /^\[(?:Invite|Count update|Code feedback)\]/.test(String(issue.title || "")) ||
-    String(issue.body || "").includes(issueMarker(code)) ||
+  const canonicalNumber = originalIssueNumber(item);
+  // Never reopen an arbitrary Issue with the same code: the single linked Issue
+  // number is the source of truth for old contributions as well as new threads.
+  if (canonicalNumber !== null) return canonicalNumber === issue.number ? code : null;
+  return String(issue.body || "").includes(issueMarker(code)) ||
     String(issue.body || "").includes("<!-- muse-code-feedback-root:" + code + " -->") ?
     code : null;
 }
