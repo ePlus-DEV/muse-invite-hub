@@ -32,7 +32,7 @@ export function createTelegramApp({
   const handled=new Set(processed);
   const strikes=new Map();
   let queue=Promise.resolve();
-  const call=telegramApi||async (method,payload)=>{
+  const call=telegramApi || (async (method,payload)=>{
     const response=await fetch("https://api.telegram.org/bot"+token+"/"+method,{
       method:"POST",
       headers:{"Content-Type":"application/json"},
@@ -42,7 +42,7 @@ export function createTelegramApp({
     if(!response.ok)throw Error("Telegram API HTTP "+response.status);
     const result=await response.json();
     if(result.ok!==true)throw Error("Telegram rejected "+method);
-  };
+  });
   async function send(chat_id,text,buttons){
     const payload={chat_id,text,disable_web_page_preview:true};
     if(buttons)payload.reply_markup=keyboard(buttons);
