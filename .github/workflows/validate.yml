@@ -37,6 +37,13 @@ jobs:
           node --check assets/site-ui.js
       - name: Validate public invite catalog
         run: node scripts/validate.mjs
+      - name: Test Telegram ARM64 server and webhook
+        run: |
+          node --check telegram/bot.mjs
+          node --check telegram/github.mjs
+          node --check telegram/server.mjs
+          node --check telegram/register-webhook.mjs
+          node --test telegram/telegram.test.mjs
       - name: Test trusted Issue form parser
         run: |
           node --check scripts/issue-to-pr.mjs
