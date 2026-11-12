@@ -159,25 +159,25 @@ test("Threads codes retain attribution on detail pages and remain noindex", () =
   assert.match(app, /render\(true\)/);
 });
 
-test("Give feedback prefills the invite code and listing platform on Home and detail pages", () => {
+test("Give feedback prefills editable issue title and code; platform remains a dropdown", () => {
   const homeJs = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
   const detailJs = readFileSync(new URL("../assets/detail.js", import.meta.url), "utf8");
   const form = readFileSync(new URL("../.github/ISSUE_TEMPLATE/report-code.yml", import.meta.url), "utf8");
   assert.match(form, /id: invite_code/);
-  assert.match(form, /- type: input\n    id: listing_platform\n/);
-  assert.match(form, /placeholder: "GitHub or Threads"/);
-  assert.doesNotMatch(form, /- type: dropdown\n    id: listing_platform\n/);
+  assert.match(form, /- type: dropdown\n    id: listing_platform\n/);
+  assert.match(form, /      options:\n        - GitHub\n        - Threads/);
+  assert.doesNotMatch(form, /- type: input\n    id: listing_platform\n/);
   assert.match(form, /title: "\[Code feedback\] "/);
   assert.match(homeJs, /params\.set\("invite_code", code\)/);
   assert.match(homeJs, /params\.set\("title", "\[Code feedback\] " \+ code\)/);
-  assert.match(homeJs, /params\.set\("listing_platform", platform\)/);
-  assert.match(homeJs, /issueUrl\("report-code\.yml", item\.code, source\.platform\)/);
-  assert.match(detailJs, /href\.searchParams\.set\("listing_platform", listingPlatform\)/);
+  assert.doesNotMatch(homeJs, /params\.set\("listing_platform", platform\)/);
+  assert.match(homeJs, /issueUrl\("report-code\.yml", item\.code\)/);
+  assert.match(detailJs, /href\.searchParams\.delete\("listing_platform"\)/);
   assert.match(detailJs, /href\.searchParams\.set\("title", "\[Code feedback\] " \+ inviteCode\)/);
-  for (const [entry, expectedPlatform] of [
-    [owner(), "GitHub"],
-    [{ ...community(), code:"XZ4PV6", submittedBy:undefined,
-       sourceUrl:"https://www.threads.com/@zkeir1914" }, "Threads"]
+  for (const entry of [
+    owner(),
+    { ...community(), code:"XZ4PV6", submittedBy:undefined,
+      sourceUrl:"https://www.threads.com/@zkeir1914" }
   ]) {
     const html = renderDetailPage(entry);
     const href = html.match(/<a href="([^"]+)" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-comment"/);
@@ -187,9 +187,9 @@ test("Give feedback prefills the invite code and listing platform on Home and de
     assert.equal(url.pathname, "/ePlus-DEV/muse-invite-hub/issues/new");
     assert.equal(url.searchParams.get("template"), "report-code.yml");
     assert.equal(url.searchParams.get("invite_code"), entry.code);
-    assert.equal(url.searchParams.get("listing_platform"), expectedPlatform);
+    assert.equal(url.searchParams.has("listing_platform"), false);
     assert.equal(url.searchParams.get("title"), "[Code feedback] " + entry.code);
     assert.equal(url.searchParams.getAll("title").length, 1);
-    assert.equal(url.searchParams.getAll("listing_platform").length, 1);
+    assert.equal(url.searchParams.getAll("listing_platform").length, 0);
   }
 });
