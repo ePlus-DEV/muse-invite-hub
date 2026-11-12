@@ -10,7 +10,8 @@
     "ownerConfirmed": true,
     "reportedCapacity": 30,
     "reportedUses": 27,
-    "usageReportedAt": "2026-11-11"
+    "usageReportedAt": "2026-11-11",
+    "feedbackIssueNumber": 14
   },
   {
     "id": "community-issue-60",
@@ -19,7 +20,8 @@
     "addedAt": "2026-11-12",
     "submittedBy": "THIENHUONG123",
     "note": "Community-submitted in issue #60; redemption not independently verified.",
-    "submittedById": 355748529
+    "submittedById": 355748529,
+    "feedbackIssueNumber": 60
   },
   {
     "id": "community-issue-55",
@@ -31,7 +33,8 @@
     "submittedById": 341934512,
     "reportedCapacity": 30,
     "reportedUses": 8,
-    "usageReportedAt": "2026-11-12"
+    "usageReportedAt": "2026-11-12",
+    "feedbackIssueNumber": 55
   },
   {
     "id": "community-issue-46",
@@ -43,7 +46,8 @@
     "submittedById": 125558313,
     "reportedCapacity": 30,
     "reportedUses": 3,
-    "usageReportedAt": "2026-11-12"
+    "usageReportedAt": "2026-11-12",
+    "feedbackIssueNumber": 46
   },
   {
     "id": "community-issue-32",
@@ -55,7 +59,8 @@
     "submittedById": 109600446,
     "reportedCapacity": 30,
     "reportedUses": 3,
-    "usageReportedAt": "2026-11-11"
+    "usageReportedAt": "2026-11-11",
+    "feedbackIssueNumber": 32
   },
   {
     "id": "community-issue-20",
@@ -63,7 +68,8 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "YHresearcher",
-    "note": "Submitted by the contributor in issue #20; redemption has not been independently verified."
+    "note": "Submitted by the contributor in issue #20; redemption has not been independently verified.",
+    "feedbackIssueNumber": 20
   },
   {
     "id": "jx-issue-63",
@@ -71,7 +77,8 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "hastur1229",
-    "note": "Publicly shared in a Muse community issue."
+    "note": "Publicly shared in a Muse community issue.",
+    "feedbackIssueNumber": 64
   },
   {
     "id": "jx-issue-23",
@@ -82,7 +89,8 @@
     "note": "Publicly shared; availability not independently verified.",
     "reportedUses": 1,
     "reportedCapacity": 30,
-    "usageReportedAt": "2026-11-11"
+    "usageReportedAt": "2026-11-11",
+    "feedbackIssueNumber": 65
   },
   {
     "id": "jx-issue-18",
@@ -90,7 +98,8 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "lilaclilac09",
-    "note": "Publicly shared; Muse determines redemption eligibility."
+    "note": "Publicly shared; Muse determines redemption eligibility.",
+    "feedbackIssueNumber": 66
   },
   {
     "id": "jx-issue-19",
@@ -101,7 +110,8 @@
     "note": "Contributor shared a usage figure; it may now be stale.",
     "usageReportedAt": "2026-11-11",
     "reportedRemaining": 17,
-    "submittedById": 316039127
+    "submittedById": 316039127,
+    "feedbackIssueNumber": 28
   },
   {
     "id": "jx-issue-16",
@@ -109,7 +119,8 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "orangebananas",
-    "note": "Public referral code, independently unverified."
+    "note": "Public referral code, independently unverified.",
+    "feedbackIssueNumber": 67
   },
   {
     "id": "jx-issue-13",
@@ -117,7 +128,8 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "TonyInsightOps",
-    "note": "Fourth character is the letter O, not zero."
+    "note": "Fourth character is the letter O, not zero.",
+    "feedbackIssueNumber": 68
   },
   {
     "id": "jx-issue-6",
@@ -125,7 +137,8 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "haiwaiid20-art",
-    "note": "Shared by a Muse community participant."
+    "note": "Shared by a Muse community participant.",
+    "feedbackIssueNumber": 69
   },
   {
     "id": "jx-issue-5",
@@ -133,7 +146,8 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "FeatureMarski",
-    "note": "Public referral code; not officially verified."
+    "note": "Public referral code; not officially verified.",
+    "feedbackIssueNumber": 70
   },
   {
     "id": "jx-issue-4",
@@ -144,7 +158,8 @@
     "note": "Contributor shared a historical usage count; it may be stale.",
     "reportedUses": 26,
     "reportedCapacity": 30,
-    "usageReportedAt": "2026-10-31"
+    "usageReportedAt": "2026-10-31",
+    "feedbackIssueNumber": 71
   },
   {
     "id": "jx-issue-3",
@@ -152,7 +167,8 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "FeatureMarski",
-    "note": "Publicly shared by its owner; status unverified."
+    "note": "Publicly shared by its owner; status unverified.",
+    "feedbackIssueNumber": 72
   },
   {
     "id": "jx-readme",
@@ -160,7 +176,8 @@
     "status": "unverified",
     "addedAt": "2026-11-11",
     "submittedBy": "jaxxchen003",
-    "note": "Publicly shared invitation; Muse redemption has not been independently verified."
+    "note": "Publicly shared invitation; Muse redemption has not been independently verified.",
+    "feedbackIssueNumber": 73
   },
   {
     "id": "threads-baijiling2-18i70n",
@@ -168,7 +185,8 @@
     "status": "unverified",
     "addedAt": "2026-11-12",
     "note": "User-reported Threads code; original comment and Muse redemption not independently verified.",
-    "sourceUrl": "https://www.threads.com/@baijiling2"
+    "sourceUrl": "https://www.threads.com/@baijiling2",
+    "feedbackIssueNumber": 74
   },
   {
     "id": "threads-zkeir1914-xz4pv6",
@@ -176,6 +194,7 @@
     "status": "unverified",
     "addedAt": "2026-11-12",
     "note": "User-reported Threads code; original comment and Muse redemption not independently verified.",
-    "sourceUrl": "https://www.threads.com/@zkeir1914"
+    "sourceUrl": "https://www.threads.com/@zkeir1914",
+    "feedbackIssueNumber": 75
   }
 ]
