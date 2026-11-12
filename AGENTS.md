@@ -50,3 +50,10 @@ Copying a code is not the same as redeeming it.
 - Use WebSite structured data on the homepage and WebPage/BreadcrumbList structured data on details only when it matches user-visible facts. Do not add invented reviews, misleading affiliations, artificial FAQ rich-results, or unsupported `SearchAction` markup.
 - The trusted Pages build must copy `llms.txt` into the public site. PR previews may copy only approved static files and must never execute PR-supplied scripts.
 - Test with Node.js 24: `node --test scripts/seo-aeo.test.mjs`. After deploying to production, verify `https://muse.eplus.dev/llms.txt` returns the current guide (not a 404 or stale file).
+
+## Muse country availability editorial rule
+
+- Supported signup markets must be supported by primary Meta announcements, not reposts or speculative lists. Keep the "as of" date and primary sources together with the public list; do not infer a future launch date from marketing campaigns.
+- Separate a confirmed service rollout from an individual account's eligibility, waitlist status, invite-code redemption, and regional restrictions. Do not claim a code bypasses signup restrictions.
+- Keep the country section compact and accessible as semantic static HTML, with source links and mobile layout. Preserve homepage SEO metadata, GA4, existing invites data, `llms.txt` indexability, and noindex preview rules.
+- Update `scripts/seo-aeo.test.mjs` and the README/llms.txt country references when the Meta-source-backed list changes.

@@ -30,6 +30,14 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full process, supported fields a
 
 Run `node --test scripts/seo-aeo.test.mjs` with Node.js 24.
 
+## Country availability (checked 12 November 2026)
+
+Muse Invite Hub shows a compact, expandable, source-linked list of the five markets confirmed by Meta: **United States, Canada, Japan, Singapore and Mexico**. It is not a live eligibility checker. Vietnam is not among these confirmed launch markets; codes cannot override region restrictions.
+
+Official sources: [US launch](https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/), [Canada confirmation](https://about.fb.com/news/2026/09/introducing-muse-small-business/), [Japan launch](https://about.fb.com/ja/news/2026/10/muse-personal-ai-agent-launches-in-japan/), [Singapore launch](https://about.fb.com/news/2026/10/muse-is-now-available-in-singapore-the-worlds-first-personal-ai-agent-built-for-everyone/), and [Mexico announcement](https://about.fb.com/ltam/news/2026/09/presentamos-muse-el-primer-agente-de-ia-personal-del-mundo-creado-para-todos/). Dates are sourced from Meta; for Canada we show **confirmed by 29 September** instead of claiming a specific launch date.
+
+Update the source links, checked date and `scripts/seo-aeo.test.mjs` together when Meta announces another supported market. No unconfirmed launches or automatic eligibility promises.
+
 ## Features
 
 - Search, filter, sort and browse the directory with **Load more** (six codes per batch).

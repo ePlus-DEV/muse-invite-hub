@@ -242,3 +242,37 @@ button{cursor:pointer}
 /* Compact, semantic answers for users and search readers. */
 .help-content #faq h3{font-size:14px;color:var(--ink);font-weight:800;margin:12px 0 4px}
 .help-content #faq p{font-size:12.5px;line-height:1.7;margin:0 0 11px}
+
+/* A compact, source-linked regional availability disclosure ahead of code listings. */
+.availability-section{margin:-2px 0 16px;scroll-margin-top:92px}
+.availability-disclosure{background:#fff;border:1px solid var(--blue-line);border-radius:13px;box-shadow:var(--shadow-sm);overflow:hidden}
+.availability-disclosure>summary{display:flex;align-items:center;gap:12px;cursor:pointer;padding:12px 15px;list-style:none}
+.availability-disclosure>summary::-webkit-details-marker{display:none}
+.availability-heading{display:inline-flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:12.5px;color:var(--ink)}
+.availability-heading>i{color:var(--blue);font-size:15px}
+.availability-heading strong{font-weight:800}
+.availability-count{font-size:10.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.availability-flags{font-size:16px;letter-spacing:3px;white-space:nowrap}
+.availability-chevron{color:var(--blue);font-size:11px;transition:transform .15s;flex:none}
+.availability-disclosure[open] .availability-chevron{transform:rotate(180deg)}
+.availability-content{padding:0 15px 15px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.availability-content>p{margin:12px 0;line-height:1.7}
+.availability-market-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr;gap:0}
+.availability-market-list li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line)}
+.availability-market-list li:last-child{border-bottom:none}
+.availability-market{font-weight:800;color:var(--ink)}
+.availability-date{color:var(--muted)}
+.availability-market-list a,.availability-note a{font-size:11.5px;color:var(--blue);font-weight:800;text-decoration:underline;text-underline-offset:3px}
+.availability-market-list a:hover,.availability-note a:hover{color:var(--blue-hover)}
+.availability-note{background:var(--blue-soft);padding:11px 12px;border-radius:10px;color:var(--text)}
+@media(max-width:620px){
+  .availability-section{margin-top:0;margin-bottom:12px}
+  .availability-disclosure>summary{flex-wrap:wrap;gap:7px;padding:11px 12px}
+  .availability-heading{font-size:12px;flex-basis:calc(100% - 18px);flex-wrap:wrap}
+  .availability-flags{order:2;font-size:15px}
+  .availability-chevron{margin-left:auto;order:3}
+  .availability-content{padding:0 12px 12px}
+  .availability-market-list li{grid-template-columns:1fr auto;gap:2px 8px}
+  .availability-market-list a{grid-column:2;grid-row:1/3;white-space:nowrap}
+  .availability-date{font-size:11px;padding-left:2px}
+}
