@@ -5,7 +5,7 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. The local HTTP s
 ## Rules
 
 - Never invent invite codes, redemptions, reward amounts, account eligibility or live validity.
-- The site owner confirms ownership of the featured `DPNIHH` code. Label it **Verified Owner** via `ownerConfirmed: true`. This is an ownership assertion, not independently verified Muse redemption. Keep `status: unverified` until an actual Muse redemption result is available.
+- The site owner confirms ownership of the featured `DPNIHH` code. Label it **Verified Owner** prominently via `ownerConfirmed: true` on both card and detail. Keep **Code owner** verification separate from **Muse redemption** status; do not show bare `Unverified` text that suggests owner verification is missing. This is an ownership assertion, not independently verified Muse redemption. Keep `status: unverified` until an actual Muse redemption result is available.
 - Keep at most one `featured: true` code. Pin it ahead of community codes regardless of sort selection.
 - Treat code statuses as community-reported, potentially outdated.
 - Preserve attributed contributor handles for historical public code listings; do not imply contributors submitted directly to this site or that Muse validated a code.
