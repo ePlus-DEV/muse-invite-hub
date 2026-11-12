@@ -209,11 +209,13 @@
     codeLink.setAttribute("aria-label", "Details for Muse invite code " + item.code);
     name.append(codeLink);
     const badge = el("span", "status-badge " +
-      (featured ? "status-featured" : "status-" + item.status),
-      featured ? "Featured" : status.label);
+      (ownerConfirmed ? "status-owner-verified" :
+        featured ? "status-featured" : "status-" + item.status),
+      ownerConfirmed ? "Verified Owner" : featured ? "Featured" : status.label);
     badge.title = ownerConfirmed
-      ? "Verified Owner: ownership is confirmed; Muse redemption is unverified."
+      ? "Owner-confirmed by ePlus.DEV. Muse redemption has not been independently confirmed."
       : status.description;
+    if (ownerConfirmed) badge.prepend(icon("fa-solid fa-circle-check"));
     const headActions = el("div", "card-head-actions");
     const saveButton = el("button", "card-save");
     saveButton.type = "button";
@@ -254,10 +256,10 @@
       : " Listed " + formatDate(item.addedAt)));
     info.append(date);
     if (ownerConfirmed) {
-      const ownership = el("p", "card-owner");
-      ownership.append(icon("fa-solid fa-circle-check"));
-      ownership.append(document.createTextNode(" Verified Owner · Redemption unverified"));
-      info.append(ownership);
+      const redemption = el("p", "card-redemption");
+      redemption.append(icon("fa-solid fa-circle-info"));
+      redemption.append(document.createTextNode(" Muse redemption not independently confirmed"));
+      info.append(redemption);
     }
     const actions = el("div", "card-actions");
     const copy = el("button", "card-copy");
