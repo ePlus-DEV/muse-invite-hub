@@ -188,6 +188,58 @@
     else button.textContent = text;
     if (icon && iconClass) icon.className = iconClass;
   };
+  const copyPanel = document.querySelector(".detail-code-panel");
+  const copyActions = document.querySelector(".detail-action-row");
+  let copiedNote = null;
+  if (copyPanel && copyActions && typeof document.createElement === "function") {
+    copiedNote = document.createElement("p");
+    copiedNote.className = "detail-copy-note";
+    copiedNote.textContent = "Copied on this device · Redemption not verified";
+    copiedNote.hidden = true;
+    copyActions.after(copiedNote);
+  }
+  let copyFeedbackTimer = null;
+  let copiedBefore = false;
+  function setCopiedAppearance(value) {
+    copiedBefore = value;
+    copyPanel?.classList.toggle("detail-code-panel-copied", value);
+    button.dataset.copied = String(value);
+    button.dataset.tooltip = value ?
+      "Previously copied in this browser. Copying does not redeem it on Muse." :
+      "Copy this code. Copying does not redeem it in Muse.";
+    button.setAttribute?.("aria-label",
+      (value ? "Copy again Muse invite code " : "Copy Muse invite code ") + detailCode);
+    if (copiedNote) copiedNote.hidden = !value;
+    if (copyFeedbackTimer === null) {
+      setLabel(value ? "Copy again" : "Copy invite code",
+        value ? "fa-solid fa-rotate" : "fa-regular fa-copy");
+    }
+  }
+  function previouslyCopied() {
+    try {
+      return features?.parseCopied(window.localStorage.getItem(features.COPIED_STORAGE_KEY))
+        .includes(detailCode) || false;
+    } catch {
+      return false;
+    }
+  }
+  setCopiedAppearance(previouslyCopied());
+  if (typeof window.addEventListener === "function") {
+    window.addEventListener("storage", event => {
+      if (event.key !== features?.COPIED_STORAGE_KEY && event.key !== null) return;
+      setCopiedAppearance(features.parseCopied(event.key === null ? null : event.newValue)
+        .includes(detailCode));
+    });
+  }
+  function restoreCopyLabel() {
+    if (copyFeedbackTimer !== null && typeof window.clearTimeout === "function") {
+      window.clearTimeout(copyFeedbackTimer);
+    }
+    copyFeedbackTimer = window.setTimeout(() => {
+      copyFeedbackTimer = null;
+      setCopiedAppearance(copiedBefore);
+    }, 2400);
+  }
   button.addEventListener("click", async () => {
     const value = code.textContent.trim();
     try {
@@ -205,13 +257,17 @@
         input.remove();
         if (!copied) throw Error("Unable to copy");
       }
+      try {
+        features?.rememberCopiedCode(window.localStorage, value);
+      } catch { /* Storage may be disabled; keep the visual copy state in this tab. */ }
+      setCopiedAppearance(true);
       setLabel("Copied!", "fa-solid fa-check");
-      live.textContent = "Copied invitation code " + value + ". Open Muse to try redeeming it.";
-      window.setTimeout(() => { setLabel("Copy invite code", "fa-regular fa-copy"); }, 2400);
+      live.textContent = "Copied invitation code " + value + " on this device. This does not confirm Muse redemption.";
+      restoreCopyLabel();
     } catch {
       setLabel("Copy failed", "fa-solid fa-xmark");
       live.textContent = "Select and copy the code manually.";
-      window.setTimeout(() => { setLabel("Copy invite code", "fa-regular fa-copy"); }, 2400);
+      restoreCopyLabel();
     }
   });
 })();
