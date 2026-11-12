@@ -52,7 +52,7 @@ export function resolveExistingIssue(item, issues) {
   return candidates[0] || null;
 }
 
-export async function syncCodeIssueMap(items, listIssues, createIssue) {
+export async function syncCodeIssueMap(items, listIssues, createIssue, {allowMissing = false} = {}) {
   if (!Array.isArray(items) || typeof listIssues !== "function" || typeof createIssue !== "function") {
     throw Error("Expected catalog and GitHub API callbacks");
   }
@@ -64,6 +64,7 @@ export async function syncCodeIssueMap(items, listIssues, createIssue) {
       throw Error("Invalid or duplicate published invite code");
     }
     let existing = resolveExistingIssue(item, issues);
+    if (!existing && allowMissing) continue;
     if (!existing) {
       const created = await createIssue({
         title: "[Code] " + item.code + " — community feedback",
