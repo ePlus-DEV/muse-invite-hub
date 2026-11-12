@@ -29,7 +29,7 @@ All Issue submissions are public and reviewed; never share passwords, session to
 Static HTML, CSS and JavaScript — no backend or npm dependencies. To run the homepage locally:
 
 ~~~sh
-python -m http.server 8000
+node scripts/serve.mjs
 ~~~
 
 Open http://localhost:8000/. Generated code-detail pages, Node.js 24 tests, previews and deployment are covered in the [project guide](docs/PROJECT_GUIDE.md).
