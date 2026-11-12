@@ -44,13 +44,12 @@
       year: "numeric", month: "short", day: "numeric", timeZone: "UTC"
     });
   }
-  function issueUrl(template, code, platform) {
+  function issueUrl(template, code) {
     const params = new URLSearchParams({ template });
     if (code) {
       params.set("invite_code", code);
       if (template === "report-code.yml") params.set("title", "[Code feedback] " + code);
     }
-    if (platform) params.set("listing_platform", platform);
     return REPO + "/issues/new?" + params.toString();
   }
   function reportedRemaining(item) {
@@ -200,7 +199,7 @@
     const details = el("a", "card-detail-link", "View details");
     details.href = "./codes/" + encodeURIComponent(item.code) + "/";
     const report = el("a", "card-feedback-link", "Give feedback");
-    report.href = issueUrl("report-code.yml", item.code, source.platform);
+    report.href = issueUrl("report-code.yml", item.code);
     report.target = "_blank";
     report.rel = "noopener noreferrer";
     subActions.append(details, report);
