@@ -22,6 +22,10 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
+      - name: Test Node-only local HTTP server
+        run: |
+          node --check scripts/serve.mjs
+          node --test scripts/serve.test.mjs
       - name: Check frontend JavaScript syntax
         run: |
           node --check assets/app.js
