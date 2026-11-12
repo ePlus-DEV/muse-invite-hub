@@ -13,6 +13,18 @@
     "usageReportedAt": "2026-11-11"
   },
   {
+    "id": "community-issue-55",
+    "code": "IY56PP",
+    "status": "unverified",
+    "addedAt": "2026-11-12",
+    "submittedBy": "ruochen-li",
+    "note": "Community-submitted in issue #55; redemption not independently verified.",
+    "submittedById": 341934512,
+    "reportedCapacity": 30,
+    "reportedUses": 8,
+    "usageReportedAt": "2026-11-12"
+  },
+  {
     "id": "community-issue-46",
     "code": "4DO4IF",
     "status": "unverified",
