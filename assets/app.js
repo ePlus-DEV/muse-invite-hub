@@ -29,14 +29,17 @@
   let loadFailed = false;
   let codeIssueMap = {};
   function feedbackIssue(code, outcome = "other") {
-    return features.quickFeedbackUrl(code, outcome, features.issueNumberFor(codeIssueMap, code));
+    const item = codes.find(entry => entry.code === code);
+    const number = features.issueNumberFor(codeIssueMap, code) ??
+      (Number.isSafeInteger(item?.feedbackIssueNumber) ? item.feedbackIssueNumber : null);
+    return features.quickFeedbackUrl(code, outcome, number);
   }
-  function copySuggestedFeedback(code, outcome) {
-    // User-triggered only. GitHub does not accept comment prefill via URL.
-    if (!navigator.clipboard || !window.isSecureContext) return;
-    void navigator.clipboard.writeText(features.feedbackComment(code, outcome))
-      .then(() => { announcer.textContent = "Suggested report copied. Paste it into the existing GitHub Issue comment."; })
-      .catch(() => { announcer.textContent = "Write your result as a comment on the existing GitHub Issue."; });
+  function prepareFeedback(event, item, outcome) {
+    const number = features.issueNumberFor(codeIssueMap, item.code) ??
+      (Number.isSafeInteger(item.feedbackIssueNumber) ? item.feedbackIssueNumber : null);
+    if (features.openFeedbackDialog(item.code, outcome, number, event.currentTarget)) {
+      event.preventDefault(); // Keep plain GitHub links as no-JS fallbacks.
+    }
   }
   function readSavedCodes() {
     try {
@@ -277,6 +280,7 @@
     const report = el("a", "card-feedback-link", "Give feedback");
     report.dataset.tooltip = "Comment on this code's existing GitHub Issue. New feedback reopens it for review.";
     report.href = feedbackIssue(item.code);
+    report.addEventListener("click", event => prepareFeedback(event, item, "other"));
     report.target = "_blank";
     report.rel = "noopener noreferrer";
     subActions.append(details, report);
@@ -287,12 +291,12 @@
     ]) {
       const link = el("a", "card-quick-feedback card-quick-" + outcome);
       link.href = feedbackIssue(item.code, outcome);
-      link.addEventListener("click", () => copySuggestedFeedback(item.code, outcome));
+      link.addEventListener("click", event => prepareFeedback(event, item, outcome));
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.dataset.tooltip = outcome === "worked" ?
-        "Open this code's original GitHub Issue. A suggested report is copied for you to paste." :
-        "Report a redemption problem on the existing Issue. Paste the suggested comment.";
+        "Review a prepared success report, then copy and comment on the original Issue." :
+        "Review a prepared failure report, then copy and comment on the original Issue.";
       link.setAttribute("aria-label", text + " — report Muse invite code " + item.code + " on GitHub");
       link.append(icon(iconName), document.createTextNode(" " + text));
       quickFeedback.append(link);
