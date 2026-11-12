@@ -13,9 +13,9 @@
 - **One directory:** browse, search, filter and sort invite codes shared on GitHub, Threads, X (Twitter) and Facebook.
 - **Saved codes:** bookmark codes on the homepage or detail page and filter by saved items. Bookmarks are stored only in this browser (no accounts or server synchronization).
 - **Recently updated:** sort by the latest recorded listing date, reported usage date or catalog check. This does not verify current Muse redemption.
-- **Quick feedback:** each published invite has one canonical GitHub Issue for reports and discussion. Contributor-submitted codes reuse their original Issue; other published codes receive a unique Issue during trusted Pages deploy. Worked/Didn't work buttons open that thread and copy a suggested comment. Posting new feedback reopens a closed thread for maintainer review; feedback never automatically verifies Muse redemption.
+- **Quick feedback:** each published invite has one canonical GitHub Issue for reports and discussion. Contributor-submitted codes reuse their original Issue; other published codes receive a unique Issue during trusted Pages deploy. Worked/Didn't work buttons open an editable comment dialog before linking to that Issue. Posting a structured report can reopen a closed thread and propose a Draft PR for maintainer review; feedback never automatically verifies Muse redemption.
 - **Code details:** copy and share individual codes, view source attribution and community-reported status.
-- **Community contributions:** submit codes, report your experience and update owner-reported invite counts through GitHub Issues.
+- **Community contributions:** submit new codes with an Issue Form; report feedback and owner-count updates on the existing code Issue using the website's editable comment dialog.
 - **Reviewed updates:** maintainers review contributions before publication; accepted Issues receive a link to their published code.
 
 ## Contribute
@@ -24,7 +24,7 @@ No coding required:
 
 - [**Share an invite code**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml)
 - [**Report code feedback**](https://muse.eplus.dev/#codes)
-- [**Update invite count**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml)
+- [**Update invite count on an existing code**](https://muse.eplus.dev/#codes)
 - [**Contribute code or documentation**](CONTRIBUTING.md#contribute-code-or-documentation)
 
 All Issue submissions are public and reviewed; never share passwords, session tokens or private account information. See the [contribution guide](CONTRIBUTING.md) for instructions.
