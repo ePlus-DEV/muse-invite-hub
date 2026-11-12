@@ -120,6 +120,23 @@ export function planIssueChange(issue, current) {
   const date = reportDate(issue);
   const data = structuredClone(current);
   let action, notice = "";
+  if (kind === "count" || kind === "feedback") {
+    const platform = field(f, "Listing platform").trim();
+    // Older Issue Forms had no platform selector. Retain their code-based behavior
+    // while enforcing the explicit platform in all new submissions.
+    if (platform && !["GitHub", "Threads"].includes(platform)) {
+      return {outcome:"needs-review",kind,code,
+        reason:"Listing platform must be GitHub or Threads."};
+    }
+    if (existing && platform) {
+      const listedPlatform = threadsReference(existing.sourceUrl) ? "Threads" : "GitHub";
+      if (platform !== listedPlatform) {
+        return {outcome:"needs-review",kind,code,
+          reason:"Selected platform does not match the catalog listing (" + listedPlatform +
+            "). Same usernames on GitHub and Threads are distinct accounts; select the code's actual source."};
+      }
+    }
+  }
   if (kind === "invite") {
     const checklist = field(f,"Contributor checklist");
     const authorized = checklist.includes("[x] I am authorized to share this code publicly") ||
