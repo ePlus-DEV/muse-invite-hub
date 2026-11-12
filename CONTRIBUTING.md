@@ -9,9 +9,9 @@ Thanks for helping! **You can share an invite, report feedback or update a count
 ## Share a public invite code
 
 1. Open [Share a Muse invite code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml).
-2. Select **GitHub (my own code)** for a code you own or **Threads (public code I found)** for an existing publicly posted Threads code.
-3. Enter a public code (4–32 uppercase letters/digits/hyphens). For Threads include the public *original post URL* (`https://www.threads.com/@user/post/ID`); profile-only URLs are held for manual review, not automatically proposed. The handle in the link is the source, **not** the reporter's GitHub account.
-4. Enter quota figures **only for your own GitHub-owned code** if shown by your own Muse account; never infer quotas from another person's post. Add optional non-sensitive notes.
+2. Select **GitHub (my own code)** if you own the code, or **Threads**, **X (Twitter)** or **Facebook** if you found a public code posted by another person.
+3. Enter a public code (4–32 uppercase letters/digits/hyphens). For social submissions include the **original public post URL** (`threads.com/@user/post/ID`, `x.com/user/status/123456789` or `facebook.com/user/posts/ID`). A profile-only, Facebook share-shortlink or ambiguous URL is held for manual review. The handle in the post URL is the social source, **not** the reporter's GitHub account.
+4. Enter quota figures **only for your own GitHub-owned code** from your Muse account; never infer them from a social post. Add optional non-sensitive notes.
 5. Check both public sharing/privacy confirmations, then submit.
 
 For GitHub-owned codes only: if your code is already listed under the same GitHub username, resubmitting an updated count (including a remaining-only number) can prepare an **update Draft PR**, not a duplicate listing. If a code is already listed from Threads, or someone files it under a different source, the bot will request manual review rather than replace the attribution or update the quota automatically. Existing listing IDs, contributor attribution and original listing dates are preserved. Numeric GitHub IDs help protect subsequent updates from username reuse. Actions checks the code and duplicates and can prepare an **automated Draft PR**. A maintainer reviews the data, marks the PR ready and merges it when appropriate. **An Issue never automatically publishes a code.** Community submissions start as `unverified`, and total quota alone never implies all invites remain.
@@ -19,7 +19,7 @@ For GitHub-owned codes only: if your code is already listed under the same GitHu
 ## Report code feedback
 
 1. Use **Give feedback** on a code card or detail page to open the Issue Form with its editable title **`[Code feedback] CODE`** and **Invite code** prefilled. Alternatively, open [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) manually.
-2. Select **Listing platform** from the required GitHub/Threads dropdown, based on the code's source shown on the website. GitHub cannot preselect dropdown values from URL parameters, so this selection remains manual. Confirm or edit the code/title, then report accepted, rejected, exhausted, no redeem option, duplicate, or other. The bot rejects a platform inconsistent with the catalog.
+2. Select **Listing platform** from the required GitHub/Threads/X (Twitter)/Facebook dropdown, based on the code's source shown on the website. GitHub cannot preselect dropdown values from URL parameters, so this selection remains manual. Confirm or edit the code/title, then report accepted, rejected, exhausted, no redeem option, duplicate, or other. The bot rejects a platform inconsistent with the catalog.
 3. Include the date and non-sensitive error text or context if helpful. A GitHub user and a Threads user with the same @handle are **different accounts**; the reporter's username does not override the listed source.
 
 One attempt is **community feedback**, not proof that every account or region will behave the same way. Clear accepted/rejected feedback can produce an automated **Draft PR** with a community-reported status and date; ambiguous feedback stays for manual triage. Only a reviewed and merged PR should change `status` or `checkedAt`.
@@ -34,7 +34,7 @@ If you own the public invite, use [Update invite count](https://github.com/ePlus
 | Remaining invites | 3 |
 | Used invites (30 − 3) | 27 |
 
-If only a remaining number is shown, report it without inventing the total. The public catalog stores either the complete `reportedCapacity` + `reportedUses` + `usageReportedAt` snapshot, **or** `reportedRemaining` + `usageReportedAt` when only the remaining count is known. The latter displays the remaining number without inventing a total. The trusted workflow proposes an automatic **Draft PR** only when the reporter matches the listed GitHub code owner and the figures are consistent. For Threads-sourced listings, GitHub identity alone does not prove code ownership and quota changes require manual verification. A maintainer must review and merge the proposal before publication.
+If only a remaining number is shown, report it without inventing the total. The public catalog stores either the complete `reportedCapacity` + `reportedUses` + `usageReportedAt` snapshot, **or** `reportedRemaining` + `usageReportedAt` when only the remaining count is known. The latter displays the remaining number without inventing a total. The trusted workflow proposes an automatic **Draft PR** only when the reporter matches the listed GitHub code owner and the figures are consistent. For Threads, X or Facebook listings, GitHub identity alone does not prove code ownership and quota changes require manual verification. A maintainer must review and merge the proposal before publication.
 
 Amounts are **dated self-reported snapshots**, not live Muse availability. Copying a code is not redeeming it. Missing or incomplete values display **Not reported**.
 
@@ -44,7 +44,7 @@ Supported Issue Forms trigger [Issue to Draft PR](.github/workflows/issue-to-pr.
 
 New feedback and count forms require the listing platform. The Issue bot checks the selected platform against the code's cataloged source; if it conflicts, it requests manual review rather than changing the other platform's listing. Old Issues without the field remain backward compatible.
 
-Threads Issues with a verifiable-looking public post permalink may propose an **unverified** Draft PR; the maintainer must check that the post really contains the code. Profile-only, malformed, duplicated or ambiguous Threads sources are routed for manual triage, and the Issue reporter is never presented as the Threads code owner.
+Threads, X and Facebook Issues with a valid-looking **original post permalink** may propose an **unverified** Draft PR; maintainers must confirm the post actually contains the code and credits the correct author. Profile-only, Facebook share-shortlink, malformed, duplicated or ambiguous sources require manual review. Issue reporters are never automatically treated as owners of other platforms' accounts.
 
 No Issue content is published automatically. Draft PRs created by this workflow are **not included in publicly hosted PR previews** until a maintainer marks them ready for review. Once ready, maintainers inspect the proposal and CI/preview, then merge to `main` to deploy. Repeated Issues or conflicting values do not create duplicate proposals.
 
@@ -117,7 +117,7 @@ Use the real code, authorized contributor handle and actual addition date, never
 | `reportedUses` / `reportedCapacity` / `usageReportedAt` | Optional full snapshot: used ≥ 0, capacity 1–1000, used ≤ capacity, real date `YYYY-MM-DD` |
 | `reportedRemaining` / `usageReportedAt` | Alternative remaining-only snapshot: 0–1000, real date; cannot mix with full snapshot |
 | `submittedById` | Optional positive GitHub numeric account ID recorded on authorized owner updates; protects against future username reuse |
-| `sourceUrl` | Optional public HTTPS link. A Threads-source entry uses `https://www.threads.com/@handle/post/ID` (or an existing manually reviewed profile link) to derive the Threads attribution; do not set `submittedBy` on those entries. No private data or unrelated GitHub repositories |
+| `sourceUrl` | Optional public HTTPS context. Social attribution requires a valid Threads, X/Twitter or Facebook profile/post permalink, with no `submittedBy`/`submittedById`. Use direct original posts for automatic Issue proposals; profiles or unsupported Facebook shares require manual review. No private data or unrelated GitHub repositories |
 | `featured` | Optional boolean; at most one featured code |
 | `ownerConfirmed` | Optional boolean; `true` reserved for featured owner code submitted by `hoangsvit`, not redemption verification |
 
