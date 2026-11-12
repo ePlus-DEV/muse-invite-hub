@@ -40,13 +40,13 @@ Amounts are **dated self-reported snapshots**, not live Muse availability. Copyi
 
 ## Automatic Issue-to-Draft-PR
 
-Supported Issue Forms trigger [Issue to Draft PR](.github/workflows/issue-to-pr.yml) when opened, edited or reopened. It uses trusted source code on `main`, treats submitted text as untrusted data, checks duplicates, and creates a separate branch named `auto/issue-<NUMBER>-<TYPE>`. It proposes a change **only to `data/invites.json`** and opens a **Draft PR**. The workflow comments on the originating Issue with the PR link or the reason the report requires manual review.
+Supported Issue Forms trigger [Issue to Draft PR](.github/workflows/issue-to-pr.yml) when opened, edited or reopened. It uses trusted source code on `main`, treats submitted text as untrusted data, checks duplicates, and creates a separate branch named `auto/issue-<NUMBER>-<TYPE>`. It proposes a change **only to `data/invites.json`** and opens a **Draft PR**. The workflow comments on the originating Issue with the PR link or the reason the report requires manual review. **The Issue stays open during Draft PR review.** Generated PRs do not include GitHub's `Closes #` keywords, which could close an Issue before the acceptance comment is posted.
 
 New feedback and count forms require the listing platform. The Issue bot checks the selected platform against the code's cataloged source; if it conflicts, it requests manual review rather than changing the other platform's listing. Old Issues without the field remain backward compatible.
 
 Threads, X and Facebook Issues with a valid-looking **original post permalink** may propose an **unverified** Draft PR; maintainers must confirm the post actually contains the code and credits the correct author. Profile-only, Facebook share-shortlink, malformed, duplicated or ambiguous sources require manual review. Issue reporters are never automatically treated as owners of other platforms' accounts.
 
-No Issue content is published automatically. Draft PRs created by this workflow are **not included in publicly hosted PR previews** until a maintainer marks them ready for review. Once ready, maintainers inspect the proposal and CI/preview, then merge to `main` to deploy. Repeated Issues or conflicting values do not create duplicate proposals.
+No Issue content is published automatically. Draft PRs created by this workflow are **not included in publicly hosted PR previews** until a maintainer marks them ready for review. Once ready, maintainers inspect the proposal and CI/preview, then merge to `main` to deploy. After successful GitHub Pages deployment, trusted automation checks that the merged PR is included in the deployed commit and that the code's production detail is accessible. It posts a comment linking to **https://muse.eplus.dev/codes/CODE/** on the original Issue **before** closing it. If deployment, page verification or commenting fails, the Issue remains open for a later successful deployment. Repeated runs never post duplicate acceptance comments. Repeated Issues or conflicting values do not create duplicate proposals.
 
 **One-time setup:** if GitHub denies PR creation, enable **Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests** (subject to organization policy). No custom token is required. Retry using **Actions → Issue to Draft PR → Run workflow** and enter the original Issue number. The automation never force-pushes or auto-merges.
 
@@ -79,7 +79,7 @@ node --test scripts/validate.test.mjs scripts/audit-links.test.mjs scripts/previ
 node --check assets/app.js
 node --check assets/detail.js
 node --check scripts/issue-to-pr.mjs
-node --test scripts/issue-to-pr.test.mjs
+node --test scripts/issue-to-pr.test.mjs scripts/close-accepted-issues.test.mjs
 ~~~
 
 For UI changes, also inspect mobile/desktop, filtering, sorting, copy, error states and affected detail pages. The PR workflow attaches a full `muse-invite-hub-pr-preview-N` artifact for **same-repository PRs** after validation; extract it, serve the folder over HTTP and open `http://localhost:8000/codes/<CODE>/`.

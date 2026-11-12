@@ -83,7 +83,7 @@ node --test scripts/validate.test.mjs scripts/audit-links.test.mjs scripts/previ
 node --check assets/app.js
 node --check assets/detail.js
 node --check scripts/issue-to-pr.mjs
-node --test scripts/issue-to-pr.test.mjs
+node --test scripts/issue-to-pr.test.mjs scripts/close-accepted-issues.test.mjs
 ~~~
 
 Keep the existing homepage SEO title, description and canonical unless an authorized change explicitly calls for editing them.
@@ -97,6 +97,7 @@ The [Issue-to-Draft-PR workflow](.github/workflows/issue-to-pr.yml) runs when a 
 - **Quota:** accepts consistent full counts **or remaining-only** reports from the listed GitHub code owner; Threads, X and Facebook owner claims require manual verification. GitHub numeric IDs are saved for eligible owner updates.
 - **Feedback:** requires selection of the listed code's platform (GitHub, Threads, X or Facebook) and rejects mismatches before proposing a reported-working/not-working status; older Issues stay compatible. Other cases need maintainer triage. Same @handle across platforms is not a shared identity.
 - **Review:** auto-created Draft PRs are excluded from publicly hosted PR previews until marked ready; only reviewed merges to `main` affect production.
+- **Acceptance notice:** after a successful production Pages deployment, the bot verifies that the approved PR is contained in the deployed commit and the code's detail page is live. It **comments on the original Issue with the production detail link before closing the Issue**. Draft PRs, CI passes and rejected submissions never trigger automatic closure. Invite, feedback and quota contributions share this flow. Acceptance does not mean Muse verified a code.
 
 **One-time GitHub setting:** In **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests** (if allowed by the organization). If disabled, the workflow explains the blocked PR on the Issue. After enabling it, manually rerun **Issue to Draft PR → Run workflow** with the Issue number. [Full process](CONTRIBUTING.md#automatic-issue-to-draft-pr).
 
