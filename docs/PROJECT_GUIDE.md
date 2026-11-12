@@ -7,16 +7,17 @@ This is the technical reference for maintainers. For a short project overview se
 Muse Invite Hub is a static HTML, CSS, JavaScript and JSON website, requiring no backend or npm installation. From the repository root:
 
 ~~~sh
-python -m http.server 8000
+node scripts/serve.mjs
 ~~~
 
-Open http://localhost:8000/. Use HTTP rather than a local file URL because the homepage fetches the JSON catalog. Source checkouts render the homepage directly; code detail pages are generated in the Pages build.
+Open http://localhost:8000/. Use HTTP rather than a local file URL because the homepage fetches the JSON catalog. The server uses Node.js built-ins only; to serve an extracted preview bundle instead, use `node scripts/serve.mjs /path/to/preview 8000`. Source checkouts render the homepage directly; code detail pages are generated in the Pages build.
 
 Use **Node.js 24** for CI-compatible checks:
 
 ~~~sh
 node scripts/validate.mjs
 node scripts/audit-links.mjs
+node --test scripts/serve.test.mjs
 node --test scripts/validate.test.mjs scripts/audit-links.test.mjs scripts/preview.test.mjs scripts/preview-fallback.test.mjs scripts/site-pages.test.mjs scripts/seo-aeo.test.mjs
 node --check assets/app.js
 node --check assets/detail.js
