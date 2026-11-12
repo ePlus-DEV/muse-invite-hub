@@ -86,7 +86,11 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     ? 'Owner-confirmed by ePlus.DEV. Ownership confirmation does not mean the code has been redeemed or validated by Muse.'
     : 'This community listing has not been independently tested. Its appearance here does not guarantee Muse access.';
   const notes = item.note ? '<p class="detail-note">' + escapeHtml(item.note) + '</p>' : '';
-  const statusLine = item.ownerConfirmed ? 'Owner-confirmed listing' : 'Community-reported listing';
+  const redemptionLine = item.status === "reported-working" ?
+    "Reported working (community; not Muse-verified)" :
+    item.status === "reported-not-working" ?
+    "Reported not working (community)" :
+    "Not independently confirmed by Muse";
   const graph = [
     { "@context": "https://schema.org", "@type": "WebPage", "@id": pageUrl + "#webpage",
       url: pageUrl, name: title, description, isPartOf: { "@type": "WebSite", name: "Muse Invite Hub", url: root + "/" },
@@ -168,7 +172,8 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '          <dl class="detail-meta"><div><dt>Contributor</dt><dd>' + escapeHtml(author) + '</dd></div>' +
     '            <div><dt>Source</dt><dd>' + sourceLink + '</dd></div>' +
     '            <div><dt>Listed</dt><dd>' + escapeHtml(dateText(item.addedAt)) + '</dd></div>' +
-    '            <div><dt>Redemption status</dt><dd>' + escapeHtml(item.status === "unverified" ? "Unverified" : statusLine) + '</dd></div></dl>' +
+    (item.ownerConfirmed ? '            <div><dt>Code owner</dt><dd><span class="detail-owner-confirmed"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Verified Owner (ePlus.DEV)</span></dd></div>' : '') +
+    '            <div><dt>Muse redemption</dt><dd>' + escapeHtml(redemptionLine) + '</dd></div></dl>' +
     '        </div><div class="detail-info-card detail-feedback"><h2>Does this code work?</h2><p>Share your experience to help the community keep listings accurate.</p>' +
     '          <a href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-comment" aria-hidden="true"></i> Give feedback</a>' +
     '          <div class="detail-feedback-actions"><a class="detail-quick-feedback" data-feedback-outcome="worked" href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-thumbs-up" aria-hidden="true"></i> Worked for me</a>' +
