@@ -18,8 +18,8 @@ For GitHub-owned codes only: if your code is already listed under the same GitHu
 
 ## Report code feedback
 
-1. Open [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml).
-2. Supply the exact code, then select the **Listing platform** (GitHub or Threads) shown on that code's card, and report accepted, rejected, exhausted, no redeem option, duplicate, or other.
+1. Use **Give feedback** on a code card or detail page to open the Issue Form with its **Invite code** and **Listing platform** already supplied in the link. You can edit either field before submitting. Alternatively, open [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) manually.
+2. Confirm the exact code and **Listing platform** (GitHub or Threads) shown on the card, then report accepted, rejected, exhausted, no redeem option, duplicate, or other. GitHub may require you to select the dropdown manually on some clients; always confirm it before submission.
 3. Include the date and non-sensitive error text or context if helpful. A GitHub user and a Threads user with the same @handle are **different accounts**; the reporter's username does not override the listed source.
 
 One attempt is **community feedback**, not proof that every account or region will behave the same way. Clear accepted/rejected feedback can produce an automated **Draft PR** with a community-reported status and date; ambiguous feedback stays for manual triage. Only a reviewed and merged PR should change `status` or `checkedAt`.
