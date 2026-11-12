@@ -105,8 +105,8 @@ test("country availability panel lists five Meta-confirmed markets with exact so
     assert.equal(html.split('src="./' + flagPath + '"').length - 1, 2,
       "Country flag should appear in the heading and its market row");
     const svg = read(flagPath);
-    assert.match(svg, /<svg\\s[^>]*viewBox=/);
-    assert.doesNotMatch(svg, /<script\\b|<foreignObject\\b/i);
+    assert.match(svg, /<svg\s[^>]*viewBox=/);
+    assert.doesNotMatch(svg, /<script\b|<foreignObject\b/i);
   }
   assert.match(html, /Vietnam is not among these announced launch markets/);
   assert.match(html, /An invite code does not override geographic restrictions or guarantee signup or rewards/);
