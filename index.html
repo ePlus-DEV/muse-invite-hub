@@ -30,6 +30,7 @@
     gtag('js', new Date());
     gtag('config', 'G-N1MZ8YLNLJ');
   </script>
+  <script src="./assets/directory-features.js" defer></script>
   <script src="./assets/app.js" defer></script>
 </head>
 <body>
@@ -93,6 +94,7 @@
             </button>
             <div class="sort-menu" id="sort-menu" role="menu" aria-label="Sort invite codes" hidden>
               <button type="button" class="sort-option" role="menuitemradio" data-sort="newest" aria-checked="true" tabindex="-1">Newest first<i class="fa-solid fa-check" aria-hidden="true"></i></button>
+              <button type="button" class="sort-option" role="menuitemradio" data-sort="updated" aria-checked="false" tabindex="-1" title="Most recent listing, usage report or catalog check">Recently updated<i class="fa-solid fa-check" aria-hidden="true"></i></button>
               <button type="button" class="sort-option" role="menuitemradio" data-sort="oldest" aria-checked="false" tabindex="-1">Oldest first<i class="fa-solid fa-check" aria-hidden="true"></i></button>
               <button type="button" class="sort-option" role="menuitemradio" data-sort="code" aria-checked="false" tabindex="-1">Code A–Z<i class="fa-solid fa-check" aria-hidden="true"></i></button>
             </div>
@@ -119,12 +121,13 @@
           </div>
         </details>
       </section>
-      <div class="source-filters" role="group" aria-label="Filter invite codes by source">
+      <div class="source-filters" role="group" aria-label="Filter invite codes by source or saved codes">
         <button type="button" class="source-filter is-active" data-source="all" aria-pressed="true">All sources</button>
         <button type="button" class="source-filter" data-source="github" aria-pressed="false"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</button>
         <button type="button" class="source-filter" data-source="threads" aria-pressed="false"><i class="fa-brands fa-threads" aria-hidden="true"></i> Threads</button>
         <button type="button" class="source-filter" data-source="x" aria-pressed="false"><i class="fa-brands fa-x-twitter" aria-hidden="true"></i> X (Twitter)</button>
         <button type="button" class="source-filter" data-source="facebook" aria-pressed="false"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i> Facebook</button>
+        <button type="button" class="saved-filter" id="saved-filter" data-source="saved" aria-pressed="false" title="Saved codes are stored only in this browser"><i class="fa-regular fa-bookmark" aria-hidden="true"></i> Saved <span class="saved-count" id="saved-count">0</span></button>
       </div>
       <div class="cards-grid" id="code-grid" aria-live="off"><div class="loading-card">Loading community codes…</div></div>
       <div class="directory-more" id="directory-more" hidden><button type="button" class="button button-outlined" id="load-more-codes" aria-controls="code-grid">Load more <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button></div>
