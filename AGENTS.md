@@ -24,7 +24,7 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. No npm dependenc
 - Keep relative asset paths so GitHub Pages works with project subpaths and custom domains.
 - Use assets/favicon.svg as the single brand logo asset for homepage and generated detail headers/footers. Keep mobile sizing and preview-relative paths consistent. Use identical navigation and footer elements across pages.
 - Generate detail pages via trusted scripts/site-pages.mjs from validated catalog JSON. Never claim Muse officially validated community codes.
-- Only owner-confirmed featured detail pages are indexable and appear in sitemap; unverified community details are noindex,follow and preview details noindex,nofollow,noarchive.
+- Every published, validated invite code has a canonical index,follow production detail and appears once in the generated production sitemap, regardless of platform, featured status or redemption verification. PR previews remain noindex,nofollow,noarchive. Indexability does not claim that Muse has validated a code.
 - Keep homepage title, description and canonical unchanged. Pre-render detail content, escape untrusted notes and usernames, and use WebPage/BreadcrumbList JSON-LD on detail.
 - Directory Load more must preserve filtering and sorting, reset limit on changes, and work without adding query-string pagination or duplicate SEO pages.
 - Treat PR preview inputs as untrusted data: copy approved static assets from the PR merge ref, but NEVER run PR scripts in a privileged publish workflow.
@@ -47,10 +47,10 @@ Copying a code is not the same as redeeming it.
 
 - `AGENTS.md` instructs coding agents. Public `llms.txt` is a curated Markdown navigation guide, not a crawler-permissions file, live invite feed, or Google ranking requirement.
 - Never change homepage SEO title, meta description, canonical, Open Graph/Twitter metadata, or GA4 tag without express authorization. Do not edit SEO copy incidentally during layout or maintenance tasks.
-- Keep `llms.txt` concise and truthful. Its links must resolve to real, stable, publicly approved locations. Do not advertise non-indexable community detail pages as search results or claim codes work in real time.
+- Keep `llms.txt` concise and truthful. Its links must resolve to real, stable, publicly approved locations. Every merged code detail is indexable, but this guide is curated, not an exhaustive directory; never claim community codes work in real time.
 - Prioritize useful, visible content with direct answers to actual visitor questions. Statements about availability, limits, account eligibility and rewards must agree with the original public reports and official Muse terms; never speculate.
 - Google AI Overviews and AI Mode do not require `llms.txt`, special AI schema, or keyword-stuffed AEO text. No SEO, AEO, or LLM file guarantees indexing, referrals or AI citations.
-- Keep `robots.txt`, the tracked root `sitemap.xml`, and the trusted generated sitemap consistent. CI must compare both sitemaps and include only Home and owner-confirmed featured detail. Preserve the current indexability rule: homepage and owner-confirmed featured detail only; community details `noindex,follow`; PR previews `noindex,nofollow,noarchive`.
+- Generate production `sitemap.xml` from the validated catalog during the trusted Pages build; do not commit a separate static sitemap that becomes stale after automated code additions. CI must verify Home and ALL merged codes appear exactly once; production code details use index,follow and previews remain noindex,nofollow,noarchive.
 - Use WebSite structured data on the homepage and WebPage/BreadcrumbList structured data on details only when it matches user-visible facts. Do not add invented reviews, misleading affiliations, artificial FAQ rich-results, or unsupported `SearchAction` markup.
 - The trusted Pages build must copy `llms.txt` into the public site. PR previews may copy only approved static files and must never execute PR-supplied scripts.
 - Test with Node.js 24: `node --test scripts/seo-aeo.test.mjs`. After deploying to production, verify `https://muse.eplus.dev/llms.txt` returns the current guide (not a 404 or stale file).
