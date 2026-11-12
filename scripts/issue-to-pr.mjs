@@ -7,6 +7,21 @@ const REPO = "ePlus-DEV/muse-invite-hub";
 const MARKER = "<!-- muse-issue-draft-pr -->";
 const CODE_PATTERN = /^[A-Z0-9-]{4,32}$/;
 const USER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+const GITHUB_OWN = "GitHub (my own code)";
+const THREADS_FOUND = "Threads (public code I found)";
+const THREADS_FIELD = "Threads public post or profile URL (required for Threads)";
+function threadsReference(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const url = new URL(value.trim());
+    const match = /^\/@([A-Za-z0-9_.]{1,30})(?:\/post\/([A-Za-z0-9_-]+))?\/?$/.exec(url.pathname);
+    if (url.protocol !== "https:" ||
+        !["threads.com", "www.threads.com"].includes(url.hostname.toLowerCase()) ||
+        url.username || url.password || url.search || url.hash || !match) return null;
+    return { url: url.href, handle: match[1], post: Boolean(match[2]) };
+  } catch { return null; }
+}
+
 
 export function readIssueFields(body) {
   const values = {};
@@ -107,11 +122,48 @@ export function planIssueChange(issue, current) {
   let action, notice = "";
   if (kind === "invite") {
     const checklist = field(f,"Contributor checklist");
-    if (!checklist.includes("[x] I am authorized to share this code publicly") ||
-        !checklist.includes("[x] This code is not a password")) {
+    const authorized = checklist.includes("[x] I am authorized to share this code publicly") ||
+      checklist.includes("[x] I own this public code or am reporting a code explicitly shared publicly");
+    if (!authorized || !checklist.includes("[x] This code is not a password")) {
       throw Error("Contributor permission and privacy confirmations are required.");
     }
+    const selectedSource = field(f,"Code source").trim();
+    if (selectedSource && selectedSource !== GITHUB_OWN && selectedSource !== THREADS_FOUND) {
+      return { outcome:"needs-review",kind,code,reason:"Choose a supported GitHub or Threads source." };
+    }
+    const isThreads = selectedSource === THREADS_FOUND;
+    const urlField = field(f,THREADS_FIELD).trim();
+    // Legacy submissions did not have a source selector. They must not silently
+    // attribute another person's Threads code to the GitHub Issue reporter.
+    const legacyUrl = field(f,"Public confirmation or context (optional)").trim();
+    if (!selectedSource && threadsReference(legacyUrl)) {
+      return {outcome:"needs-review",kind,code,
+        reason:"Legacy Issues with a Threads URL need a new source selection and maintainer review."};
+    }
+    if (!isThreads && urlField) {
+      return {outcome:"needs-review",kind,code,
+        reason:"Select Threads as the code source when supplying a Threads URL."};
+    }
+    const threads = isThreads ? threadsReference(urlField) : null;
+    if (isThreads && !threads) {
+      return {outcome:"needs-review",kind,code,
+        reason:"Threads codes need a valid public https://www.threads.com/@user/post/ID source link."};
+    }
+    if (isThreads && !threads.post) {
+      return {outcome:"needs-review",kind,code,
+        reason:"A Threads profile alone does not prove that the code was posted. Supply the original public post URL for review."};
+    }
+    if (isThreads && ["Invite limit (optional; self-reported)",
+        "Uses so far (optional; self-reported)",
+        "Remaining invites (optional; self-reported)"].some(label => field(f,label).trim())) {
+      return {outcome:"needs-review",kind,code,
+        reason:"Threads source reports cannot claim owner-only quota numbers. Remove the quota fields or request manual review."};
+    }
     if (existing) {
+      if (isThreads || threadsReference(existing.sourceUrl)) {
+        return {outcome:"needs-review",kind,code,
+          reason:"The code is already listed. A Threads report cannot replace attribution, ownership or quota automatically; maintainer review is required."};
+      }
       if (!ownerMatches(existing,issue)) {
         return {outcome:"needs-review",kind,code,
           reason:"The code already exists under a different GitHub owner; manual review is required."};
@@ -130,33 +182,45 @@ export function planIssueChange(issue, current) {
         reason:state==="stale"?"Newer usage data is already published.":"The published catalog already has this dated quota."};
       rememberOwnerId(target,issue);
       action="update owner report";
-      notice="The owner updated a dated self-reported count; this is NOT a live Muse balance.";
+      notice="The GitHub owner updated a dated self-reported count; this is NOT a live Muse balance.";
     } else {
-    const id = "community-issue-" + issue.number;
-    if (data.some(item => item.id === id)) throw Error("Catalog ID already exists.");
-    const entry = {
-      id, code, status:"unverified", addedAt:date,
-      submittedBy:issue.user.login,
-      note:"Community-submitted in issue #" + issue.number + "; redemption not independently verified."
-    };
-    rememberOwnerId(entry,issue);
-    const reported = actualQuota(f,date,{
-      total:"Invite limit (optional; self-reported)",
-      used:"Uses so far (optional; self-reported)",
-      remaining:"Remaining invites (optional; self-reported)",
-      notes:"Notes (optional)"
-    });
-    if (reported) Object.assign(entry,reported);
-    else notice = "Usage numbers were absent or incomplete; no available-slot count has been guessed.";
-    const firstCommunity = data.findIndex(item => item.featured !== true);
-    data.splice(firstCommunity < 0 ? data.length : firstCommunity, 0, entry);
-    action = "add";
+      const id = "community-issue-" + issue.number;
+      if (data.some(item => item.id === id)) throw Error("Catalog ID already exists.");
+      const entry = {
+        id, code, status:"unverified", addedAt:date,
+        ...(isThreads
+          ? {sourceUrl:threads.url, note:"Public Threads code reported in issue #"+issue.number+
+              "; original post and Muse redemption require human review."}
+          : {submittedBy:issue.user.login, note:"Community-submitted in issue #"+issue.number+
+              "; redemption not independently verified."})
+      };
+      if (!isThreads) {
+        rememberOwnerId(entry,issue);
+        const reported=actualQuota(f,date,{
+          total:"Invite limit (optional; self-reported)",
+          used:"Uses so far (optional; self-reported)",
+          remaining:"Remaining invites (optional; self-reported)",
+          notes:"Notes (optional)"
+        });
+        if (reported) Object.assign(entry,reported);
+        else notice="Usage numbers were absent or incomplete; no available-slot count has been guessed.";
+      } else {
+        notice="Threads @"+threads.handle+" is the cited public source, NOT the GitHub reporter or a verified code owner. "+
+          "Verify the original post and code before merging; do NOT invent availability or redemption results.";
+      }
+      const firstCommunity=data.findIndex(item=>item.featured!==true);
+      data.splice(firstCommunity<0?data.length:firstCommunity,0,entry);
+      action=isThreads?"add Threads source":"add";
     }
   } else if (kind === "count") {
     if (!existing) return { outcome:"needs-review",kind,code,reason:"Code not yet in the catalog; report requires manual triage." };
     const confirmation = field(f,"Confirmation");
     if (!confirmation.includes("[x] I confirm that these figures came from a Muse invite screen")) {
       throw Error("The owner must confirm the figures came from their Muse invite screen.");
+    }
+    if (threadsReference(existing.sourceUrl)) {
+      return {outcome:"needs-review",kind,code,
+        reason:"Threads attribution does not prove GitHub ownership. Owner quota updates for Threads codes require manual verification."};
     }
     if (!ownerMatches(existing,issue)) {
       return { outcome:"needs-review",kind,code,reason:"Only the cataloged code owner may submit a quota proposal automatically." };
@@ -298,6 +362,9 @@ async function propose(issue,token) {
     "",
     "### Required human checks",
     "- [ ] Verify the submitter, code and any ownership or usage claims",
+    proposed.action==="add Threads source"
+      ? "- [ ] Open the original Threads post, confirm it actually contains this code and matches the attributed account"
+      : "- [ ] Confirm the original GitHub owner attribution and any account-reported quota",
     "- [ ] Review catalog diff, duplicates and contributor attribution",
     "- [ ] CI and security checks pass",
     "- [ ] Confirm website preview after marking the draft ready",
