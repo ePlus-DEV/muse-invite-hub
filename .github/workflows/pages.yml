@@ -19,6 +19,7 @@ permissions:
   contents: read
   checks: read
   pull-requests: write
+  issues: write
   pages: write
   id-token: write
 
@@ -58,6 +59,8 @@ jobs:
           node --check assets/detail.js
           node --check scripts/build-pages.mjs
           node --check scripts/post-preview-status.mjs
+          node --check scripts/close-accepted-issues.mjs
+          node --test scripts/close-accepted-issues.test.mjs
       - name: Build main site and eligible PR previews
         env:
           GH_TOKEN: ${{ github.token }}
@@ -156,3 +159,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/post-preview-status.mjs
+      - name: Notify accepted contributors and close published Issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DEPLOYED_SHA="$(git rev-parse HEAD)" node scripts/close-accepted-issues.mjs
