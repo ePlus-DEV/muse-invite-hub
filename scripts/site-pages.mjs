@@ -51,6 +51,27 @@ function detailDescription(item) {
     : " Remaining invite availability has not been reported.";
   return "Explore Muse invite code " + item.code + ". " + owner + slots;
 }
+// The homepage is the single trusted source of the dated Meta-backed market list.
+// Reuse its static accessible disclosure on each generated detail; no duplicate
+// geography data or client-side network dependency. The flags stay relative.
+export function renderDetailMarketAvailability() {
+  const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const opener = '<section class="availability-section" id="availability"';
+  const start = home.indexOf(opener);
+  const end = home.indexOf("</section>", start);
+  if (start < 0 || end < start) throw Error("Homepage availability disclosure missing");
+  const html = home.slice(start, end + "</section>".length);
+  if ((html.match(/<li data-country="[A-Z]{2}">/g) || []).length !== 5) {
+    throw Error("Unexpected market list in homepage disclosure");
+  }
+  return html
+    .replace('class="availability-section"', 'class="availability-section detail-market-section"')
+    .replace('id="availability"', 'id="detail-availability"')
+    .replace('aria-labelledby="availability-title"', 'aria-labelledby="detail-availability-title"')
+    .replace('id="availability-title"', 'id="detail-availability-title"')
+    .replaceAll('src="./assets/flags/', 'src="../../assets/flags/');
+}
+
 function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = false } = {}) {
   const root = origin.replace(/\/+$/, "");
   const base = basePath.endsWith("/") ? basePath : basePath + "/";
@@ -166,6 +187,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '          <li>Enter the code and review eligibility and reward terms directly in Muse.</li></ol>' +
     '          <p>Only Muse confirms whether an invitation is accepted. Copying it on this site does not redeem it or reduce its remaining quota.</p>' +
     '        </section>' +
+    renderDetailMarketAvailability() +
     '      </section>' +
     '      <aside class="detail-side" aria-label="Invite information">' +
     '        <div class="detail-info-card"><p class="section-kicker">REPORTED AVAILABILITY</p>' + usage +

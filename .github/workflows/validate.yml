@@ -50,7 +50,7 @@ jobs:
       - name: Run catalog and link validation tests
         run: node --test scripts/validate.test.mjs scripts/audit-links.test.mjs
       - name: Verify static detail generation and PR preview renderer
-        run: node --test scripts/preview.test.mjs scripts/preview-fallback.test.mjs scripts/site-pages.test.mjs scripts/seo-aeo.test.mjs scripts/page-skeleton.test.mjs scripts/directory-features.test.mjs scripts/copied-codes.test.mjs scripts/site-ui.test.mjs scripts/code-issue-map.test.mjs scripts/feedback-comment-to-pr.test.mjs
+        run: node --test scripts/preview.test.mjs scripts/preview-fallback.test.mjs scripts/site-pages.test.mjs scripts/seo-aeo.test.mjs scripts/page-skeleton.test.mjs scripts/directory-features.test.mjs scripts/copied-codes.test.mjs scripts/site-ui.test.mjs scripts/market-layout.test.mjs scripts/code-issue-map.test.mjs scripts/feedback-comment-to-pr.test.mjs
       - name: Dry-run production and live preview bundle (read-only)
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         env:
