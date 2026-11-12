@@ -50,7 +50,7 @@ jobs:
         run: |
           node scripts/validate.mjs
           node scripts/audit-links.mjs
-          node --test scripts/validate.test.mjs scripts/preview.test.mjs scripts/audit-links.test.mjs
+          node --test scripts/validate.test.mjs scripts/preview.test.mjs scripts/preview-fallback.test.mjs scripts/audit-links.test.mjs
           node --check scripts/site-pages.mjs
           node --test scripts/site-pages.test.mjs scripts/verify-production.test.mjs scripts/seo-aeo.test.mjs
           node --check scripts/verify-production.mjs
@@ -65,6 +65,7 @@ jobs:
       - name: Verify production and generated preview files
         run: |
           test -s _site/index.html
+          test -s _site/404.html
           test -s _site/llms.txt
           test -s _site/assets/app.js
           test -s _site/assets/styles.css
