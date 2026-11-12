@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join, resolve } from "node:path";
 import { buildPreview, isSafeSiteFile } from "./preview-core.mjs";
 import { generateSite } from "./site-pages.mjs";
+import { syncCodeIssueMap, validIssueMap } from "./code-issue-map.mjs";
 
 const REPO = process.env.GITHUB_REPOSITORY;
 const ORIGIN = "https://muse.eplus.dev";
@@ -35,9 +36,6 @@ for (const required of ["index.html", "404.html", "llms.txt", "assets/app.js", "
 }
 const code = JSON.parse(readFileSync(join(output, "data/invites.json"), "utf8"));
 if (!Array.isArray(code)) throw Error("Production catalog is not an array");
-const productionPages = generateSite(output);
-console.log("Generated " + productionPages.created + " static invite detail pages and " + productionPages.indexed + " indexable entries.");
-
 async function api(path) {
   const res = await fetch("https://api.github.com/" + path, {
     headers: {
@@ -50,6 +48,37 @@ async function api(path) {
   if (!res.ok) throw Error("GitHub API " + res.status + ": " + path);
   return res.json();
 }
+async function listAllRepositoryIssues() {
+  const result = [];
+  for (let page = 1; page <= 20; page++) {
+    const batch = await api("repos/" + REPO + "/issues?state=all&per_page=100&page=" + page);
+    result.push(...batch.filter(item => !item.pull_request));
+    if (batch.length < 100) return result;
+  }
+  throw Error("Too many issues; refuse incomplete canonical mapping");
+}
+async function createCanonicalIssue(fields) {
+  const res = await fetch("https://api.github.com/repos/" + REPO + "/issues", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + TOKEN,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(fields),
+    signal: AbortSignal.timeout(25000)
+  });
+  if (!res.ok) throw Error("Could not create canonical issue: HTTP " + res.status);
+  return res.json();
+}
+const issueMap = await syncCodeIssueMap(code, listAllRepositoryIssues, createCanonicalIssue);
+if (!validIssueMap(issueMap, code)) throw Error("Canonical Issue mapping does not cover every published code");
+writeFileSync(join(output, "data", "code-issues.json"), JSON.stringify(issueMap, null, 2) + "\n");
+console.log("Mapped " + code.length + " published invite codes to canonical GitHub Issues.");
+const productionPages = generateSite(output);
+console.log("Generated " + productionPages.created + " static invite detail pages and " + productionPages.indexed + " indexable entries.");
+
 async function listOpenPRs() {
   const prs = [];
   for (let page = 1; page <= 3; page++) {
@@ -120,6 +149,10 @@ for (const pr of (await listOpenPRs()).slice(0, MAX_PREVIEWS)) {
     const dest = join(output, "pr-preview", "pr-" + pr.number);
     const built = buildPreview({ files, readFile: file => readMergeFile(mergeSha, file), dest,
       number: pr.number, sha: head, mergeSha, origin: ORIGIN });
+    // The public issue map is produced by trusted main code and covers published
+    // codes only. Unmerged codes never create Issues or gain false mappings.
+    copyFileSync(join(output, "data", "code-issues.json"),
+      join(dest, "data", "code-issues.json"));
     record.detail_pages = built.detail_pages;
     // Parse JavaScript but never execute scripts from the untrusted PR ref.
     const syntax = spawnSync(process.execPath, ["--check", join(dest, "assets/app.js")],
