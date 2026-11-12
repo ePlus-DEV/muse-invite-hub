@@ -156,8 +156,10 @@
     window.addEventListener("scroll", hide, { passive: true, capture: true });
     window.addEventListener("resize", hide, { passive: true });
     tooltipApi = { show, hide, refresh() {
-      if (active && active.isConnected) show(active);
-      else hide();
+      if (active && active.isConnected) {
+        show(active);
+        if (lastPointerWasTouch) dismissTimer = window.setTimeout(hide, 2400);
+      } else hide();
     } };
     return tooltipApi;
   }
