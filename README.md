@@ -40,9 +40,10 @@ Update the source links, checked date and `scripts/seo-aeo.test.mjs` together wh
 
 ## Features
 
-- Search, filter, sort and browse the directory with **Load more** (12 codes per batch).
+- Search, filter by source (All / GitHub / Threads), sort and browse the unified directory with **Load more** (12 codes per batch).
 - Open pre-rendered code detail pages at `/codes/<CODE>/` for sharing, copying and reporting feedback.
-- Show contributor attribution and community-reported code status, never official Muse validity.
+- Show linked GitHub or Threads attribution and community-reported code status, never official Muse validity.
+- Threads demo listings (`18I70N`, `XZ4PV6`) were supplied by a user; linked profiles are not proof of comment authorship or successful redemption.
 - Display dated, owner-reported invite counts, or **Not reported** when data is incomplete.
 - Feature the site owner's `DPNIHH` with **Verified Owner**, which confirms only ownership—not successful redemption.
 - Review GitHub Issue Form submissions through automatically proposed Draft PRs, CI and isolated previews after review.
@@ -54,6 +55,12 @@ Update the source links, checked date and `scripts/seo-aeo.test.mjs` together wh
 The owner reported **3 of 30 remaining** for `DPNIHH` in [Issue #14](https://github.com/ePlus-DEV/muse-invite-hub/issues/14) on **2026-11-11** (30 total minus 27 used). This is a **dated snapshot, not live Muse availability**. Counts can change without this website knowing. Clicking Copy does not redeem or consume an invitation.
 
 If you know only a remaining number, [submit that number](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml) without guessing the total. Remaining-only owner reports are displayed without a made-up total. The website does not connect to private Muse account data.
+
+### Source attribution and Threads demo
+
+Existing entries continue to use `submittedBy` as a GitHub account. A Threads record instead has a `source` object with `platform: "threads"`, `handle`, and an HTTPS `url` pointing to a public Threads profile or post. Do not reuse `submittedBy` for Threads handles. The same code must not appear twice, including across platforms.
+
+These two entries are an attribution/UI demo based on user-provided handles and codes; the original Threads comments were not independently accessible, so the profile links are **profiles**, not evidence that the code was posted or worked. Never infer remaining quotas.
 
 ## Run and test locally
 
