@@ -82,3 +82,20 @@ test("external repository links are not accepted in public catalog references", 
   assert.ok(error.some(x => x.includes("unrelated GitHub repository")));
   assert.deepEqual(validateCatalog([{ ...sample(), sourceUrl: "https://muse.ai/join" }]), []);
 });
+
+test("Threads profiles are supported without a GitHub contributor identity", () => {
+  const entry = { id:"threads-sample", code:"18I70N", status:"unverified",
+    addedAt:"2026-11-12",
+    source:{platform:"threads",handle:"baijiling2",url:"https://www.threads.com/@baijiling2"} };
+  assert.deepEqual(validateCatalog([entry]), []);
+  assert.ok(validateCatalog([{...entry, source:{...entry.source,url:"https://threads.com.evil.invalid/@baijiling2"}}])
+    .some(error => error.includes("Threads profile")));
+  assert.ok(validateCatalog([{...entry, source:{...entry.source,handle:"<script>"}}])
+    .some(error => error.includes("source.handle")));
+  assert.ok(validateCatalog([{...entry, submittedBy:"baijiling2"}])
+    .some(error => error.includes("source.handle, not submittedBy")));
+  assert.ok(validateCatalog([{...entry, source:{...entry.source,platform:"github"}}])
+    .some(error => error.includes("source.platform")));
+  assert.ok(validateCatalog([{...entry, source:{...entry.source,extra:"unsafe"}}])
+    .some(error => error.includes("unsupported fields")));
+});
