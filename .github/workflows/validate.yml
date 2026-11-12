@@ -44,6 +44,15 @@ jobs:
           node --check telegram/server.mjs
           node --check telegram/register-webhook.mjs
           node --test telegram/telegram.test.mjs
+      - name: Check OCI Docker Compose and ARM64 image build
+        env:
+          BOT_DOMAIN: bot.example.com
+          TELEGRAM_BOT_TOKEN: TESTONLY_FAKE_BOT_TOKEN_NOT_A_SECRET
+          TELEGRAM_WEBHOOK_SECRET: TESTONLY_FAKE_WEBHOOK_SECRET_NOT_A_SECRET
+          GITHUB_ISSUES_TOKEN: TESTONLY_FAKE_GITHUB_TOKEN_NOT_A_SECRET
+        run: |
+          docker compose -f telegram/compose.yaml config --quiet
+          docker buildx build --platform linux/arm64 --file telegram/Dockerfile --output type=cacheonly .
       - name: Test trusted Issue form parser
         run: |
           node --check scripts/issue-to-pr.mjs
