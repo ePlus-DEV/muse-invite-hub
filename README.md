@@ -13,7 +13,7 @@
 - **One directory:** browse, search, filter and sort invite codes shared on GitHub, Threads, X (Twitter) and Facebook.
 - **Saved codes:** bookmark codes on the homepage or detail page and filter by saved items. Bookmarks are stored only in this browser (no accounts or server synchronization).
 - **Recently updated:** sort by the latest recorded listing date, reported usage date or catalog check. This does not verify current Muse redemption.
-- **Quick feedback:** use Worked for me / Didn\u0027t work links to open a prefilled GitHub Issue Form. Select the listing platform and actual result yourself before submitting; clicking the link does not create a report.
+- **Quick feedback:** each published invite has one canonical GitHub Issue for reports and discussion. Contributor-submitted codes reuse their original Issue; other published codes receive a unique Issue during trusted Pages deploy. Worked/Didn't work buttons open that thread and copy a suggested comment. Posting new feedback reopens a closed thread for maintainer review; feedback never automatically verifies Muse redemption.
 - **Code details:** copy and share individual codes, view source attribution and community-reported status.
 - **Community contributions:** submit codes, report your experience and update owner-reported invite counts through GitHub Issues.
 - **Reviewed updates:** maintainers review contributions before publication; accepted Issues receive a link to their published code.
