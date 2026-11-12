@@ -22,7 +22,7 @@ const html=(target=code)=>'<!doctype html><html><head><title>'+target+
   ' Muse Invite Code | Muse Invite Hub</title><link rel="canonical" href="https://muse.eplus.dev/codes/'+target+
   '/"></head><body>Community-shared, unverified.</body></html>';
 
-function mock({pull=pr(),posted=false,live=true,comparison="ahead",initialIssue=issue(),
+function mock({pull=pr(),posted=false,reopened=false,live=true,comparison="ahead",initialIssue=issue(),
   failComment=false,files=[{filename:"data/invites.json"}]}={}) {
   const events=[], savedIssue=structuredClone(initialIssue);
   let accepted=posted;
@@ -42,8 +42,12 @@ function mock({pull=pr(),posted=false,live=true,comparison="ahead",initialIssue=
     else if(op==="GET issues/90") data=savedIssue;
     else if(op==="GET pulls/91/files") data=files;
     else if(op==="GET compare/"+merged+"..."+deployed) data={status:comparison};
-    else if(op==="GET issues/90/comments") data=accepted?[{user:{login:"github-actions[bot]"},
-      body:"<!-- muse-accepted-contribution -->"}]:[];
+    else if(op==="GET issues/90/comments") data=[
+      ...(accepted?[{user:{login:"github-actions[bot]"},
+        body:"<!-- muse-accepted-contribution -->"}]:[]),
+      ...(reopened?[{user:{login:"github-actions[bot]"},
+        body:"<!-- muse-code-feedback-reopened -->"}]:[])
+    ];
     else if(op==="POST issues/90/comments") {
       if(failComment) return {ok:false,status:500,text:async()=>"failure"};
       const body=JSON.parse(options.body).body;
@@ -96,6 +100,16 @@ test("an already posted acceptance comment is not duplicated on retry",async()=>
   assert.deepEqual(result,{notified:0,closed:1,pending:0,skipped:0});
   assert.ok(!m.events.includes("POST issues/90/comments"));
   assert.ok(m.events.includes("PATCH issues/90"));
+});
+
+test("new feedback on a previously accepted Issue survives future deployments",async()=>{
+  const m=mock({posted:true,reopened:true});
+  const result=await closeAcceptedIssues({
+    request:m.request,token:"test-token",deployedSha:deployed,catalog:[{code}]
+  });
+  assert.equal(result.closed,0);
+  assert.equal(result.skipped,1);
+  assert.ok(!m.events.includes("PATCH issues/90"));
 });
 
 test("unpublished, wrong-code, unverified merge, stale site and unrelated file changes never close",async()=>{
