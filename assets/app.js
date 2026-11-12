@@ -44,7 +44,10 @@
     button.setAttribute("aria-pressed", String(saved));
     button.setAttribute("aria-label",
       (saved ? "Remove saved Muse invite code " : "Save Muse invite code ") + code);
-    button.title = saved ? "Remove from saved codes" : "Save code on this device";
+    button.dataset.tooltip = saved ?
+      "Remove this bookmark from this browser." :
+      "Save this code on this device. No login or cloud sync.";
+    features.enableTooltips()?.refresh();
     button.replaceChildren(icon(saved ? "fa-solid fa-bookmark" : "fa-regular fa-bookmark"));
   }
   function syncSavedUi() {
@@ -259,13 +262,16 @@
     const actions = el("div", "card-actions");
     const copy = el("button", "card-copy");
     copy.type = "button";
+    copy.dataset.tooltip = "Copy this code. Copying does not redeem it in Muse.";
     copy.setAttribute("aria-label", "Copy Muse invite code " + item.code);
     copy.append(icon("fa-regular fa-copy"), document.createTextNode(" Copy code"));
     copy.addEventListener("click", () => copyCode(item.code, copy));
     const subActions = el("div", "card-subactions");
     const details = el("a", "card-detail-link", "View details");
+    details.dataset.tooltip = "See the source, report date and details for this code.";
     details.href = "./codes/" + encodeURIComponent(item.code) + "/";
     const report = el("a", "card-feedback-link", "Give feedback");
+    report.dataset.tooltip = "Report a duplicate, exhausted code or another issue via GitHub.";
     report.href = issueUrl("report-code.yml", item.code);
     report.target = "_blank";
     report.rel = "noopener noreferrer";
@@ -279,7 +285,9 @@
       link.href = features.quickFeedbackUrl(item.code, outcome);
       link.target = "_blank";
       link.rel = "noopener noreferrer";
-      link.title = "Opens GitHub Issue Form. Select listing platform and result before submitting.";
+      link.dataset.tooltip = outcome === "worked" ?
+        "Muse accepted this code for you? Open GitHub to confirm your report and platform." :
+        "Code rejected or unavailable? Open GitHub to report the result and platform.";
       link.setAttribute("aria-label", text + " — report Muse invite code " + item.code + " on GitHub");
       link.append(icon(iconName), document.createTextNode(" " + text));
       quickFeedback.append(link);
@@ -390,10 +398,14 @@
     if (!option || !sortMenu.contains(option)) return;
     sortValue = option.dataset.sort;
     sortCurrent.textContent = option.textContent;
+    sortTrigger.dataset.tooltip = option.dataset.sort === "updated" ?
+      "Most recent recorded listing, usage report or catalog check. Not live availability." :
+      "Sort the directory. Featured listings stay pinned at the top.";
     for (const entry of sortOptions) {
       entry.setAttribute("aria-checked", String(entry === option));
     }
     closeSortMenu(true);
+    features.enableTooltips()?.hide();
     render(true);
   });
   sortMenu.addEventListener("keydown", event => {
