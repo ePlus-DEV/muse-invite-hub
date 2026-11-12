@@ -134,23 +134,15 @@
     "code": "18I70N",
     "status": "unverified",
     "addedAt": "2026-11-12",
-    "source": {
-      "platform": "threads",
-      "handle": "baijiling2",
-      "url": "https://www.threads.com/@baijiling2"
-    },
-    "note": "User-reported Threads code; original comment and Muse redemption not independently verified."
+    "note": "User-reported Threads code; original comment and Muse redemption not independently verified.",
+    "sourceUrl": "https://www.threads.com/@baijiling2"
   },
   {
     "id": "threads-zkeir1914-xz4pv6",
     "code": "XZ4PV6",
     "status": "unverified",
     "addedAt": "2026-11-12",
-    "source": {
-      "platform": "threads",
-      "handle": "zkeir1914",
-      "url": "https://www.threads.com/@zkeir1914"
-    },
-    "note": "User-reported Threads code; original comment and Muse redemption not independently verified."
+    "note": "User-reported Threads code; original comment and Muse redemption not independently verified.",
+    "sourceUrl": "https://www.threads.com/@zkeir1914"
   }
 ]
