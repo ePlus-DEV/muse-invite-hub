@@ -106,7 +106,7 @@ test("contextual tooltips cover saved, quick feedback, copy, details and recentl
   assert.match(home, /data-sort="updated"[^>]*data-tooltip="Latest recorded listing/);
   assert.match(home, /id="sort-trigger"[^>]*data-tooltip="Sort the directory/);
   assert.match(app, /button\.dataset\.tooltip = saved \?/);
-  assert.match(app, /button\.dataset\.tooltip = "Copy this code/);
+  assert.match(app, /copy\.dataset\.tooltip = "Copy this code/);
   assert.match(app, /details\.dataset\.tooltip = "See the source/);
   assert.match(app, /report\.dataset\.tooltip = "Report a duplicate/);
   assert.match(app, /link\.dataset\.tooltip = outcome === "worked"/);
