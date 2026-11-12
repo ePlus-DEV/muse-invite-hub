@@ -1,11 +1,11 @@
-name: "↻ Update invite code remaining count"
-description: "Share a dated quota/usage snapshot from your own Muse Invite screen."
+name: "↻ Update invite code remaining count (legacy)"
+description: "Legacy fallback. For listed codes, use Update count on the existing code card/Issue."
 title: "[Count update] "
 body:
   - type: markdown
     attributes:
       value: |
-        Help keep invitation availability useful. GitHub Issues are public.
+        **Preferred:** visit https://muse.eplus.dev/#codes, select your existing invite code, and click **Update count**. You will add a comment to its original Issue; no duplicate Issue is needed. Use this legacy form only if the linked Issue cannot be found. GitHub Issues are public.
         Share only **numbers shown in your own Muse account**, not credentials or private account screenshots.
         Select the platform of the **listed invite code**, not your own login. Identical usernames on GitHub, Threads, X and Facebook are different identities.
         GitHub Issue ownership checks can confirm only the cataloged GitHub owner. **Threads, X and Facebook codes require manual owner verification** and will not receive automatic quota PRs.

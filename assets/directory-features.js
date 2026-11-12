@@ -39,24 +39,185 @@
       a.code.localeCompare(b.code);
   }
 
-  function quickFeedbackUrl(code, outcome) {
+  const FEEDBACK_CHOICES = {
+    worked: "Muse accepted my code",
+    failed: "Muse rejected or could not redeem my code",
+    other: "Other feedback",
+    count: "Owner-reported invite count"
+  };
+
+  function feedbackComment(code, outcome) {
     if (!CODE_PATTERN.test(code)) throw Error("Invalid public invite code");
-    const choices = {
-      worked: "Worked for me",
-      failed: "Didn't work for me"
-    };
-    if (!Object.hasOwn(choices, outcome)) throw Error("Invalid feedback option");
-    const details = "Quick feedback choice: " + choices[outcome] +
-      ". Please confirm your experience and select the required Listing platform and " +
-      "What happened? options before submitting. Only Muse can verify redemption.";
-    const params = new URLSearchParams({
-      template: "report-code.yml",
-      invite_code: code,
-      title: "[Code feedback] " + code,
-      details
+    if (!Object.hasOwn(FEEDBACK_CHOICES, outcome)) throw Error("Invalid feedback option");
+    if (outcome === "count") {
+      return "Code: " + code + "\nUpdate type: Owner count" +
+        "\nRemaining invites: [enter actual number or leave blank]" +
+        "\nTotal invites: [optional]" +
+        "\nUsed invites: [optional]" +
+        "\nOwner confirmation: [confirm this report below]";
+    }
+    return "Code: " + code + "\nResult: " + FEEDBACK_CHOICES[outcome] +
+      "\nWhen I tried: [add date]\nDetails: [add non-sensitive context]";
+  }
+
+  function quickFeedbackUrl(code, outcome, issueNumber) {
+    if (!CODE_PATTERN.test(code)) throw Error("Invalid public invite code");
+    if (!Object.hasOwn(FEEDBACK_CHOICES, outcome)) throw Error("Invalid feedback option");
+    // GitHub does not support prefilled comments on existing issues.
+    // Never fall back to a new Issue: it would fragment the per-code thread.
+    return Number.isSafeInteger(issueNumber) && issueNumber > 0 ?
+      REPO + "/issues/" + issueNumber + "#issuecomment-new" : REPO + "/issues";
+  }
+
+  function issueNumberFor(map, code) {
+    if (!CODE_PATTERN.test(code)) return null;
+    const value = map?.[code];
+    return Number.isSafeInteger(value) && value > 0 ? value : null;
+  }
+
+
+  // Existing GitHub Issues cannot prefill comments through a URL. Instead this
+  // browser-only dialog prepares an editable comment, lets the visitor copy it,
+  // and opens the ONE linked Issue. Never submit or reopen on mere page clicks.
+  let feedbackDialogApi = null;
+  function feedbackDialog() {
+    if (feedbackDialogApi) return feedbackDialogApi;
+    if (typeof document === "undefined" || typeof HTMLDialogElement === "undefined") return null;
+    const dialog = document.createElement("dialog");
+    dialog.className = "feedback-dialog";
+    dialog.setAttribute("aria-labelledby", "feedback-dialog-title");
+    dialog.setAttribute("aria-describedby", "feedback-dialog-help");
+    const surface = document.createElement("div");
+    surface.className = "feedback-dialog-body";
+    const heading = document.createElement("h2");
+    heading.id = "feedback-dialog-title";
+    const help = document.createElement("p");
+    help.id = "feedback-dialog-help";
+    help.textContent = "Review and copy your prepared comment, then open the existing GitHub Issue and paste it. GitHub cannot prefill comments in an existing Issue.";
+    const label = document.createElement("label");
+    label.setAttribute("for", "feedback-comment-text");
+    label.textContent = "Your comment (editable)";
+    const textarea = document.createElement("textarea");
+    textarea.id = "feedback-comment-text";
+    textarea.rows = 7;
+    textarea.maxLength = 3000;
+    const ownerConfirm = document.createElement("label");
+    ownerConfirm.className = "feedback-dialog-consent";
+    const ownerCheckbox = document.createElement("input");
+    ownerCheckbox.type = "checkbox";
+    ownerConfirm.append(ownerCheckbox,
+      document.createTextNode(" I confirm these figures come from my own Muse invite screen."));
+    ownerConfirm.hidden = true;
+    let activeOutcome = "other";
+    const note = document.createElement("p");
+    note.className = "feedback-dialog-note";
+    note.textContent = "Posting a comment on a closed Issue triggers a review/reopen workflow. A report never verifies Muse redemption automatically.";
+    const feedbackStatus = document.createElement("p");
+    feedbackStatus.className = "feedback-dialog-status";
+    feedbackStatus.setAttribute("role", "status");
+    feedbackStatus.setAttribute("aria-live", "polite");
+    const controls = document.createElement("div");
+    controls.className = "feedback-dialog-actions";
+    const copy = document.createElement("button");
+    copy.className = "button button-primary";
+    copy.type = "button";
+    copy.textContent = "Copy comment";
+    const open = document.createElement("a");
+    open.className = "button button-outlined";
+    open.target = "_blank";
+    open.rel = "noopener noreferrer";
+    open.textContent = "Open original Issue";
+    const close = document.createElement("button");
+    close.className = "button button-outlined";
+    close.type = "button";
+    close.textContent = "Close";
+    controls.append(copy, open, close);
+    surface.append(heading, help, label, textarea, ownerConfirm, note, feedbackStatus, controls);
+    dialog.append(surface);
+    document.body.append(dialog);
+    let trigger = null;
+
+    copy.addEventListener("click", async () => {
+      let text = textarea.value.trim();
+      if (activeOutcome === "count") {
+        if (!ownerCheckbox.checked) {
+          feedbackStatus.textContent = "Confirm that these numbers came from your own Muse account.";
+          ownerCheckbox.focus();
+          return;
+        }
+        const countFields = {};
+        for (const line of text.split(/\r?\n/)) {
+          const hit = /^(Remaining invites|Total invites|Used invites):\s*(.*)$/.exec(line.trim());
+          if (hit) countFields[hit[1]] = hit[2].trim();
+        }
+        const values = Object.values(countFields);
+        const numbers = values.filter(value => /^\d{1,4}$/.test(value));
+        if (!numbers.length || values.some(value =>
+          value && !/^\d{1,4}$/.test(value) && !/^\[(?:optional|enter actual number or leave blank)\]$/.test(value))) {
+          feedbackStatus.textContent = "Enter a real remaining count, or a consistent total and used count.";
+          textarea.focus();
+          return;
+        }
+        text = text.replace(/\[enter actual number or leave blank\]|\[optional\]/g,"").replace(
+          /Owner confirmation:.*$/m,
+          "Owner confirmation: I confirm these figures came from my own Muse invite screen.");
+        textarea.value = text;
+      }
+      if (!text) {
+        feedbackStatus.textContent = "Enter a comment before copying.";
+        textarea.focus();
+        return;
+      }
+      try {
+        if (!navigator.clipboard || !window.isSecureContext) throw Error("Clipboard API unavailable");
+        await navigator.clipboard.writeText(text);
+        feedbackStatus.textContent = "Copied. Open the linked Issue, paste and submit the comment.";
+      } catch {
+        textarea.focus();
+        textarea.select();
+        feedbackStatus.textContent = "Clipboard access was blocked. Copy the selected text manually, then open the Issue.";
+      }
     });
-    // GitHub Issue Forms dropdowns cannot be preselected by query parameters.
-    return REPO + "/issues/new?" + params.toString();
+    close.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("close", () => {
+      if (trigger?.isConnected) trigger.focus();
+      trigger = null;
+    });
+    dialog.addEventListener("click", event => {
+      if (event.target === dialog) dialog.close();
+    });
+    feedbackDialogApi = {
+      open(code, outcome, issueNumber, opener) {
+        if (!CODE_PATTERN.test(code) || !Object.hasOwn(FEEDBACK_CHOICES, outcome) ||
+            !Number.isSafeInteger(issueNumber) || issueNumber <= 0) return false;
+        heading.textContent = outcome === "count" ?
+          "Update owner count for " + code : "Report code " + code;
+        activeOutcome = outcome;
+        ownerCheckbox.checked = false;
+        ownerConfirm.hidden = outcome !== "count";
+        help.textContent = outcome === "count" ?
+          "Only the listed GitHub owner can propose a count update. Enter numbers shown in your own Muse account, confirm ownership, then copy and comment on the ORIGINAL Issue. GitHub identity is checked before any Draft PR." :
+          "Review and copy your prepared comment, then open the existing GitHub Issue and paste it. GitHub cannot prefill comments in an existing Issue.";
+        const date = new Date();
+        // Local date is only a convenient editable starting point.
+        const localDate = [date.getFullYear(),
+          String(date.getMonth() + 1).padStart(2, "0"),
+          String(date.getDate()).padStart(2, "0")].join("-");
+        textarea.value = feedbackComment(code, outcome).replace("[add date]", localDate);
+        open.href = quickFeedbackUrl(code, outcome, issueNumber);
+        open.textContent = "Open Issue #" + issueNumber;
+        feedbackStatus.textContent = "No comment has been submitted. Copy the text before opening GitHub.";
+        trigger = opener || document.activeElement;
+        if (dialog.open) dialog.close();
+        dialog.showModal();
+        textarea.focus();
+        return true;
+      }
+    };
+    return feedbackDialogApi;
+  }
+  function openFeedbackDialog(code, outcome, issueNumber, opener) {
+    return feedbackDialog()?.open(code, outcome, issueNumber, opener) === true;
   }
 
   // A single viewport-positioned tooltip avoids clipping inside card/panel overflow
@@ -173,5 +334,5 @@
   }
 
   return { STORAGE_KEY, MAX_SAVED, parseSaved, activityDate, compareCodes,
-    quickFeedbackUrl, enableTooltips };
+    quickFeedbackUrl, feedbackComment, issueNumberFor, openFeedbackDialog, enableTooltips };
 });

@@ -180,38 +180,21 @@ test("Threads codes retain attribution and are included in the production sitema
   assert.match(app, /render\(true\)/);
 });
 
-test("Give feedback prefills editable issue title and code; platform remains a dropdown", () => {
+test("published detail routes feedback to the canonical GitHub Issue, never a new Issue form", () => {
   const homeJs = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
   const detailJs = readFileSync(new URL("../assets/detail.js", import.meta.url), "utf8");
-  const form = readFileSync(new URL("../.github/ISSUE_TEMPLATE/report-code.yml", import.meta.url), "utf8");
-  assert.match(form, /id: invite_code/);
-  assert.match(form, /- type: dropdown\n    id: listing_platform\n/);
-  assert.match(form, /      options:\n        - GitHub\n        - Threads/);
-  assert.doesNotMatch(form, /- type: input\n    id: listing_platform\n/);
-  assert.match(form, /title: "\[Code feedback\] "/);
-  assert.match(homeJs, /params\.set\("invite_code", code\)/);
-  assert.match(homeJs, /params\.set\("title", "\[Code feedback\] " \+ code\)/);
-  assert.doesNotMatch(homeJs, /params\.set\("listing_platform", platform\)/);
-  assert.match(homeJs, /issueUrl\("report-code\.yml", item\.code\)/);
-  assert.match(detailJs, /href\.searchParams\.delete\("listing_platform"\)/);
-  assert.match(detailJs, /href\.searchParams\.set\("title", "\[Code feedback\] " \+ inviteCode\)/);
-  for (const entry of [
-    owner(),
-    { ...community(), code:"XZ4PV6", submittedBy:undefined,
-      sourceUrl:"https://www.threads.com/@zkeir1914" }
-  ]) {
+  assert.match(homeJs, /fetch\("\.\/data\/code-issues\.json"/);
+  assert.match(detailJs, /fetch\("\.\.\/\.\.\/data\/code-issues\.json"/);
+  assert.match(detailJs, /features\.issueNumberFor\(map, detailCode\)/);
+  assert.match(homeJs, /features\.issueNumberFor\(codeIssueMap, code\)/);
+  for (const entry of [owner(), community()]) {
     const html = renderDetailPage(entry);
     const href = html.match(/<a href="([^"]+)" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-comment"/);
     assert.ok(href, "detail feedback link must be present");
-    const url = new URL(href[1].replaceAll("&amp;", "&"));
+    const url = new URL(href[1]);
     assert.equal(url.origin, "https://github.com");
-    assert.equal(url.pathname, "/ePlus-DEV/muse-invite-hub/issues/new");
-    assert.equal(url.searchParams.get("template"), "report-code.yml");
-    assert.equal(url.searchParams.get("invite_code"), entry.code);
-    assert.equal(url.searchParams.has("listing_platform"), false);
-    assert.equal(url.searchParams.get("title"), "[Code feedback] " + entry.code);
-    assert.equal(url.searchParams.getAll("title").length, 1);
-    assert.equal(url.searchParams.getAll("listing_platform").length, 0);
+    assert.equal(url.pathname, "/ePlus-DEV/muse-invite-hub/issues");
+    assert.ok(!html.includes("issues/new?template=report-code.yml"));
   }
 });
 

@@ -210,6 +210,7 @@ export function planIssueChange(issue, current) {
       if (data.some(item => item.id === id)) throw Error("Catalog ID already exists.");
       const entry = {
         id, code, status:"unverified", addedAt:date,
+        feedbackIssueNumber:issue.number,
         ...(socialSubmission
           ? {sourceUrl:social.url, note:"Public "+social.platform+" code reported in issue #"+issue.number+
               "; original post and Muse redemption require human review."}

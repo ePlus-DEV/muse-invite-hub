@@ -43,7 +43,8 @@ Usage figures are **dated self-reported snapshots**, not live balances. When cap
 The [Issue-to-Draft-PR workflow](../.github/workflows/issue-to-pr.yml) validates Issue Form submissions, checks duplicates and creates review-only Draft PRs for changes to the catalog.
 
 - GitHub owners may propose dated quota updates under ownership checks. A Threads, X or Facebook reporter cannot claim GitHub quota ownership through a matching handle.
-- Feedback forms require the listing platform. GitHub does not reliably preselect Issue Form dropdowns from links, so the user selects the platform; Give feedback links prefill the code and title.
+- The directory links feedback to one canonical GitHub Issue per published code. Contributor-submitted codes reuse their original Issue. Missing threads for manual/imported codes are created once during trusted production Pages build; PR validation is read-only.
+- A human comment on a closed canonical Issue reopens it for review. Structured accepted/rejected reports or GitHub-owner-confirmed quota updates are passed through the existing catalog validator and may produce a **review-only Draft PR**. Ordinary discussion, conflicting updates or unsupported ownership remain for manual review. A comment never directly changes `status`, `checkedAt` or Muse availability. The contribution acceptance bot skips reopened feedback threads; legacy feedback/count Issue Forms remain fallback-only.
 - Maintainers must review and merge accepted PRs into main. Submitting an Issue or opening a Draft PR never publishes a code automatically.
 - After successful deployment, trusted automation verifies the approved merge is deployed and the detail page is accessible. It comments https://muse.eplus.dev/codes/CODE/ on the original Issue **before** closing it. If checks or commenting fail, the Issue stays open.
 

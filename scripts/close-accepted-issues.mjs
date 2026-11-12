@@ -58,12 +58,16 @@ function githubApi(request, token) {
   };
 }
 
-async function hasAcceptanceComment(api, issueNumber) {
+async function issueCommentFlags(api, issueNumber) {
+  let accepted = false, feedbackReopened = false;
   for (let page = 1; page <= 10; page++) {
     const comments = await api("GET", "issues/" + issueNumber + "/comments?per_page=100&page=" + page);
-    if (comments.some(entry => entry.user?.login === "github-actions[bot]" &&
-        entry.body?.includes(MARKER))) return true;
-    if (comments.length < 100) return false;
+    for (const entry of comments) {
+      if (entry.user?.login !== "github-actions[bot]") continue;
+      if (entry.body?.includes(MARKER)) accepted = true;
+      if (entry.body?.includes("<!-- muse-code-feedback-reopened -->")) feedbackReopened = true;
+    }
+    if (comments.length < 100) return { accepted, feedbackReopened };
   }
   throw Error("Too many comments to confirm idempotency on Issue #" + issueNumber);
 }
@@ -126,7 +130,11 @@ export async function closeAcceptedIssues({
       if (!await liveDetailReady(request, code)) { summary.pending++; continue; }
 
       // Order matters: post the accepted detail link, THEN close the Issue.
-      if (!await hasAcceptanceComment(api,issueNumber)) {
+      const flags = await issueCommentFlags(api,issueNumber);
+      // Once a user has reported on a closed canonical Issue, do not let the
+      // historical acceptance PR close it again on every production deploy.
+      if (flags.feedbackReopened) { summary.skipped++; continue; }
+      if (!flags.accepted) {
         await api("POST","issues/" + issueNumber + "/comments",
           {body:acceptanceComment({code,prNumber})});
         summary.notified++;

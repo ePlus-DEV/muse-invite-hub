@@ -2,7 +2,7 @@
 
 **Share the spark.** An open-source directory of community-shared [Muse](https://muse.ai/) invite codes, maintained by [ePlus.DEV](https://eplus.dev).
 
-[**Explore invite codes**](https://muse.eplus.dev/) · [**Contribute**](CONTRIBUTING.md) · [**Report an issue**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml)
+[**Explore invite codes**](https://muse.eplus.dev/) · [**Contribute**](CONTRIBUTING.md) · [**Report an issue**](https://muse.eplus.dev/#codes)
 
 [![Open Issues](https://img.shields.io/github/issues/ePlus-DEV/muse-invite-hub?label=Issues%20open&style=flat-square)](https://github.com/ePlus-DEV/muse-invite-hub/issues?q=is%3Aissue%20is%3Aopen) [![Closed Issues](https://img.shields.io/github/issues-closed/ePlus-DEV/muse-invite-hub?label=Issues%20closed&style=flat-square)](https://github.com/ePlus-DEV/muse-invite-hub/issues?q=is%3Aissue%20is%3Aclosed) [![Open PRs](https://img.shields.io/github/issues-pr/ePlus-DEV/muse-invite-hub?label=PRs%20open&style=flat-square)](https://github.com/ePlus-DEV/muse-invite-hub/pulls?q=is%3Apr%20is%3Aopen) [![Closed PRs](https://img.shields.io/github/issues-pr-closed/ePlus-DEV/muse-invite-hub?label=PRs%20closed&style=flat-square)](https://github.com/ePlus-DEV/muse-invite-hub/pulls?q=is%3Apr%20is%3Aclosed)
 
@@ -13,9 +13,9 @@
 - **One directory:** browse, search, filter and sort invite codes shared on GitHub, Threads, X (Twitter) and Facebook.
 - **Saved codes:** bookmark codes on the homepage or detail page and filter by saved items. Bookmarks are stored only in this browser (no accounts or server synchronization).
 - **Recently updated:** sort by the latest recorded listing date, reported usage date or catalog check. This does not verify current Muse redemption.
-- **Quick feedback:** use Worked for me / Didn\u0027t work links to open a prefilled GitHub Issue Form. Select the listing platform and actual result yourself before submitting; clicking the link does not create a report.
+- **Quick feedback:** each published invite has one canonical GitHub Issue for reports and discussion. Contributor-submitted codes reuse their original Issue; other published codes receive a unique Issue during trusted Pages deploy. Worked/Didn't work buttons open an editable comment dialog before linking to that Issue. Posting a structured report can reopen a closed thread and propose a Draft PR for maintainer review; feedback never automatically verifies Muse redemption.
 - **Code details:** copy and share individual codes, view source attribution and community-reported status.
-- **Community contributions:** submit codes, report your experience and update owner-reported invite counts through GitHub Issues.
+- **Community contributions:** submit new codes with an Issue Form; report feedback and owner-count updates on the existing code Issue using the website's editable comment dialog.
 - **Reviewed updates:** maintainers review contributions before publication; accepted Issues receive a link to their published code.
 
 ## Contribute
@@ -23,8 +23,8 @@
 No coding required:
 
 - [**Share an invite code**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml)
-- [**Report code feedback**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml)
-- [**Update invite count**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml)
+- [**Report code feedback**](https://muse.eplus.dev/#codes)
+- [**Update invite count on an existing code**](https://muse.eplus.dev/#codes)
 - [**Contribute code or documentation**](CONTRIBUTING.md#contribute-code-or-documentation)
 
 All Issue submissions are public and reviewed; never share passwords, session tokens or private account information. See the [contribution guide](CONTRIBUTING.md) for instructions.

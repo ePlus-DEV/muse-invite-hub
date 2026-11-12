@@ -1,0 +1,51 @@
+name: Reopen Code Feedback Issue
+
+# Trusted main script only. Untrusted comments are inspected as data.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: muse-feedback-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  reopen:
+    if: >
+      github.event.issue.pull_request == null &&
+      github.event.comment.user.type != 'Bot' &&
+      github.event.comment.user.login != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Verify trusted feedback handler
+        run: |
+          node --check scripts/reopen-code-feedback.mjs
+          node --check scripts/feedback-comment-to-pr.mjs
+          node --test scripts/code-issue-map.test.mjs scripts/feedback-comment-to-pr.test.mjs
+      - name: Reopen original code Issue after a real comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: node scripts/reopen-code-feedback.mjs
+      - name: Propose review-only Draft PR for a structured report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: node scripts/feedback-comment-to-pr.mjs

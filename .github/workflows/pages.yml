@@ -57,12 +57,15 @@ jobs:
           node scripts/audit-links.mjs
           node --test scripts/validate.test.mjs scripts/preview.test.mjs scripts/preview-fallback.test.mjs scripts/audit-links.test.mjs
           node --check scripts/site-pages.mjs
-          node --test scripts/site-pages.test.mjs scripts/verify-production.test.mjs scripts/seo-aeo.test.mjs scripts/page-skeleton.test.mjs scripts/directory-features.test.mjs scripts/site-ui.test.mjs
+          node --test scripts/site-pages.test.mjs scripts/verify-production.test.mjs scripts/seo-aeo.test.mjs scripts/page-skeleton.test.mjs scripts/directory-features.test.mjs scripts/site-ui.test.mjs scripts/code-issue-map.test.mjs scripts/feedback-comment-to-pr.test.mjs
           node --check scripts/verify-production.mjs
           node --check assets/app.js
           node --check assets/detail.js
           node --check assets/site-ui.js
           node --check scripts/build-pages.mjs
+          node --check scripts/code-issue-map.mjs
+          node --check scripts/reopen-code-feedback.mjs
+          node --check scripts/feedback-comment-to-pr.mjs
           node --check scripts/post-preview-status.mjs
           node --check scripts/close-accepted-issues.mjs
           node --test scripts/close-accepted-issues.test.mjs
@@ -78,6 +81,7 @@ jobs:
           test -s _site/assets/app.js
           test -s _site/assets/styles.css
           test -s _site/data/invites.json
+          test -s _site/data/code-issues.json
           test -s _site/assets/detail.js
           test -s _site/assets/social-preview.png
           test -s _site/codes/DPNIHH/index.html
@@ -87,6 +91,11 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           const entries = JSON.parse(fs.readFileSync('_site/data/invites.json', 'utf8'));
+          const issueMap = JSON.parse(fs.readFileSync('_site/data/code-issues.json', 'utf8'));
+          if (Object.keys(issueMap).length !== entries.length ||
+              entries.some(item => !Number.isSafeInteger(issueMap[item.code]) || issueMap[item.code] <= 0)) {
+            throw Error('Every published invite code must link to a canonical GitHub Issue');
+          }
           const expectedUrls = [
             'https://muse.eplus.dev/',
             ...entries.map(({code}) => 'https://muse.eplus.dev/codes/' + code + '/')
@@ -113,6 +122,7 @@ jobs:
                 !fs.existsSync(path+'assets/styles.css') ||
                 !fs.existsSync(path+'assets/app.js') ||
                 !fs.existsSync(path+'data/invites.json') ||
+                !fs.existsSync(path+'data/code-issues.json') ||
                 JSON.parse(fs.readFileSync(path+'preview-meta.json','utf8')).head_sha !== preview.head_sha) {
               throw Error('Invalid or incomplete preview #'+preview.number);
             }

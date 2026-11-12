@@ -57,27 +57,26 @@ test("recently updated sorting uses recorded dates, not invented live status", (
   assert.match(app, /features\.compareCodes\(a, b, sortValue\)/);
 });
 
-test("quick feedback goes to editable GitHub Issue Form and cannot silently report success", () => {
-  assert.match(form, /- type: dropdown\n    id: listing_platform/);
-  assert.match(form, /- type: dropdown\n    id: reason/);
-  for(const [kind,label] of [["worked","Worked for me"],["failed","Didn't work for me"]]) {
-    const target = new URL(features.quickFeedbackUrl("DPNIHH",kind));
-    assert.equal(target.origin, "https://github.com");
-    assert.equal(target.pathname, "/ePlus-DEV/muse-invite-hub/issues/new");
-    assert.equal(target.searchParams.get("template"), "report-code.yml");
-    assert.equal(target.searchParams.get("invite_code"), "DPNIHH");
-    assert.equal(target.searchParams.get("title"), "[Code feedback] DPNIHH");
-    assert.ok(target.searchParams.get("details").includes(label));
-    assert.ok(target.searchParams.get("details").includes("Please confirm"));
-    assert.equal(target.searchParams.has("reason"), false);
-    assert.equal(target.searchParams.has("listing_platform"), false);
+test("quick feedback links to existing canonical Issue and suggests editable comments", () => {
+  for (const [kind,label] of [["worked","Muse accepted"],["failed","Muse rejected"]]) {
+    const target = new URL(features.quickFeedbackUrl("DPNIHH",kind,73));
+    assert.equal(target.origin,"https://github.com");
+    assert.equal(target.pathname,"/ePlus-DEV/muse-invite-hub/issues/73");
+    assert.equal(target.hash,"#issuecomment-new");
+    assert.match(features.feedbackComment("DPNIHH",kind),new RegExp(label));
+    assert.match(features.feedbackComment("DPNIHH",kind),/add date/);
+    const fallback = new URL(features.quickFeedbackUrl("DPNIHH",kind));
+    assert.equal(fallback.pathname, "/ePlus-DEV/muse-invite-hub/issues");
+    assert.equal(fallback.searchParams.has("template"),false);
   }
-  assert.throws(() => features.quickFeedbackUrl("../evil","worked"), /Invalid/);
-  assert.throws(() => features.quickFeedbackUrl("DPNIHH","fake"), /Invalid/);
-  assert.match(app, /features\.quickFeedbackUrl\(item\.code, outcome\)/);
+  assert.equal(features.issueNumberFor({DPNIHH:73},"DPNIHH"),73);
+  assert.equal(features.issueNumberFor({DPNIHH:"73"},"DPNIHH"),null);
+  assert.throws(()=>features.quickFeedbackUrl("../evil","worked",73),/Invalid/);
+  assert.throws(()=>features.quickFeedbackUrl("DPNIHH","fake",73),/Invalid/);
+  assert.match(app, /feedbackIssue\(item\.code, outcome\)/);
   assert.match(app, /link\.target = "_blank"/);
   assert.match(app, /card-feedback-actions/);
-  assert.match(detailJs, /features\.quickFeedbackUrl\(detailCode, outcome\)/);
+  assert.match(detailJs, /features\.quickFeedbackUrl\(detailCode, outcome, number\)/);
 });
 
 test("homepage and detail load helpers before existing scripts without altering SEO", () => {
@@ -108,7 +107,7 @@ test("contextual tooltips cover saved, quick feedback, copy, details and recentl
   assert.match(app, /button\.dataset\.tooltip = saved \?/);
   assert.match(app, /copy\.dataset\.tooltip = "Copy this code/);
   assert.match(app, /details\.dataset\.tooltip = "See the source/);
-  assert.match(app, /report\.dataset\.tooltip = "Report a duplicate/);
+  assert.match(app, /report\.dataset\.tooltip = "Comment on this code/);
   assert.match(app, /link\.dataset\.tooltip = outcome === "worked"/);
   assert.match(detailJs, /detailSave\.dataset\.tooltip = active \?/);
   assert.match(detailJs, /genericFeedback\.dataset\.tooltip/);
@@ -128,4 +127,32 @@ test("contextual tooltips cover saved, quick feedback, copy, details and recentl
   assert.match(detail, /id="detail-save"/);
   assert.match(detail, /class="detail-quick-feedback"/);
   assert.match(detail, /src="\.\.\/\.\.\/assets\/directory-features.js"/);
+});
+
+test("editable feedback dialog prepares a report and reuses the linked Issue without auto-submitting", () => {
+  const helper = read("assets/directory-features.js");
+  const style = read("assets/styles.css");
+  assert.equal(typeof features.openFeedbackDialog, "function");
+  assert.match(helper, /document\.createElement\("dialog"\)/);
+  assert.match(helper, /dialog\.showModal\(\)/);
+  assert.match(helper, /textarea\.value = feedbackComment\(code, outcome\)/);
+  assert.match(helper, /textarea\.maxLength = 3000/);
+  assert.match(helper, /navigator\.clipboard\.writeText\(text\)/);
+  assert.match(helper, /open\.href = quickFeedbackUrl\(code, outcome, issueNumber\)/);
+  assert.match(helper, /"Copy comment"/);
+  assert.match(helper, /"Open original Issue"/);
+  assert.match(helper, /"aria-labelledby"/);
+  assert.match(helper, /"aria-live"/);
+  assert.doesNotMatch(helper, /fetch\([^)]*POST|method:\s*["']POST/);
+  assert.match(app, /features\.openFeedbackDialog\(item\.code, outcome, number, event\.currentTarget\)/);
+  assert.match(app, /report\.addEventListener\("click", event => prepareFeedback/);
+  assert.match(detailJs, /features\.openFeedbackDialog\(detailCode, outcome, number, link\)/);
+  assert.match(detailJs, /features\.openFeedbackDialog\(detailCode, "other", number, feedbackLink\)/);
+  assert.match(style, /\.feedback-dialog::backdrop/);
+  assert.match(style, /@media\(max-width:620px\)\{\.feedback-dialog-body/);
+
+  const detail = renderDetailPage({...owner,feedbackIssueNumber:14});
+  assert.match(detail, /https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/14#issuecomment-new/);
+  const feedbackSection = detail.split('class="detail-info-card detail-feedback"')[1].split("</aside>")[0];
+  assert.doesNotMatch(feedbackSection, /issues\/new\?/);
 });

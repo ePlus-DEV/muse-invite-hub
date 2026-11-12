@@ -78,10 +78,10 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     ? '<a href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener noreferrer">' +
       escapeHtml(platform + " · " + author) + ' <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>'
     : escapeHtml(platform);
-  const feedbackUrl = new URL("https://github.com/ePlus-DEV/muse-invite-hub/issues/new");
-  feedbackUrl.searchParams.set("template", "report-code.yml");
-  feedbackUrl.searchParams.set("invite_code", item.code);
-  feedbackUrl.searchParams.set("title", "[Code feedback] " + item.code);
+  const linkedIssue = Number.isSafeInteger(item.feedbackIssueNumber) && item.feedbackIssueNumber > 0
+    ? item.feedbackIssueNumber : null;
+  const feedbackUrl = new URL("https://github.com/ePlus-DEV/muse-invite-hub/issues" +
+    (linkedIssue ? "/" + linkedIssue + "#issuecomment-new" : ""));
   const ownerText = item.ownerConfirmed
     ? 'Owner-confirmed by ePlus.DEV. Ownership confirmation does not mean the code has been redeemed or validated by Muse.'
     : 'This community listing has not been independently tested. Its appearance here does not guarantee Muse access.';
@@ -178,6 +178,8 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '            <div><dt>Muse redemption</dt><dd>' + escapeHtml(redemptionLine) + '</dd></div></dl>' +
     '        </div><div class="detail-info-card detail-feedback"><h2>Does this code work?</h2><p>Share your experience to help the community keep listings accurate.</p>' +
     '          <a href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-comment" aria-hidden="true"></i> Give feedback</a>' +
+    (item.submittedBy && !item.sourceUrl ?
+      '          <a class="detail-owner-count" data-feedback-outcome="count" href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer">Update owner count</a>' : '') +
     '          <div class="detail-feedback-actions"><a class="detail-quick-feedback" data-feedback-outcome="worked" href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-thumbs-up" aria-hidden="true"></i> Worked for me</a>' +
     '            <a class="detail-quick-feedback" data-feedback-outcome="failed" href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-thumbs-down" aria-hidden="true"></i> Didn\'t work</a></div></div>' +
     '      </aside>' +
