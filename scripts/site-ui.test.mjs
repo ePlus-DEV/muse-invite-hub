@@ -19,7 +19,7 @@ function createBrowser({ hash = "", loading = false, reduced = false, readyState
   const windowListeners = new Map();
   const linkListeners = new Map();
   const topListeners = new Map();
-  const calls = { aboutScrolls: [], topScrolls: [], observers: [] };
+  const calls = { aboutScrolls: [], topScrolls: [], observers: [], footerObservers: [] };
   let loadingState = loading;
   const disclosure = { open: false };
   const about = detail ? null : {
@@ -31,10 +31,12 @@ function createBrowser({ hash = "", loading = false, reduced = false, readyState
     addEventListener: (type, cb) => topListeners.set(type, cb)
   };
   const link = { addEventListener: (type, cb) => linkListeners.set(type, cb) };
+  const footer = { className: "site-footer" };
   const document = {
     readyState,
     documentElement: { classList: { contains: name => name === "is-page-loading" && loadingState } },
     getElementById: id => id === "about" ? about : id === "back-to-top" ? top : null,
+    querySelector: selector => selector === ".site-footer" ? footer : null,
     querySelectorAll: selector => selector === 'a[href="#about"]' && !detail ? [link] : [],
     addEventListener: (type, cb) => listeners.set(type, cb)
   };
@@ -50,13 +52,23 @@ function createBrowser({ hash = "", loading = false, reduced = false, readyState
     observe(target, options) { this.target = target; this.options = options; }
     disconnect() { this.disconnected = true; }
   }
-  runInNewContext(source, { window, document, MutationObserver: MockMutationObserver });
+  class MockIntersectionObserver {
+    constructor(callback, options) { this.callback = callback; this.options = options; calls.footerObservers.push(this); }
+    observe(target) { this.target = target; }
+  }
+  runInNewContext(source, { window, document, MutationObserver: MockMutationObserver,
+    IntersectionObserver: MockIntersectionObserver });
   return {
     window, document, disclosure, top, calls,
     triggerDoc: type => listeners.get(type)?.(),
     triggerWindow: type => windowListeners.get(type)?.(),
     clickAbout: () => linkListeners.get("click")?.(),
     clickTop: () => topListeners.get("click")?.(),
+    setFooterVisible: value => {
+      for (const observer of calls.footerObservers) {
+        observer.callback([{ isIntersecting:value }]);
+      }
+    },
     finishLoading: () => {
       loadingState = false;
       calls.observers.forEach(observer => observer.callback());
@@ -111,6 +123,21 @@ test("Back to top is only shown after scrolling and honors reduced motion", () =
   browser.window.scrollY = 0;
   browser.triggerWindow("scroll");
   assert.equal(browser.top.hidden, true);
+});
+
+test("floating Back to top never covers footer links on desktop or mobile", () => {
+  const browser = createBrowser({ detail: true });
+  assert.equal(browser.calls.footerObservers.length, 1);
+  assert.equal(browser.calls.footerObservers[0].target.className, "site-footer");
+  browser.window.scrollY = 1200;
+  browser.triggerWindow("scroll");
+  assert.equal(browser.top.hidden, false);
+  browser.setFooterVisible(true);
+  assert.equal(browser.top.hidden, true);
+  browser.setFooterVisible(false);
+  assert.equal(browser.top.hidden, false);
+  browser.clickTop();
+  assert.equal(browser.calls.topScrolls.at(-1).top, 0);
 });
 
 test("Navigation also initializes when script executes before DOMContentLoaded", () => {
