@@ -51,6 +51,36 @@
   }
   let savedCodes = readSavedCodes();
 
+  function readCopiedCodes() {
+    try {
+      return new Set(features.parseCopied(window.localStorage.getItem(features.COPIED_STORAGE_KEY)));
+    } catch {
+      return new Set();
+    }
+  }
+  let copiedCodes = readCopiedCodes();
+
+  function updateCopiedCard(card) {
+    const code = card.dataset.code;
+    const copied = copiedCodes.has(code);
+    card.classList.toggle("code-card-copied", copied);
+    const note = card.querySelector(".card-copy-note");
+    if (note) note.hidden = !copied;
+    const button = card.querySelector(".card-copy");
+    if (!button) return;
+    button.dataset.copied = String(copied);
+    button.dataset.tooltip = copied
+      ? "Previously copied in this browser. Copying a code does not redeem it on Muse."
+      : "Copy this code. Copying does not redeem it in Muse.";
+    button.setAttribute("aria-label",
+      (copied ? "Copy again Muse invite code " : "Copy Muse invite code ") + code);
+    button.replaceChildren(icon(copied ? "fa-solid fa-rotate" : "fa-regular fa-copy"),
+      document.createTextNode(copied ? " Copy again" : " Copy code"));
+  }
+  function syncCopiedCards() {
+    grid.querySelectorAll(".code-card").forEach(updateCopiedCard);
+  }
+
   function updateSaveButton(button) {
     const code = button.dataset.code;
     const saved = savedCodes.has(code);
@@ -161,15 +191,23 @@
       } else if (!fallbackCopy(value)) {
         throw Error("Copy failed");
       }
+      let stored = null;
+      try {
+        stored = features.rememberCopiedCode(window.localStorage, value);
+      } catch { /* Disabled storage should not undo a successful clipboard copy. */ }
+      if (stored) copiedCodes = new Set(stored);
+      else copiedCodes.add(value);
+      syncCopiedCards();
       button.replaceChildren(icon("fa-solid fa-check"), document.createTextNode(" Copied!"));
-      announcer.textContent = "Copied " + value + ". Paste it into Muse to check redemption.";
+      announcer.textContent = "Copied " + value + " on this device. This does not confirm Muse redemption.";
     } catch {
       button.replaceChildren(icon("fa-solid fa-xmark"), document.createTextNode(" Copy failed"));
       announcer.textContent = "Unable to copy automatically. Open details to select the code.";
     }
     window.setTimeout(() => {
       if (button.isConnected) {
-        button.replaceChildren(icon("fa-regular fa-copy"), document.createTextNode(" Copy code"));
+        const card = button.closest(".code-card");
+        if (card) updateCopiedCard(card);
       }
     }, 2200);
   }
@@ -207,6 +245,7 @@
     const featured = item.featured === true;
     const ownerConfirmed = featured && item.ownerConfirmed === true;
     const card = el("article", featured ? "code-card code-card-featured" : "code-card");
+    card.dataset.code = item.code;
     const head = el("div", "card-topline");
     const name = el("h3", "code-value");
     const codeLink = el("a", "code-link", item.code);
@@ -266,6 +305,11 @@
       redemption.append(document.createTextNode(" Muse redemption not independently confirmed"));
       info.append(redemption);
     }
+    const copiedNote = el("p", "card-copy-note");
+    copiedNote.append(icon("fa-solid fa-clipboard-check"),
+      document.createTextNode(" Copied on this device · Not redeemed"));
+    copiedNote.hidden = true;
+    info.append(copiedNote);
     const actions = el("div", "card-actions");
     const copy = el("button", "card-copy");
     copy.type = "button";
@@ -312,6 +356,7 @@
     }
     actions.append(copy, quickFeedback, subActions);
     card.append(head, contributor, info, actions);
+    updateCopiedCard(card);
     return card;
   }
   function render(resetLimit = false) {
@@ -398,10 +443,15 @@
     });
   }
   window.addEventListener("storage", event => {
-    if (event.key !== features.STORAGE_KEY && event.key !== null) return;
-    savedCodes = new Set(features.parseSaved(event.key === null ? null : event.newValue));
-    syncSavedUi();
-    if (sourceFilter === "saved") render(true);
+    if (event.key === features.COPIED_STORAGE_KEY || event.key === null) {
+      copiedCodes = new Set(features.parseCopied(event.key === null ? null : event.newValue));
+      syncCopiedCards();
+    }
+    if (event.key === features.STORAGE_KEY || event.key === null) {
+      savedCodes = new Set(features.parseSaved(event.key === null ? null : event.newValue));
+      syncSavedUi();
+      if (sourceFilter === "saved") render(true);
+    }
   });
   function closeSortMenu(restoreFocus = false) {
     sortMenu.hidden = true;
