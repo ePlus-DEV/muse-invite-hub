@@ -390,3 +390,9 @@ html.is-page-loading body>.site-footer{display:none!important}
 .detail-quick-feedback{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--blue-line);border-radius:10px;background:#fff;padding:9px 11px;color:var(--blue);font-size:12px;font-weight:700;text-decoration:none;min-height:40px}
 .detail-quick-feedback:hover{background:var(--blue-soft)}
 @media(max-width:620px){.saved-filter{margin-left:0}.card-save{width:40px;height:40px}.card-quick-feedback{min-height:40px}.detail-feedback-actions{display:grid;grid-template-columns:1fr 1fr}}
+
+/* Shared accessible tooltip, rendered at document level to avoid clipping
+   inside decorative code panels or dropdowns. */
+#muse-action-tooltip{position:fixed;z-index:1000;pointer-events:none;max-width:min(280px,calc(100vw - 20px));width:max-content;padding:10px 12px;border:1px solid rgba(199,222,255,.9);border-radius:10px;background:#15243b;color:#fff;box-shadow:0 10px 26px rgba(16,24,40,.20);font-size:12px;font-weight:600;line-height:1.45;text-align:left;overflow-wrap:anywhere}
+#muse-action-tooltip[hidden]{display:none!important}
+@media(max-width:620px){#muse-action-tooltip{max-width:min(250px,calc(100vw - 20px));font-size:11.5px}}
