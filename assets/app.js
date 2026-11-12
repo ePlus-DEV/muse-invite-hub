@@ -28,6 +28,17 @@
   let displayLimit = PAGE_SIZE;
   let codes = [];
   let loadFailed = false;
+  let codeIssueMap = {};
+  function feedbackIssue(code, outcome = "other") {
+    return features.quickFeedbackUrl(code, outcome, features.issueNumberFor(codeIssueMap, code));
+  }
+  function copySuggestedFeedback(code, outcome) {
+    // User-triggered only. GitHub does not accept comment prefill via URL.
+    if (!navigator.clipboard || !window.isSecureContext) return;
+    void navigator.clipboard.writeText(features.feedbackComment(code, outcome))
+      .then(() => { announcer.textContent = "Suggested report copied. Paste it into the existing GitHub Issue comment."; })
+      .catch(() => { announcer.textContent = "Write your result as a comment on the existing GitHub Issue."; });
+  }
   function readSavedCodes() {
     try {
       return new Set(features.parseSaved(window.localStorage.getItem(features.STORAGE_KEY)));
@@ -273,8 +284,8 @@
     details.dataset.tooltip = "See the source, report date and details for this code.";
     details.href = "./codes/" + encodeURIComponent(item.code) + "/";
     const report = el("a", "card-feedback-link", "Give feedback");
-    report.dataset.tooltip = "Report a duplicate, exhausted code or another issue via GitHub.";
-    report.href = issueUrl("report-code.yml", item.code);
+    report.dataset.tooltip = "Comment on this code's existing GitHub Issue. New feedback reopens it for review.";
+    report.href = feedbackIssue(item.code);
     report.target = "_blank";
     report.rel = "noopener noreferrer";
     subActions.append(details, report);
@@ -284,12 +295,13 @@
       ["failed", "Didn't work", "fa-regular fa-thumbs-down"]
     ]) {
       const link = el("a", "card-quick-feedback card-quick-" + outcome);
-      link.href = features.quickFeedbackUrl(item.code, outcome);
+      link.href = feedbackIssue(item.code, outcome);
+      link.addEventListener("click", () => copySuggestedFeedback(item.code, outcome));
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.dataset.tooltip = outcome === "worked" ?
-        "Muse accepted this code for you? Open GitHub to confirm your report and platform." :
-        "Code rejected or unavailable? Open GitHub to report the result and platform.";
+        "Open this code's original GitHub Issue. A suggested report is copied for you to paste." :
+        "Report a redemption problem on the existing Issue. Paste the suggested comment.";
       link.setAttribute("aria-label", text + " — report Muse invite code " + item.code + " on GitHub");
       link.append(icon(iconName), document.createTextNode(" " + text));
       quickFeedback.append(link);
@@ -345,6 +357,18 @@
       if (!Array.isArray(list)) throw Error("Invite catalog must be an array");
       codes = list.filter(item => item && typeof item.code === "string" &&
         typeof item.addedAt === "string" && Object.hasOwn(STATUS, item.status));
+      try {
+        const mapResponse = await fetch("./data/code-issues.json",
+          { cache: "no-store", signal: controller.signal });
+        if (!mapResponse.ok) throw Error("Issue map HTTP " + mapResponse.status);
+        const received = await mapResponse.json();
+        if (received && typeof received === "object" && !Array.isArray(received)) {
+          codeIssueMap = received;
+        }
+      } catch (error) {
+        // Use the repository Issue list, never an extra feedback Issue Form.
+        console.warn("Canonical issue links unavailable:", error);
+      }
     } catch (error) {
       console.error("Could not load invite directory:", error);
       loadFailed = true;
