@@ -74,11 +74,28 @@ jobs:
           test -s _site/assets/social-preview.png
           test -s _site/codes/DPNIHH/index.html
           test -s _site/pr-preview/manifest.json
-          grep -Fq 'https://muse.eplus.dev/codes/DPNIHH/' _site/sitemap.xml
-          grep -Fq 'noindex,follow' _site/codes/UPWS4W/index.html
+          test -s _site/sitemap.xml
           grep -Fq 'rel="canonical" href="https://muse.eplus.dev/"' _site/index.html
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
+          const entries = JSON.parse(fs.readFileSync('_site/data/invites.json', 'utf8'));
+          const expectedUrls = [
+            'https://muse.eplus.dev/',
+            ...entries.map(({code}) => 'https://muse.eplus.dev/codes/' + code + '/')
+          ];
+          const sitemap = fs.readFileSync('_site/sitemap.xml', 'utf8');
+          const actualUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
+          if (JSON.stringify(actualUrls) !== JSON.stringify(expectedUrls)) {
+            throw Error('Production sitemap must include Home and every published code exactly once');
+          }
+          for (const {code} of entries) {
+            const html = fs.readFileSync('_site/codes/' + code + '/index.html', 'utf8');
+            if (!html.includes('name="robots" content="index,follow"') ||
+                !html.includes('rel="canonical" href="https://muse.eplus.dev/codes/' + code + '/"')) {
+              throw Error('Invalid production robots or canonical for code ' + code);
+            }
+          }
+          console.log('Verified '+entries.length+' indexable production code pages and sitemap URLs');
           const doc = JSON.parse(fs.readFileSync('_site/pr-preview/manifest.json','utf8'));
           for (const preview of doc.previews.filter(pr => pr.status === 'ready')) {
             const path = '_site/pr-preview/pr-'+preview.number+'/';
