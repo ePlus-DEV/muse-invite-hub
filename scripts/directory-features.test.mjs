@@ -107,7 +107,7 @@ test("contextual tooltips cover saved, quick feedback, copy, details and recentl
   assert.match(app, /button\.dataset\.tooltip = saved \?/);
   assert.match(app, /copy\.dataset\.tooltip = "Copy this code/);
   assert.match(app, /details\.dataset\.tooltip = "See the source/);
-  assert.match(app, /report\.dataset\.tooltip = "Report a duplicate/);
+  assert.match(app, /report\.dataset\.tooltip = "Comment on this code/);
   assert.match(app, /link\.dataset\.tooltip = outcome === "worked"/);
   assert.match(detailJs, /detailSave\.dataset\.tooltip = active \?/);
   assert.match(detailJs, /genericFeedback\.dataset\.tooltip/);
