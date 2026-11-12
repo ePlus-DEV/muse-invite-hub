@@ -276,7 +276,7 @@ test("count form checks platform before owner identity for same-name cross-platf
   const attempted=planIssueChange(issue(76,"[Count update]",
     withListingPlatform(threadsCount,"Threads"),"sameperson"),catalog);
   assert.equal(attempted.outcome,"needs-review");
-  assert.match(attempted.reason,/Threads attribution/);
+  assert.match(attempted.reason,/Social attribution/);
 
   const mismatch=planIssueChange(issue(77,"[Count update]",
     withListingPlatform(threadsCount,"GitHub"),"sameperson"),catalog);
