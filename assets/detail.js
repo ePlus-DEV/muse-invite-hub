@@ -68,7 +68,13 @@
         const response = await fetch("../../data/code-issues.json", { cache: "no-store" });
         if (response.ok) map = await response.json();
       } catch { /* Keep a safe repository Issue-list fallback. */ }
-      const number = features.issueNumberFor(map, detailCode);
+      // Trusted static detail markup already links to the catalog's Issue ID;
+      // use it when the supplemental JSON mapping cannot be fetched.
+      const staticLink = /^https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/([1-9][0-9]*)(?:#.*)?$/
+        .exec(feedbackLink?.href || "");
+      const staticNumber = staticLink ? Number(staticLink[1]) : null;
+      const number = features.issueNumberFor(map, detailCode) ??
+        (Number.isSafeInteger(staticNumber) ? staticNumber : null);
       const url = features.quickFeedbackUrl(detailCode, "other", number);
       if (feedbackLink) {
         feedbackLink.href = url;
