@@ -40,7 +40,7 @@ Update the source links, checked date and `scripts/seo-aeo.test.mjs` together wh
 
 ## Features
 
-- Search, filter, sort and browse the directory with **Load more** (six codes per batch).
+- Search, filter, sort and browse the directory with **Load more** (12 codes per batch).
 - Open pre-rendered code detail pages at `/codes/<CODE>/` for sharing, copying and reporting feedback.
 - Show contributor attribution and community-reported code status, never official Muse validity.
 - Display dated, owner-reported invite counts, or **Not reported** when data is incomplete.
