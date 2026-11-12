@@ -58,10 +58,10 @@ test("canonical owner mapping survives unrelated Issue numbers and old foreign r
 
 test("reuse original count / Invite Issues and already-created feedback threads without duplication",async()=>{
   const published = [
-    {id:"eplus-owner-dpnihh",code:"DPNIHH"},
-    {id:"jx-issue-19",code:"ARKHZZ"},
-    {id:"community-issue-55",code:"IY56PP"},
-    {id:"jx-issue-63",code:"UPWS4W"}
+    {id:"eplus-owner-dpnihh",code:"DPNIHH",feedbackIssueNumber:14},
+    {id:"jx-issue-19",code:"ARKHZZ",feedbackIssueNumber:28},
+    {id:"community-issue-55",code:"IY56PP",feedbackIssueNumber:55},
+    {id:"jx-issue-63",code:"UPWS4W",feedbackIssueNumber:64}
   ];
   const existing = [
     {number:14,title:"[Count update] DPNIHH",state:"closed",
