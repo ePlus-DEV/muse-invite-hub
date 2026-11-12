@@ -22,6 +22,10 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
+      - name: Validate committed OG image (1200 x 630 PNG)
+        run: |
+          test -s assets/social-preview.png
+          node -e 'const b = require("node:fs").readFileSync("assets/social-preview.png"); if(b.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a" || b.readUInt32BE(16) !== 1200 || b.readUInt32BE(20) !== 630) { throw Error("Invalid OG image: expected PNG 1200x630"); } console.log("Static OG PNG verified: 1200x630");'
       - name: Check frontend JavaScript syntax
         run: |
           node --check assets/app.js
