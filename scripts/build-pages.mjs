@@ -72,8 +72,16 @@ async function createCanonicalIssue(fields) {
   if (!res.ok) throw Error("Could not create canonical issue: HTTP " + res.status);
   return res.json();
 }
+// Preserve stable, reviewed Issue IDs in source data without changing
+// invites.json: existing trusted preview renderers must accept the catalog.
+const seededMap = JSON.parse(readFileSync(join(output, "data", "code-issues.json"), "utf8"));
+const codeWithIssueRefs = code.map(item => ({
+  ...item,
+  ...(Number.isSafeInteger(seededMap[item.code]) && seededMap[item.code] > 0
+    ? {feedbackIssueNumber:seededMap[item.code]} : {})
+}));
 const readonly = process.env.MUSE_READONLY_BUILD === "1";
-const issueMap = await syncCodeIssueMap(code, listAllRepositoryIssues, createCanonicalIssue,
+const issueMap = await syncCodeIssueMap(codeWithIssueRefs, listAllRepositoryIssues, createCanonicalIssue,
   {allowMissing:readonly});
 if (!readonly && !validIssueMap(issueMap, code)) {
   throw Error("Canonical Issue mapping does not cover every published code");
