@@ -94,6 +94,7 @@ button{cursor:pointer}
 .code-link:hover{color:var(--blue);text-decoration:underline;text-underline-offset:3px}
 .status-badge{flex:none;padding:5px 8px;border-radius:999px;font-size:10px;white-space:nowrap;font-weight:800;background:#edf0f4;color:var(--muted)}
 .status-featured{color:#865919;background:#fff4d8}
+.status-owner-verified{display:inline-flex;align-items:center;gap:5px;color:#0057dd;background:var(--blue-soft);border:1px solid var(--blue-line)}
 .status-reported-working{color:var(--green);background:var(--green-bg)}
 .status-reported-not-working{color:var(--red);background:var(--red-bg)}
 .card-contributor{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11.5px;min-width:0;flex-wrap:wrap}
@@ -108,6 +109,7 @@ button{cursor:pointer}
 .card-facts p{margin:0;font-size:11.2px;line-height:1.55;color:var(--muted);display:flex;gap:6px;align-items:flex-start;overflow-wrap:anywhere}
 .card-facts p i{margin-top:3px;flex:none;color:var(--blue)}
 .card-facts .card-owner{color:#0057dd;font-size:10.5px}
+.card-facts .card-redemption{color:var(--muted);font-size:10.5px}
 .card-actions{display:flex;flex-direction:column;gap:8px}
 .card-copy{min-height:42px;padding:9px 12px;border:0;width:100%;background:var(--blue-soft);color:#0057dd;border-radius:10px;font-size:12.5px;font-weight:800;display:flex;justify-content:center;align-items:center;gap:5px}
 .code-card-featured .card-copy{background:var(--blue);color:#fff}
@@ -213,6 +215,7 @@ button{cursor:pointer}
 .detail-code-heading{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .detail-status{font-size:11px;font-weight:800;border-radius:20px;background:var(--blue);color:#fff;padding:7px 11px}
 .detail-owner{font-size:12px;color:var(--ink);font-weight:700}
+.detail-owner-confirmed{display:inline-flex;align-items:center;gap:4px;color:#0057dd;font-weight:800}
 .detail-code{font-size:clamp(34px,6vw,60px);font-weight:800;letter-spacing:4px;color:var(--ink);margin:24px 0 26px;line-height:1.1;overflow-wrap:anywhere}
 .detail-action-row{display:flex;gap:10px;flex-wrap:wrap}
 .detail-action-row .button{min-height:44px}
