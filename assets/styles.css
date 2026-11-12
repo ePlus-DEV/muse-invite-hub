@@ -435,8 +435,11 @@ html.is-page-loading body>.site-footer{display:none!important}
 
 /* Detail feedback is a single responsive action grid: outcomes first, secondary actions last. */
 .detail-feedback{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:12px}
-.detail-feedback-actions .detail-quick-feedback:first-child{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 5px 14px rgba(0,100,255,.13)}
-.detail-feedback-actions .detail-quick-feedback:first-child:hover,.detail-feedback-actions .detail-quick-feedback:first-child:focus-visible{background:var(--blue-hover);border-color:var(--blue-hover)}
+.detail-feedback-actions .detail-quick-feedback:first-child{background:#fff;border-color:var(--blue-line);color:var(--ink);box-shadow:none}
+.detail-feedback-actions .detail-quick-feedback[data-feedback-outcome="worked"] i{color:var(--green)}
+.detail-feedback-actions .detail-quick-feedback[data-feedback-outcome="failed"] i{color:var(--red)}
+.detail-feedback-actions .detail-quick-feedback[data-feedback-outcome="worked"]:hover,.detail-feedback-actions .detail-quick-feedback[data-feedback-outcome="worked"]:focus-visible{background:var(--green-bg);border-color:var(--green-line)}
+.detail-feedback-actions .detail-quick-feedback[data-feedback-outcome="failed"]:hover,.detail-feedback-actions .detail-quick-feedback[data-feedback-outcome="failed"]:focus-visible{background:var(--red-bg);border-color:var(--red-line)}
 .detail-feedback .detail-quick-feedback i{font-size:14px;flex:none}
 .detail-feedback>a:not(.detail-owner-count){grid-column:1;grid-row:4;display:flex;align-items:center;justify-content:center;min-height:46px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#f8faff;color:var(--blue);font-size:12px;font-weight:750;text-decoration:none;text-align:center;line-height:1.4}
 .detail-feedback>a:not(.detail-owner-count):only-of-type{grid-column:1/-1}
