@@ -68,46 +68,60 @@
   if (features) {
     // The trusted Pages deployment publishes one Issue number for every code.
     // A missing map never creates duplicate feedback Issues.
-    async function connectFeedbackThread() {
+    function connectFeedbackThread() {
       const feedbackLink = document.querySelector(".detail-feedback > a");
+      const countLink = document.querySelector(".detail-owner-count");
       const quickLinks = [...document.querySelectorAll(".detail-quick-feedback")];
-      let map = {};
-      try {
-        const response = await fetch("../../data/code-issues.json", { cache: "no-store" });
-        if (response.ok) map = await response.json();
-      } catch { /* Keep a safe repository Issue-list fallback. */ }
-      // Trusted static detail markup already links to the catalog's Issue ID;
-      // use it when the supplemental JSON mapping cannot be fetched.
-      const staticLink = /^https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/([1-9][0-9]*)(?:#.*)?$/
-        .exec(feedbackLink?.href || "");
-      const staticNumber = staticLink ? Number(staticLink[1]) : null;
-      const number = features.issueNumberFor(map, detailCode) ??
-        (Number.isSafeInteger(staticNumber) ? staticNumber : null);
-      const url = features.quickFeedbackUrl(detailCode, "other", number);
-      if (feedbackLink) {
-        feedbackLink.href = url;
-        feedbackLink.dataset.tooltip =
-          "Prepare an editable comment for this code's existing Issue.";
-        feedbackLink.addEventListener("click", event => {
-          if (features.openFeedbackDialog(detailCode, "other", number, feedbackLink)) {
-            event.preventDefault();
-          }
-        });
+      // The static detail generator already contains this code's canonical Issue
+      // URL. Never delay click handlers while fetching supplemental JSON.
+      const staticHref = feedbackLink?.href || countLink?.href || quickLinks[0]?.href || "";
+      const staticMatch = /^https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/([1-9][0-9]*)(?:#.*)?$/
+        .exec(staticHref);
+      let issueNumber = staticMatch ? Number(staticMatch[1]) : null;
+
+      const actions = [
+        ...(feedbackLink ? [{link:feedbackLink,outcome:"other"}] : []),
+        ...(countLink ? [{link:countLink,outcome:"count"}] : []),
+        ...quickLinks.map(link => ({link,outcome:link.dataset.feedbackOutcome}))
+      ];
+      const descriptions = {
+        other:"Review and copy feedback for this code's original GitHub Issue.",
+        count:"Update your own Muse invite quota using the same editable report dialog as the directory.",
+        worked:"Review and copy a success report for the original Issue.",
+        failed:"Review and copy a failure report for the original Issue."
+      };
+      function refreshLinks() {
+        for (const {link,outcome} of actions) {
+          link.href = features.quickFeedbackUrl(detailCode, outcome, issueNumber);
+          link.dataset.tooltip = descriptions[outcome] || descriptions.other;
+        }
       }
-      for (const link of quickLinks) {
-        const outcome = link.dataset.feedbackOutcome;
-        link.href = features.quickFeedbackUrl(detailCode, outcome, number);
-        link.dataset.tooltip = outcome === "worked" ?
-          "Review and copy a prepared success report for the original Issue." :
-          "Review and copy a prepared failure report for the original Issue.";
+      // Listeners attach immediately, even offline, on slow networks, or in PR previews.
+      for (const {link,outcome} of actions) {
         link.addEventListener("click", event => {
-          if (features.openFeedbackDialog(detailCode, outcome, number, link)) {
+          if (features.openFeedbackDialog(detailCode, outcome, issueNumber, link)) {
             event.preventDefault();
           }
         });
       }
+      refreshLinks();
+
+      // Supplemental code→Issue JSON can correct an old HTML link but must
+      // never create a new Issue, switch codes or silently submit reports.
+      void (async () => {
+        try {
+          const response = await fetch("../../data/code-issues.json", {cache:"no-store"});
+          if (!response.ok) return;
+          const map = await response.json();
+          const resolved = features.issueNumberFor(map, detailCode);
+          if (resolved && resolved !== issueNumber) {
+            issueNumber = resolved;
+            refreshLinks();
+          }
+        } catch { /* Retain the static canonical Issue URL when offline. */ }
+      })();
     }
-    void connectFeedbackThread();
+    connectFeedbackThread();
   }
 
   // Hosted PR previews can use a trusted renderer from main. The catalog
