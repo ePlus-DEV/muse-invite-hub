@@ -31,7 +31,8 @@ jobs:
       - name: Test trusted Issue form parser
         run: |
           node --check scripts/issue-to-pr.mjs
-          node --test scripts/issue-to-pr.test.mjs
+          node --test scripts/issue-to-pr.test.mjs scripts/close-accepted-issues.test.mjs
+          node --check scripts/close-accepted-issues.mjs
       - name: Audit website and repository links
         run: node scripts/audit-links.mjs
       - name: Run catalog and link validation tests
