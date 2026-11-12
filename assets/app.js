@@ -44,9 +44,14 @@
       year: "numeric", month: "short", day: "numeric", timeZone: "UTC"
     });
   }
-  function issueUrl(template, code) {
-    const url = REPO + "/issues/new?template=" + encodeURIComponent(template);
-    return code ? url + "&invite_code=" + encodeURIComponent(code) : url;
+  function issueUrl(template, code, platform) {
+    const params = new URLSearchParams({ template });
+    if (code) {
+      params.set("invite_code", code);
+      if (template === "report-code.yml") params.set("title", "[Code feedback] " + code);
+    }
+    if (platform) params.set("listing_platform", platform);
+    return REPO + "/issues/new?" + params.toString();
   }
   function reportedRemaining(item) {
     if (!item || typeof item.usageReportedAt !== "string") return null;
@@ -195,7 +200,7 @@
     const details = el("a", "card-detail-link", "View details");
     details.href = "./codes/" + encodeURIComponent(item.code) + "/";
     const report = el("a", "card-feedback-link", "Give feedback");
-    report.href = issueUrl("report-code.yml", item.code);
+    report.href = issueUrl("report-code.yml", item.code, source.platform);
     report.target = "_blank";
     report.rel = "noopener noreferrer";
     subActions.append(details, report);

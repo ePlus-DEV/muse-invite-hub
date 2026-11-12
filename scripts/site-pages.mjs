@@ -78,6 +78,11 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     ? '<a href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener noreferrer">' +
       escapeHtml(platform + " · " + author) + ' <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>'
     : escapeHtml(platform);
+  const feedbackUrl = new URL("https://github.com/ePlus-DEV/muse-invite-hub/issues/new");
+  feedbackUrl.searchParams.set("template", "report-code.yml");
+  feedbackUrl.searchParams.set("invite_code", item.code);
+  feedbackUrl.searchParams.set("listing_platform", platform);
+  feedbackUrl.searchParams.set("title", "[Code feedback] " + item.code);
   const ownerText = item.ownerConfirmed
     ? 'Owner-confirmed by ePlus.DEV. Ownership confirmation does not mean the code has been redeemed or validated by Muse.'
     : 'This community listing has not been independently tested. Its appearance here does not guarantee Muse access.';
@@ -162,8 +167,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '            <div><dt>Listed</dt><dd>' + escapeHtml(dateText(item.addedAt)) + '</dd></div>' +
     '            <div><dt>Redemption status</dt><dd>' + escapeHtml(item.status === "unverified" ? "Unverified" : statusLine) + '</dd></div></dl>' +
     '        </div><div class="detail-info-card detail-feedback"><h2>Does this code work?</h2><p>Share your experience to help the community keep listings accurate.</p>' +
-    '          <a href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml&invite_code=' +
-      encodeURIComponent(item.code) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-comment" aria-hidden="true"></i> Give feedback</a></div>' +
+    '          <a href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-comment" aria-hidden="true"></i> Give feedback</a></div>' +
     '      </aside>' +
     '    </div><a class="detail-back" href="../../#codes"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to all invite codes</a>' +
     '    <p class="detail-independent">Muse Invite Hub is independent and not affiliated with Muse or Meta.</p>' +
