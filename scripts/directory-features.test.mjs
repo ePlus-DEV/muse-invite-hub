@@ -128,3 +128,30 @@ test("contextual tooltips cover saved, quick feedback, copy, details and recentl
   assert.match(detail, /class="detail-quick-feedback"/);
   assert.match(detail, /src="\.\.\/\.\.\/assets\/directory-features.js"/);
 });
+
+test("editable feedback dialog prepares a report and reuses the linked Issue without auto-submitting", () => {
+  const helper = read("assets/directory-features.js");
+  const style = read("assets/styles.css");
+  assert.equal(typeof features.openFeedbackDialog, "function");
+  assert.match(helper, /document\.createElement\("dialog"\)/);
+  assert.match(helper, /dialog\.showModal\(\)/);
+  assert.match(helper, /textarea\.value = feedbackComment\(code, outcome\)/);
+  assert.match(helper, /textarea\.maxLength = 3000/);
+  assert.match(helper, /navigator\.clipboard\.writeText\(text\)/);
+  assert.match(helper, /open\.href = quickFeedbackUrl\(code, outcome, issueNumber\)/);
+  assert.match(helper, /"Copy comment"/);
+  assert.match(helper, /"Open original Issue"/);
+  assert.match(helper, /"aria-labelledby"/);
+  assert.match(helper, /"aria-live"/);
+  assert.doesNotMatch(helper, /fetch\([^)]*POST|method:\s*["']POST/);
+  assert.match(app, /features\.openFeedbackDialog\(item\.code, outcome, number, event\.currentTarget\)/);
+  assert.match(app, /report\.addEventListener\("click", event => prepareFeedback/);
+  assert.match(detailJs, /features\.openFeedbackDialog\(detailCode, outcome, number, link\)/);
+  assert.match(detailJs, /features\.openFeedbackDialog\(detailCode, "other", number, feedbackLink\)/);
+  assert.match(style, /\.feedback-dialog::backdrop/);
+  assert.match(style, /@media\(max-width:620px\)\{\.feedback-dialog-body/);
+
+  const detail = renderDetailPage({...owner,feedbackIssueNumber:14});
+  assert.match(detail, /https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/14#issuecomment-new/);
+  assert.doesNotMatch(detail, /issues\/new\?/);
+});
