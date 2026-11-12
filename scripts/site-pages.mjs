@@ -82,6 +82,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
   feedbackUrl.searchParams.set("template", "report-code.yml");
   feedbackUrl.searchParams.set("invite_code", item.code);
   feedbackUrl.searchParams.set("listing_platform", platform);
+  feedbackUrl.searchParams.set("title", "[Code feedback] " + item.code);
   const ownerText = item.ownerConfirmed
     ? 'Owner-confirmed by ePlus.DEV. Ownership confirmation does not mean the code has been redeemed or validated by Muse.'
     : 'This community listing has not been independently tested. Its appearance here does not guarantee Muse access.';
