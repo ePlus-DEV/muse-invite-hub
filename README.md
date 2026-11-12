@@ -12,8 +12,8 @@
 
 | Contribution | Action | Information needed |
 | --- | --- | --- |
-| **Share a GitHub-owned or public Threads code** | [Submit a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) | Pick source; provide your own code or the original public Threads post URL |
-| **Report whether a code works** | [Send feedback](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) | Code, listing platform (GitHub/Threads), what happened and non-sensitive details |
+| **Share a GitHub-owned or public social code** | [Submit a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) | Pick GitHub, Threads, X (Twitter) or Facebook; provide your own code or the original public post URL |
+| **Report whether a code works** | [Send feedback](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) | Code, listing platform (GitHub/Threads/X/Facebook), what happened and non-sensitive details |
 | **Update remaining invites** | [Update count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml) | Code, listing platform and dated numbers shown in your own Muse Invite screen |
 | **Improve UI, code or docs** | [Contributor guide](CONTRIBUTING.md#contribute-code-or-documentation) | A focused Pull Request against `main`, with tests |
 
@@ -40,9 +40,9 @@ Update the source links, checked date and `scripts/seo-aeo.test.mjs` together wh
 
 ## Features
 
-- Search, filter by source (All / GitHub / Threads), sort and browse the unified directory with **Load more** (12 codes per batch).
-- Open pre-rendered code detail pages at `/codes/<CODE>/` for sharing, copying and reporting feedback. **Give feedback** links from Home and detail pages prefill the editable Issue title (`[Code feedback] CODE`) and invite code. **Listing platform** remains a required GitHub/Threads dropdown so manual Issue submitters know the accepted values. GitHub does not preselect this dropdown from URL parameters: choose the platform shown on the code card before submitting. The trusted Issue bot rejects mismatched sources.
-- Show linked GitHub or Threads attribution and community-reported code status, never official Muse validity.
+- Search, filter by source (All / GitHub / Threads / X / Facebook), sort and browse the unified directory with **Load more** (12 codes per batch).
+- Open pre-rendered code detail pages at `/codes/<CODE>/` for sharing, copying and reporting feedback. **Give feedback** links from Home and detail pages prefill the editable Issue title (`[Code feedback] CODE`) and invite code. **Listing platform** remains a required GitHub/Threads/X/Facebook dropdown so manual Issue submitters know the accepted values. GitHub does not preselect this dropdown from URL parameters: choose the platform shown on the code card before submitting. The trusted Issue bot rejects mismatched sources.
+- Show linked GitHub, Threads, X (Twitter) or Facebook attribution and community-reported code status, never official Muse validity.
 - Threads demo listings (`18I70N`, `XZ4PV6`) were supplied by a user; linked profiles are not proof of comment authorship or successful redemption.
 - Display dated, owner-reported invite counts, or **Not reported** when data is incomplete.
 - Feature the site owner's `DPNIHH` with **Verified Owner**, which confirms only ownership—not successful redemption.
@@ -56,9 +56,9 @@ The owner reported **3 of 30 remaining** for `DPNIHH` in [Issue #14](https://git
 
 If you know only a remaining number, [submit that number](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml) without guessing the total. Remaining-only owner reports are displayed without a made-up total. The website does not connect to private Muse account data.
 
-### Source attribution and Threads demo
+### Source attribution across platforms
 
-Existing entries continue to use `submittedBy` as a GitHub account. For Threads records, use the already-supported `sourceUrl` field set to an HTTPS Threads profile or post link (e.g., `https://www.threads.com/@baijiling2`), without `submittedBy`. The UI derives the Threads handle from the URL. This preserves compatibility with the trusted production preview validator, which does not accept new catalog fields from unmerged PRs. Do not duplicate a code across platforms.
+Existing GitHub entries use `submittedBy`; public social entries use the existing `sourceUrl` field, **without** a GitHub `submittedBy` or `submittedById`. Supported links are `https://www.threads.com/@handle/post/ID`, `https://x.com/handle/status/123456789` (or `twitter.com`) and `https://www.facebook.com/handle/posts/ID`. The platform and handle are derived from a validated URL, not the GitHub Issue author's login. Social profile-only entries can be displayed after manual review; automated Issue submissions require an original public post permalink. Facebook `/share/p/...` links do not identify the author reliably and require manual review or a canonical post URL. Codes remain unique across all platforms.
 
 These two entries are an attribution/UI demo based on user-provided handles and codes; the original Threads comments were not independently accessible, so the profile links are **profiles**, not evidence that the code was posted or worked. Never infer remaining quotas.
 
@@ -92,10 +92,10 @@ Keep the existing homepage SEO title, description and canonical unless an author
 
 The [Issue-to-Draft-PR workflow](.github/workflows/issue-to-pr.yml) runs when a supported Issue is opened, reopened or edited. It checks code formats, duplicates, contributor permissions and quota consistency, then proposes a **Draft PR** changing only `data/invites.json`. It uses the repository `GITHUB_TOKEN`, **not** a personal access token. There is no hourly schedule and no auto-merge.
 
-- **Invite:** GitHub-owned submissions use the Issue author's GitHub identity and can propose dated owner quota updates. Public Threads reports use a validated original-post `sourceUrl` without claiming GitHub ownership; profile-only sources and ambiguous/duplicate reports need manual review. All new listings remain `unverified`.
-- **Cross-source safety:** The same code is never added twice, Threads reporters cannot automatically claim owner quota or replace attribution, and reviewers must confirm the original public Threads post before merging.
-- **Quota:** accepts consistent full counts **or remaining-only** reports from the listed GitHub code owner; Threads-source ownership requires manual verification. GitHub numeric IDs are saved for eligible owner updates.
-- **Feedback:** requires selection of the listed code's platform (GitHub or Threads) and rejects mismatches before proposing a reported-working/not-working status; older Issues stay compatible. Other cases need maintainer triage. Same @handle across platforms is not a shared identity.
+- **Invite:** GitHub-owned submissions use the Issue author's GitHub identity and can propose dated owner quota updates. Public Threads, X (Twitter) and Facebook reports use a validated original-post `sourceUrl` without claiming GitHub ownership; profile-only, ambiguous, share-shortlink or duplicate reports need manual review. All new listings remain `unverified`.
+- **Cross-source safety:** The same code is never added twice, social reporters cannot automatically claim owner quota or replace attribution, and reviewers must verify the original public social post before merging.
+- **Quota:** accepts consistent full counts **or remaining-only** reports from the listed GitHub code owner; Threads, X and Facebook owner claims require manual verification. GitHub numeric IDs are saved for eligible owner updates.
+- **Feedback:** requires selection of the listed code's platform (GitHub, Threads, X or Facebook) and rejects mismatches before proposing a reported-working/not-working status; older Issues stay compatible. Other cases need maintainer triage. Same @handle across platforms is not a shared identity.
 - **Review:** auto-created Draft PRs are excluded from publicly hosted PR previews until marked ready; only reviewed merges to `main` affect production.
 
 **One-time GitHub setting:** In **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests** (if allowed by the organization). If disabled, the workflow explains the blocked PR on the Issue. After enabling it, manually rerun **Issue to Draft PR → Run workflow** with the Issue number. [Full process](CONTRIBUTING.md#automatic-issue-to-draft-pr).
@@ -123,7 +123,7 @@ GitHub Pages serves the trusted `404.html` when a preview URL disappears. Its br
 | `.github/ISSUE_TEMPLATE/` | Forms for sharing codes, feedback and count updates |
 | `.github/workflows/` | CI and GitHub Pages deployment |
 
-The homepage has WebSite structured data and an OG image. Detail pages have individual metadata and WebPage/BreadcrumbList schema. Only the featured owner-confirmed code is currently included in the sitemap for indexing; unverified detail pages have `noindex,follow`. All previews have `noindex,nofollow,noarchive`. Indexing is not a claim that Muse has accepted a code.
+The homepage has WebSite structured data and an OG image. Detail pages have individual metadata and WebPage/BreadcrumbList schema. **The tracked `sitemap.xml` and the generated production sitemap must match:** only the homepage and the featured owner-confirmed `/codes/DPNIHH/` detail are listed. CI enforces this invariant. Community details (including Threads, X and Facebook) remain `noindex,follow` and are not added to the sitemap merely because a code was shared. All previews have `noindex,nofollow,noarchive`. Indexing is not a claim that Muse has accepted a code.
 
 ## Deployment
 
