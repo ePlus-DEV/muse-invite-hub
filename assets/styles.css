@@ -422,3 +422,10 @@ html.is-page-loading body>.site-footer{display:none!important}
 .feedback-dialog-actions{display:flex;flex-wrap:wrap;gap:9px}
 .feedback-dialog-actions .button{flex:1 0 auto;text-align:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 @media(max-width:620px){.feedback-dialog-body{gap:12px;padding:20px 16px}.feedback-dialog h2{font-size:20px}.feedback-dialog-actions{display:grid;grid-template-columns:1fr 1fr}.feedback-dialog-actions .button:first-child{grid-column:1/-1}.feedback-dialog textarea{font-size:12px}}
+
+/* Owner count update reuses the existing code Issue without opening another form. */
+.detail-owner-count{display:inline-flex;align-items:center;margin:8px 0 0;padding:9px 12px;border-radius:9px;border:1px solid var(--blue-line);color:var(--blue);background:#fff;font-size:12px;font-weight:750;text-decoration:none}
+.detail-owner-count:hover,.detail-owner-count:focus-visible{background:var(--blue-soft)}
+.feedback-dialog-consent{display:flex;gap:9px;align-items:flex-start;color:var(--ink);font-size:12.5px;font-weight:700;line-height:1.45}
+.feedback-dialog-consent[hidden]{display:none}
+.feedback-dialog-consent input{margin-top:2px;accent-color:var(--blue);width:17px;height:17px;flex:none}
