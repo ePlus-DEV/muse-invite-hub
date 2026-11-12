@@ -158,3 +158,31 @@ test("Threads codes retain attribution on detail pages and remain noindex", () =
   assert.match(app, /sourceFilter === "all"/);
   assert.match(app, /render\(true\)/);
 });
+
+test("Give feedback prefills the invite code and listing platform on Home and detail pages", () => {
+  const homeJs = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
+  const detailJs = readFileSync(new URL("../assets/detail.js", import.meta.url), "utf8");
+  const form = readFileSync(new URL("../.github/ISSUE_TEMPLATE/report-code.yml", import.meta.url), "utf8");
+  assert.match(form, /id: invite_code/);
+  assert.match(form, /id: listing_platform/);
+  assert.match(homeJs, /params\.set\("invite_code", code\)/);
+  assert.match(homeJs, /params\.set\("listing_platform", platform\)/);
+  assert.match(homeJs, /issueUrl\("report-code\.yml", item\.code, source\.platform\)/);
+  assert.match(detailJs, /href\.searchParams\.set\("listing_platform", listingPlatform\)/);
+  for (const [entry, expectedPlatform] of [
+    [owner(), "GitHub"],
+    [{ ...community(), code:"XZ4PV6", submittedBy:undefined,
+       sourceUrl:"https://www.threads.com/@zkeir1914" }, "Threads"]
+  ]) {
+    const html = renderDetailPage(entry);
+    const href = html.match(/<a href="([^"]+)" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-comment"/);
+    assert.ok(href, "detail feedback link must be present");
+    const url = new URL(href[1].replaceAll("&amp;", "&"));
+    assert.equal(url.origin, "https://github.com");
+    assert.equal(url.pathname, "/ePlus-DEV/muse-invite-hub/issues/new");
+    assert.equal(url.searchParams.get("template"), "report-code.yml");
+    assert.equal(url.searchParams.get("invite_code"), entry.code);
+    assert.equal(url.searchParams.get("listing_platform"), expectedPlatform);
+    assert.equal(url.searchParams.getAll("listing_platform").length, 1);
+  }
+});
