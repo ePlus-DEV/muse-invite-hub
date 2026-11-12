@@ -59,8 +59,10 @@
     if (href.origin === "https://github.com" &&
         href.pathname === "/ePlus-DEV/muse-invite-hub/issues/new" &&
         href.searchParams.get("template") === "report-code.yml") {
-      href.searchParams.set("invite_code", code.textContent.trim());
+      const inviteCode = code.textContent.trim();
+      href.searchParams.set("invite_code", inviteCode);
       href.searchParams.set("listing_platform", listingPlatform);
+      href.searchParams.set("title", "[Code feedback] " + inviteCode);
       feedbackLink.href = href.href;
     }
   }
