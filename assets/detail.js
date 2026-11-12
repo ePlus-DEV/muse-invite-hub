@@ -25,6 +25,10 @@
       detailSave.setAttribute("aria-label",
         (active ? "Remove saved Muse invite code " : "Save Muse invite code ") + detailCode);
       if (saveLabel) saveLabel.textContent = active ? "Saved" : "Save code";
+      detailSave.dataset.tooltip = active ?
+        "Remove this bookmark from this browser." :
+        "Save this code on this device. No login or cloud sync.";
+      features.enableTooltips()?.refresh();
       if (saveIcon) saveIcon.className = active ? "fa-solid fa-bookmark" : "fa-regular fa-bookmark";
     }
     detailSave.hidden = false;
@@ -57,7 +61,9 @@
     document.querySelectorAll(".detail-quick-feedback").forEach(link => {
       const outcome = link.dataset.feedbackOutcome;
       link.href = features.quickFeedbackUrl(detailCode, outcome);
-      link.title = "Opens GitHub Issue Form. Select listing platform and result before submitting.";
+      link.dataset.tooltip = outcome === "worked" ?
+        "Muse accepted this code for you? Open GitHub to confirm your report and platform." :
+        "Code rejected or unavailable? Open GitHub to report the result and platform.";
     });
   }
 
@@ -130,6 +136,10 @@
       feedbackLink.href = href.href;
     }
   }
+  button.dataset.tooltip = "Copy this code. Copying does not redeem it in Muse.";
+  const genericFeedback = document.querySelector(".detail-feedback > a");
+  if (genericFeedback) genericFeedback.dataset.tooltip =
+    "Report a duplicate, exhausted code or another issue via GitHub.";
   const label = button.querySelector(".detail-copy-label");
   const icon = button.querySelector("i");
   const setLabel = (text, iconClass) => {
