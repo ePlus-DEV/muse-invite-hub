@@ -46,7 +46,10 @@
   }
   function issueUrl(template, code, platform) {
     const params = new URLSearchParams({ template });
-    if (code) params.set("invite_code", code);
+    if (code) {
+      params.set("invite_code", code);
+      if (template === "report-code.yml") params.set("title", "[Code feedback] " + code);
+    }
     if (platform) params.set("listing_platform", platform);
     return REPO + "/issues/new?" + params.toString();
   }
