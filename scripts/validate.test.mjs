@@ -83,19 +83,15 @@ test("external repository links are not accepted in public catalog references", 
   assert.deepEqual(validateCatalog([{ ...sample(), sourceUrl: "https://muse.ai/join" }]), []);
 });
 
-test("Threads profiles are supported without a GitHub contributor identity", () => {
-  const entry = { id:"threads-sample", code:"18I70N", status:"unverified",
-    addedAt:"2026-11-12",
-    source:{platform:"threads",handle:"baijiling2",url:"https://www.threads.com/@baijiling2"} };
+test("Threads sourceUrl works with trusted main preview schema", () => {
+  const entry = { id: "threads-sample", code: "18I70N", status: "unverified",
+    addedAt: "2026-11-12", sourceUrl: "https://www.threads.com/@baijiling2" };
   assert.deepEqual(validateCatalog([entry]), []);
-  assert.ok(validateCatalog([{...entry, source:{...entry.source,url:"https://threads.com.evil.invalid/@baijiling2"}}])
-    .some(error => error.includes("Threads profile")));
-  assert.ok(validateCatalog([{...entry, source:{...entry.source,handle:"<script>"}}])
-    .some(error => error.includes("source.handle")));
+  assert.ok(validateCatalog([{...entry, source: {platform:"threads"}}])
+    .some(error => error.includes("unsupported field source")));
+  assert.ok(validateCatalog([{...entry, sourceUrl:"https://www.threads.com/@baijiling2?redirect=https://evil.test"}])
+    .some(error => error.includes("public Threads profile")));
   assert.ok(validateCatalog([{...entry, submittedBy:"baijiling2"}])
-    .some(error => error.includes("source.handle, not submittedBy")));
-  assert.ok(validateCatalog([{...entry, source:{...entry.source,platform:"github"}}])
-    .some(error => error.includes("source.platform")));
-  assert.ok(validateCatalog([{...entry, source:{...entry.source,extra:"unsafe"}}])
-    .some(error => error.includes("unsupported fields")));
+    .some(error => error.includes("must not reuse submittedBy")));
+  assert.ok(validateCatalog([{...entry, sourceUrl:"https://www.threads.com/@baijiling2/post/abc123"}]).length === 0);
 });
