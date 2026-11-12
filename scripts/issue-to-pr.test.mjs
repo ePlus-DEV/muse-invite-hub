@@ -229,3 +229,75 @@ test("a third-party Threads reporter cannot claim quotas or edit existing source
   const countBody=count().replace("DPNIHH","18I70N");
   assert.equal(planIssueChange(issue(71,"[Count update]",countBody,"baijiling2"),original).outcome,"needs-review");
 });
+
+
+const withListingPlatform = (body, platform) =>
+  body + "\n\n### Listing platform\n\n" + platform;
+
+test("report feedback uses code + platform, never just an identical username", () => {
+  const github={id:"github-same-name",code:"GH2222",status:"unverified",
+    addedAt:"2026-11-11",submittedBy:"sameperson"};
+  const threads={id:"threads-same-name",code:"TH2222",status:"unverified",
+    addedAt:"2026-11-11",sourceUrl:"https://www.threads.com/@sameperson/post/example"};
+  const catalog=[github,threads];
+  assert.deepEqual(validateCatalog(catalog),[]);
+
+  const threadsFeedback=feedback("Muse accepted the code (worked for me)")
+    .replace("PNSMZZ","TH2222");
+  const good=planIssueChange(issue(72,"[Code feedback]",
+    withListingPlatform(threadsFeedback,"Threads"),"sameperson"),catalog);
+  assert.equal(good.outcome,"proposal");
+  assert.equal(good.data.find(x=>x.code==="TH2222").status,"reported-working");
+  assert.equal(good.data.find(x=>x.code==="GH2222").status,"unverified");
+  assert.equal(good.data.find(x=>x.code==="TH2222").submittedBy,undefined);
+
+  const mismatch=planIssueChange(issue(73,"[Code feedback]",
+    withListingPlatform(threadsFeedback,"GitHub"),"sameperson"),catalog);
+  assert.equal(mismatch.outcome,"needs-review");
+  assert.match(mismatch.reason,/does not match/);
+
+  const wrongGithub=planIssueChange(issue(74,"[Code feedback]",
+    withListingPlatform(feedback("Muse did not accept the code")
+      .replace("PNSMZZ","GH2222"),"Threads"),"sameperson"),catalog);
+  assert.equal(wrongGithub.outcome,"needs-review");
+
+  const invalid=planIssueChange(issue(75,"[Code feedback]",
+    withListingPlatform(threadsFeedback,"Reddit"),"sameperson"),catalog);
+  assert.equal(invalid.outcome,"needs-review");
+});
+
+test("count form checks platform before owner identity for same-name cross-platform reports", () => {
+  const threads={id:"threads-same-name",code:"TH2222",status:"unverified",
+    addedAt:"2026-11-11",sourceUrl:"https://www.threads.com/@sameperson/post/example"};
+  const github={id:"github-same-name",code:"GH2222",status:"unverified",
+    addedAt:"2026-11-11",submittedBy:"sameperson"};
+  const catalog=[github,threads];
+  const threadsCount=count().replace("DPNIHH","TH2222");
+  const attempted=planIssueChange(issue(76,"[Count update]",
+    withListingPlatform(threadsCount,"Threads"),"sameperson"),catalog);
+  assert.equal(attempted.outcome,"needs-review");
+  assert.match(attempted.reason,/Threads attribution/);
+
+  const mismatch=planIssueChange(issue(77,"[Count update]",
+    withListingPlatform(threadsCount,"GitHub"),"sameperson"),catalog);
+  assert.equal(mismatch.outcome,"needs-review");
+  assert.match(mismatch.reason,/does not match/);
+
+  const githubCount=count().replace("DPNIHH","GH2222");
+  const allowed=planIssueChange(issue(78,"[Count update]",
+    withListingPlatform(githubCount,"GitHub"),"sameperson"),catalog);
+  assert.equal(allowed.outcome,"proposal");
+  assert.equal(allowed.data.find(x=>x.code==="GH2222").reportedCapacity,30);
+  assert.equal(allowed.data.find(x=>x.code==="TH2222").reportedCapacity,undefined);
+});
+
+test("matching usernames from a Threads source never assert GitHub ownership on share", () => {
+  const body=updatedShare("Threads (public code I found)",
+    "https://www.threads.com/@baijiling2/post/example");
+  const result=planIssueChange(issue(79,"[Invite]",body,"baijiling2"),[item]);
+  assert.equal(result.outcome,"proposal");
+  const next=result.data.find(x=>x.code==="18I70N");
+  assert.equal(next.sourceUrl,"https://www.threads.com/@baijiling2/post/example");
+  assert.equal(next.submittedBy,undefined);
+  assert.equal(next.submittedById,undefined);
+});
