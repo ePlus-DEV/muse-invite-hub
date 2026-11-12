@@ -33,6 +33,10 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /rel="canonical" href="https:\/\/muse.eplus.dev\/codes\/DPNIHH\/"/);
   assert.match(html, /<meta name="robots" content="index,follow">/);
   assert.match(html, /Verified Owner/);
+  assert.match(html, /<dt>Code owner<\/dt><dd><span class="detail-owner-confirmed"/);
+  assert.match(html, /Verified Owner \(ePlus\.DEV\)/);
+  assert.match(html, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
+  assert.doesNotMatch(html, /<dt>Redemption status<\/dt><dd>Unverified/);
   assert.match(html, /3 \/ 30/);
   assert.match(html, /Not live/);
   assert.match(html, /"BreadcrumbList"/);
@@ -41,6 +45,19 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /href="https:\/\/muse.ai\/join"/);
   assert.doesNotMatch(html, /Muse has verified this code/);
 });
+test("confirmed owner card and non-owner detail keep verification meanings separate", () => {
+  const app = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../assets/styles.css", import.meta.url), "utf8");
+  assert.match(app, /ownerConfirmed \? "Verified Owner" : featured \? "Featured"/);
+  assert.match(app, /status-owner-verified/);
+  assert.match(app, /Muse redemption not independently confirmed/);
+  assert.match(css, /\.status-owner-verified\{/);
+  assert.match(css, /\.card-redemption\{/);
+  const communityHtml = renderDetailPage(community());
+  assert.doesNotMatch(communityHtml, /Verified Owner \(ePlus\.DEV\)/);
+  assert.match(communityHtml, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
+});
+
 test("all published invite details, including unverified codes, are indexable and in the sitemap", () => {
   const html = renderDetailPage(community());
   assert.match(html, /<meta name="robots" content="index,follow">/);
@@ -122,7 +139,7 @@ test("directory redesign preserves SEO, GA4, a single featured listing and verif
   assert.doesNotMatch(home, /id="featured-invite"/);
   assert.match(app, /new Set\(codes\.map/);
   assert.match(app, /ownerConfirmed/);
-  assert.match(app, /Redemption unverified/);
+  assert.match(app, /Muse redemption not independently confirmed/);
   assert.match(app, /visible\.slice\(0, displayLimit\)/);
   assert.match(renderDetailPage(owner()), /G-N1MZ8YLNLJ/);
 });
