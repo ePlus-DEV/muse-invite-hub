@@ -106,6 +106,10 @@ Open focused PRs against `main`. After a **same-repository PR** passes CI, the t
 
 Same-repository PRs also receive a downloadable `muse-invite-hub-pr-preview-N` artifact. Fork PRs receive CI but **do not automatically receive hosted same-origin previews or that artifact**. Preview pages use `noindex` and disappear after a PR closes; **only merged changes on `main` affect production**.
 
+### Removed preview URLs
+
+GitHub Pages serves the trusted `404.html` when a preview URL disappears. Its browser script sends `/pr-preview/pr-N/` back to the production homepage, and `/pr-preview/pr-N/codes/CODE/` to `/codes/CODE/` when the code exists in the production catalog. If a code exists only in the old PR or the catalog is unavailable, visitors go to Home. Unrelated missing pages continue to display 404. This is a **JavaScript redirect after the 404 response**, not an HTTP 301/302 redirect. Without JavaScript, the page offers a Home link. Query strings and anchors are retained.
+
 ## Project layout
 
 | Path | What it does |
