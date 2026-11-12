@@ -71,6 +71,13 @@ test("detail responsive layout groups feedback actions and stacks long metadata 
   assert.match(css, /\.detail-meta dd\{margin:0;text-align:left;/);
   assert.match(css, /\.detail-feedback\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(css, /\.detail-feedback-actions\{grid-column:1\/-1;grid-row:3;display:grid/);
+  assert.match(css, /\.card-quick-worked i\{color:var\(--green\)\}/);
+  assert.match(css, /\.card-quick-failed i\{color:var\(--red\)\}/);
+  assert.match(css, /\.detail-feedback-actions \.detail-quick-feedback\[data-feedback-outcome="worked"\] i\{color:var\(--green\)\}/);
+  assert.match(css, /\.detail-feedback-actions \.detail-quick-feedback\[data-feedback-outcome="failed"\] i\{color:var\(--red\)\}/);
+  assert.match(css, /\.detail-feedback-actions \.detail-quick-feedback:first-child\{background:#fff/);
+  assert.match(css, /\[data-feedback-outcome="worked"\]:hover[^}]*var\(--green-bg\)/);
+  assert.match(css, /\[data-feedback-outcome="failed"\]:hover[^}]*var\(--red-bg\)/);
   assert.match(css, /\.detail-feedback>a:not\(\.detail-owner-count\):only-of-type\{grid-column:1\/-1\}/);
   assert.match(css, /@media\(max-width:390px\)\{\.detail-feedback-actions\{grid-template-columns:1fr\}/);
   assert.match(css, /\.footer-links\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
