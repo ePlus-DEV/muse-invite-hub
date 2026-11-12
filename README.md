@@ -25,7 +25,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full process, supported fields a
 
 - [llms.txt](https://muse.eplus.dev/llms.txt) supplies concise public navigation links for AI agents and readers, not real-time invite validation or guaranteed search visibility.
 - [AGENTS.md](AGENTS.md) documents coding-agent, SEO, and AEO safeguards.
-- Homepage SEO metadata, canonical URL, GA4, and WebSite structured data are preserved. Owner-confirmed detail pages may be indexed; unverified detail pages and PR previews retain their noindex rules.
+- Homepage SEO metadata, canonical URL, GA4, and WebSite structured data are preserved. Every published invite detail page is indexable and listed in the production sitemap regardless of source, status or owner confirmation; **only PR previews** remain noindex. Indexability does not imply a code works.
 - Clear, accurate Q&A helps users understand how to copy and contribute codes. Google Search does not require llms.txt to appear in AI results.
 
 Run `node --test scripts/seo-aeo.test.mjs` with Node.js 24.
@@ -123,7 +123,7 @@ GitHub Pages serves the trusted `404.html` when a preview URL disappears. Its br
 | `.github/ISSUE_TEMPLATE/` | Forms for sharing codes, feedback and count updates |
 | `.github/workflows/` | CI and GitHub Pages deployment |
 
-The homepage has WebSite structured data and an OG image. Detail pages have individual metadata and WebPage/BreadcrumbList schema. **The tracked `sitemap.xml` and the generated production sitemap must match:** only the homepage and the featured owner-confirmed `/codes/DPNIHH/` detail are listed. CI enforces this invariant. Community details (including Threads, X and Facebook) remain `noindex,follow` and are not added to the sitemap merely because a code was shared. All previews have `noindex,nofollow,noarchive`. Indexing is not a claim that Muse has accepted a code.
+The homepage has WebSite structured data and an OG image. Every **published** invite code has a canonical, indexable detail page, even when its redemption status is unverified. The trusted Pages build generates `sitemap.xml` directly from `data/invites.json`: Home plus one detail URL for every code, without filtering by owner, platform or status. This generated file is the **single source of truth** (no stale checked-in sitemap); CI verifies the exact URL count and set. PR preview pages retain `noindex,nofollow,noarchive` and never enter the sitemap. Indexing a community report is not claiming Muse has verified the code.
 
 ## Deployment
 
