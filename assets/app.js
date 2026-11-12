@@ -284,6 +284,15 @@
     report.target = "_blank";
     report.rel = "noopener noreferrer";
     subActions.append(details, report);
+    if (item.submittedBy && !item.sourceUrl) {
+      const countLink = el("a", "card-feedback-link", "Update count");
+      countLink.href = feedbackIssue(item.code, "count");
+      countLink.target = "_blank";
+      countLink.rel = "noopener noreferrer";
+      countLink.dataset.tooltip = "For this code's verified GitHub owner: report a dated Muse quota snapshot on the same Issue.";
+      countLink.addEventListener("click", event => prepareFeedback(event, item, "count"));
+      subActions.append(countLink);
+    }
     const quickFeedback = el("div", "card-feedback-actions");
     for (const [outcome, text, iconName] of [
       ["worked", "Worked for me", "fa-regular fa-thumbs-up"],
