@@ -450,3 +450,28 @@ html.is-page-loading body>.site-footer{display:none!important}
 .footer-links a{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:#f9fbff;text-align:center;font-size:12px;text-decoration:none}
 .footer-links a:last-child:nth-child(odd){grid-column:1/-1}
 .footer-bottom{padding-top:15px}}
+
+
+/* Detail polish: spacing and text alignment should match the directory's clear
+   actions, without making every footer link look like a large CTA. */
+.detail-feedback .detail-quick-feedback,.detail-feedback>a{gap:9px}
+.detail-feedback .detail-quick-feedback i,.detail-feedback>a i{display:inline-block;flex:none;font-size:14px;line-height:1}
+.detail-feedback .detail-quick-feedback{white-space:normal;overflow-wrap:normal}
+.detail-feedback>a:not(.detail-owner-count){column-gap:9px}
+.detail-meta dd a{color:var(--blue);text-decoration:none;overflow-wrap:anywhere}
+.detail-meta dd a:hover{text-decoration:underline}
+@media(max-width:620px){
+  .detail-side{gap:15px}
+  .detail-feedback{gap:11px}
+  .detail-feedback h2{font-size:19px}
+  .detail-feedback-actions{gap:9px}
+  .detail-feedback .detail-quick-feedback,.detail-feedback>a{font-size:12px}
+  .footer-inner{gap:9px;padding-top:19px;padding-bottom:14px}
+  .footer-main-row{gap:12px}
+  .footer-links{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:5px 17px;width:100%}
+  .footer-links a{display:inline-flex;min-height:30px;justify-content:flex-start;align-items:center;gap:6px;border:0;background:transparent;padding:3px 0;border-radius:0;font-size:11.5px;font-weight:700;text-align:left}
+  .footer-links a:hover,.footer-links a:focus-visible{color:var(--blue);background:transparent}
+  .footer-links a:last-child:nth-child(odd){grid-column:auto}
+  .footer-inner .footer-tagline{font-size:11px}
+  .footer-bottom{gap:7px;padding-top:12px;padding-bottom:17px;font-size:10.5px;line-height:1.55}
+}
