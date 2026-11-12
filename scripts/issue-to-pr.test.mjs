@@ -155,3 +155,149 @@ test("unsupported and unsafe issues cannot create catalog proposals",()=>{
   assert.throws(()=>planIssueChange(issue(20,"[Invite]",
     share.replace("PNSMZZ","../../evil")),[item]),/Invite code/);
 });
+
+
+const updatedShare = (source, url="", quota=false) => [
+  "### Invite code", "", "18I70N", "",
+  "### Code source", "", source, "",
+  "### Threads public post or profile URL (required for Threads)", "", url || "_No response_", "",
+  "### Public confirmation or context (optional)", "", "_No response_", "",
+  "### Uses so far (optional; self-reported)", "", "_No response_", "",
+  "### Invite limit (optional; self-reported)", "", quota ? "30" : "_No response_", "",
+  "### Remaining invites (optional; self-reported)", "", "_No response_", "",
+  "### Notes (optional)", "", "_No response_", "",
+  "### Contributor checklist", "",
+  "- [x] I own this public code or am reporting a code explicitly shared publicly at the Threads link above; this issue is public.",
+  "- [x] This code is not a password, 2FA code, session token or private credential."
+].join("\n");
+
+test("new GitHub form keeps GitHub authorship and owner quota safely", () => {
+  const body=updatedShare("GitHub (my own code)").replace("18I70N","XZ4PV6");
+  const result=planIssueChange(issue(65,"[Invite]",body,"github-report"),[item]);
+  assert.equal(result.outcome,"proposal");
+  const entry=result.data.find(x=>x.code==="XZ4PV6");
+  assert.equal(entry.submittedBy,"github-report");
+  assert.equal(entry.sourceUrl,undefined);
+  assert.deepEqual(validateCatalog(result.data),[]);
+});
+
+test("public Threads post creates only an unverified attributed draft, not a GitHub owner", () => {
+  const url="https://www.threads.com/@baijiling2/post/Dfm1NkvE8jo";
+  const i=issue(66,"[Invite] 18I70N",updatedShare("Threads (public code I found)",url),"curator-account");
+  const result=planIssueChange(i,[item]);
+  assert.equal(result.outcome,"proposal");
+  assert.equal(result.action,"add Threads source");
+  assert.equal(result.branch,"auto/issue-66-invite");
+  const entry=result.data.find(x=>x.code==="18I70N");
+  assert.equal(entry.sourceUrl,url);
+  assert.equal(entry.submittedBy,undefined);
+  assert.equal(entry.submittedById,undefined);
+  assert.equal(entry.reportedCapacity,undefined);
+  assert.equal(entry.reportedRemaining,undefined);
+  assert.equal(entry.status,"unverified");
+  assert.match(result.notice,/NOT the GitHub reporter/);
+  assert.deepEqual(validateCatalog(result.data),[]);
+});
+
+test("profile-only or malformed Threads sources and false source selections need review", () => {
+  const base=updatedShare("Threads (public code I found)","https://www.threads.com/@baijiling2");
+  assert.equal(planIssueChange(issue(67,"[Invite]",base),[item]).outcome,"needs-review");
+  const invalid=updatedShare("Threads (public code I found)","https://threads.com.evil.example/@baijiling2/post/x");
+  assert.equal(planIssueChange(issue(67,"[Invite]",invalid),[item]).outcome,"needs-review");
+  const foreign=updatedShare("GitHub (my own code)","https://www.threads.com/@baijiling2/post/abc");
+  assert.equal(planIssueChange(issue(67,"[Invite]",foreign),[item]).outcome,"needs-review");
+  const unknown=updatedShare("Discord (my own code)");
+  assert.equal(planIssueChange(issue(67,"[Invite]",unknown),[item]).outcome,"needs-review");
+  const legacy=share.replace("PNSMZZ","18I70N")
+    .replace("### Public confirmation or context (optional)\n\n_No response_",
+      "### Public confirmation or context (optional)\n\nhttps://www.threads.com/@baijiling2/post/abc");
+  assert.equal(planIssueChange(issue(67,"[Invite]",legacy),[item]).outcome,"needs-review");
+});
+
+test("a third-party Threads reporter cannot claim quotas or edit existing sources", () => {
+  const url="https://www.threads.com/@baijiling2/post/abc";
+  const threadsBody=updatedShare("Threads (public code I found)",url,true);
+  assert.equal(planIssueChange(issue(68,"[Invite]",threadsBody),[item]).outcome,"needs-review");
+  const sourceOnly={id:"threads-code",code:"18I70N",status:"unverified",
+    addedAt:"2026-11-11",sourceUrl:url};
+  const original=[item,sourceOnly];
+  const same=planIssueChange(issue(69,"[Invite]",updatedShare("Threads (public code I found)",url)),original);
+  assert.equal(same.outcome,"needs-review");
+  assert.deepEqual(original,[item,sourceOnly]);
+  const hijackBody=updatedShare("GitHub (my own code)");
+  assert.equal(planIssueChange(issue(70,"[Invite]",hijackBody),original).outcome,"needs-review");
+  const countBody=count().replace("DPNIHH","18I70N");
+  assert.equal(planIssueChange(issue(71,"[Count update]",countBody,"baijiling2"),original).outcome,"needs-review");
+});
+
+
+const withListingPlatform = (body, platform) =>
+  body + "\n\n### Listing platform\n\n" + platform;
+
+test("report feedback uses code + platform, never just an identical username", () => {
+  const github={id:"github-same-name",code:"GH2222",status:"unverified",
+    addedAt:"2026-11-11",submittedBy:"sameperson"};
+  const threads={id:"threads-same-name",code:"TH2222",status:"unverified",
+    addedAt:"2026-11-11",sourceUrl:"https://www.threads.com/@sameperson/post/example"};
+  const catalog=[github,threads];
+  assert.deepEqual(validateCatalog(catalog),[]);
+
+  const threadsFeedback=feedback("Muse accepted the code (worked for me)")
+    .replace("PNSMZZ","TH2222");
+  const good=planIssueChange(issue(72,"[Code feedback]",
+    withListingPlatform(threadsFeedback,"Threads"),"sameperson"),catalog);
+  assert.equal(good.outcome,"proposal");
+  assert.equal(good.data.find(x=>x.code==="TH2222").status,"reported-working");
+  assert.equal(good.data.find(x=>x.code==="GH2222").status,"unverified");
+  assert.equal(good.data.find(x=>x.code==="TH2222").submittedBy,undefined);
+
+  const mismatch=planIssueChange(issue(73,"[Code feedback]",
+    withListingPlatform(threadsFeedback,"GitHub"),"sameperson"),catalog);
+  assert.equal(mismatch.outcome,"needs-review");
+  assert.match(mismatch.reason,/does not match/);
+
+  const wrongGithub=planIssueChange(issue(74,"[Code feedback]",
+    withListingPlatform(feedback("Muse did not accept the code")
+      .replace("PNSMZZ","GH2222"),"Threads"),"sameperson"),catalog);
+  assert.equal(wrongGithub.outcome,"needs-review");
+
+  const invalid=planIssueChange(issue(75,"[Code feedback]",
+    withListingPlatform(threadsFeedback,"Reddit"),"sameperson"),catalog);
+  assert.equal(invalid.outcome,"needs-review");
+});
+
+test("count form checks platform before owner identity for same-name cross-platform reports", () => {
+  const threads={id:"threads-same-name",code:"TH2222",status:"unverified",
+    addedAt:"2026-11-11",sourceUrl:"https://www.threads.com/@sameperson/post/example"};
+  const github={id:"github-same-name",code:"GH2222",status:"unverified",
+    addedAt:"2026-11-11",submittedBy:"sameperson"};
+  const catalog=[github,threads];
+  const threadsCount=count().replace("DPNIHH","TH2222");
+  const attempted=planIssueChange(issue(76,"[Count update]",
+    withListingPlatform(threadsCount,"Threads"),"sameperson"),catalog);
+  assert.equal(attempted.outcome,"needs-review");
+  assert.match(attempted.reason,/Threads attribution/);
+
+  const mismatch=planIssueChange(issue(77,"[Count update]",
+    withListingPlatform(threadsCount,"GitHub"),"sameperson"),catalog);
+  assert.equal(mismatch.outcome,"needs-review");
+  assert.match(mismatch.reason,/does not match/);
+
+  const githubCount=count().replace("DPNIHH","GH2222");
+  const allowed=planIssueChange(issue(78,"[Count update]",
+    withListingPlatform(githubCount,"GitHub"),"sameperson"),catalog);
+  assert.equal(allowed.outcome,"proposal");
+  assert.equal(allowed.data.find(x=>x.code==="GH2222").reportedCapacity,30);
+  assert.equal(allowed.data.find(x=>x.code==="TH2222").reportedCapacity,undefined);
+});
+
+test("matching usernames from a Threads source never assert GitHub ownership on share", () => {
+  const body=updatedShare("Threads (public code I found)",
+    "https://www.threads.com/@baijiling2/post/example");
+  const result=planIssueChange(issue(79,"[Invite]",body,"baijiling2"),[item]);
+  assert.equal(result.outcome,"proposal");
+  const next=result.data.find(x=>x.code==="18I70N");
+  assert.equal(next.sourceUrl,"https://www.threads.com/@baijiling2/post/example");
+  assert.equal(next.submittedBy,undefined);
+  assert.equal(next.submittedById,undefined);
+});

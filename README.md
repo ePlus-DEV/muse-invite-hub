@@ -12,9 +12,9 @@
 
 | Contribution | Action | Information needed |
 | --- | --- | --- |
-| **Share my invite code** | [Submit a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) | Public code you own or are authorized to share; optional context |
-| **Report whether a code works** | [Send feedback](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) | Code, what happened in Muse, date and non-sensitive details |
-| **Update remaining invites** | [Update count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml) | Code, date and the real figures shown in your own Muse Invite screen |
+| **Share a GitHub-owned or public Threads code** | [Submit a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) | Pick source; provide your own code or the original public Threads post URL |
+| **Report whether a code works** | [Send feedback](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) | Code, listing platform (GitHub/Threads), what happened and non-sensitive details |
+| **Update remaining invites** | [Update count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml) | Code, listing platform and dated numbers shown in your own Muse Invite screen |
 | **Improve UI, code or docs** | [Contributor guide](CONTRIBUTING.md#contribute-code-or-documentation) | A focused Pull Request against `main`, with tests |
 
 GitHub Issues and PRs are **public**. Never post passwords, OTPs, cookies, session tokens, login links, private invitation links or personal account information. GitHub Actions checks new-code and complete quota submissions and can prepare **Draft PRs automatically**; clear accepted/rejected feedback can also become a Draft PR. A maintainer reviews the proposed change before merging. **An Issue never automatically publishes a code or updates production.**
@@ -92,9 +92,10 @@ Keep the existing homepage SEO title, description and canonical unless an author
 
 The [Issue-to-Draft-PR workflow](.github/workflows/issue-to-pr.yml) runs when a supported Issue is opened, reopened or edited. It checks code formats, duplicates, contributor permissions and quota consistency, then proposes a **Draft PR** changing only `data/invites.json`. It uses the repository `GITHUB_TOKEN`, **not** a personal access token. There is no hourly schedule and no auto-merge.
 
-- **Invite:** adds an `unverified` listing, or proposes an **owner update** if the code already exists under the same GitHub account. Counts are dated self-reports; totals are never guessed.
-- **Quota:** accepts consistent full counts **or remaining-only** reports from the listed code owner; third-party reports need manual review. GitHub numeric IDs are saved for owner updates when available.
-- **Feedback:** proposes reported-working/not-working status for unambiguous user feedback; other cases remain for maintainer triage.
+- **Invite:** GitHub-owned submissions use the Issue author's GitHub identity and can propose dated owner quota updates. Public Threads reports use a validated original-post `sourceUrl` without claiming GitHub ownership; profile-only sources and ambiguous/duplicate reports need manual review. All new listings remain `unverified`.
+- **Cross-source safety:** The same code is never added twice, Threads reporters cannot automatically claim owner quota or replace attribution, and reviewers must confirm the original public Threads post before merging.
+- **Quota:** accepts consistent full counts **or remaining-only** reports from the listed GitHub code owner; Threads-source ownership requires manual verification. GitHub numeric IDs are saved for eligible owner updates.
+- **Feedback:** requires selection of the listed code's platform (GitHub or Threads) and rejects mismatches before proposing a reported-working/not-working status; older Issues stay compatible. Other cases need maintainer triage. Same @handle across platforms is not a shared identity.
 - **Review:** auto-created Draft PRs are excluded from publicly hosted PR previews until marked ready; only reviewed merges to `main` affect production.
 
 **One-time GitHub setting:** In **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests** (if allowed by the organization). If disabled, the workflow explains the blocked PR on the Issue. After enabling it, manually rerun **Issue to Draft PR → Run workflow** with the Issue number. [Full process](CONTRIBUTING.md#automatic-issue-to-draft-pr).
