@@ -1,11 +1,11 @@
 name: "⚑ Report Muse invite code feedback"
-description: "Tell the community whether a code worked or failed, or report duplicates."
+description: "Legacy/manual report only. For a listed code, comment on its existing linked Issue instead."
 title: "[Code feedback] "
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for keeping the directory useful. Select the platform shown on the existing invite listing, not the platform of your own account. For example, GitHub @alex, Threads @alex, X @alex and Facebook @alex are separate accounts. The code identifies the listing and the platform must match it. Do not include credentials, private account details or sensitive screenshots. Reports are community feedback, not official global validation.
+        For a published code, use its existing GitHub Issue from the Muse Invite Hub detail page to avoid duplicate reports. Use this legacy form only when you cannot identify the existing thread. Select the platform shown on the existing invite listing, not the platform of your own account. For example, GitHub @alex, Threads @alex, X @alex and Facebook @alex are separate accounts. The code identifies the listing and the platform must match it. Do not include credentials, private account details or sensitive screenshots. Reports are community feedback, not official global validation.
   - type: input
     id: invite_code
     attributes:
