@@ -76,6 +76,12 @@ test("detail responsive layout groups feedback actions and stacks long metadata 
   assert.match(css, /\.footer-links\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(css, /\.back-to-top span\{display:none\}/);
   assert.match(js, /new IntersectionObserver\(entries =>/);
+  const outcomesIndex = githubOwner.indexOf('class="detail-feedback-actions"');
+  const secondaryIndex = githubOwner.indexOf('fa-regular fa-comment');
+  assert.ok(outcomesIndex > 0 && secondaryIndex > outcomesIndex,
+    "keyboard and screen-reader order must follow primary actions before secondary links");
+  assert.match(readFileSync(new URL("../assets/detail.js", import.meta.url), "utf8"),
+    /feedbackCard\.insertBefore\(outcomeControls, firstSecondary\)/);
   assert.match(githubOwner, /class="detail-owner-count" data-feedback-outcome="count"/);
   assert.match(githubOwner, /class="detail-quick-feedback" data-feedback-outcome="worked"/);
   assert.match(githubOwner, /class="detail-quick-feedback" data-feedback-outcome="failed"/);
