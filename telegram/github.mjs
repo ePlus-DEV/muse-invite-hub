@@ -43,8 +43,17 @@ async function findExistingTelegramSubmission(code,token) {
   // than creating a duplicate when the repo grows beyond our scan budget.
   for(let page=1;page<=20;page++){
     const batch=await github("issues?state=all&per_page=100&page="+page,token);
-    const match=batch.find(issue=>!issue.pull_request&&issue.title==="[Telegram submission] "+code&&
-      issue.body?.includes("<!-- muse-telegram-submission:"+code+" -->"));
+    const match=batch.find(issue=>{
+      if(issue.pull_request)return false;
+      const title=String(issue.title||"");
+      const body=String(issue.body||"");
+      const original=/^### Invite code\s*\r?\n\s*([A-Z0-9-]{4,32})\s*(?:\r?\n|$)/m.exec(body)?.[1];
+      const canonical=/<!-- (?:muse-code-feedback-thread:\s*|muse-code-feedback-root:)([A-Z0-9-]{4,32})\s*-->/.exec(body)?.[1];
+      return (title==="[Telegram submission] "+code&&body.includes("<!-- muse-telegram-submission:"+code+" -->"))||
+        (title.startsWith("[Invite]")&&original===code)||
+        (title.startsWith("[Code discussion]")&&canonical===code)||
+        (canonical===code);
+    });
     if(match)return match;
     if(batch.length<100)return null;
   }
