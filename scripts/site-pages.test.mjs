@@ -134,7 +134,7 @@ test("sort dropdown uses a styled accessible menu with keyboard and outside-clic
   assert.doesNotMatch(home, /<select id="sort-codes"/);
   assert.match(home, /id="sort-trigger" aria-haspopup="menu"/);
   assert.match(home, /id="sort-menu" role="menu"/);
-  assert.equal((home.match(/role="menuitemradio"/g) || []).length, 3);
+  assert.equal((home.match(/role="menuitemradio"/g) || []).length, 4);
   assert.match(home, /data-sort="newest" aria-checked="true"/);
   assert.match(css, /\.sort-menu\{position:absolute/);
   assert.match(css, /\.sort-option\[aria-checked="true"\]/);
