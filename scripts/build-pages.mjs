@@ -72,8 +72,12 @@ async function createCanonicalIssue(fields) {
   if (!res.ok) throw Error("Could not create canonical issue: HTTP " + res.status);
   return res.json();
 }
-const issueMap = await syncCodeIssueMap(code, listAllRepositoryIssues, createCanonicalIssue);
-if (!validIssueMap(issueMap, code)) throw Error("Canonical Issue mapping does not cover every published code");
+const readonly = process.env.MUSE_READONLY_BUILD === "1";
+const issueMap = await syncCodeIssueMap(code, listAllRepositoryIssues, createCanonicalIssue,
+  {allowMissing:readonly});
+if (!readonly && !validIssueMap(issueMap, code)) {
+  throw Error("Canonical Issue mapping does not cover every published code");
+}
 writeFileSync(join(output, "data", "code-issues.json"), JSON.stringify(issueMap, null, 2) + "\n");
 console.log("Mapped " + code.length + " published invite codes to canonical GitHub Issues.");
 const productionPages = generateSite(output);
