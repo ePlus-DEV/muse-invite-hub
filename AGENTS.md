@@ -28,6 +28,9 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. The local HTTP s
 - Every published, validated invite code has a canonical index,follow production detail and appears once in the generated production sitemap, regardless of platform, featured status or redemption verification. PR previews remain noindex,nofollow,noarchive. Indexability does not claim that Muse has validated a code.
 - Keep homepage title, description and canonical unchanged. Pre-render detail content, escape untrusted notes and usernames, and use WebPage/BreadcrumbList JSON-LD on detail.
 - Directory Load more must preserve filtering and sorting, reset limit on changes, and work without adding query-string pagination or duplicate SEO pages.
+- Saved codes are local-only browser bookmarks with no account, analytics claim, or server state. Handle localStorage failures and cross-tab changes; never equate a saved or copied code with redemption.
+- Recently updated sort uses only dated catalog activity (addedAt, usageReportedAt, checkedAt), not a fabricated live Muse check; keep featured pinned and newest as the default.
+- Quick feedback links open editable GitHub Issue Forms; the code and optional details may prefill but Listing platform and What happened? dropdowns must be chosen by the visitor. Do not submit automatically or count clicks as successful redemptions.
 - Full-page skeletons are decorative and must mirror homepage/detail layout without replacing SEO content. Never trap users in loading state: release on successful data load, error/timeout, and allow no-JavaScript content. Respect reduced-motion preferences.
 - Treat PR preview inputs as untrusted data: copy approved static assets from the PR merge ref, but NEVER run PR scripts in a privileged publish workflow.
 - Production must be copied from trusted main on every Pages publish. Rebuild all eligible open PR preview directories together; no stale/closed PR directories.
