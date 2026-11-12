@@ -39,24 +39,32 @@
       a.code.localeCompare(b.code);
   }
 
-  function quickFeedbackUrl(code, outcome) {
+  const FEEDBACK_CHOICES = {
+    worked: "Muse accepted my code",
+    failed: "Muse rejected or could not redeem my code",
+    other: "Other feedback"
+  };
+
+  function feedbackComment(code, outcome) {
     if (!CODE_PATTERN.test(code)) throw Error("Invalid public invite code");
-    const choices = {
-      worked: "Worked for me",
-      failed: "Didn't work for me"
-    };
-    if (!Object.hasOwn(choices, outcome)) throw Error("Invalid feedback option");
-    const details = "Quick feedback choice: " + choices[outcome] +
-      ". Please confirm your experience and select the required Listing platform and " +
-      "What happened? options before submitting. Only Muse can verify redemption.";
-    const params = new URLSearchParams({
-      template: "report-code.yml",
-      invite_code: code,
-      title: "[Code feedback] " + code,
-      details
-    });
-    // GitHub Issue Forms dropdowns cannot be preselected by query parameters.
-    return REPO + "/issues/new?" + params.toString();
+    if (!Object.hasOwn(FEEDBACK_CHOICES, outcome)) throw Error("Invalid feedback option");
+    return "Code: " + code + "\nResult: " + FEEDBACK_CHOICES[outcome] +
+      "\nWhen I tried: [add date]\nDetails: [add non-sensitive context]";
+  }
+
+  function quickFeedbackUrl(code, outcome, issueNumber) {
+    if (!CODE_PATTERN.test(code)) throw Error("Invalid public invite code");
+    if (!Object.hasOwn(FEEDBACK_CHOICES, outcome)) throw Error("Invalid feedback option");
+    // GitHub does not support prefilled comments on existing issues.
+    // Never fall back to a new Issue: it would fragment the per-code thread.
+    return Number.isSafeInteger(issueNumber) && issueNumber > 0 ?
+      REPO + "/issues/" + issueNumber + "#issuecomment-new" : REPO + "/issues";
+  }
+
+  function issueNumberFor(map, code) {
+    if (!CODE_PATTERN.test(code)) return null;
+    const value = map?.[code];
+    return Number.isSafeInteger(value) && value > 0 ? value : null;
   }
 
   // A single viewport-positioned tooltip avoids clipping inside card/panel overflow
@@ -173,5 +181,5 @@
   }
 
   return { STORAGE_KEY, MAX_SAVED, parseSaved, activityDate, compareCodes,
-    quickFeedbackUrl, enableTooltips };
+    quickFeedbackUrl, feedbackComment, issueNumberFor, enableTooltips };
 });
