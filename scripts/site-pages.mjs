@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { validateCatalog } from "./validate.mjs";
+import { parsePublicSource } from "./source-platform.mjs";
 
 export const SITE_ORIGIN = "https://muse.eplus.dev";
 export const DETAIL_PATH = "codes";
@@ -67,13 +68,11 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
       (quota.capacity === null ? '' : ' / ' + escapeHtml(quota.capacity)) + '</strong><span class="detail-slots-caption">invites remaining, reported ' +
       escapeHtml(quota.date) + ' · Not live</span>'
     : '<strong class="detail-slots-number">Not reported</strong><span class="detail-slots-caption">No confirmed remaining-slot data</span>';
-  const threadsMatch = typeof item.sourceUrl === "string" &&
-    /^https:\/\/(?:www\.)?threads\.com\/@([A-Za-z0-9_.]{1,30})(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.exec(item.sourceUrl);
-  const isThreads = Boolean(threadsMatch);
-  const platform = isThreads ? "Threads" : "GitHub";
-  const handle = isThreads ? threadsMatch[1] : item.submittedBy;
+  const social = parsePublicSource(item.sourceUrl);
+  const platform = social?.platform || "GitHub";
+  const handle = social?.handle || item.submittedBy;
   const author = handle ? "@" + handle : "Community contributor";
-  const sourceUrl = isThreads ? item.sourceUrl : handle ? "https://github.com/" + encodeURIComponent(handle) : null;
+  const sourceUrl = social?.url || (handle ? "https://github.com/" + encodeURIComponent(handle) : null);
   const sourceLink = sourceUrl
     ? '<a href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener noreferrer">' +
       escapeHtml(platform + " · " + author) + ' <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>'
