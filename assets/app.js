@@ -116,20 +116,31 @@
       }
     }, 2200);
   }
-  function threadsSource(url) {
-    if (typeof url !== "string") return null;
+  function socialSource(value) {
+    if (typeof value !== "string") return null;
     try {
-      const parsed = new URL(url);
-      const match = /^\/@([A-Za-z0-9_.]{1,30})(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.exec(parsed.pathname);
-      if (parsed.protocol !== "https:" ||
-          !["threads.com", "www.threads.com"].includes(parsed.hostname.toLowerCase()) ||
-          parsed.username || parsed.password || parsed.search || parsed.hash || !match) return null;
-      return { platform: "Threads", handle: match[1], url: parsed.href, icon: "fa-brands fa-threads" };
+      const url = new URL(value);
+      if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) return null;
+      const host = url.hostname.toLowerCase(), path = url.pathname;
+      let found, platform, key, iconName;
+      if (["threads.com", "www.threads.com"].includes(host)) {
+        found = /^\/@([A-Za-z0-9_.]{1,30})(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.exec(path);
+        [platform,key,iconName] = ["Threads","threads","fa-brands fa-threads"];
+      } else if (["x.com","www.x.com","twitter.com","www.twitter.com"].includes(host)) {
+        found = /^\/([A-Za-z0-9_]{1,15})(?:\/status\/[0-9]{5,25})?\/?$/.exec(path);
+        if (found && ["i","home","search","explore","intent","share","settings","messages"].includes(found[1].toLowerCase())) return null;
+        [platform,key,iconName] = ["X (Twitter)","x","fa-brands fa-x-twitter"];
+      } else if (["facebook.com","www.facebook.com","m.facebook.com"].includes(host)) {
+        found = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/[A-Za-z0-9_-]{4,120})?\/?$/.exec(path);
+        if (found && ["share","groups","watch","reel","reels","events","marketplace","people","pages","profile.php","permalink.php","photo.php","login"].includes(found[1].toLowerCase())) return null;
+        [platform,key,iconName] = ["Facebook","facebook","fa-brands fa-facebook-f"];
+      }
+      return found ? {platform,key,handle:found[1],url:url.href,icon:iconName} : null;
     } catch { return null; }
   }
   function sourceInfo(item) {
-    return threadsSource(item.sourceUrl) || {
-      platform: "GitHub", handle: item.submittedBy || null,
+    return socialSource(item.sourceUrl) || {
+      platform: "GitHub", key: "github", handle: item.submittedBy || null,
       url: item.submittedBy ? "https://github.com/" + encodeURIComponent(item.submittedBy) : null,
       icon: "fa-brands fa-github"
     };
@@ -154,7 +165,7 @@
     head.append(name, badge);
     const contributor = el("div", "card-contributor");
     const source = sourceInfo(item);
-    const sourceTag = el("span", "card-source" + (source.platform === "Threads" ? " card-source-threads" : ""));
+    const sourceTag = el("span", "card-source" + (source.key === "github" ? "" : " card-source-" + source.key));
     sourceTag.append(icon(source.icon), document.createTextNode(" " + source.platform));
     contributor.append(sourceTag);
     if (source.handle && source.url) {
@@ -211,7 +222,7 @@
     if (resetLimit) displayLimit = PAGE_SIZE;
     const q = searchInput.value.trim().toLowerCase();
     const visible = codes.filter(item =>
-      (sourceFilter === "all" || sourceInfo(item).platform.toLowerCase() === sourceFilter) &&
+      (sourceFilter === "all" || sourceInfo(item).key === sourceFilter) &&
       (item.code.toLowerCase().includes(q) ||
        String(item.submittedBy || "").toLowerCase().includes(q) ||
        String(sourceInfo(item).handle || "").toLowerCase().includes(q) ||
