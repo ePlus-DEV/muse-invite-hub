@@ -393,7 +393,7 @@ async function propose(issue,token) {
     "",
     "**Do not auto-merge**. This is not Muse redemption verification.",
     "",
-    "Closes #"+issue.number
+    "Tracks Issue #"+issue.number+". The Issue is closed only after the reviewed change is merged, live, and a detail link has been posted."
   ].join("\n");
   let pr;
   try {
