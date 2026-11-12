@@ -13,12 +13,14 @@ body:
       placeholder: "Code from this directory"
     validations:
       required: true
-  - type: input
+  - type: dropdown
     id: listing_platform
     attributes:
       label: Listing platform
-      description: "GitHub or Threads. Prefilled when you click Give feedback on the website; editable before submission. The same @username on GitHub and Threads represents different accounts."
-      placeholder: "GitHub or Threads"
+      description: "Select GitHub or Threads as shown on the invite card. These are separate accounts even if @usernames match. GitHub cannot preselect this dropdown from a link."
+      options:
+        - GitHub
+        - Threads
     validations:
       required: true
   - type: dropdown
