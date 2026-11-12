@@ -54,7 +54,11 @@ test("robots, detail noindex and sitemap retain the intended policy", () => {
   assert.match(robots, /Sitemap: https:\/\/muse\.eplus\.dev\/sitemap\.xml/);
   const catalog = JSON.parse(read("data/invites.json"));
   const sitemap = generateSitemap(catalog);
+  assert.equal(read("sitemap.xml").trim(), sitemap.trim(),
+    "Tracked sitemap must match the trusted production sitemap generator");
   assert.ok(sitemap.includes("<loc>" + origin + "/</loc>"));
+  assert.equal((sitemap.match(/<loc>/g) || []).length, 2,
+    "Only Home and owner-confirmed featured detail should be indexable");
   for (const item of catalog) {
     const page = renderDetailPage(item);
     if (item.featured && item.ownerConfirmed) {
