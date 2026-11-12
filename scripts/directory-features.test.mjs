@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 import { renderDetailPage } from "./site-pages.mjs";
 
 const require = createRequire(import.meta.url);
@@ -76,7 +77,7 @@ test("quick feedback links to existing canonical Issue and suggests editable com
   assert.match(app, /feedbackIssue\(item\.code, outcome\)/);
   assert.match(app, /link\.target = "_blank"/);
   assert.match(app, /card-feedback-actions/);
-  assert.match(detailJs, /features\.quickFeedbackUrl\(detailCode, outcome, number\)/);
+  assert.match(detailJs, /features\.quickFeedbackUrl\(detailCode, outcome, issueNumber\)/);
 });
 
 test("homepage and detail load helpers before existing scripts without altering SEO", () => {
@@ -111,7 +112,7 @@ test("contextual tooltips cover saved, quick feedback, copy, details and recentl
   assert.match(app, /link\.dataset\.tooltip = outcome === "worked"/);
   assert.match(detailJs, /detailSave\.dataset\.tooltip = active \?/);
   assert.match(detailJs, /genericFeedback\.dataset\.tooltip/);
-  assert.match(detailJs, /link\.dataset\.tooltip = outcome === "worked"/);
+  assert.match(detailJs, /link\.dataset\.tooltip = descriptions\[outcome\]/);
   assert.match(helper, /tip\.setAttribute\("role", "tooltip"\)/);
   assert.match(helper, /tip\.textContent = target\.dataset\.tooltip/);
   assert.doesNotMatch(helper, /tip\.innerHTML\s*=/);
@@ -127,6 +128,84 @@ test("contextual tooltips cover saved, quick feedback, copy, details and recentl
   assert.match(detail, /id="detail-save"/);
   assert.match(detail, /class="detail-quick-feedback"/);
   assert.match(detail, /src="\.\.\/\.\.\/assets\/directory-features.js"/);
+});
+
+test("detail owner-count uses the same browser dialog as homepage with immediate click binding", () => {
+  const detail = renderDetailPage({...owner,feedbackIssueNumber:14});
+  assert.match(detail,/class="detail-owner-count" data-feedback-outcome="count"/);
+  assert.match(app,/prepareFeedback\(event, item, "count"\)/);
+  assert.match(detailJs,/const countLink = document\.querySelector\("\.detail-owner-count"\)/);
+  assert.match(detailJs,/\{link:countLink,outcome:"count"\}/);
+  assert.match(detailJs,/features\.openFeedbackDialog\(detailCode, outcome, issueNumber, link\)/);
+  assert.match(detailJs,/function refreshLinks\(\)/);
+  assert.match(detailJs,/const staticMatch = \/\^https:/);
+  assert.ok(detailJs.indexOf('link.addEventListener("click"') <
+    detailJs.indexOf('await fetch("../../data/code-issues.json"'),
+    "actions must work before Issue-map network request completes");
+  const style=read("assets/styles.css");
+  assert.match(style,/\.detail-feedback \.detail-quick-feedback,\.detail-feedback>a\{gap:9px\}/);
+  assert.match(style,/\.footer-links a\{display:inline-flex;min-height:30px/);
+  assert.match(style,/\.footer-links a:last-child:nth-child\(odd\)\{grid-column:auto\}/);
+});
+
+test("detail actions open exactly the same report dialog with a static Issue link while offline", () => {
+  function link(outcome) {
+    const events=new Map();
+    return {
+      href:"https://github.com/ePlus-DEV/muse-invite-hub/issues/14#issuecomment-new",
+      dataset:outcome ? {feedbackOutcome:outcome} : {},
+      addEventListener:(name,callback)=>events.set(name,callback),
+      click() {
+        let prevented=false;
+        events.get("click")?.({preventDefault:()=>{prevented=true;}});
+        return prevented;
+      }
+    };
+  }
+  const general=link();
+  const ownerCount=link("count");
+  const worked=link("worked");
+  const failed=link("failed");
+  const copy={dataset:{},addEventListener:()=>{},querySelector:()=>null};
+  const code={textContent:"DPNIHH"};
+  const live={textContent:""};
+  const calls=[];
+  const featuresMock={
+    issueNumberFor:()=>null,
+    quickFeedbackUrl:(invite,outcome,num)=>features.quickFeedbackUrl(invite,outcome,num),
+    openFeedbackDialog:(invite,outcome,num,trigger)=>{
+      calls.push({invite,outcome,num,trigger});
+      return true;
+    }
+  };
+  const document={
+    getElementById:id=>({
+      "detail-copy":copy,"detail-code":code,"detail-live":live
+    })[id]||null,
+    querySelector:selector=>({
+      ".detail-feedback > a":general,
+      ".detail-owner-count":ownerCount
+    })[selector]||null,
+    querySelectorAll:selector=>selector===".detail-quick-feedback" ?
+      [worked,failed] : []
+  };
+  runInNewContext(detailJs,{
+    window:{MuseDirectoryFeatures:featuresMock},
+    document,
+    // A slow or offline Issue-map fetch must not block registering button handlers.
+    fetch:()=>new Promise(()=>{})
+  });
+  for (const [target,outcome] of [
+    [ownerCount,"count"],[general,"other"],[worked,"worked"],[failed,"failed"]
+  ]) {
+    assert.equal(target.click(),true);
+    assert.equal(calls.at(-1).invite,"DPNIHH");
+    assert.equal(calls.at(-1).outcome,outcome);
+    assert.equal(calls.at(-1).num,14);
+    assert.equal(calls.at(-1).trigger,target);
+    assert.equal(target.href,
+      "https://github.com/ePlus-DEV/muse-invite-hub/issues/14#issuecomment-new");
+  }
 });
 
 test("editable feedback dialog prepares a report and reuses the linked Issue without auto-submitting", () => {
@@ -146,8 +225,8 @@ test("editable feedback dialog prepares a report and reuses the linked Issue wit
   assert.doesNotMatch(helper, /fetch\([^)]*POST|method:\s*["']POST/);
   assert.match(app, /features\.openFeedbackDialog\(item\.code, outcome, number, event\.currentTarget\)/);
   assert.match(app, /report\.addEventListener\("click", event => prepareFeedback/);
-  assert.match(detailJs, /features\.openFeedbackDialog\(detailCode, outcome, number, link\)/);
-  assert.match(detailJs, /features\.openFeedbackDialog\(detailCode, "other", number, feedbackLink\)/);
+  assert.match(detailJs, /features\.openFeedbackDialog\(detailCode, outcome, issueNumber, link\)/);
+  assert.match(detailJs, /feedbackLink \? \[\{link:feedbackLink,outcome:"other"\}\]/);
   assert.match(style, /\.feedback-dialog::backdrop/);
   assert.match(style, /@media\(max-width:620px\)\{\.feedback-dialog-body/);
 
