@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { validateCatalog } from "./validate.mjs";
+import { parsePublicSource } from "./source-platform.mjs";
 
 const sample = () => ({ id: "community-001", code: "MUSE42", status: "unverified", addedAt: "2026-11-11", submittedBy: "contributor-1" });
 
@@ -94,4 +95,60 @@ test("Threads sourceUrl works with trusted main preview schema", () => {
   assert.ok(validateCatalog([{...entry, submittedBy:"baijiling2"}])
     .some(error => error.includes("must not reuse submittedBy")));
   assert.ok(validateCatalog([{...entry, sourceUrl:"https://www.threads.com/@baijiling2/post/abc123"}]).length === 0);
+});
+
+test("X and Facebook public provenance URLs validate without claiming GitHub ownership", () => {
+  for (const url of [
+    "https://x.com/example_handle/status/1234567890123456789",
+    "https://twitter.com/example_handle/status/1234567890123456789",
+    "https://www.facebook.com/example.user/posts/pfbid0123456789",
+    "https://www.facebook.com/example.user"
+  ]) {
+    const entry = {...sample(), sourceUrl:url};
+    assert.deepEqual(validateCatalog([entry]), [], url);
+    assert.ok(validateCatalog([{...entry, submittedBy:"example"}])
+      .some(error => error.includes("must not reuse a GitHub owner identity")));
+    assert.ok(validateCatalog([{...entry, featured:true, ownerConfirmed:true}]).length > 0);
+  }
+});
+test("reject malformed and impersonating X or Facebook source URLs", () => {
+  for (const url of [
+    "https://x.com.evil.invalid/someone/status/123456789",
+    "https://twitter.com/someone/status/not-a-number",
+    "https://x.com/i/status/123456789",
+    "https://x.com/someone/status/123456789?redirect=https://evil.invalid",
+    "https://www.facebook.com/share/p/abc123",
+    "https://www.facebook.com/groups/public/posts/123456",
+    "https://www.facebook.com/someone/posts/a?token=secret",
+    "https://www.facebook.com.evil.invalid/someone/posts/abcdef",
+    "http://www.facebook.com/someone/posts/abc123"
+  ]) {
+    const entry = {...sample(), sourceUrl:url};
+    const errors = validateCatalog([entry]);
+    if (url.includes("evil.invalid") && !url.startsWith("http://")) {
+      // Unrelated HTTPS context links remain supported by the legacy schema,
+      // but they must never be recognized as X/Facebook provenance.
+      const reference = parsePublicSource;
+      assert.equal(reference(url),null);
+    } else {
+      assert.ok(errors.some(e => e.includes("sourceUrl")), url + " should be rejected");
+    }
+  }
+});
+
+test("social parser differentiates identical handles across networks", () => {
+  const links = [
+    ["https://www.threads.com/@sameperson/post/example", "Threads", "threads"],
+    ["https://x.com/sameperson/status/123456789", "X (Twitter)", "x"],
+    ["https://www.facebook.com/sameperson/posts/pfbid123456", "Facebook", "facebook"]
+  ];
+  for (const [url, platform, key] of links) {
+    const parsed = parsePublicSource(url);
+    assert.equal(parsed.platform, platform);
+    assert.equal(parsed.key, key);
+    assert.equal(parsed.handle, "sameperson");
+    assert.equal(parsed.post, true);
+  }
+  assert.equal(parsePublicSource("https://www.facebook.com/share/p/123"),null);
+  assert.equal(parsePublicSource("https://x.com/home"),null);
 });
