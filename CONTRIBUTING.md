@@ -9,11 +9,12 @@ Thanks for helping! **You can share an invite, report feedback or update a count
 ## Share a public invite code
 
 1. Open [Share a Muse invite code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml).
-2. Enter a **public** code you own or are authorized to share. The catalog accepts 4–32 uppercase letters, digits or hyphens.
-3. Add any useful non-sensitive notes or public context. If your account shows an invite total and used count, you may supply the **actual** values; never guess.
-4. Check both permission/privacy confirmations, then submit.
+2. Select **GitHub (my own code)** for a code you own or **Threads (public code I found)** for an existing publicly posted Threads code.
+3. Enter a public code (4–32 uppercase letters/digits/hyphens). For Threads include the public *original post URL* (`https://www.threads.com/@user/post/ID`); profile-only URLs are held for manual review, not automatically proposed. The handle in the link is the source, **not** the reporter's GitHub account.
+4. Enter quota figures **only for your own GitHub-owned code** if shown by your own Muse account; never infer quotas from another person's post. Add optional non-sensitive notes.
+5. Check both public sharing/privacy confirmations, then submit.
 
-If your code is already listed under the same GitHub username, resubmitting an updated count (including a remaining-only number) can prepare an **update Draft PR**, not a duplicate listing. Existing listing IDs, contributor attribution and original listing dates are preserved. Numeric GitHub IDs help protect subsequent updates from username reuse. Actions checks the code and duplicates and can prepare an **automated Draft PR**. A maintainer reviews the data, marks the PR ready and merges it when appropriate. **An Issue never automatically publishes a code.** Community submissions start as `unverified`, and total quota alone never implies all invites remain.
+For GitHub-owned codes only: if your code is already listed under the same GitHub username, resubmitting an updated count (including a remaining-only number) can prepare an **update Draft PR**, not a duplicate listing. If a code is already listed from Threads, or someone files it under a different source, the bot will request manual review rather than replace the attribution or update the quota automatically. Existing listing IDs, contributor attribution and original listing dates are preserved. Numeric GitHub IDs help protect subsequent updates from username reuse. Actions checks the code and duplicates and can prepare an **automated Draft PR**. A maintainer reviews the data, marks the PR ready and merges it when appropriate. **An Issue never automatically publishes a code.** Community submissions start as `unverified`, and total quota alone never implies all invites remain.
 
 ## Report code feedback
 
@@ -33,13 +34,15 @@ If you own the public invite, use [Update invite count](https://github.com/ePlus
 | Remaining invites | 3 |
 | Used invites (30 − 3) | 27 |
 
-If only a remaining number is shown, report it without inventing the total. The public catalog stores either the complete `reportedCapacity` + `reportedUses` + `usageReportedAt` snapshot, **or** `reportedRemaining` + `usageReportedAt` when only the remaining count is known. The latter displays the remaining number without inventing a total. The trusted workflow proposes a **Draft PR** only when the reporter matches the listed code owner and the figures are consistent. A maintainer must review and merge the proposal before publication.
+If only a remaining number is shown, report it without inventing the total. The public catalog stores either the complete `reportedCapacity` + `reportedUses` + `usageReportedAt` snapshot, **or** `reportedRemaining` + `usageReportedAt` when only the remaining count is known. The latter displays the remaining number without inventing a total. The trusted workflow proposes an automatic **Draft PR** only when the reporter matches the listed GitHub code owner and the figures are consistent. For Threads-sourced listings, GitHub identity alone does not prove code ownership and quota changes require manual verification. A maintainer must review and merge the proposal before publication.
 
 Amounts are **dated self-reported snapshots**, not live Muse availability. Copying a code is not redeeming it. Missing or incomplete values display **Not reported**.
 
 ## Automatic Issue-to-Draft-PR
 
 Supported Issue Forms trigger [Issue to Draft PR](.github/workflows/issue-to-pr.yml) when opened, edited or reopened. It uses trusted source code on `main`, treats submitted text as untrusted data, checks duplicates, and creates a separate branch named `auto/issue-<NUMBER>-<TYPE>`. It proposes a change **only to `data/invites.json`** and opens a **Draft PR**. The workflow comments on the originating Issue with the PR link or the reason the report requires manual review.
+
+Threads Issues with a verifiable-looking public post permalink may propose an **unverified** Draft PR; the maintainer must check that the post really contains the code. Profile-only, malformed, duplicated or ambiguous Threads sources are routed for manual triage, and the Issue reporter is never presented as the Threads code owner.
 
 No Issue content is published automatically. Draft PRs created by this workflow are **not included in publicly hosted PR previews** until a maintainer marks them ready for review. Once ready, maintainers inspect the proposal and CI/preview, then merge to `main` to deploy. Repeated Issues or conflicting values do not create duplicate proposals.
 
@@ -112,7 +115,7 @@ Use the real code, authorized contributor handle and actual addition date, never
 | `reportedUses` / `reportedCapacity` / `usageReportedAt` | Optional full snapshot: used ≥ 0, capacity 1–1000, used ≤ capacity, real date `YYYY-MM-DD` |
 | `reportedRemaining` / `usageReportedAt` | Alternative remaining-only snapshot: 0–1000, real date; cannot mix with full snapshot |
 | `submittedById` | Optional positive GitHub numeric account ID recorded on authorized owner updates; protects against future username reuse |
-| `sourceUrl` | Optional **public** HTTPS context link; not displayed on cards but visible in JSON/Git history. No private data or unrelated GitHub repository URLs |
+| `sourceUrl` | Optional public HTTPS link. A Threads-source entry uses `https://www.threads.com/@handle/post/ID` (or an existing manually reviewed profile link) to derive the Threads attribution; do not set `submittedBy` on those entries. No private data or unrelated GitHub repositories |
 | `featured` | Optional boolean; at most one featured code |
 | `ownerConfirmed` | Optional boolean; `true` reserved for featured owner code submitted by `hoangsvit`, not redemption verification |
 
