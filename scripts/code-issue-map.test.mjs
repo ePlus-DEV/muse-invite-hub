@@ -56,6 +56,16 @@ test("canonical owner mapping survives unrelated Issue numbers and old foreign r
   assert.equal(validIssueMap({IY56PP:55},entries),false);
 });
 
+test("readonly CI dry-run does not create Issues or invent thread numbers",async()=>{
+  const created=[];
+  const entries=[contributor,seeded,foreign];
+  const map=await syncCodeIssueMap(entries,async()=>[oldIssue],async fields=>{
+    created.push(fields);throw Error("Must remain read-only");
+  },{allowMissing:true});
+  assert.deepEqual(map,{IY56PP:55});
+  assert.equal(created.length,0);
+});
+
 test("reject duplicate canonical Issue threads and malformed creations",async()=>{
   const entries=[seeded];
   const duplicate=[67,68].map(number=>({number,title:"[Code] DPNIHH",
