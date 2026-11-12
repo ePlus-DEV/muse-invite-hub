@@ -12,8 +12,13 @@ export function feedbackCodeForIssue(issue, catalog) {
   if (!code) return null;
   const item = catalog.find(entry => entry.code === code);
   if (!item) return null;
+  // The historical Issue is authoritative even if its catalog entry id does
+  // not carry a local issue number (e.g. owner count update or imported entry).
   return originalIssueNumber(item) === issue.number ||
-    String(issue.body || "").includes(issueMarker(code)) ? code : null;
+    /^\[(?:Invite|Count update|Code feedback)\]/.test(String(issue.title || "")) ||
+    String(issue.body || "").includes(issueMarker(code)) ||
+    String(issue.body || "").includes("<!-- muse-code-feedback-root:" + code + " -->") ?
+    code : null;
 }
 
 export function shouldReopen(issue, comment, catalog) {
