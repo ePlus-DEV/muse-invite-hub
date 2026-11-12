@@ -29,6 +29,7 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. No npm dependenc
 - Directory Load more must preserve filtering and sorting, reset limit on changes, and work without adding query-string pagination or duplicate SEO pages.
 - Treat PR preview inputs as untrusted data: copy approved static assets from the PR merge ref, but NEVER run PR scripts in a privileged publish workflow.
 - Production must be copied from trusted main on every Pages publish. Rebuild all eligible open PR preview directories together; no stale/closed PR directories.
+- The trusted Pages output must ship a root `404.html` for deleted PR preview routes: send removed preview Home to production Home and removed code details to the matching published production detail, or Home if the code was never published. Do not redirect unrelated 404s or construct external redirects. GitHub Pages' initial response remains a 404 until the client-side redirect.
 - Previews require green CI at the current PR head SHA and a safe merge ref. Mark generated preview HTML noindex, remove production canonical, add PR-scoped base path and preview-meta.json; for PRs adding detail routes, verify both the nested directory URL and its index.html, plus CSS/JS, before posting a preview link.
 - Verify the actual production detail directory URL, index.html, CSS, JS, image and sitemap after Pages deploy; never declare production healthy from build output alone.
 - Avoid personal deployment tokens, hourly preview schedules, and unverified/guessed URLs.

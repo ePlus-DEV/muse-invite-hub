@@ -14,7 +14,8 @@ const pages = {
   "/assets/detail.js": 'document.getElementById("detail-copy")',
   "/assets/social-preview.png": "a".repeat(600),
   "/llms.txt": "# Muse Invite Hub\n\nThis is not a live code-validity feed.\n\n- [Home](" + root + "/): Browse codes.\n",
-  "/sitemap.xml": "<url><loc>" + root + "/codes/DPNIHH/</loc></url>"
+  "/sitemap.xml": "<url><loc>" + root + "/codes/DPNIHH/</loc></url>",
+  "/404.html": '<meta name="robots" content="noindex,nofollow,noarchive"><script id="muse-preview-fallback">window.location.replace</script>'
 };
 function mockGet(overrides = {}) {
   return async url => {
@@ -26,7 +27,7 @@ function mockGet(overrides = {}) {
 }
 test("verifies production directory route, explicit HTML, JS/CSS and sitemap", async () => {
   const result = await probeProduction({get:mockGet()});
-  assert.deepEqual(result, {checked:8,detailPath:"/codes/DPNIHH/"});
+  assert.deepEqual(result, {checked:9,detailPath:"/codes/DPNIHH/"});
 });
 test("fails when the pretty URL returns 404 even if index.html works", async () => {
   await assert.rejects(
@@ -52,6 +53,10 @@ test("fails if detail is noindex or sitemap lacks the page", async () => {
 });
 test("fails when the public AI discovery file is missing", async () => {
   await assert.rejects(probeProduction({get:mockGet({"/llms.txt":null})}), /llms.txt: HTTP 404/);
+});
+test("fails if the trusted Pages fallback handler is absent", async () => {
+  await assert.rejects(probeProduction({get:mockGet({"/404.html":null})}), /404\.html: HTTP 404/);
+  await assert.rejects(probeProduction({get:mockGet({"/404.html":"generic 404"})}), /missing deleted-preview redirect handler/);
 });
 test("a transient 404 can recover before production verification fails", async () => {
   let attempts=0;

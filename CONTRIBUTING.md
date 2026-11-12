@@ -84,7 +84,7 @@ node --test scripts/issue-to-pr.test.mjs
 
 For UI changes, also inspect mobile/desktop, filtering, sorting, copy, error states and affected detail pages. The PR workflow attaches a full `muse-invite-hub-pr-preview-N` artifact for **same-repository PRs** after validation; extract it, serve the folder over HTTP and open `http://localhost:8000/codes/<CODE>/`.
 
-Same-repository non-Draft PRs with green CI and a clean merge can receive a verified public preview URL at `https://muse.eplus.dev/pr-preview/pr-N/` and detail pages below `/codes/<CODE>/`. The deployment bot checks the actual commit and assets before posting a link. **Fork PRs get CI, but not automatically a hosted same-origin preview or the same-repository artifact.** All previews use `noindex` and do not alter production.
+Same-repository non-Draft PRs with green CI and a clean merge can receive a verified public preview URL at `https://muse.eplus.dev/pr-preview/pr-N/` and detail pages below `/codes/<CODE>/`. The deployment bot checks the actual commit and assets before posting a link. **Fork PRs get CI, but not automatically a hosted same-origin preview or the same-repository artifact.** All previews use `noindex` and do not alter production. After a PR preview is removed, its Home and code-detail paths navigate to the production equivalents using the trusted root `404.html` (or production Home for PR-only codes). This client-side fallback does not change GitHub Pages' initial HTTP 404 status.
 
 ## Invite catalog format
 

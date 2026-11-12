@@ -6,7 +6,7 @@ const CODE = "DPNIHH";
 const PATHS = [
   "/", "/codes/" + CODE + "/", "/codes/" + CODE + "/index.html",
   "/assets/styles.css", "/assets/detail.js", "/assets/social-preview.png", "/llms.txt",
-  "/sitemap.xml"
+  "/sitemap.xml", "/404.html"
 ];
 
 export async function probeProduction({ origin = ORIGIN, get = fetch, nonce = "check" } = {}) {
@@ -35,6 +35,7 @@ export async function probeProduction({ origin = ORIGIN, get = fetch, nonce = "c
   const image = results.get("/assets/social-preview.png");
   const sitemap = results.get("/sitemap.xml");
   const llms = results.get("/llms.txt");
+  const notFound = results.get("/404.html");
 
   if (!homepage.includes('rel="canonical" href="' + root + '/"')) {
     throw new Error("/: missing production homepage canonical");
@@ -62,6 +63,11 @@ export async function probeProduction({ origin = ORIGIN, get = fetch, nonce = "c
   if (!llms.startsWith("# Muse Invite Hub") || !llms.includes(root + "/") ||
       !llms.includes("not a live code-validity feed")) {
     throw new Error("/llms.txt: missing or incorrect AI guide");
+  }
+  if (!notFound.includes('name="robots" content="noindex,nofollow,noarchive"') ||
+      !notFound.includes('id="muse-preview-fallback"') ||
+      !notFound.includes('window.location.replace')) {
+    throw new Error("/404.html: missing deleted-preview redirect handler");
   }
   if (!sitemap.includes("<loc>" + root + "/codes/" + CODE + "/</loc>")) {
     throw new Error("/sitemap.xml: missing indexable detail URL");
