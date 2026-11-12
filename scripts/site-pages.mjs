@@ -81,7 +81,6 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
   const feedbackUrl = new URL("https://github.com/ePlus-DEV/muse-invite-hub/issues/new");
   feedbackUrl.searchParams.set("template", "report-code.yml");
   feedbackUrl.searchParams.set("invite_code", item.code);
-  feedbackUrl.searchParams.set("listing_platform", platform);
   feedbackUrl.searchParams.set("title", "[Code feedback] " + item.code);
   const ownerText = item.ownerConfirmed
     ? 'Owner-confirmed by ePlus.DEV. Ownership confirmation does not mean the code has been redeemed or validated by Muse.'
