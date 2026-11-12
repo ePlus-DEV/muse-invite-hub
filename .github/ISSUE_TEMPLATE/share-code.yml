@@ -5,8 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Issues are public. Choose whether this is **your own GitHub-contributed code** or a **public Threads code you found**.
-        For Threads, provide the original public post permalink when available; a profile URL alone requires manual verification. Your GitHub account is the reporter, NOT automatically the owner of another person's Threads code.
+        Issues are public. Choose **your own GitHub code** or a **public code found on Threads, X (Twitter) or Facebook**.
+        For a social post, provide the original public post permalink: a profile alone cannot prove authorship and needs manual review. Your GitHub account is only the reporter, NOT automatically the owner of someone else's code.
         Never submit passwords, authentication codes, sessions, cookies or private account information. All accepted reports produce review-only Draft PRs, never automatic publication.
   - type: input
     id: invite_code
@@ -20,25 +20,27 @@ body:
     id: code_source
     attributes:
       label: Code source
-      description: "GitHub means YOUR own GitHub-submitted code; Threads means another person's publicly shared Threads code. @handles on the two services are separate identities."
+      description: "GitHub means your own code; other options mean a public code found on that platform. Identical usernames on different platforms are different identities."
       options:
         - GitHub (my own code)
         - Threads (public code I found)
+        - X (Twitter) (public code I found)
+        - Facebook (public code I found)
     validations:
       required: true
   - type: input
-    id: threads_url
+    id: social_url
     attributes:
-      label: Threads public post or profile URL (required for Threads)
-      description: "Prefer the original public post containing the code. A profile-only link cannot verify the code and requires manual maintainer review. Never paste private login/invite links."
-      placeholder: "https://www.threads.com/@username/post/..."
+      label: Social post or profile URL (required for Threads, X or Facebook)
+      description: "Paste the original public post containing the code: threads.com/@handle/post/ID, x.com/handle/status/ID or facebook.com/handle/posts/ID. Profile-only, share-shortlink or ambiguous URLs require manual review."
+      placeholder: "https://x.com/username/status/123456789..."
     validations:
       required: false
   - type: input
     id: source_url
     attributes:
       label: Public confirmation or context (optional)
-      description: "For GitHub-owned codes only: optional HTTPS page you control or official Muse reference. For Threads use the Threads URL field above. No unrelated repositories or private links."
+      description: "For your own GitHub code only: optional public HTTPS page you control or official Muse reference. For Threads, X or Facebook use the social URL field above."
       placeholder: "https://..."
     validations:
       required: false
@@ -46,7 +48,7 @@ body:
     id: reported_uses
     attributes:
       label: Uses so far (optional; self-reported)
-      description: "For GitHub-owned codes only, from your Muse invite screen. Never enter quotas found on another person's Threads profile."
+      description: "For your own GitHub code only, from your Muse invite screen. Never enter quotas found on another person's social profile."
       placeholder: "e.g. 1"
     validations:
       required: false
@@ -62,7 +64,7 @@ body:
     id: remaining
     attributes:
       label: Remaining invites (optional; self-reported)
-      description: "For GitHub-owned codes only; use the current values shown by your own Muse account. Threads reports cannot submit owner quota."
+      description: "For your own GitHub code only; use your Muse account. Social-source reports cannot claim another user's invite quota."
       placeholder: "e.g. 17"
     validations:
       required: false
@@ -78,7 +80,7 @@ body:
     attributes:
       label: Contributor checklist
       options:
-        - label: "I own this public code or am reporting a code explicitly shared publicly at the Threads link above; this issue is public."
+        - label: "I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public."
           required: true
         - label: "This code is not a password, 2FA code, session token or private credential."
           required: true
