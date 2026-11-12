@@ -14,7 +14,7 @@
   const moreButton = document.getElementById("load-more-codes");
   const empty = document.getElementById("empty-state");
   const announcer = document.getElementById("live-message");
-  const PAGE_SIZE = 6;
+  const PAGE_SIZE = 12;
   let displayLimit = PAGE_SIZE;
   let codes = [];
   let loadFailed = false;
