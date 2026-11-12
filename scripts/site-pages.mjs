@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { validateCatalog } from "./validate.mjs";
 import { parsePublicSource } from "./source-platform.mjs";
+import { renderPageSkeleton } from "./page-skeleton.mjs";
 
 export const SITE_ORIGIN = "https://muse.eplus.dev";
 export const DETAIL_PATH = "codes";
@@ -106,6 +107,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '  <meta charset="utf-8">\n' +
     '  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
     '  <meta name="theme-color" content="#f4f6f9">\n' +
+    '  <script>document.documentElement.classList.add("is-page-loading");window.setTimeout(() => document.documentElement.classList.remove("is-page-loading"), 9000);document.addEventListener("DOMContentLoaded", () => document.documentElement.classList.remove("is-page-loading"), { once: true });</script>\n' +
     '  <title>' + escapeHtml(title) + '</title>\n' +
     '  <meta name="description" content="' + escapeHtml(description) + '">\n' +
     '  ' + meta + '\n' +
@@ -125,6 +127,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '  <script src="../../assets/detail.js" defer></script>\n' +
     '</head>\n<body>\n' +
     '  <a class="skip-link" href="#detail-title">Skip to invite details</a>\n' +
+    renderPageSkeleton("detail") + '\n' +
     '  <header class="site-header"><div class="container nav-shell">' +
     '    <a class="brand" href="../../" aria-label="Muse Invite Hub homepage"><span class="brand-icon" aria-hidden="true"><img src="../../assets/favicon.svg" width="42" height="42" alt=""></span>' +
     '      <span class="brand-type"><strong>Muse Invite Hub</strong><small>COMMUNITY</small></span></a>' +
