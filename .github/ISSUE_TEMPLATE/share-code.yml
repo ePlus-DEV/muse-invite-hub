@@ -20,7 +20,7 @@ body:
     id: code_source
     attributes:
       label: Code source
-      description: "GitHub means YOUR own code. Threads means a code you found publicly shared on Threads."
+      description: "GitHub means YOUR own GitHub-submitted code; Threads means another person's publicly shared Threads code. @handles on the two services are separate identities."
       options:
         - GitHub (my own code)
         - Threads (public code I found)
