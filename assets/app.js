@@ -307,7 +307,7 @@
     }
     const copiedNote = el("p", "card-copy-note");
     copiedNote.append(icon("fa-solid fa-clipboard-check"),
-      document.createTextNode(" Copied on this device · Not redeemed"));
+      document.createTextNode(" Copied on this device · Redemption not verified"));
     copiedNote.hidden = true;
     info.append(copiedNote);
     const actions = el("div", "card-actions");
