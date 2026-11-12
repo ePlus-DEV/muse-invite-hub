@@ -13,6 +13,15 @@
     "usageReportedAt": "2026-11-11"
   },
   {
+    "id": "community-issue-60",
+    "code": "0OOKO6",
+    "status": "unverified",
+    "addedAt": "2026-11-12",
+    "submittedBy": "THIENHUONG123",
+    "note": "Community-submitted in issue #60; redemption not independently verified.",
+    "submittedById": 355748529
+  },
+  {
     "id": "community-issue-55",
     "code": "IY56PP",
     "status": "unverified",
