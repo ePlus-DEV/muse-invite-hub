@@ -56,6 +56,40 @@ test("canonical owner mapping survives unrelated Issue numbers and old foreign r
   assert.equal(validIssueMap({IY56PP:55},entries),false);
 });
 
+test("reuse original count / Invite Issues and already-created feedback threads without duplication",async()=>{
+  const published = [
+    {id:"eplus-owner-dpnihh",code:"DPNIHH"},
+    {id:"jx-issue-19",code:"ARKHZZ"},
+    {id:"community-issue-55",code:"IY56PP"},
+    {id:"jx-issue-63",code:"UPWS4W"}
+  ];
+  const existing = [
+    {number:14,title:"[Count update] DPNIHH",state:"closed",
+      body:"### Invite code\n\nDPNIHH\n\n### Remaining invites shown by Muse\n\n3"},
+    {number:28,title:"[Invite] ARKHZZ — 17 uses left",state:"closed",
+      body:"### Invite code\n\nARKHZZ\n\n### Code source\n\nGitHub (my own code)"},
+    oldIssue,
+    {number:64,title:"[Code discussion] UPWS4W",state:"open",
+      body:"<!-- muse-code-feedback-root:UPWS4W -->\n## Invite code: UPWS4W"}
+  ];
+  const created=[];
+  const mapping=await syncCodeIssueMap(published,async()=>existing,async values=>{
+    created.push(values);
+    throw Error("Never create duplicates of existing Issues");
+  });
+  assert.deepEqual(mapping,{DPNIHH:14,ARKHZZ:28,IY56PP:55,UPWS4W:64});
+  assert.equal(created.length,0);
+  assert.equal(issueCode(existing[0]),"DPNIHH");
+  assert.equal(issueCode(existing[1]),"ARKHZZ");
+  assert.equal(issueCode(existing[3]),"UPWS4W");
+  assert.equal(feedbackCodeForIssue(existing[0],published),"DPNIHH");
+  assert.equal(feedbackCodeForIssue(existing[1],published),"ARKHZZ");
+  assert.equal(feedbackCodeForIssue(existing[3],published),"UPWS4W");
+  const report={id:104,body:"I tried it and it did not work",user:{login:"member",type:"User"}};
+  assert.equal(shouldReopen(existing[0],report,published),true);
+  assert.equal(shouldReopen({...existing[3],state:"closed"},report,published),true);
+});
+
 test("readonly CI dry-run does not create Issues or invent thread numbers",async()=>{
   const created=[];
   const entries=[contributor,seeded,foreign];
