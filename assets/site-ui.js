@@ -50,9 +50,19 @@
     }
 
     if (topButton) {
+      let footerVisible = false;
       const updateButton = () => {
-        topButton.hidden = window.scrollY < 400;
+        topButton.hidden = window.scrollY < 400 || footerVisible;
       };
+      // Keep the floating button clear of the footer's navigation and legal text.
+      const footer = document.querySelector(".site-footer");
+      if (footer && typeof IntersectionObserver === "function") {
+        const footerObserver = new IntersectionObserver(entries => {
+          footerVisible = entries.some(entry => entry.isIntersecting);
+          updateButton();
+        }, { threshold: 0 });
+        footerObserver.observe(footer);
+      }
       let queued = false;
       window.addEventListener("scroll", () => {
         if (queued) return;
