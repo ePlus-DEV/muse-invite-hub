@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { parsePublicSource } from "./source-platform.mjs";
 
 const statuses = new Set(["unverified", "reported-working", "reported-not-working"]);
-const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "reportedRemaining", "usageReportedAt", "submittedById", "featured", "ownerConfirmed"]);
+const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "reportedRemaining", "usageReportedAt", "submittedById", "featured", "ownerConfirmed", "feedbackIssueNumber"]);
 
 function validDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -17,6 +17,7 @@ export function validateCatalog(data) {
   if (!Array.isArray(data)) return ["Catalog must be a JSON array."];
   const ids = new Set();
   const codes = new Set();
+  const feedbackIssues = new Set();
   let featuredCount = 0;
 
   data.forEach((item, index) => {
@@ -40,6 +41,14 @@ export function validateCatalog(data) {
       errors.push(at + ": duplicate code " + item.code + ".");
     } else codes.add(item.code.toUpperCase());
 
+    if (item.feedbackIssueNumber !== undefined) {
+      const issueNo = item.feedbackIssueNumber;
+      if (!Number.isSafeInteger(issueNo) || issueNo <= 0) {
+        errors.push(at + ": feedbackIssueNumber must be a positive GitHub Issue number.");
+      } else if (feedbackIssues.has(issueNo)) {
+        errors.push(at + ": duplicate feedback Issue #"+issueNo+".");
+      } else feedbackIssues.add(issueNo);
+    }
     if (!statuses.has(item.status)) errors.push(at + ": invalid community status.");
     if (item.featured !== undefined && typeof item.featured !== "boolean") errors.push(at + ": featured must be a boolean.");
     if (item.ownerConfirmed !== undefined && typeof item.ownerConfirmed !== "boolean") errors.push(at + ": ownerConfirmed must be a boolean.");
