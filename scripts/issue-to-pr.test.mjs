@@ -183,7 +183,7 @@ test("new GitHub form keeps GitHub authorship and owner quota safely", () => {
 
 test("public Threads post creates only an unverified attributed draft, not a GitHub owner", () => {
   const url="https://www.threads.com/@baijiling2/post/Dfm1NkvE8jo";
-  const i=issue(66,"[Invite] 18I70N",updatedShare("Threads (public code I found)",url),"curator_account");
+  const i=issue(66,"[Invite] 18I70N",updatedShare("Threads (public code I found)",url),"curator-account");
   const result=planIssueChange(i,[item]);
   assert.equal(result.outcome,"proposal");
   assert.equal(result.action,"add Threads source");
