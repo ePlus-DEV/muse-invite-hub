@@ -152,7 +152,7 @@ test("Threads codes retain attribution on detail pages and remain noindex", () =
   assert.doesNotMatch(generateSitemap([owner(), entry]), /codes\/XZ4PV6/);
   const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const app = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
-  assert.equal((home.match(/class="source-filter(?:\\s|")/g) || []).length, 3);
+  assert.equal((home.match(/class="source-filter(?: is-active)?"/g) || []).length, 3);
   assert.match(home, /data-source="threads"/);
   assert.match(app, /item\.source\?\.handle/);
   assert.match(app, /sourceFilter === "all"/);
