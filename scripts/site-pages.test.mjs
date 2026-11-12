@@ -144,7 +144,7 @@ test("sort dropdown uses a styled accessible menu with keyboard and outside-clic
 
 test("Threads codes retain attribution on detail pages and remain noindex", () => {
   const entry = { id:"threads-sample", code:"XZ4PV6", status:"unverified",
-    addedAt:"2026-11-12", source:{platform:"threads",handle:"zkeir1914",url:"https://www.threads.com/@zkeir1914"} };
+    addedAt:"2026-11-12", sourceUrl:"https://www.threads.com/@zkeir1914" };
   const html = renderDetailPage(entry);
   assert.match(html, /Threads · @zkeir1914/);
   assert.match(html, /https:\/\/www\.threads\.com\/@zkeir1914/);
@@ -154,7 +154,7 @@ test("Threads codes retain attribution on detail pages and remain noindex", () =
   const app = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
   assert.equal((home.match(/class="source-filter(?: is-active)?"/g) || []).length, 3);
   assert.match(home, /data-source="threads"/);
-  assert.match(app, /item\.source\?\.handle/);
+  assert.match(app, /sourceInfo\(item\)\.handle/);
   assert.match(app, /sourceFilter === "all"/);
   assert.match(app, /render\(true\)/);
 });
