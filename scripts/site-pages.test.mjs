@@ -164,7 +164,9 @@ test("Give feedback prefills the invite code and listing platform on Home and de
   const detailJs = readFileSync(new URL("../assets/detail.js", import.meta.url), "utf8");
   const form = readFileSync(new URL("../.github/ISSUE_TEMPLATE/report-code.yml", import.meta.url), "utf8");
   assert.match(form, /id: invite_code/);
-  assert.match(form, /id: listing_platform/);
+  assert.match(form, /- type: input\n    id: listing_platform\n/);
+  assert.match(form, /placeholder: "GitHub or Threads"/);
+  assert.doesNotMatch(form, /- type: dropdown\n    id: listing_platform\n/);
   assert.match(form, /title: "\[Code feedback\] "/);
   assert.match(homeJs, /params\.set\("invite_code", code\)/);
   assert.match(homeJs, /params\.set\("title", "\[Code feedback\] " \+ code\)/);
