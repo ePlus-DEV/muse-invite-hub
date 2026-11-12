@@ -58,6 +58,31 @@ test("confirmed owner card and non-owner detail keep verification meanings separ
   assert.match(communityHtml, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
 });
 
+test("detail responsive layout groups feedback actions and stacks long metadata values", () => {
+  const css = readFileSync(new URL("../assets/styles.css", import.meta.url), "utf8");
+  const js = readFileSync(new URL("../assets/site-ui.js", import.meta.url), "utf8");
+  const githubOwner = renderDetailPage({...owner(),feedbackIssueNumber:14});
+  const social = renderDetailPage({
+    id:"social-code",code:"SOCIAL1",status:"unverified",addedAt:"2026-11-12",
+    sourceUrl:"https://x.com/testperson/status/123456789",feedbackIssueNumber:74
+  });
+  assert.match(css, /\.detail-layout\{display:grid;grid-template-columns:minmax\(0,1\.55fr\) minmax\(340px,0\.95fr\)/);
+  assert.match(css, /\.detail-meta div\{display:grid;grid-template-columns:minmax\(0,1fr\);gap:6px/);
+  assert.match(css, /\.detail-meta dd\{margin:0;text-align:left;/);
+  assert.match(css, /\.detail-feedback\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.detail-feedback-actions\{grid-column:1\/-1;grid-row:3;display:grid/);
+  assert.match(css, /\.detail-feedback>a:not\(\.detail-owner-count\):only-of-type\{grid-column:1\/-1\}/);
+  assert.match(css, /@media\(max-width:390px\)\{\.detail-feedback-actions\{grid-template-columns:1fr\}/);
+  assert.match(css, /\.footer-links\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.back-to-top span\{display:none\}/);
+  assert.match(js, /new IntersectionObserver\(entries =>/);
+  assert.match(githubOwner, /class="detail-owner-count" data-feedback-outcome="count"/);
+  assert.match(githubOwner, /class="detail-quick-feedback" data-feedback-outcome="worked"/);
+  assert.match(githubOwner, /class="detail-quick-feedback" data-feedback-outcome="failed"/);
+  assert.doesNotMatch(social, /class="detail-owner-count"/);
+  assert.match(social, /class="detail-quick-feedback"/);
+});
+
 test("all published invite details, including unverified codes, are indexable and in the sitemap", () => {
   const html = renderDetailPage(community());
   assert.match(html, /<meta name="robots" content="index,follow">/);
