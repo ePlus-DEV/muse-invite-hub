@@ -1,6 +1,8 @@
 (() => {
   "use strict";
   const REPO = "https://github.com/ePlus-DEV/muse-invite-hub";
+  const features = window.MuseDirectoryFeatures;
+  if (!features) throw Error("Missing directory helpers");
   const STATUS = {
     "reported-working": { label: "Reported working", description: "A community member reported this code worked; not verified by Muse." },
     "unverified": { label: "Unverified", description: "Shared by the community; no confirmed redemption feedback." },
@@ -13,7 +15,9 @@
   const sortCurrent = document.getElementById("sort-current");
   const sortOptions = [...sortMenu.querySelectorAll(".sort-option")];
   let sortValue = "newest";
-  const sourceFilters = [...document.querySelectorAll(".source-filter")];
+  const sourceFilters = [...document.querySelectorAll(".source-filter, .saved-filter")];
+  const savedFilter = document.getElementById("saved-filter");
+  const savedCount = document.getElementById("saved-count");
   let sourceFilter = "all";
   const resultCount = document.getElementById("result-count");
   const more = document.getElementById("directory-more");
@@ -24,6 +28,51 @@
   let displayLimit = PAGE_SIZE;
   let codes = [];
   let loadFailed = false;
+  function readSavedCodes() {
+    try {
+      return new Set(features.parseSaved(window.localStorage.getItem(features.STORAGE_KEY)));
+    } catch {
+      // Private browsing and blocked storage should not break the directory.
+      return new Set();
+    }
+  }
+  let savedCodes = readSavedCodes();
+
+  function updateSaveButton(button) {
+    const code = button.dataset.code;
+    const saved = savedCodes.has(code);
+    button.setAttribute("aria-pressed", String(saved));
+    button.setAttribute("aria-label",
+      (saved ? "Remove saved Muse invite code " : "Save Muse invite code ") + code);
+    button.title = saved ? "Remove from saved codes" : "Save code on this device";
+    button.replaceChildren(icon(saved ? "fa-solid fa-bookmark" : "fa-regular fa-bookmark"));
+  }
+  function syncSavedUi() {
+    savedCount.textContent = String(codes.filter(item => savedCodes.has(item.code)).length);
+    grid.querySelectorAll(".card-save").forEach(updateSaveButton);
+  }
+  function toggleSaved(code) {
+    if (savedCodes.has(code)) savedCodes.delete(code);
+    else if (savedCodes.size < features.MAX_SAVED) savedCodes.add(code);
+    else {
+      announcer.textContent = "Saved code limit reached.";
+      return;
+    }
+    let persisted = true;
+    try {
+      window.localStorage.setItem(features.STORAGE_KEY, JSON.stringify([...savedCodes]));
+    } catch {
+      persisted = false;
+    }
+    syncSavedUi();
+    if (sourceFilter === "saved") {
+      render(true);
+      savedFilter.focus();
+    }
+    announcer.textContent = code + (savedCodes.has(code) ?
+      " saved on this device." : " removed from saved codes.") +
+      (persisted ? "" : " Storage is unavailable; changes last only for this tab.");
+  }
 
   function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -162,7 +211,14 @@
     badge.title = ownerConfirmed
       ? "Verified Owner: ownership is confirmed; Muse redemption is unverified."
       : status.description;
-    head.append(name, badge);
+    const headActions = el("div", "card-head-actions");
+    const saveButton = el("button", "card-save");
+    saveButton.type = "button";
+    saveButton.dataset.code = item.code;
+    updateSaveButton(saveButton);
+    saveButton.addEventListener("click", () => toggleSaved(item.code));
+    headActions.append(badge, saveButton);
+    head.append(name, headActions);
     const contributor = el("div", "card-contributor");
     const source = sourceInfo(item);
     const sourceTag = el("span", "card-source" + (source.key === "github" ? "" : " card-source-" + source.key));
@@ -214,7 +270,21 @@
     report.target = "_blank";
     report.rel = "noopener noreferrer";
     subActions.append(details, report);
-    actions.append(copy, subActions);
+    const quickFeedback = el("div", "card-feedback-actions");
+    for (const [outcome, text, iconName] of [
+      ["worked", "Worked for me", "fa-regular fa-thumbs-up"],
+      ["failed", "Didn't work", "fa-regular fa-thumbs-down"]
+    ]) {
+      const link = el("a", "card-quick-feedback card-quick-" + outcome);
+      link.href = features.quickFeedbackUrl(item.code, outcome);
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.title = "Opens GitHub Issue Form. Select listing platform and result before submitting.";
+      link.setAttribute("aria-label", text + " — report Muse invite code " + item.code + " on GitHub");
+      link.append(icon(iconName), document.createTextNode(" " + text));
+      quickFeedback.append(link);
+    }
+    actions.append(copy, quickFeedback, subActions);
     card.append(head, contributor, info, actions);
     return card;
   }
@@ -222,18 +292,15 @@
     if (resetLimit) displayLimit = PAGE_SIZE;
     const q = searchInput.value.trim().toLowerCase();
     const visible = codes.filter(item =>
-      (sourceFilter === "all" || sourceInfo(item).key === sourceFilter) &&
+      (sourceFilter === "all" ||
+       (sourceFilter === "saved" ? savedCodes.has(item.code) :
+        sourceInfo(item).key === sourceFilter)) &&
       (item.code.toLowerCase().includes(q) ||
        String(item.submittedBy || "").toLowerCase().includes(q) ||
        String(sourceInfo(item).handle || "").toLowerCase().includes(q) ||
        String(item.note || "").toLowerCase().includes(q))
     );
-    const sort = sortValue;
-    visible.sort((a, b) => {
-      if (Boolean(a.featured) !== Boolean(b.featured)) return a.featured ? -1 : 1;
-      return sort === "code" ? a.code.localeCompare(b.code) : sort === "oldest"
-        ? a.addedAt.localeCompare(b.addedAt) : b.addedAt.localeCompare(a.addedAt);
-    });
+    visible.sort((a, b) => features.compareCodes(a, b, sortValue));
     const page = visible.slice(0, displayLimit);
     grid.replaceChildren(...page.map(createCard));
     resultCount.textContent = "Showing " + page.length.toLocaleString("en-US") +
@@ -247,11 +314,15 @@
       const title = document.getElementById("empty-title");
       const description = document.getElementById("empty-description");
       title.textContent = loadFailed ? "Couldn't load invite codes." :
-        codes.length === 0 ? "Be the first to share." : "No matching codes.";
+        codes.length === 0 ? "Be the first to share." :
+        sourceFilter === "saved" && savedCodes.size === 0 ?
+        "No saved codes yet." : "No matching codes.";
       description.textContent = loadFailed ?
         "Check your connection and refresh. You can still share codes through GitHub." :
         codes.length === 0 ? "No invite codes have been published yet." :
-        "Try a different search term or source filter.";
+        sourceFilter === "saved" && savedCodes.size === 0 ?
+        "Use the bookmark icon on a code to save it on this device." :
+        "Try another search term or source filter. Saved codes stay only in this browser.";
     }
   }
   async function initialize() {
@@ -272,6 +343,7 @@
       window.clearTimeout(requestTimeout);
     }
     updateStats();
+    syncSavedUi();
     render();
     document.documentElement.classList.remove("is-page-loading");
   }
@@ -287,6 +359,12 @@
       render(true);
     });
   }
+  window.addEventListener("storage", event => {
+    if (event.key !== features.STORAGE_KEY && event.key !== null) return;
+    savedCodes = new Set(features.parseSaved(event.key === null ? null : event.newValue));
+    syncSavedUi();
+    if (sourceFilter === "saved") render(true);
+  });
   function closeSortMenu(restoreFocus = false) {
     sortMenu.hidden = true;
     sortTrigger.setAttribute("aria-expanded", "false");
