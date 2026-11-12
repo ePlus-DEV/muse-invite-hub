@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
 const statuses = new Set(["unverified", "reported-working", "reported-not-working"]);
-const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "reportedRemaining", "usageReportedAt", "submittedById", "featured", "ownerConfirmed", "source"]);
+const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "reportedRemaining", "usageReportedAt", "submittedById", "featured", "ownerConfirmed"]);
 
 function validDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -72,41 +72,22 @@ export function validateCatalog(data) {
     }
     if (item.note !== undefined && (typeof item.note !== "string" || item.note.length > 180)) errors.push(at + ": note must contain at most 180 characters.");
     if (item.submittedBy !== undefined && (typeof item.submittedBy !== "string" || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(item.submittedBy))) errors.push(at + ": invalid GitHub username.");
-    if (item.source !== undefined) {
-      const source = item.source;
-      if (!source || typeof source !== "object" || Array.isArray(source)) {
-        errors.push(at + ": source must be an object.");
-      } else {
-        if (Object.keys(source).some(key => !["platform", "handle", "url"].includes(key))) {
-          errors.push(at + ": source has unsupported fields.");
-        }
-        if (source.platform !== "threads") errors.push(at + ": source.platform must be threads.");
-        if (typeof source.handle !== "string" || !/^[A-Za-z0-9_.]{1,30}$/.test(source.handle)) {
-          errors.push(at + ": source.handle must be a public Threads username.");
-        }
-        try {
-          const url = new URL(source.url);
-          if (url.protocol !== "https:" ||
-              !["threads.com", "www.threads.com"].includes(url.hostname.toLowerCase()) ||
-              url.username || url.password || url.search || url.hash ||
-              !/^\/@[A-Za-z0-9_.]+(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.test(url.pathname)) {
-            throw Error("Not a Threads profile or post URL");
-          }
-        } catch {
-          errors.push(at + ": source.url must be a public Threads profile or post HTTPS URL.");
-        }
-        if (item.submittedBy !== undefined) {
-          errors.push(at + ": use source.handle, not submittedBy, for Threads contributions.");
-        }
-        if (item.featured === true || item.ownerConfirmed === true) {
-          errors.push(at + ": Threads-listed code cannot claim featured owner status.");
-        }
-      }
-    }
     if (item.sourceUrl !== undefined) {
       try {
         const url = new URL(item.sourceUrl);
         if (url.protocol !== "https:" || !url.hostname.includes(".")) throw new Error("HTTPS only");
+        if (["threads.com", "www.threads.com"].includes(url.hostname.toLowerCase())) {
+          if (url.username || url.password || url.search || url.hash ||
+              !/^\/@[A-Za-z0-9_.]{1,30}(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.test(url.pathname)) {
+            errors.push(at + ": sourceUrl must identify a public Threads profile or post.");
+          }
+          if (item.submittedBy !== undefined) {
+            errors.push(at + ": Threads sourceUrl must not reuse submittedBy as a GitHub username.");
+          }
+          if (item.featured === true || item.ownerConfirmed === true) {
+            errors.push(at + ": Threads-listed codes cannot claim featured owner status.");
+          }
+        }
         if (url.hostname.toLowerCase() === "github.com") {
           const parts = url.pathname.split("/").filter(Boolean);
           if (parts.length >= 2 && (parts[0].toLowerCase() !== "eplus-dev" || parts[1].toLowerCase() !== "muse-invite-hub")) {
