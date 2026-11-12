@@ -5,12 +5,22 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for keeping the directory useful. Do not include private account details, credentials or sensitive screenshots. Reports are community feedback, not official global validation.
+        Thanks for keeping the directory useful. Select the platform shown on the existing invite listing, not the platform of your own account. For example, GitHub @alex and Threads @alex are distinct accounts. The code identifies the listing and the platform must match it. Do not include credentials, private account details or sensitive screenshots. Reports are community feedback, not official global validation.
   - type: input
     id: invite_code
     attributes:
       label: Invite code
       placeholder: "Code from this directory"
+    validations:
+      required: true
+  - type: dropdown
+    id: listing_platform
+    attributes:
+      label: Listing platform
+      description: "Choose the platform shown on the invite card. The same @username on GitHub and Threads represents different accounts."
+      options:
+        - GitHub
+        - Threads
     validations:
       required: true
   - type: dropdown
