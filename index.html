@@ -84,6 +84,26 @@
         <label class="search-field" for="code-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="code-search" type="search" placeholder="Search by code or contributor…" autocomplete="off"><kbd class="shortcut-hint">/</kbd></label>
         <label class="sort-field" for="sort-codes"><i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i><span>Sort</span><select id="sort-codes"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="code">Code A–Z</option></select></label>
       </div>
+      <section class="availability-section" id="availability" aria-labelledby="availability-title">
+        <details class="availability-disclosure">
+          <summary>
+            <span class="availability-heading"><i class="fa-solid fa-earth-americas" aria-hidden="true"></i><strong id="availability-title">Where is Muse available?</strong><span class="availability-count">5 confirmed markets</span></span>
+            <span class="availability-flags" aria-hidden="true">🇺🇸 🇨🇦 🇯🇵 🇸🇬 🇲🇽</span>
+            <i class="fa-solid fa-chevron-down availability-chevron" aria-hidden="true"></i>
+          </summary>
+          <div class="availability-content">
+            <p>As of <time datetime="2026-11-12">12 Nov 2026</time>, these five markets are confirmed by Meta announcements. Availability can change, and access is subject to Muse eligibility and account checks.</p>
+            <ul class="availability-market-list">
+              <li data-country="US"><span class="availability-market">🇺🇸 United States</span><span class="availability-date"><time datetime="2026-09-08">8 Sep 2026</time></span><a href="https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/" target="_blank" rel="noopener noreferrer" aria-label="Meta launch announcement for United States">Meta source <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></li>
+              <li data-country="CA"><span class="availability-market">🇨🇦 Canada</span><span class="availability-date"><time datetime="2026-09-29">Confirmed by 29 Sep 2026</time></span><a href="https://about.fb.com/news/2026/09/introducing-muse-small-business/" target="_blank" rel="noopener noreferrer" aria-label="Meta confirmation for Canada">Meta source <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></li>
+              <li data-country="JP"><span class="availability-market">🇯🇵 Japan</span><span class="availability-date"><time datetime="2026-10-23">23 Oct 2026</time></span><a href="https://about.fb.com/ja/news/2026/10/muse-personal-ai-agent-launches-in-japan/" target="_blank" rel="noopener noreferrer" aria-label="Meta Japan announcement for Japan">Meta source <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></li>
+              <li data-country="SG"><span class="availability-market">🇸🇬 Singapore</span><span class="availability-date"><time datetime="2026-10-27">27 Oct 2026</time></span><a href="https://about.fb.com/news/2026/10/muse-is-now-available-in-singapore-the-worlds-first-personal-ai-agent-built-for-everyone/" target="_blank" rel="noopener noreferrer" aria-label="Meta Singapore announcement for Singapore">Meta source <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></li>
+              <li data-country="MX"><span class="availability-market">🇲🇽 Mexico</span><span class="availability-date"><time datetime="2026-11-05">5 Nov 2026</time></span><a href="https://about.fb.com/ltam/news/2026/09/presentamos-muse-el-primer-agente-de-ia-personal-del-mundo-creado-para-todos/" target="_blank" rel="noopener noreferrer" aria-label="Meta Mexico launch update for Mexico">Meta source <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></li>
+            </ul>
+            <p class="availability-note">Vietnam is not among these announced launch markets. An invite code does not override geographic restrictions or guarantee signup or rewards. <a href="https://muse.ai/join" target="_blank" rel="noopener noreferrer">Check your eligibility with Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>.</p>
+          </div>
+        </details>
+      </section>
       <div class="cards-grid" id="code-grid" aria-live="off"><div class="loading-card">Loading community codes…</div></div>
       <div class="directory-more" id="directory-more" hidden><button type="button" class="button button-outlined" id="load-more-codes" aria-controls="code-grid">Load more <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button></div>
       <div class="empty-state" id="empty-state" hidden><div class="empty-symbol" aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></div><h3 id="empty-title">No matching codes</h3><p id="empty-description">Try another search or help the community by sharing your code.</p><a class="button button-primary" href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" target="_blank" rel="noopener noreferrer">Share a code</a></div>
