@@ -4,7 +4,7 @@ name: Issue to Draft PR
 # Untrusted Issue text is read as data and is NEVER embedded in shell commands.
 on:
   issues:
-    types: [opened, edited, reopened]
+    types: [opened, edited]
   workflow_dispatch:
     inputs:
       issue_number:
