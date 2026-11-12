@@ -41,7 +41,7 @@ Update the source links, checked date and `scripts/seo-aeo.test.mjs` together wh
 ## Features
 
 - Search, filter by source (All / GitHub / Threads), sort and browse the unified directory with **Load more** (12 codes per batch).
-- Open pre-rendered code detail pages at `/codes/<CODE>/` for sharing, copying and reporting feedback. **Give feedback** links from Home and detail pages prefill the invite code and listed platform in GitHub Issue Forms; visitors can review and change them before submission.
+- Open pre-rendered code detail pages at `/codes/<CODE>/` for sharing, copying and reporting feedback. **Give feedback** links from Home and detail pages prefill the editable Issue title (`[Code feedback] CODE`), invite code and listing platform in GitHub Issue Forms; visitors can review and change them before submission.
 - Show linked GitHub or Threads attribution and community-reported code status, never official Muse validity.
 - Threads demo listings (`18I70N`, `XZ4PV6`) were supplied by a user; linked profiles are not proof of comment authorship or successful redemption.
 - Display dated, owner-reported invite counts, or **Not reported** when data is incomplete.
