@@ -73,6 +73,7 @@
     let active = null;
     let oldDescription = null;
     let dismissTimer = null;
+    let lastPointerWasTouch = false;
 
     function stopTimer() {
       if (dismissTimer !== null) window.clearTimeout(dismissTimer);
@@ -119,6 +120,7 @@
     }
     document.addEventListener("pointerover", event => {
       if (event.pointerType !== "touch") {
+        lastPointerWasTouch = false;
         const target = getTarget(event);
         if (target) show(target);
       }
@@ -128,13 +130,17 @@
     });
     document.addEventListener("focusin", event => {
       const target = getTarget(event);
-      if (target) show(target);
+      if (target) {
+        show(target);
+        if (lastPointerWasTouch) dismissTimer = window.setTimeout(hide, 2400);
+      }
     });
     document.addEventListener("focusout", event => {
       if (active === event.target) hide();
     });
     document.addEventListener("pointerdown", event => {
-      if (event.pointerType !== "touch") return;
+      lastPointerWasTouch = event.pointerType === "touch";
+      if (!lastPointerWasTouch) return;
       const target = getTarget(event);
       if (!target) return hide();
       show(target);
@@ -144,6 +150,7 @@
       if (getTarget(event)?.tagName === "A") hide();
     });
     document.addEventListener("keydown", event => {
+      lastPointerWasTouch = false;
       if (event.key === "Escape") hide();
     });
     window.addEventListener("scroll", hide, { passive: true, capture: true });
