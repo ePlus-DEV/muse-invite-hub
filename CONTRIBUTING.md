@@ -62,10 +62,10 @@ Do not directly push to `main`, force-push rewritten contributor history, base u
 
 ### Run locally
 
-You need **Node.js 24** and Python (or another static HTTP server). No package install or backend is needed.
+You need **Node.js 24** only. The included local static server uses Node.js built-ins; no Python, npm install or backend is required.
 
 ~~~sh
-python -m http.server 8000
+node scripts/serve.mjs
 ~~~
 
 Open http://localhost:8000/. Use HTTP instead of `file://`. A plain source checkout serves the homepage; detail pages are generated during deployment.
@@ -75,6 +75,7 @@ Run:
 ~~~sh
 node scripts/validate.mjs
 node scripts/audit-links.mjs
+node --test scripts/serve.test.mjs
 node --test scripts/validate.test.mjs scripts/audit-links.test.mjs scripts/preview.test.mjs scripts/site-pages.test.mjs
 node --check assets/app.js
 node --check assets/detail.js
@@ -82,7 +83,7 @@ node --check scripts/issue-to-pr.mjs
 node --test scripts/issue-to-pr.test.mjs scripts/close-accepted-issues.test.mjs
 ~~~
 
-For UI changes, also inspect mobile/desktop, filtering, sorting, copy, error states and affected detail pages. The PR workflow attaches a full `muse-invite-hub-pr-preview-N` artifact for **same-repository PRs** after validation; extract it, serve the folder over HTTP and open `http://localhost:8000/codes/<CODE>/`.
+For UI changes, also inspect mobile/desktop, filtering, sorting, copy, error states and affected detail pages. The PR workflow attaches a full `muse-invite-hub-pr-preview-N` artifact for **same-repository PRs** after validation; extract it, run `node scripts/serve.mjs /path/to/extracted-preview 8000` from the repository root, and open `http://localhost:8000/codes/<CODE>/`.
 
 Same-repository non-Draft PRs with green CI and a clean merge can receive a verified public preview URL at `https://muse.eplus.dev/pr-preview/pr-N/` and detail pages below `/codes/<CODE>/`. The deployment bot checks the actual commit and assets before posting a link. **Fork PRs get CI, but not automatically a hosted same-origin preview or the same-repository artifact.** All previews use `noindex` and do not alter production. After a PR preview is removed, its Home and code-detail paths navigate to the production equivalents using the trusted root `404.html` (or production Home for PR-only codes). This client-side fallback does not change GitHub Pages' initial HTTP 404 status.
 

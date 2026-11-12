@@ -25,7 +25,7 @@ buildPreview({ files: paths, readFile: readFileSync, dest,
   number, sha, origin: "https://muse.eplus.dev", hosted: false });
 writeFileSync(join(dest, "PREVIEW_README.txt"),
   "Muse Invite Hub PR #" + number + " offline preview\n" +
-  "Run a local HTTP server inside this folder (for example: python -m http.server 8000)\n" +
+  "From the cloned repo root, run: node scripts/serve.mjs _offline-preview 8000\n" +
   "and visit http://localhost:8000/ . The invite catalog requires HTTP, not file://.\n" +
   "All code data comes from the PR being validated. This is not a public live preview.\n");
 console.log("Built downloadable PR #" + number + " preview at _offline-preview/");

@@ -1,6 +1,6 @@
 # AGENTS.md — Muse Invite Hub
 
-Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. No npm dependencies or backend required.
+Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. The local HTTP server is pure Node.js 24 with no npm dependencies or Python; production needs no backend.
 
 ## Rules
 
