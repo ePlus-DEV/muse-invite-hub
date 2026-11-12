@@ -16,9 +16,12 @@ export function originalIssueNumber(item) {
 export function issueCode(issue) {
   if (issue?.pull_request) return null;
   const body = String(issue?.body || "");
-  const match = new RegExp("<!-- " + MARKER + ": ([A-Z0-9-]{4,32}) -->").exec(body);
+  const match = new RegExp("<!-- " + MARKER + ": ([A-Z0-9-]{4,32}) -->").exec(body) ||
+    /<!-- muse-code-feedback-root:([A-Z0-9-]{4,32}) -->/.exec(body);
   if (match) return match[1];
-  if (!String(issue?.title || "").startsWith("[Invite]")) return null;
+  // Historical contributor submission and count-update Issues remain the original
+  // conversation, even when the entry id came from a different repository.
+  if (!/^\[(?:Invite|Count update|Code feedback)\]/.test(String(issue?.title || ""))) return null;
   return /^### Invite code\s*\n\s*([A-Z0-9-]{4,32})\s*(?:\n|$)/m.exec(body)?.[1] || null;
 }
 
@@ -45,7 +48,10 @@ export function resolveExistingIssue(item, issues) {
   const candidates = issues.filter(issue => !issue.pull_request &&
     Number.isSafeInteger(issue.number) && issue.number > 0 &&
     issueCode(issue) === code &&
-    (issue.number === issueNo || String(issue.body || "").includes(issueMarker(code))));
+    (issue.number === issueNo ||
+      /^\[(?:Invite|Count update|Code feedback)\]/.test(String(issue.title || "")) ||
+      String(issue.body || "").includes(issueMarker(code)) ||
+      /<!-- muse-code-feedback-root:[A-Z0-9-]{4,32} -->/.test(String(issue.body || ""))));
   const source = candidates.find(x => x.number === issueNo);
   if (source) return source;
   if (candidates.length > 1) throw Error("Duplicate canonical feedback issues for " + code);
