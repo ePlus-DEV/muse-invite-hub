@@ -5,7 +5,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for sharing! Issues are public. Provide only a public invite/referral code you are authorized to share, never a password, authentication code, session token, cookie or private account detail. Maintainers review submissions before publication.
+        Issues are public. Choose whether this is **your own GitHub-contributed code** or a **public Threads code you found**.
+        For Threads, provide the original public post permalink when available; a profile URL alone requires manual verification. Your GitHub account is the reporter, NOT automatically the owner of another person's Threads code.
+        Never submit passwords, authentication codes, sessions, cookies or private account information. All accepted reports produce review-only Draft PRs, never automatic publication.
   - type: input
     id: invite_code
     attributes:
@@ -14,11 +16,29 @@ body:
       placeholder: "Your Muse invite code"
     validations:
       required: true
+  - type: dropdown
+    id: code_source
+    attributes:
+      label: Code source
+      description: "GitHub means YOUR own code. Threads means a code you found publicly shared on Threads."
+      options:
+        - GitHub (my own code)
+        - Threads (public code I found)
+    validations:
+      required: true
+  - type: input
+    id: threads_url
+    attributes:
+      label: Threads public post or profile URL (required for Threads)
+      description: "Prefer the original public post containing the code. A profile-only link cannot verify the code and requires manual maintainer review. Never paste private login/invite links."
+      placeholder: "https://www.threads.com/@username/post/..."
+    validations:
+      required: false
   - type: input
     id: source_url
     attributes:
       label: Public confirmation or context (optional)
-      description: "Optional HTTPS page you control or official Muse reference. Do not link to unrelated GitHub projects or private invite/login links."
+      description: "For GitHub-owned codes only: optional HTTPS page you control or official Muse reference. For Threads use the Threads URL field above. No unrelated repositories or private links."
       placeholder: "https://..."
     validations:
       required: false
@@ -26,7 +46,7 @@ body:
     id: reported_uses
     attributes:
       label: Uses so far (optional; self-reported)
-      description: "Only if shown in your Muse account. This is a dated snapshot, NOT a guarantee of remaining slots."
+      description: "For GitHub-owned codes only, from your Muse invite screen. Never enter quotas found on another person's Threads profile."
       placeholder: "e.g. 1"
     validations:
       required: false
@@ -34,7 +54,7 @@ body:
     id: reported_capacity
     attributes:
       label: Invite limit (optional; self-reported)
-      description: "Only if shown in your Muse account. Never guess."
+      description: "For GitHub-owned codes only, from your Muse account. Never guess."
       placeholder: "e.g. 30"
     validations:
       required: false
@@ -42,7 +62,7 @@ body:
     id: remaining
     attributes:
       label: Remaining invites (optional; self-reported)
-      description: "Only if shown by Muse. The total quota is not required; this will be marked as a dated owner report."
+      description: "For GitHub-owned codes only; use the current values shown by your own Muse account. Threads reports cannot submit owner quota."
       placeholder: "e.g. 17"
     validations:
       required: false
@@ -58,7 +78,7 @@ body:
     attributes:
       label: Contributor checklist
       options:
-        - label: "I am authorized to share this code publicly and understand this issue is public."
+        - label: "I own this public code or am reporting a code explicitly shared publicly at the Threads link above; this issue is public."
           required: true
         - label: "This code is not a password, 2FA code, session token or private credential."
           required: true
