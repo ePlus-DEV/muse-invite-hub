@@ -48,27 +48,24 @@ test("llms.txt contains only trustworthy indexable code-page links", () => {
   }
 });
 
-test("robots, detail noindex and sitemap retain the intended policy", () => {
+test("robots and generated sitemap include all published codes while previews remain noindex", () => {
   const robots = read("robots.txt");
   assert.match(robots, /User-agent: \*/);
   assert.match(robots, /Sitemap: https:\/\/muse\.eplus\.dev\/sitemap\.xml/);
   const catalog = JSON.parse(read("data/invites.json"));
   const sitemap = generateSitemap(catalog);
-  assert.equal(read("sitemap.xml").trim(), sitemap.trim(),
-    "Tracked sitemap must match the trusted production sitemap generator");
-  assert.ok(sitemap.includes("<loc>" + origin + "/</loc>"));
-  assert.equal((sitemap.match(/<loc>/g) || []).length, 2,
-    "Only Home and owner-confirmed featured detail should be indexable");
+  const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
+  assert.equal(urls.length, catalog.length + 1, "Sitemap must list Home plus every code");
+  assert.deepEqual(urls, [
+    origin + "/", ...catalog.map(item => origin + "/codes/" + item.code + "/")
+  ]);
+  assert.equal(new Set(urls).size, urls.length, "Sitemap must not contain duplicate URLs");
   for (const item of catalog) {
     const page = renderDetailPage(item);
-    if (item.featured && item.ownerConfirmed) {
-      assert.match(page, /<meta name="robots" content="index,follow">/);
-      assert.ok(sitemap.includes("/codes/" + item.code + "/"));
-    } else {
-      assert.match(page, /<meta name="robots" content="noindex,follow">/);
-      assert.ok(!sitemap.includes("/codes/" + item.code + "/"));
-    }
+    assert.match(page, /<meta name="robots" content="index,follow">/);
+    assert.ok(page.includes('rel="canonical" href="' + origin + "/codes/" + item.code + '/"'));
   }
+  assert.doesNotMatch(sitemap, /pr-preview\//);
   assert.match(renderDetailPage(catalog[0], { preview:true, basePath:"/pr-preview/pr-21/" }), /noindex,nofollow,noarchive/);
 });
 
