@@ -18,9 +18,9 @@ export function codePath(code) {
   return "/codes/" + encodeURIComponent(code) + "/";
 }
 export function canIndexDetail(item) {
-  // A public listing alone does not establish that Muse accepts its referral code.
-  // Index only the site-owner-confirmed, specifically documented featured entry.
-  return item?.featured === true && item?.ownerConfirmed === true;
+  // Index every valid, published invite detail page without implying redemption.
+  // Only validated catalog entries reach the production detail generator.
+  return typeof item?.code === "string" && /^[A-Z0-9-]{4,32}$/.test(item.code);
 }
 function dateText(value) {
   if (!value) return "Not reported";
@@ -203,7 +203,7 @@ export function generateSite(root, { origin = SITE_ORIGIN, basePath = "/", previ
     writeFileSync(join(folder, "index.html"), renderDetailPage(item, { origin, basePath, preview }));
     created++;
   }
-  // Preview has no sitemap; production sitemap only lists indexable, useful pages.
+  // Previews are never indexed; production sitemap includes every published code.
   if (!preview) writeFileSync(join(root, "sitemap.xml"), generateSitemap(items, origin));
   return { created, indexed: items.filter(canIndexDetail).length };
 }
