@@ -46,6 +46,24 @@
     } catch { /* Keep the trusted server-rendered detail page if data is unavailable. */ }
   }
   void showThreadsProvenance();
+  // Hosted PR detail previews use a trusted renderer from main. Populate the same
+  // editable feedback defaults client-side so those previews match the card links.
+  const feedbackLink = document.querySelector(".detail-feedback a");
+  const sourceRow = [...document.querySelectorAll(".detail-meta > div")]
+    .find(row => row.querySelector("dt")?.textContent.trim() === "Source");
+  const sourceLabel = sourceRow?.querySelector("dd")?.textContent.trim() || "";
+  const listingPlatform = sourceLabel.startsWith("Threads") ? "Threads" :
+    sourceLabel.startsWith("GitHub") ? "GitHub" : null;
+  if (feedbackLink && listingPlatform) {
+    const href = new URL(feedbackLink.href);
+    if (href.origin === "https://github.com" &&
+        href.pathname === "/ePlus-DEV/muse-invite-hub/issues/new" &&
+        href.searchParams.get("template") === "report-code.yml") {
+      href.searchParams.set("invite_code", code.textContent.trim());
+      href.searchParams.set("listing_platform", listingPlatform);
+      feedbackLink.href = href.href;
+    }
+  }
   const label = button.querySelector(".detail-copy-label");
   const icon = button.querySelector("i");
   const setLabel = (text, iconClass) => {
