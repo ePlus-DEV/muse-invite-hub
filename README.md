@@ -58,7 +58,7 @@ If you know only a remaining number, [submit that number](https://github.com/ePl
 
 ### Source attribution and Threads demo
 
-Existing entries continue to use `submittedBy` as a GitHub account. A Threads record instead has a `source` object with `platform: "threads"`, `handle`, and an HTTPS `url` pointing to a public Threads profile or post. Do not reuse `submittedBy` for Threads handles. The same code must not appear twice, including across platforms.
+Existing entries continue to use `submittedBy` as a GitHub account. For Threads records, use the already-supported `sourceUrl` field set to an HTTPS Threads profile or post link (e.g., `https://www.threads.com/@baijiling2`), without `submittedBy`. The UI derives the Threads handle from the URL. This preserves compatibility with the trusted production preview validator, which does not accept new catalog fields from unmerged PRs. Do not duplicate a code across platforms.
 
 These two entries are an attribution/UI demo based on user-provided handles and codes; the original Threads comments were not independently accessible, so the profile links are **profiles**, not evidence that the code was posted or worked. Never infer remaining quotas.
 
