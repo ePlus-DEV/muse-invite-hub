@@ -7,6 +7,8 @@
 })(typeof window === "object" ? window : null, function () {
   "use strict";
   const STORAGE_KEY = "muse-invite-hub:saved-codes:v1";
+  // Copy history is independent from Saved Codes and never indicates redemption.
+  const COPIED_STORAGE_KEY = "muse-invite-hub:copied-codes:v1";
   const REPO = "https://github.com/ePlus-DEV/muse-invite-hub";
   const CODE_PATTERN = /^[A-Z0-9-]{4,32}$/;
   const MAX_SAVED = 200;
@@ -19,6 +21,23 @@
         typeof value === "string" && CODE_PATTERN.test(value)))].slice(0, MAX_SAVED);
     } catch {
       return [];
+    }
+  }
+
+  function parseCopied(raw) {
+    return parseSaved(raw);
+  }
+
+  function rememberCopiedCode(storage, code) {
+    if (typeof code !== "string" || !CODE_PATTERN.test(code)) return null;
+    try {
+      const previouslyCopied = parseCopied(storage.getItem(COPIED_STORAGE_KEY));
+      const next = [code, ...previouslyCopied.filter(value => value !== code)].slice(0, MAX_SAVED);
+      storage.setItem(COPIED_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    } catch {
+      // Clipboard success must still update UI even if browser storage is blocked.
+      return null;
     }
   }
 
@@ -333,6 +352,7 @@
     }
   }
 
-  return { STORAGE_KEY, MAX_SAVED, parseSaved, activityDate, compareCodes,
-    quickFeedbackUrl, feedbackComment, issueNumberFor, openFeedbackDialog, enableTooltips };
+  return { STORAGE_KEY, COPIED_STORAGE_KEY, MAX_SAVED, parseSaved, parseCopied,
+    rememberCopiedCode, activityDate, compareCodes, quickFeedbackUrl,
+    feedbackComment, issueNumberFor, openFeedbackDialog, enableTooltips };
 });
