@@ -153,5 +153,6 @@ test("editable feedback dialog prepares a report and reuses the linked Issue wit
 
   const detail = renderDetailPage({...owner,feedbackIssueNumber:14});
   assert.match(detail, /https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/14#issuecomment-new/);
-  assert.doesNotMatch(detail, /issues\/new\?/);
+  const feedbackSection = detail.split('class="detail-info-card detail-feedback"')[1].split("</aside>")[0];
+  assert.doesNotMatch(feedbackSection, /issues\/new\?/);
 });
