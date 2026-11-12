@@ -194,7 +194,7 @@
   if (copyPanel && copyActions && typeof document.createElement === "function") {
     copiedNote = document.createElement("p");
     copiedNote.className = "detail-copy-note";
-    copiedNote.textContent = "Copied on this device · Not redeemed";
+    copiedNote.textContent = "Copied on this device · Redemption not verified";
     copiedNote.hidden = true;
     copyActions.after(copiedNote);
   }
