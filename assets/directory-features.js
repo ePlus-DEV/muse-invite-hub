@@ -59,5 +59,110 @@
     return REPO + "/issues/new?" + params.toString();
   }
 
-  return { STORAGE_KEY, MAX_SAVED, parseSaved, activityDate, compareCodes, quickFeedbackUrl };
+  // A single viewport-positioned tooltip avoids clipping inside card/panel overflow
+  // and allows mouse, keyboard and touch users to discover the action.
+  let tooltipApi = null;
+  function enableTooltips() {
+    if (tooltipApi) return tooltipApi;
+    if (typeof document === "undefined") return null;
+    const tip = document.createElement("div");
+    tip.id = "muse-action-tooltip";
+    tip.setAttribute("role", "tooltip");
+    tip.hidden = true;
+    document.body.append(tip);
+    let active = null;
+    let oldDescription = null;
+    let dismissTimer = null;
+
+    function stopTimer() {
+      if (dismissTimer !== null) window.clearTimeout(dismissTimer);
+      dismissTimer = null;
+    }
+    function hide() {
+      stopTimer();
+      if (active) {
+        if (oldDescription === null) active.removeAttribute("aria-describedby");
+        else active.setAttribute("aria-describedby", oldDescription);
+      }
+      active = null;
+      oldDescription = null;
+      tip.hidden = true;
+    }
+    function show(target) {
+      if (!target || !target.isConnected || !target.dataset.tooltip) return hide();
+      stopTimer();
+      if (active !== target) {
+        hide();
+        active = target;
+        oldDescription = target.getAttribute("aria-describedby");
+        target.setAttribute("aria-describedby",
+          (oldDescription ? oldDescription + " " : "") + tip.id);
+      }
+      tip.textContent = target.dataset.tooltip;
+      tip.hidden = false;
+      const rect = target.getBoundingClientRect();
+      const bounds = tip.getBoundingClientRect();
+      const viewportWidth = document.documentElement.clientWidth;
+      const viewportHeight = document.documentElement.clientHeight;
+      const left = Math.max(10, Math.min(rect.left + rect.width / 2 - bounds.width / 2,
+        viewportWidth - bounds.width - 10));
+      let top = rect.top - bounds.height - 10;
+      if (top < 8) top = rect.bottom + 10;
+      if (top + bounds.height > viewportHeight - 8) {
+        top = Math.max(8, rect.top - bounds.height - 10);
+      }
+      tip.style.left = Math.round(left) + "px";
+      tip.style.top = Math.round(top) + "px";
+    }
+    function getTarget(event) {
+      return event.target instanceof Element ? event.target.closest("[data-tooltip]") : null;
+    }
+    document.addEventListener("pointerover", event => {
+      if (event.pointerType !== "touch") {
+        const target = getTarget(event);
+        if (target) show(target);
+      }
+    });
+    document.addEventListener("pointerout", event => {
+      if (event.pointerType !== "touch" && active && !active.contains(event.relatedTarget)) hide();
+    });
+    document.addEventListener("focusin", event => {
+      const target = getTarget(event);
+      if (target) show(target);
+    });
+    document.addEventListener("focusout", event => {
+      if (active === event.target) hide();
+    });
+    document.addEventListener("pointerdown", event => {
+      if (event.pointerType !== "touch") return;
+      const target = getTarget(event);
+      if (!target) return hide();
+      show(target);
+      dismissTimer = window.setTimeout(hide, 2400);
+    });
+    document.addEventListener("click", event => {
+      if (getTarget(event)?.tagName === "A") hide();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") hide();
+    });
+    window.addEventListener("scroll", hide, { passive: true, capture: true });
+    window.addEventListener("resize", hide, { passive: true });
+    tooltipApi = { show, hide, refresh() {
+      if (active && active.isConnected) show(active);
+      else hide();
+    } };
+    return tooltipApi;
+  }
+
+  if (typeof document !== "undefined") {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", enableTooltips, { once: true });
+    } else {
+      enableTooltips();
+    }
+  }
+
+  return { STORAGE_KEY, MAX_SAVED, parseSaved, activityDate, compareCodes,
+    quickFeedbackUrl, enableTooltips };
 });
