@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-labelledby="title desc">
+<title id="title">Muse AI Invite Hub — share invite codes</title>
+<desc id="desc">Light blue and white Muse Invite Hub community directory preview with the original Muse mascot poster.</desc>
+<defs>
+<radialGradient id="bg" cx="75%" cy="35%" r="83%"><stop stop-color="#d6e8ff"/><stop offset=".63" stop-color="#eff6ff"/><stop offset="1" stop-color="#f4f6f9"/></radialGradient>
+<linearGradient id="hero" x2="0" y2="1"><stop stop-color="#f4f9ff"/><stop offset="1" stop-color="#e6f2ff"/></linearGradient>
+<filter id="shadow" x="-20%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="13" stdDeviation="17" flood-color="#2e6ec6" flood-opacity=".16"/></filter>
+<clipPath id="mascot-mask"><rect x="882" y="184" width="190" height="187" rx="36"/></clipPath>
+</defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="1166" cy="-52" r="200" fill="#d5eaff" opacity=".54"/><circle cx="772" cy="684" r="186" fill="#bbd9ff" opacity=".45"/>
+<g fill="#0064ff" opacity=".82"><path d="M1137 55l7 17 17 7-17 7-7 17-7-17-17-7 17-7z"/><path d="M705 545l5 12 12 5-12 5-5 12-5-12-12-5 12-5z"/></g>
+<rect x="54" y="44" width="48" height="48" rx="13" fill="#0064ff"/>
+<path d="M64 78C66.25 67.5 68.5 60 71.5 60.38C74.5 60.75 74.13 69 73.38 75C75.25 66 78.25 59.63 81.25 60C84.25 60.38 83.88 69.38 83.13 75C85.38 67.5 88 63 92.5 60.75" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+<g font-family="Arial,DejaVu Sans,sans-serif">
+<text x="116" y="70" fill="#101828" font-weight="800" font-size="26" letter-spacing="-.8">Muse Invite Hub</text>
+<text x="118" y="87" fill="#0064ff" font-weight="800" font-size="10" letter-spacing="2">COMMUNITY</text>
+<rect x="55" y="154" width="185" height="35" rx="18" fill="#e8f1ff" stroke="#c7deff"/>
+<circle cx="75" cy="171" r="5" fill="#0064ff"/><circle cx="84" cy="166" r="3.2" fill="#0064ff"/><circle cx="66" cy="166" r="3.2" fill="#0064ff"/>
+<text x="99" y="177" fill="#0064ff" font-weight="800" font-size="13">Community project</text>
+<text x="54" y="276" fill="#101828" font-weight="900" font-size="74" letter-spacing="-3.5">Muse AI</text>
+<text x="54" y="355" fill="#101828" font-weight="900" font-size="74" letter-spacing="-3.5">Invite Hub</text>
+<text x="56" y="406" fill="#5b6472" font-size="21" font-weight="500">Discover, copy and share Muse AI</text>
+<text x="56" y="436" fill="#5b6472" font-size="21" font-weight="500">invite codes with the community.</text>
+<rect x="55" y="477" width="231" height="62" rx="14" fill="#0064ff"/><path d="M79 508h18m-9-9v18" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+<text x="113" y="515" fill="#fff" font-size="19" font-weight="800">Share your code</text>
+<text x="55" y="592" fill="#101828" font-size="17" font-weight="800">muse.eplus.dev</text>
+<text x="222" y="592" fill="#75869b" font-size="16">·  by ePlus.DEV</text>
+</g>
+<g filter="url(#shadow)">
+<rect x="593" y="101" width="553" height="454" rx="30" fill="#fff" stroke="#dce7f7" stroke-width="3"/>
+<rect x="611" y="119" width="517" height="53" rx="14" fill="#fff"/>
+<rect x="630" y="133" width="27" height="27" rx="7" fill="#0064ff"/>
+<path d="M635 152Q640 134 643 144Q645 151 642 153Q648 138 652 144Q654 150 651 154" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+<g font-family="Arial,DejaVu Sans,sans-serif"><text x="666" y="151" font-weight="800" font-size="16" fill="#101828">Muse Invite Hub</text><text x="666" y="164" font-size="7.5" font-weight="800" letter-spacing="1" fill="#0064ff">COMMUNITY</text></g>
+<rect x="979" y="134" width="70" height="26" rx="9" fill="#e8f1ff"/><rect x="1059" y="132" width="54" height="30" rx="9" fill="#0064ff"/>
+<rect x="612" y="174" width="515" height="205" fill="url(#hero)"/>
+<g font-family="Arial,DejaVu Sans,sans-serif">
+<rect x="633" y="194" width="126" height="24" rx="12" fill="#e8f1ff"/>
+<text x="645" y="210" font-size="11" font-weight="800" fill="#0064ff">Community project</text>
+<text x="634" y="257" fill="#101828" font-size="33" font-weight="900" letter-spacing="-1.6">Muse AI</text>
+<text x="634" y="294" fill="#101828" font-size="33" font-weight="900" letter-spacing="-1.6">Invite Hub</text>
+<text x="635" y="320" fill="#5b6472" font-size="12">Discover, copy and share invite codes.</text>
+<rect x="634" y="334" width="129" height="29" rx="10" fill="#0064ff"/>
+<text x="657" y="353" fill="#fff" font-size="12" font-weight="800">Share your code</text>
+</g>
+<rect x="882" y="184" width="190" height="187" rx="36" fill="#c7deff" stroke="#fff" stroke-width="5"/>
+<g clip-path="url(#mascot-mask)"><image x="882" y="184" width="190" height="187" preserveAspectRatio="xMidYMid slice" xlink:href="__MASCOT_DATA_URI__"/></g>
+<path d="M1092 214l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#3988fa"/>
+<g font-family="Arial,DejaVu Sans,sans-serif">
+<text x="632" y="409" fill="#0064ff" font-size="10" font-weight="800" letter-spacing="1.1">THE DIRECTORY</text>
+<text x="632" y="442" fill="#101828" font-size="26" font-weight="900" letter-spacing="-1">Find your invitation<tspan fill="#0064ff">.</tspan></text>
+<rect x="632" y="461" width="472" height="64" rx="12" fill="#fff" stroke="#c7deff"/>
+<rect x="647" y="476" width="122" height="35" rx="10" fill="#eff5ff" stroke="#a9c8ff"/>
+<rect x="783" y="476" width="145" height="35" rx="10" fill="#f4f6f9" stroke="#e3e7ee"/>
+<rect x="940" y="476" width="148" height="35" rx="10" fill="#f4f6f9" stroke="#e3e7ee"/>
+<text x="661" y="499" fill="#0064ff" font-size="13" font-weight="800">Invite codes</text>
+<text x="795" y="499" fill="#5b6472" font-size="13" font-weight="700">Community</text>
+<text x="953" y="499" fill="#5b6472" font-size="13" font-weight="700">Contributors</text>
+</g>
+</g>
+</svg>
