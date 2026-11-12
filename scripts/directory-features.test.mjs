@@ -97,3 +97,35 @@ test("homepage and detail load helpers before existing scripts without altering 
   assert.match(detailJs, /features\.parseSaved\(window\.localStorage\.getItem/);
   assert.match(detailJs, /window\.addEventListener\("storage"/);
 });
+
+
+test("contextual tooltips cover saved, quick feedback, copy, details and recently updated", () => {
+  const css = read("assets/styles.css");
+  const helper = read("assets/directory-features.js");
+  assert.match(home, /id="saved-filter"[^>]*data-tooltip="Show bookmarked codes/);
+  assert.match(home, /data-sort="updated"[^>]*data-tooltip="Latest recorded listing/);
+  assert.match(home, /id="sort-trigger"[^>]*data-tooltip="Sort the directory/);
+  assert.match(app, /button\.dataset\.tooltip = saved \?/);
+  assert.match(app, /button\.dataset\.tooltip = "Copy this code/);
+  assert.match(app, /details\.dataset\.tooltip = "See the source/);
+  assert.match(app, /report\.dataset\.tooltip = "Report a duplicate/);
+  assert.match(app, /link\.dataset\.tooltip = outcome === "worked"/);
+  assert.match(detailJs, /detailSave\.dataset\.tooltip = active \?/);
+  assert.match(detailJs, /genericFeedback\.dataset\.tooltip/);
+  assert.match(detailJs, /link\.dataset\.tooltip = outcome === "worked"/);
+  assert.match(helper, /tip\.setAttribute\("role", "tooltip"\)/);
+  assert.match(helper, /tip\.textContent = target\.dataset\.tooltip/);
+  assert.doesNotMatch(helper, /tip\.innerHTML\s*=/);
+  assert.match(helper, /setAttribute\("aria-describedby"/);
+  assert.match(helper, /document\.addEventListener\("pointerover"/);
+  assert.match(helper, /document\.addEventListener\("focusin"/);
+  assert.match(helper, /document\.addEventListener\("pointerdown"/);
+  assert.match(helper, /event\.key === "Escape"/);
+  assert.match(helper, /window\.setTimeout\(hide, 2400\)/);
+  assert.match(css, /#muse-action-tooltip\{position:fixed;z-index:1000/);
+  assert.match(css, /#muse-action-tooltip\[hidden\]\{display:none!important\}/);
+  const detail = renderDetailPage(owner);
+  assert.match(detail, /id="detail-save"/);
+  assert.match(detail, /class="detail-quick-feedback"/);
+  assert.match(detail, /src="\.\.\/\.\.\/assets\/directory-features.js"/);
+});
