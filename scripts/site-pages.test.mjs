@@ -165,10 +165,13 @@ test("Give feedback prefills the invite code and listing platform on Home and de
   const form = readFileSync(new URL("../.github/ISSUE_TEMPLATE/report-code.yml", import.meta.url), "utf8");
   assert.match(form, /id: invite_code/);
   assert.match(form, /id: listing_platform/);
+  assert.match(form, /title: "\[Code feedback\] "/);
   assert.match(homeJs, /params\.set\("invite_code", code\)/);
+  assert.match(homeJs, /params\.set\("title", "\[Code feedback\] " \+ code\)/);
   assert.match(homeJs, /params\.set\("listing_platform", platform\)/);
   assert.match(homeJs, /issueUrl\("report-code\.yml", item\.code, source\.platform\)/);
   assert.match(detailJs, /href\.searchParams\.set\("listing_platform", listingPlatform\)/);
+  assert.match(detailJs, /href\.searchParams\.set\("title", "\[Code feedback\] " \+ inviteCode\)/);
   for (const [entry, expectedPlatform] of [
     [owner(), "GitHub"],
     [{ ...community(), code:"XZ4PV6", submittedBy:undefined,
@@ -183,6 +186,8 @@ test("Give feedback prefills the invite code and listing platform on Home and de
     assert.equal(url.searchParams.get("template"), "report-code.yml");
     assert.equal(url.searchParams.get("invite_code"), entry.code);
     assert.equal(url.searchParams.get("listing_platform"), expectedPlatform);
+    assert.equal(url.searchParams.get("title"), "[Code feedback] " + entry.code);
+    assert.equal(url.searchParams.getAll("title").length, 1);
     assert.equal(url.searchParams.getAll("listing_platform").length, 1);
   }
 });
