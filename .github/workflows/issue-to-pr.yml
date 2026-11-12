@@ -34,14 +34,15 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout trusted main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           persist-credentials: false
       - name: Use Node.js 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
+          package-manager-cache: false
       - name: Verify automation and catalog
         run: |
           node --check scripts/issue-to-pr.mjs

@@ -36,15 +36,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout trusted production source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           persist-credentials: false
           fetch-depth: 1
       - name: Use Node.js 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
+          package-manager-cache: false
       - name: Validate production data and preview utilities
         run: |
           node scripts/validate.mjs
@@ -119,9 +120,9 @@ jobs:
             exit 1
           fi
       - name: Configure Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Upload complete site with current PR previews
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: _site
       # The artifact upload API may confirm success before deploy-pages can list
@@ -130,7 +131,7 @@ jobs:
         run: sleep 12
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
       - name: Verify live production detail, assets and sitemap after deployment
         run: node scripts/verify-production.mjs
       - name: Post preview links only after live asset checks

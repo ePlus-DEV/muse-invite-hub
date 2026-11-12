@@ -16,11 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Use Node.js 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
+          package-manager-cache: false
       - name: Check frontend JavaScript syntax
         run: |
           node --check assets/app.js
@@ -74,7 +75,7 @@ jobs:
         run: node scripts/build-offline-preview.mjs
       - name: Upload downloadable PR preview
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: muse-invite-hub-pr-preview-${{ github.event.pull_request.number }}
           path: _offline-preview/
