@@ -9,6 +9,8 @@ export function issueMarker(code) {
 }
 
 export function originalIssueNumber(item) {
+  const linked = item?.feedbackIssueNumber;
+  if (Number.isSafeInteger(linked) && linked > 0) return linked;
   const match = /^community-issue-([1-9][0-9]*)$/.exec(item?.id || "");
   return match ? Number(match[1]) : null;
 }
@@ -53,8 +55,11 @@ export function resolveExistingIssue(item, issues) {
       String(issue.body || "").includes(issueMarker(code)) ||
       /<!-- muse-code-feedback-root:[A-Z0-9-]{4,32} -->/.test(String(issue.body || ""))));
   const source = candidates.find(x => x.number === issueNo);
-  if (source) return source;
+  if (item.feedbackIssueNumber && !source) {
+    throw Error("Explicit code Issue mapping not found or code mismatch for " + code);
+  }
   if (candidates.length > 1) throw Error("Duplicate canonical feedback issues for " + code);
+  if (source) return source;
   return candidates[0] || null;
 }
 
