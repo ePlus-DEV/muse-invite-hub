@@ -7,8 +7,8 @@ body:
       value: |
         Help keep invitation availability useful. GitHub Issues are public.
         Share only **numbers shown in your own Muse account**, not credentials or private account screenshots.
-        Select the platform of the **listed invite code**, not your own login. Identical usernames on GitHub and Threads are different identities.
-        GitHub Issue ownership checks can confirm only the cataloged GitHub owner. **Threads-sourced codes require manual owner verification** and will not receive automatic quota PRs.
+        Select the platform of the **listed invite code**, not your own login. Identical usernames on GitHub, Threads, X and Facebook are different identities.
+        GitHub Issue ownership checks can confirm only the cataloged GitHub owner. **Threads, X and Facebook codes require manual owner verification** and will not receive automatic quota PRs.
         Updates are reviewed before changing the site. Counts are snapshots, NOT live Muse availability.
   - type: input
     id: invite_code
@@ -22,10 +22,12 @@ body:
     id: listing_platform
     attributes:
       label: Listing platform
-      description: "Choose the platform shown on the invite card. The same @username on GitHub and Threads represents different accounts."
+      description: "Choose the platform shown on the invite card. Matching usernames across services do not prove ownership."
       options:
         - GitHub
         - Threads
+        - X (Twitter)
+        - Facebook
     validations:
       required: true
   - type: input

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
+import { parsePublicSource } from "./source-platform.mjs";
 
 const statuses = new Set(["unverified", "reported-working", "reported-not-working"]);
 const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "reportedRemaining", "usageReportedAt", "submittedById", "featured", "ownerConfirmed"]);
@@ -76,16 +77,19 @@ export function validateCatalog(data) {
       try {
         const url = new URL(item.sourceUrl);
         if (url.protocol !== "https:" || !url.hostname.includes(".")) throw new Error("HTTPS only");
-        if (["threads.com", "www.threads.com"].includes(url.hostname.toLowerCase())) {
-          if (url.username || url.password || url.search || url.hash ||
-              !/^\/@[A-Za-z0-9_.]{1,30}(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.test(url.pathname)) {
-            errors.push(at + ": sourceUrl must identify a public Threads profile or post.");
-          }
-          if (item.submittedBy !== undefined) {
-            errors.push(at + ": Threads sourceUrl must not reuse submittedBy as a GitHub username.");
+        const socialHosts = [
+          "threads.com", "www.threads.com",
+          "x.com", "www.x.com", "twitter.com", "www.twitter.com",
+          "facebook.com", "www.facebook.com", "m.facebook.com"
+        ];
+        if (socialHosts.includes(url.hostname.toLowerCase())) {
+          const social = parsePublicSource(item.sourceUrl);
+          if (!social) errors.push(at + ": sourceUrl must be a supported public social profile or post URL.");
+          if (item.submittedBy !== undefined || item.submittedById !== undefined) {
+            errors.push(at + ": social sourceUrl must not reuse a GitHub owner identity.");
           }
           if (item.featured === true || item.ownerConfirmed === true) {
-            errors.push(at + ": Threads-listed codes cannot claim featured owner status.");
+            errors.push(at + ": social-source codes cannot claim featured owner status.");
           }
         }
         if (url.hostname.toLowerCase() === "github.com") {

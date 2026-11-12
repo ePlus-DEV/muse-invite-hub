@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for keeping the directory useful. Select the platform shown on the existing invite listing, not the platform of your own account. For example, GitHub @alex and Threads @alex are distinct accounts. The code identifies the listing and the platform must match it. Do not include credentials, private account details or sensitive screenshots. Reports are community feedback, not official global validation.
+        Thanks for keeping the directory useful. Select the platform shown on the existing invite listing, not the platform of your own account. For example, GitHub @alex, Threads @alex, X @alex and Facebook @alex are separate accounts. The code identifies the listing and the platform must match it. Do not include credentials, private account details or sensitive screenshots. Reports are community feedback, not official global validation.
   - type: input
     id: invite_code
     attributes:
@@ -17,10 +17,12 @@ body:
     id: listing_platform
     attributes:
       label: Listing platform
-      description: "Select GitHub or Threads as shown on the invite card. These are separate accounts even if @usernames match. GitHub cannot preselect this dropdown from a link."
+      description: "Select the platform shown on the invite card. Handles are platform-specific. GitHub cannot preselect this dropdown from a link."
       options:
         - GitHub
         - Threads
+        - X (Twitter)
+        - Facebook
     validations:
       required: true
   - type: dropdown

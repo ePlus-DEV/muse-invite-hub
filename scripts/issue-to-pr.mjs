@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { validateCatalog } from "./validate.mjs";
+import { parsePublicSource, listedPlatform, LISTING_PLATFORMS } from "./source-platform.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
 const MARKER = "<!-- muse-issue-draft-pr -->";
@@ -9,19 +10,21 @@ const CODE_PATTERN = /^[A-Z0-9-]{4,32}$/;
 const USER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 const GITHUB_OWN = "GitHub (my own code)";
 const THREADS_FOUND = "Threads (public code I found)";
+const X_FOUND = "X (Twitter) (public code I found)";
+const FACEBOOK_FOUND = "Facebook (public code I found)";
 const THREADS_FIELD = "Threads public post or profile URL (required for Threads)";
+const SOCIAL_FIELD = "Social post or profile URL (required for Threads, X or Facebook)";
+const listedPlatformOf = listedPlatform;
+const SUBMISSION_PLATFORMS = new Map([
+  [GITHUB_OWN, "GitHub"],
+  [THREADS_FOUND, "Threads"],
+  [X_FOUND, "X (Twitter)"],
+  [FACEBOOK_FOUND, "Facebook"]
+]);
 function threadsReference(value) {
-  if (typeof value !== "string" || !value.trim()) return null;
-  try {
-    const url = new URL(value.trim());
-    const match = /^\/@([A-Za-z0-9_.]{1,30})(?:\/post\/([A-Za-z0-9_-]+))?\/?$/.exec(url.pathname);
-    if (url.protocol !== "https:" ||
-        !["threads.com", "www.threads.com"].includes(url.hostname.toLowerCase()) ||
-        url.username || url.password || url.search || url.hash || !match) return null;
-    return { url: url.href, handle: match[1], post: Boolean(match[2]) };
-  } catch { return null; }
+  const social = parsePublicSource(value);
+  return social?.platform === "Threads" ? social : null;
 }
-
 
 export function readIssueFields(body) {
   const values = {};
@@ -124,12 +127,12 @@ export function planIssueChange(issue, current) {
     const platform = field(f, "Listing platform").trim();
     // Older Issue Forms had no platform selector. Retain their code-based behavior
     // while enforcing the explicit platform in all new submissions.
-    if (platform && !["GitHub", "Threads"].includes(platform)) {
+    if (platform && !LISTING_PLATFORMS.includes(platform)) {
       return {outcome:"needs-review",kind,code,
-        reason:"Listing platform must be GitHub or Threads."};
+        reason:"Listing platform must be GitHub, Threads, X (Twitter) or Facebook."};
     }
     if (existing && platform) {
-      const listedPlatform = threadsReference(existing.sourceUrl) ? "Threads" : "GitHub";
+      const listedPlatform = listedPlatformOf(existing);
       if (platform !== listedPlatform) {
         return {outcome:"needs-review",kind,code,
           reason:"Selected platform does not match the catalog listing (" + listedPlatform +
@@ -145,41 +148,43 @@ export function planIssueChange(issue, current) {
       throw Error("Contributor permission and privacy confirmations are required.");
     }
     const selectedSource = field(f,"Code source").trim();
-    if (selectedSource && selectedSource !== GITHUB_OWN && selectedSource !== THREADS_FOUND) {
-      return { outcome:"needs-review",kind,code,reason:"Choose a supported GitHub or Threads source." };
+    if (selectedSource && !SUBMISSION_PLATFORMS.has(selectedSource)) {
+      return {outcome:"needs-review",kind,code,
+        reason:"Choose GitHub, Threads, X (Twitter) or Facebook as the code source."};
     }
-    const isThreads = selectedSource === THREADS_FOUND;
-    const urlField = field(f,THREADS_FIELD).trim();
-    // Legacy submissions did not have a source selector. They must not silently
-    // attribute another person's Threads code to the GitHub Issue reporter.
+    const sourcePlatform = SUBMISSION_PLATFORMS.get(selectedSource) || "GitHub";
+    const socialSubmission = sourcePlatform !== "GitHub";
+    const urlField = field(f,SOCIAL_FIELD).trim() || field(f,THREADS_FIELD).trim();
+    // Legacy issues omitted source selection; never claim public social URLs
+    // belong to a GitHub Issue reporter simply because the handles match.
     const legacyUrl = field(f,"Public confirmation or context (optional)").trim();
-    if (!selectedSource && threadsReference(legacyUrl)) {
+    if (!selectedSource && parsePublicSource(legacyUrl)) {
       return {outcome:"needs-review",kind,code,
-        reason:"Legacy Issues with a Threads URL need a new source selection and maintainer review."};
+        reason:"Legacy social-source Issues require platform selection and maintainer review."};
     }
-    if (!isThreads && urlField) {
+    if (!socialSubmission && urlField) {
       return {outcome:"needs-review",kind,code,
-        reason:"Select Threads as the code source when supplying a Threads URL."};
+        reason:"Choose the matching social code source when supplying a social URL."};
     }
-    const threads = isThreads ? threadsReference(urlField) : null;
-    if (isThreads && !threads) {
+    const social = socialSubmission ? parsePublicSource(urlField) : null;
+    if (socialSubmission && (!social || social.platform !== sourcePlatform)) {
       return {outcome:"needs-review",kind,code,
-        reason:"Threads codes need a valid public https://www.threads.com/@user/post/ID source link."};
+        reason:"Provide an HTTPS public profile or post URL matching the selected social platform."};
     }
-    if (isThreads && !threads.post) {
+    if (socialSubmission && !social.post) {
       return {outcome:"needs-review",kind,code,
-        reason:"A Threads profile alone does not prove that the code was posted. Supply the original public post URL for review."};
+        reason:"A social profile alone cannot prove a code was posted. Supply the original public post URL for maintainer review."};
     }
-    if (isThreads && ["Invite limit (optional; self-reported)",
+    if (socialSubmission && ["Invite limit (optional; self-reported)",
         "Uses so far (optional; self-reported)",
         "Remaining invites (optional; self-reported)"].some(label => field(f,label).trim())) {
       return {outcome:"needs-review",kind,code,
-        reason:"Threads source reports cannot claim owner-only quota numbers. Remove the quota fields or request manual review."};
+        reason:"Third-party social reports cannot claim owner-only quota numbers."};
     }
     if (existing) {
-      if (isThreads || threadsReference(existing.sourceUrl)) {
+      if (socialSubmission || parsePublicSource(existing.sourceUrl)) {
         return {outcome:"needs-review",kind,code,
-          reason:"The code is already listed. A Threads report cannot replace attribution, ownership or quota automatically; maintainer review is required."};
+          reason:"The code is already listed. A cross-platform report cannot replace attribution, ownership or quota automatically."};
       }
       if (!ownerMatches(existing,issue)) {
         return {outcome:"needs-review",kind,code,
@@ -205,13 +210,13 @@ export function planIssueChange(issue, current) {
       if (data.some(item => item.id === id)) throw Error("Catalog ID already exists.");
       const entry = {
         id, code, status:"unverified", addedAt:date,
-        ...(isThreads
-          ? {sourceUrl:threads.url, note:"Public Threads code reported in issue #"+issue.number+
+        ...(socialSubmission
+          ? {sourceUrl:social.url, note:"Public "+social.platform+" code reported in issue #"+issue.number+
               "; original post and Muse redemption require human review."}
           : {submittedBy:issue.user.login, note:"Community-submitted in issue #"+issue.number+
               "; redemption not independently verified."})
       };
-      if (!isThreads) {
+      if (!socialSubmission) {
         rememberOwnerId(entry,issue);
         const reported=actualQuota(f,date,{
           total:"Invite limit (optional; self-reported)",
@@ -222,12 +227,12 @@ export function planIssueChange(issue, current) {
         if (reported) Object.assign(entry,reported);
         else notice="Usage numbers were absent or incomplete; no available-slot count has been guessed.";
       } else {
-        notice="Threads @"+threads.handle+" is the cited public source, NOT the GitHub reporter or a verified code owner. "+
+        notice=social.platform+" @"+social.handle+" is the cited public source, NOT the GitHub reporter or a verified code owner. "+
           "Verify the original post and code before merging; do NOT invent availability or redemption results.";
       }
       const firstCommunity=data.findIndex(item=>item.featured!==true);
       data.splice(firstCommunity<0?data.length:firstCommunity,0,entry);
-      action=isThreads?"add Threads source":"add";
+      action=socialSubmission?"add "+social.platform+" source":"add";
     }
   } else if (kind === "count") {
     if (!existing) return { outcome:"needs-review",kind,code,reason:"Code not yet in the catalog; report requires manual triage." };
@@ -235,9 +240,9 @@ export function planIssueChange(issue, current) {
     if (!confirmation.includes("[x] I confirm that these figures came from a Muse invite screen")) {
       throw Error("The owner must confirm the figures came from their Muse invite screen.");
     }
-    if (threadsReference(existing.sourceUrl)) {
+    if (parsePublicSource(existing.sourceUrl)) {
       return {outcome:"needs-review",kind,code,
-        reason:"Threads attribution does not prove GitHub ownership. Owner quota updates for Threads codes require manual verification."};
+        reason:"Social attribution does not prove GitHub ownership. Owner quota updates for social codes require manual verification."};
     }
     if (!ownerMatches(existing,issue)) {
       return { outcome:"needs-review",kind,code,reason:"Only the cataloged code owner may submit a quota proposal automatically." };
@@ -379,8 +384,8 @@ async function propose(issue,token) {
     "",
     "### Required human checks",
     "- [ ] Verify the submitter, code and any ownership or usage claims",
-    proposed.action==="add Threads source"
-      ? "- [ ] Open the original Threads post, confirm it actually contains this code and matches the attributed account"
+    proposed.action.startsWith("add ") && proposed.action.endsWith(" source")
+      ? "- [ ] Open the original public social post and confirm it contains this code and matches the attributed account"
       : "- [ ] Confirm the original GitHub owner attribution and any account-reported quota",
     "- [ ] Review catalog diff, duplicates and contributor attribution",
     "- [ ] CI and security checks pass",

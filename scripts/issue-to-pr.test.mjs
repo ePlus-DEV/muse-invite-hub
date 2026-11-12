@@ -160,14 +160,14 @@ test("unsupported and unsafe issues cannot create catalog proposals",()=>{
 const updatedShare = (source, url="", quota=false) => [
   "### Invite code", "", "18I70N", "",
   "### Code source", "", source, "",
-  "### Threads public post or profile URL (required for Threads)", "", url || "_No response_", "",
+  "### Social post or profile URL (required for Threads, X or Facebook)", "", url || "_No response_", "",
   "### Public confirmation or context (optional)", "", "_No response_", "",
   "### Uses so far (optional; self-reported)", "", "_No response_", "",
   "### Invite limit (optional; self-reported)", "", quota ? "30" : "_No response_", "",
   "### Remaining invites (optional; self-reported)", "", "_No response_", "",
   "### Notes (optional)", "", "_No response_", "",
   "### Contributor checklist", "",
-  "- [x] I own this public code or am reporting a code explicitly shared publicly at the Threads link above; this issue is public.",
+  "- [x] I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
   "- [x] This code is not a password, 2FA code, session token or private credential."
 ].join("\n");
 
@@ -276,7 +276,7 @@ test("count form checks platform before owner identity for same-name cross-platf
   const attempted=planIssueChange(issue(76,"[Count update]",
     withListingPlatform(threadsCount,"Threads"),"sameperson"),catalog);
   assert.equal(attempted.outcome,"needs-review");
-  assert.match(attempted.reason,/Threads attribution/);
+  assert.match(attempted.reason,/Social attribution/);
 
   const mismatch=planIssueChange(issue(77,"[Count update]",
     withListingPlatform(threadsCount,"GitHub"),"sameperson"),catalog);
@@ -300,4 +300,60 @@ test("matching usernames from a Threads source never assert GitHub ownership on 
   assert.equal(next.sourceUrl,"https://www.threads.com/@baijiling2/post/example");
   assert.equal(next.submittedBy,undefined);
   assert.equal(next.submittedById,undefined);
+});
+
+test("X and Facebook public post Issues propose unverified drafts without GitHub ownership", () => {
+  for (const [platform,code,url,expectedPlatform] of [
+    ["X (Twitter) (public code I found)","XX1234","https://x.com/sameperson/status/1234567890123456","X (Twitter)"],
+    ["Facebook (public code I found)","FB1234","https://www.facebook.com/sameperson/posts/pfbid0123456789","Facebook"]
+  ]) {
+    const body = updatedShare(platform,url).replace("18I70N",code);
+    const result = planIssueChange(issue(85,"[Invite] "+code,body,"sameperson"),[item]);
+    assert.equal(result.outcome,"proposal",expectedPlatform);
+    assert.equal(result.action,"add "+expectedPlatform+" source");
+    const entry = result.data.find(row=>row.code===code);
+    assert.equal(entry.sourceUrl,url);
+    assert.equal(entry.submittedBy,undefined);
+    assert.equal(entry.submittedById,undefined);
+    assert.equal(entry.reportedCapacity,undefined);
+    assert.equal(entry.status,"unverified");
+    assert.deepEqual(validateCatalog(result.data),[]);
+    assert.match(result.notice,/NOT the GitHub reporter/);
+  }
+});
+
+test("reject wrong social source, profile-only links and third-party quota claims", () => {
+  const link = "https://x.com/sameperson/status/1234567890";
+  const xBody = updatedShare("X (Twitter) (public code I found)",link);
+  assert.equal(planIssueChange(issue(86,"[Invite]",xBody.replace(link,"https://x.com/sameperson")),[item]).outcome,"needs-review");
+  assert.equal(planIssueChange(issue(87,"[Invite]",xBody.replace(link,"https://www.facebook.com/sameperson/posts/pfbid12345")),[item]).outcome,"needs-review");
+  assert.equal(planIssueChange(issue(88,"[Invite]",updatedShare("X (Twitter) (public code I found)",link,true)),[item]).outcome,"needs-review");
+  assert.equal(planIssueChange(issue(89,"[Invite]",updatedShare("Facebook (public code I found)","https://www.facebook.com/share/p/example")),[item]).outcome,"needs-review");
+});
+
+test("X and Facebook reports cannot hijack same-named GitHub or Threads accounts", () => {
+  const existing = [
+    {id:"x-acc",code:"XX1234",status:"unverified",addedAt:"2026-11-11",
+      sourceUrl:"https://x.com/sameperson/status/1234567890"},
+    {id:"facebook-acc",code:"FB1234",status:"unverified",addedAt:"2026-11-11",
+      sourceUrl:"https://www.facebook.com/sameperson/posts/pfbid123456"},
+    {id:"github-acc",code:"GH1234",status:"unverified",addedAt:"2026-11-11",
+      submittedBy:"sameperson"}
+  ];
+  const input=feedback("Muse accepted the code (worked for me)").replace("PNSMZZ","XX1234");
+  const good=planIssueChange(issue(90,"[Code feedback]",
+    withListingPlatform(input,"X (Twitter)"),"sameperson"),[item,...existing]);
+  assert.equal(good.outcome,"proposal");
+  assert.equal(good.data.find(row=>row.code==="XX1234").status,"reported-working");
+  assert.equal(good.data.find(row=>row.code==="GH1234").status,"unverified");
+  assert.equal(planIssueChange(issue(91,"[Code feedback]",
+    withListingPlatform(input,"GitHub"),"sameperson"),[item,...existing]).outcome,"needs-review");
+  const fbInput=feedback("Muse did not accept the code").replace("PNSMZZ","FB1234");
+  assert.equal(planIssueChange(issue(92,"[Code feedback]",
+    withListingPlatform(fbInput,"Facebook"),"sameperson"),[item,...existing]).outcome,"proposal");
+  const fbCount=count().replace("DPNIHH","FB1234");
+  assert.equal(planIssueChange(issue(93,"[Count update]",
+    withListingPlatform(fbCount,"Facebook"),"sameperson"),[item,...existing]).outcome,"needs-review");
+  assert.equal(planIssueChange(issue(94,"[Invite]",
+    updatedShare("GitHub (my own code)").replace("18I70N","XX1234"),"sameperson"),[item,...existing]).outcome,"needs-review");
 });
