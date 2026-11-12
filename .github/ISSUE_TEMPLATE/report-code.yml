@@ -13,14 +13,12 @@ body:
       placeholder: "Code from this directory"
     validations:
       required: true
-  - type: dropdown
+  - type: input
     id: listing_platform
     attributes:
       label: Listing platform
-      description: "Choose the platform shown on the invite card. The same @username on GitHub and Threads represents different accounts."
-      options:
-        - GitHub
-        - Threads
+      description: "GitHub or Threads. Prefilled when you click Give feedback on the website; editable before submission. The same @username on GitHub and Threads represents different accounts."
+      placeholder: "GitHub or Threads"
     validations:
       required: true
   - type: dropdown
