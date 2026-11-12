@@ -18,8 +18,8 @@ For GitHub-owned codes only: if your code is already listed under the same GitHu
 
 ## Report code feedback
 
-1. Use **Give feedback** on a code card or detail page to open the Issue Form with an editable title of **`[Code feedback] CODE`**, its **Invite code**, and its **Listing platform** supplied in the link. You can edit the title and fields before submitting. Alternatively, open [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) manually.
-2. Confirm the exact code and editable **Listing platform** text field (`GitHub` or `Threads`) shown on the card, then report accepted, rejected, exhausted, no redeem option, duplicate, or other. GitHub Issue Form dropdowns do not reliably support URL prefilling, so this one field is plain text; an unknown value or mismatched source is sent for manual review.
+1. Use **Give feedback** on a code card or detail page to open the Issue Form with its editable title **`[Code feedback] CODE`** and **Invite code** prefilled. Alternatively, open [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) manually.
+2. Select **Listing platform** from the required GitHub/Threads dropdown, based on the code's source shown on the website. GitHub cannot preselect dropdown values from URL parameters, so this selection remains manual. Confirm or edit the code/title, then report accepted, rejected, exhausted, no redeem option, duplicate, or other. The bot rejects a platform inconsistent with the catalog.
 3. Include the date and non-sensitive error text or context if helpful. A GitHub user and a Threads user with the same @handle are **different accounts**; the reporter's username does not override the listed source.
 
 One attempt is **community feedback**, not proof that every account or region will behave the same way. Clear accepted/rejected feedback can produce an automated **Draft PR** with a community-reported status and date; ambiguous feedback stays for manual triage. Only a reviewed and merged PR should change `status` or `checkedAt`.
