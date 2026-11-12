@@ -152,7 +152,9 @@ test("Threads codes retain attribution on detail pages and remain noindex", () =
   assert.doesNotMatch(generateSitemap([owner(), entry]), /codes\/XZ4PV6/);
   const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const app = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
-  assert.equal((home.match(/class="source-filter(?: is-active)?"/g) || []).length, 3);
+  assert.equal((home.match(/class="source-filter(?: is-active)?"/g) || []).length, 5);
+  assert.match(home, /data-source="x"/);
+  assert.match(home, /data-source="facebook"/);
   assert.match(home, /data-source="threads"/);
   assert.match(app, /sourceInfo\(item\)\.handle/);
   assert.match(app, /sourceFilter === "all"/);
@@ -192,4 +194,22 @@ test("Give feedback prefills editable issue title and code; platform remains a d
     assert.equal(url.searchParams.getAll("title").length, 1);
     assert.equal(url.searchParams.getAll("listing_platform").length, 0);
   }
+});
+
+test("X and Facebook social codes use correct source links and remain noindex", () => {
+  for (const [code, url, label] of [
+    ["X12345", "https://x.com/muse_helper/status/1234567890123456789", "X (Twitter) · @muse_helper"],
+    ["FB1234", "https://www.facebook.com/muse.helper/posts/pfbid0123456789", "Facebook · @muse.helper"]
+  ]) {
+    const entry = {id:"test-"+code.toLowerCase(),code,status:"unverified",addedAt:"2026-11-12",sourceUrl:url};
+    const html = renderDetailPage(entry);
+    assert.ok(html.includes(label), "wrong source attribution: " + code);
+    assert.ok(html.includes(url), "missing source permalink: " + code);
+    assert.match(html, /name="robots" content="noindex,follow"/);
+    assert.doesNotMatch(generateSitemap([owner(),entry]), new RegExp("/codes/" + code + "/"));
+  }
+  const app = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
+  assert.match(app, /"X \(Twitter\)","x","fa-brands fa-x-twitter"/);
+  assert.match(app, /"Facebook","facebook","fa-brands fa-facebook-f"/);
+  assert.match(app, /sourceInfo\(item\)\.key === sourceFilter/);
 });
