@@ -368,3 +368,31 @@ html.is-page-loading body>.site-footer{display:none!important}
  .skel-detail{padding-top:26px}.skel-detail-main>.skel-title{height:36px!important}.skel-detail-code{padding:21px 18px}.skel-detail-sidebar{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){.skel-shimmer{animation:none!important;background:#e8eef7}}
+
+
+/* Saved codes and quick feedback: browser-only state and explicit GitHub Issue links. */
+.saved-filter{min-height:35px;padding:7px 13px;border:1px solid var(--blue-line);border-radius:999px;background:#fff;color:var(--muted);font-size:11.5px;font-weight:800;display:inline-flex;align-items:center;gap:7px;transition:border-color .15s,background .15s,color .15s;margin-left:auto}
+.saved-filter:hover,.saved-filter:focus-visible{border-color:var(--blue);color:var(--blue)}
+.saved-filter[aria-pressed="true"]{background:var(--blue-soft);border-color:#87baff;color:#0057dd}
+.saved-count{min-width:20px;line-height:19px;text-align:center;border-radius:99px;background:#edf2fa;color:#43546b;padding:0 5px;font-size:10px;font-variant-numeric:tabular-nums}
+.saved-filter[aria-pressed="true"] .saved-count{background:#d3e6ff;color:#0057dd}
+.card-head-actions{display:flex;align-items:center;gap:6px;flex:none}
+.card-save{display:grid;place-items:center;flex:none;width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--muted);font-size:14px;transition:border-color .15s,background .15s,color .15s}
+.card-save:hover,.card-save:focus-visible{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
+.card-save[aria-pressed="true"]{background:var(--blue-soft);border-color:#a9c8ff;color:#0064ff}
+.card-feedback-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.card-quick-feedback{min-height:34px;padding:8px 6px;display:inline-flex;justify-content:center;align-items:center;gap:5px;white-space:nowrap;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--muted);font-size:10.5px;font-weight:800;transition:border-color .15s,background .15s,color .15s}
+.card-quick-feedback:hover,.card-quick-feedback:focus-visible{border-color:var(--blue-line);background:var(--blue-soft);color:var(--blue)}
+.card-quick-worked i{color:var(--green)}
+.card-quick-failed i{color:var(--red)}
+.detail-save[aria-pressed="true"]{background:var(--blue-soft);color:var(--blue);border-color:var(--blue-line)}
+.detail-feedback-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.detail-quick-feedback{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--blue-line);border-radius:10px;background:#fff;padding:9px 11px;color:var(--blue);font-size:12px;font-weight:700;text-decoration:none;min-height:40px}
+.detail-quick-feedback:hover{background:var(--blue-soft)}
+@media(max-width:620px){.saved-filter{margin-left:0}.card-save{width:40px;height:40px}.card-quick-feedback{min-height:40px}.detail-feedback-actions{display:grid;grid-template-columns:1fr 1fr}}
+
+/* Shared accessible tooltip, rendered at document level to avoid clipping
+   inside decorative code panels or dropdowns. */
+#muse-action-tooltip{position:fixed;z-index:1000;pointer-events:none;max-width:min(280px,calc(100vw - 20px));width:max-content;padding:10px 12px;border:1px solid rgba(199,222,255,.9);border-radius:10px;background:#15243b;color:#fff;box-shadow:0 10px 26px rgba(16,24,40,.20);font-size:12px;font-weight:600;line-height:1.45;text-align:left;overflow-wrap:anywhere}
+#muse-action-tooltip[hidden]{display:none!important}
+@media(max-width:620px){#muse-action-tooltip{max-width:min(250px,calc(100vw - 20px));font-size:11.5px}}

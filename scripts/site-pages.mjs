@@ -124,6 +124,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '  <script async src="https://www.googletagmanager.com/gtag/js?id=G-N1MZ8YLNLJ"></script>\n' +
     '  <script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag(\'js\', new Date());gtag(\'config\', \'G-N1MZ8YLNLJ\');</script>\n' +
     '  <script type="application/ld+json">' + jsonLd(graph) + '</script>\n' +
+    '  <script src="../../assets/directory-features.js" defer></script>\n' +
     '  <script src="../../assets/detail.js" defer></script>\n' +
     '</head>\n<body>\n' +
     '  <a class="skip-link" href="#detail-title">Skip to invite details</a>\n' +
@@ -149,6 +150,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '            <span class="detail-owner">' + escapeHtml(author) + '</span></div>' +
     '          <p class="detail-code" id="detail-code">' + escapeHtml(item.code) + '</p>' +
     '          <div class="detail-action-row"><button class="button button-primary" type="button" id="detail-copy"><i class="fa-regular fa-copy" aria-hidden="true"></i> <span class="detail-copy-label">Copy invite code</span></button>' +
+    '            <button class="button button-outlined detail-save" id="detail-save" type="button" aria-pressed="false" hidden><i class="fa-regular fa-bookmark" aria-hidden="true"></i> <span class="detail-save-label">Save code</span></button>' +
     '            <a class="button button-outlined" href="https://muse.ai/join" target="_blank" rel="noopener noreferrer">Open Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div>' +
     '          <p class="detail-caution">' + escapeHtml(ownerText) + '</p>' +
     '        </div>' + notes +
@@ -168,7 +170,9 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '            <div><dt>Listed</dt><dd>' + escapeHtml(dateText(item.addedAt)) + '</dd></div>' +
     '            <div><dt>Redemption status</dt><dd>' + escapeHtml(item.status === "unverified" ? "Unverified" : statusLine) + '</dd></div></dl>' +
     '        </div><div class="detail-info-card detail-feedback"><h2>Does this code work?</h2><p>Share your experience to help the community keep listings accurate.</p>' +
-    '          <a href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-comment" aria-hidden="true"></i> Give feedback</a></div>' +
+    '          <a href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-comment" aria-hidden="true"></i> Give feedback</a>' +
+    '          <div class="detail-feedback-actions"><a class="detail-quick-feedback" data-feedback-outcome="worked" href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-thumbs-up" aria-hidden="true"></i> Worked for me</a>' +
+    '            <a class="detail-quick-feedback" data-feedback-outcome="failed" href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-thumbs-down" aria-hidden="true"></i> Didn\'t work</a></div></div>' +
     '      </aside>' +
     '    </div><a class="detail-back" href="../../#codes"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to all invite codes</a>' +
     '    <p class="detail-independent">Muse Invite Hub is independent and not affiliated with Muse or Meta.</p>' +
