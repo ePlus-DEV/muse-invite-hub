@@ -8,7 +8,11 @@
   };
   const grid = document.getElementById("code-grid");
   const searchInput = document.getElementById("code-search");
-  const sortInput = document.getElementById("sort-codes");
+  const sortTrigger = document.getElementById("sort-trigger");
+  const sortMenu = document.getElementById("sort-menu");
+  const sortCurrent = document.getElementById("sort-current");
+  const sortOptions = [...sortMenu.querySelectorAll(".sort-option")];
+  let sortValue = "newest";
   const resultCount = document.getElementById("result-count");
   const more = document.getElementById("directory-more");
   const moreButton = document.getElementById("load-more-codes");
@@ -180,7 +184,7 @@
       String(item.submittedBy || "").toLowerCase().includes(q) ||
       String(item.note || "").toLowerCase().includes(q)
     );
-    const sort = sortInput.value;
+    const sort = sortValue;
     visible.sort((a, b) => {
       if (Boolean(a.featured) !== Boolean(b.featured)) return a.featured ? -1 : 1;
       return sort === "code" ? a.code.localeCompare(b.code) : sort === "oldest"
@@ -223,7 +227,58 @@
     render();
   }
   searchInput.addEventListener("input", () => render(true));
-  sortInput.addEventListener("change", () => render(true));
+  function closeSortMenu(restoreFocus = false) {
+    sortMenu.hidden = true;
+    sortTrigger.setAttribute("aria-expanded", "false");
+    if (restoreFocus) sortTrigger.focus();
+  }
+  function openSortMenu(index = sortOptions.findIndex(option => option.dataset.sort === sortValue)) {
+    sortMenu.hidden = false;
+    sortTrigger.setAttribute("aria-expanded", "true");
+    sortOptions[Math.max(0, index)].focus();
+  }
+  sortTrigger.addEventListener("click", () => {
+    if (sortMenu.hidden) openSortMenu();
+    else closeSortMenu(true);
+  });
+  sortTrigger.addEventListener("keydown", event => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      openSortMenu(event.key === "ArrowDown" ? 0 : sortOptions.length - 1);
+    }
+  });
+  sortMenu.addEventListener("click", event => {
+    const option = event.target.closest(".sort-option");
+    if (!option || !sortMenu.contains(option)) return;
+    sortValue = option.dataset.sort;
+    sortCurrent.textContent = option.textContent;
+    for (const entry of sortOptions) {
+      entry.setAttribute("aria-checked", String(entry === option));
+    }
+    closeSortMenu(true);
+    render(true);
+  });
+  sortMenu.addEventListener("keydown", event => {
+    const index = sortOptions.indexOf(document.activeElement);
+    let next = index;
+    if (event.key === "ArrowDown") next = (index + 1) % sortOptions.length;
+    else if (event.key === "ArrowUp") next = (index - 1 + sortOptions.length) % sortOptions.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = sortOptions.length - 1;
+    else if (event.key === "Escape") {
+      event.preventDefault();
+      closeSortMenu(true);
+      return;
+    } else if (event.key === "Tab") {
+      closeSortMenu();
+      return;
+    } else return;
+    event.preventDefault();
+    sortOptions[next].focus();
+  });
+  document.addEventListener("pointerdown", event => {
+    if (!sortTrigger.parentElement.contains(event.target)) closeSortMenu();
+  });
   moreButton.addEventListener("click", () => {
     const previousCount = grid.children.length;
     displayLimit += PAGE_SIZE;
