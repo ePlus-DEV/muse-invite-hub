@@ -272,39 +272,70 @@ button{cursor:pointer}
 .help-content #faq p{font-size:12.5px;line-height:1.7;margin:0 0 11px}
 
 /* A compact, source-linked regional availability disclosure ahead of code listings. */
-.availability-section{margin:-2px 0 16px;scroll-margin-top:92px}
-.availability-disclosure{background:#fff;border:1px solid var(--blue-line);border-radius:13px;box-shadow:var(--shadow-sm);overflow:hidden}
-.availability-disclosure>summary{display:flex;align-items:center;gap:12px;cursor:pointer;padding:12px 15px;list-style:none}
+/* Availability panel shared by the directory and generated invite details. */
+.availability-section{margin:0 0 16px;scroll-margin-top:92px;min-width:0}
+.availability-disclosure{background:#fff;border:1px solid var(--blue-line);border-radius:17px;box-shadow:var(--shadow-sm);overflow:hidden}
+.availability-disclosure>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:70px;padding:12px 16px;cursor:pointer;list-style:none;transition:background .15s}
 .availability-disclosure>summary::-webkit-details-marker{display:none}
-.availability-heading{display:inline-flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:12.5px;color:var(--ink)}
-.availability-heading>i{color:var(--blue);font-size:15px}
-.availability-heading strong{font-weight:800}
-.availability-count{font-size:10.5px;font-weight:700;color:var(--muted);white-space:nowrap}
-.availability-flags{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex:none}
-.availability-flags img,.availability-flag{display:block;width:24px;height:18px;object-fit:cover;border:1px solid rgba(29,50,81,.16);border-radius:3px;box-shadow:0 1px 2px rgba(20,35,57,.08)}
-.availability-chevron{color:var(--blue);font-size:11px;transition:transform .15s;flex:none}
+.availability-disclosure>summary:hover{background:#f8fbff}
+.availability-disclosure>summary:focus-visible{outline:3px solid #accfff;outline-offset:-4px;border-radius:16px}
+.availability-summary-main{display:flex;align-items:center;gap:11px;min-width:0;flex:1}
+.availability-symbol{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--blue-soft);color:var(--blue);font-size:16px}
+.availability-heading{min-width:0;display:flex;flex-direction:column;gap:3px}
+.availability-heading strong{font-size:13.5px;line-height:1.35;color:var(--ink);font-weight:850}
+.availability-count{font-size:11px;line-height:1.3;color:var(--muted);font-weight:650}
+.availability-summary-end{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex:none}
+.availability-flags{display:flex;align-items:center;padding-left:6px;flex:none}
+.availability-flags img{display:block;width:25px;height:19px;margin-left:-6px;border:2px solid #fff;border-radius:5px;object-fit:cover;box-shadow:0 1px 4px rgba(20,35,57,.17)}
+.availability-chevron{font-size:11px;color:var(--blue);transition:transform .15s;flex:none}
 .availability-disclosure[open] .availability-chevron{transform:rotate(180deg)}
-.availability-content{padding:0 15px 15px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
-.availability-content>p{margin:12px 0;line-height:1.7}
-.availability-market-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr;gap:0}
-.availability-market-list li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line)}
-.availability-market-list li:last-child{border-bottom:none}
-.availability-market{display:inline-flex;align-items:center;gap:8px;font-weight:800;color:var(--ink)}
-.availability-date{color:var(--muted)}
-.availability-market-list a,.availability-note a{font-size:11.5px;color:var(--blue);font-weight:800;text-decoration:underline;text-underline-offset:3px}
-.availability-market-list a:hover,.availability-note a:hover{color:var(--blue-hover)}
-.availability-note{background:var(--blue-soft);padding:11px 12px;border-radius:10px;color:var(--text)}
+.availability-content{padding:0 15px 15px;border-top:1px solid var(--line);color:var(--muted)}
+.availability-intro{margin:14px 1px 13px;font-size:12px;line-height:1.7}
+.availability-market-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.availability-market-list li{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 6px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fbfcff}
+.availability-market{grid-column:1/-1;display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;font-weight:800;color:var(--ink)}
+.availability-flag{width:26px;height:19px;object-fit:cover;border:1px solid rgba(29,50,81,.16);border-radius:4px}
+.availability-date{font-size:10.5px;line-height:1.4;color:var(--muted)}
+.availability-market-list a{white-space:nowrap;font-size:10.5px;font-weight:800;color:var(--blue);text-decoration:none}
+.availability-market-list a:hover,.availability-market-list a:focus-visible,.availability-note a:hover{color:var(--blue-hover);text-decoration:underline;text-underline-offset:3px}
+.availability-note{display:flex;align-items:flex-start;gap:9px;margin:12px 0 0;padding:12px;border-radius:11px;background:var(--blue-soft);font-size:11.5px;line-height:1.6;color:var(--text)}
+.availability-note>i{color:var(--blue);flex:none;margin-top:3px}
+.availability-note a{color:var(--blue);font-weight:800}
+.detail-market-section{margin:22px 0 0}
+.detail-market-section .availability-disclosure{box-shadow:var(--shadow-sm)}
 @media(max-width:620px){
-  .availability-section{margin-top:0;margin-bottom:12px}
-  .availability-disclosure>summary{flex-wrap:wrap;gap:7px;padding:11px 12px}
-  .availability-heading{font-size:12px;flex-basis:calc(100% - 18px);flex-wrap:wrap}
-  .availability-flags{order:2;gap:4px}
-  .availability-flags img{width:20px;height:15px}
-  .availability-chevron{margin-left:auto;order:3}
+  /* Keep Search and Sort in ONE horizontal row without squeezing the input off-screen. */
+  .directory-toolbar{flex-direction:row;align-items:stretch;gap:8px;margin-bottom:14px}
+  .directory-toolbar .search-field{flex:1 1 0;width:auto;min-width:0;min-height:46px;padding:0 11px;gap:8px}
+  .directory-toolbar .search-field input{min-width:0;width:100%;font-size:12px;text-overflow:ellipsis}
+  .directory-toolbar .shortcut-hint{display:none}
+  .directory-toolbar .sort-field{flex:0 0 clamp(122px,37vw,148px);width:clamp(122px,37vw,148px);min-width:0;min-height:46px;gap:0;padding:0 3px;justify-content:center}
+  .directory-toolbar .sort-field>i{display:none}
+  .directory-toolbar #sort-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+  .directory-toolbar .sort-dropdown{width:100%;min-width:0}
+  .directory-toolbar .sort-trigger{display:flex;width:100%;min-width:0;min-height:44px;padding:0 6px;gap:6px;font-size:11.5px}
+  .directory-toolbar #sort-current{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .directory-toolbar .sort-menu{min-width:188px;max-width:min(260px,calc(100vw - 32px))}
+  .availability-disclosure>summary{min-height:66px;padding:12px;gap:8px}
+  .availability-symbol{width:34px;height:34px;border-radius:10px;font-size:14px}
+  .availability-summary-main{gap:9px}
+  .availability-heading strong{font-size:12.5px}
+  .availability-count{font-size:10px}
+  .availability-summary-end{gap:8px}
+  .availability-flags img{width:21px;height:16px}
   .availability-content{padding:0 12px 12px}
-  .availability-market-list li{grid-template-columns:1fr auto;gap:2px 8px}
-  .availability-market-list a{grid-column:2;grid-row:1/3;white-space:nowrap}
-  .availability-date{font-size:11px;padding-left:2px}
+  .availability-market-list{grid-template-columns:1fr;gap:7px}
+  .availability-market-list li{padding:10px 12px}
+  .availability-intro{font-size:11.5px}
+  .detail-market-section{margin-top:17px}
+}
+@media(max-width:360px){
+  .directory-toolbar .sort-field{flex-basis:118px;width:118px}
+  .directory-toolbar .search-field{padding-inline:9px}
+  .directory-toolbar .search-field input{font-size:11px}
+  .availability-heading strong{font-size:11.5px}
+  .availability-count{font-size:9.5px}
+  .availability-flags img{width:18px;height:14px}
 }
 
 
