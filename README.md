@@ -30,6 +30,15 @@ No coding required:
 
 All Issue submissions are public and reviewed; never share passwords, session tokens or private account information. See the [contribution guide](CONTRIBUTING.md) for instructions.
 
+## Telegram Bot on Oracle Always Free
+
+The optional Telegram Bot runs as a **linux/arm64 Docker image** on an Oracle Cloud Always Free Ampere A1 VM, with Caddy HTTPS and an HTTPS webhook. GitHub Pages remains the only published catalog. Bot-submitted codes and feedback go into the **existing GitHub Issues** review queue; Telegram does not establish GitHub identity or Muse redemption, and nothing auto-merges.
+
+- [Telegram deployment runbook](telegram/README.md) — OCI ARM64 VM, DNS, BotFather, Docker Compose, secrets and webhook registration.
+- [Build Telegram OCI ARM64 image](.github/workflows/telegram-oci-image.yml) — **manual only** after review and merge to main.
+
+No bot, VM, cloud credentials or hostname is provisioned by the repository itself.
+
 ## Development
 
 Static HTML, CSS and JavaScript — no backend or npm dependencies. To run the homepage locally:
