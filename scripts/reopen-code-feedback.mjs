@@ -59,7 +59,13 @@ export async function reopenOnFeedback({
       !Number.isSafeInteger(commentId) || commentId <= 0) {
     throw Error("Trusted repository, token, issue and comment identifiers required");
   }
-  const entries = catalog ?? JSON.parse(readFileSync(new URL("../data/invites.json", import.meta.url), "utf8"));
+  const rawEntries = catalog ?? JSON.parse(readFileSync(new URL("../data/invites.json", import.meta.url), "utf8"));
+  const roots = catalog ? {} : JSON.parse(readFileSync(new URL("../data/code-issues.json", import.meta.url), "utf8"));
+  const entries = rawEntries.map(item => ({
+    ...item,
+    ...(Number.isSafeInteger(roots[item.code]) && roots[item.code] > 0
+      ? {feedbackIssueNumber:roots[item.code]} : {})
+  }));
   const issue = await github("GET", "issues/" + issueNumber, token);
   const comment = await github("GET", "issues/comments/" + commentId, token);
   if (comment.issue_url?.split("/").at(-1) !== String(issueNumber) ||
