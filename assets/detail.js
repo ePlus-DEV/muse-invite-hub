@@ -73,19 +73,23 @@
       if (feedbackLink) {
         feedbackLink.href = url;
         feedbackLink.dataset.tooltip =
-          "Comment on this code's existing GitHub Issue. New feedback reopens it for review.";
+          "Prepare an editable comment for this code's existing Issue.";
+        feedbackLink.addEventListener("click", event => {
+          if (features.openFeedbackDialog(detailCode, "other", number, feedbackLink)) {
+            event.preventDefault();
+          }
+        });
       }
       for (const link of quickLinks) {
         const outcome = link.dataset.feedbackOutcome;
         link.href = features.quickFeedbackUrl(detailCode, outcome, number);
         link.dataset.tooltip = outcome === "worked" ?
-          "Open the existing Issue, then paste your suggested success report." :
-          "Open the existing Issue, then paste your suggested failure report.";
-        link.addEventListener("click", () => {
-          if (!navigator.clipboard || !window.isSecureContext) return;
-          void navigator.clipboard.writeText(features.feedbackComment(detailCode, outcome))
-            .then(() => { live.textContent = "Suggested report copied. Paste it as a comment on GitHub."; })
-            .catch(() => { live.textContent = "Describe your result as a GitHub Issue comment."; });
+          "Review and copy a prepared success report for the original Issue." :
+          "Review and copy a prepared failure report for the original Issue.";
+        link.addEventListener("click", event => {
+          if (features.openFeedbackDialog(detailCode, outcome, number, link)) {
+            event.preventDefault();
+          }
         });
       }
     }
