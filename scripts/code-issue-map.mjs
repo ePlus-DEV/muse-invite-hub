@@ -74,7 +74,15 @@ export async function syncCodeIssueMap(items, listIssues, createIssue, {allowMis
     if (!CODE.test(item?.code || "") || Object.hasOwn(map, item.code)) {
       throw Error("Invalid or duplicate published invite code");
     }
-    let existing = resolveExistingIssue(item, issues);
+    let existing;
+    try {
+      existing = resolveExistingIssue(item, issues);
+    } catch (error) {
+      // PR validation uses a read-only partial GitHub Issue view. It must never
+      // create Issues or require the production map before the trusted deploy.
+      if (allowMissing && error.message.startsWith("Explicit code Issue mapping not found")) continue;
+      throw error;
+    }
     if (!existing && allowMissing) continue;
     if (!existing) {
       const created = await createIssue({
