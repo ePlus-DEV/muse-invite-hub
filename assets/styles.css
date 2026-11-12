@@ -478,3 +478,18 @@ html.is-page-loading body>.site-footer{display:none!important}
   .footer-inner .footer-tagline{font-size:11px}
   .footer-bottom{gap:7px;padding-top:12px;padding-bottom:17px;font-size:10.5px;line-height:1.55}
 }
+
+
+/* Copy history is a personal browser cue, not a redemption/owner status.
+   Use soft violet so it cannot be confused with blue verified-owner or green success. */
+.code-card.code-card-copied{border-color:#bda7ec;background:linear-gradient(155deg,#f7f3ff,#fff 82%);box-shadow:0 5px 22px rgba(88,54,151,.08)}
+.code-card.code-card-copied:hover{border-color:#9f83df;box-shadow:0 14px 30px rgba(88,54,151,.13)}
+.code-card-copied .card-copy,.code-card-featured.code-card-copied .card-copy{background:#ede5ff;color:#6335a4;border:1px solid #d3c2f5}
+.code-card-copied .card-copy:hover,.code-card-featured.code-card-copied .card-copy:hover{background:#e3d7ff;color:#51278d}
+.card-facts .card-copy-note{color:#6335a4;font-size:10.5px;font-weight:750}
+.card-facts .card-copy-note i{color:#8252c8}
+.detail-code-panel.detail-code-panel-copied{border-color:#bda7ec;background:linear-gradient(135deg,#f3ecff,#fff 75%);box-shadow:0 12px 30px rgba(88,54,151,.08)}
+.detail-code-panel-copied #detail-copy{background:#ede5ff;color:#6335a4;border-color:#d3c2f5}
+.detail-code-panel-copied #detail-copy:hover,.detail-code-panel-copied #detail-copy:focus-visible{background:#e3d7ff;color:#51278d}
+.detail-copy-note{margin:11px 0 0;font-size:12px;font-weight:750;line-height:1.5;color:#6335a4}
+.detail-copy-note::before{content:"";display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:#8252c8;vertical-align:middle}
