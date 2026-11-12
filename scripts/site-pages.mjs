@@ -78,10 +78,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     ? '<a href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener noreferrer">' +
       escapeHtml(platform + " · " + author) + ' <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>'
     : escapeHtml(platform);
-  const feedbackUrl = new URL("https://github.com/ePlus-DEV/muse-invite-hub/issues/new");
-  feedbackUrl.searchParams.set("template", "report-code.yml");
-  feedbackUrl.searchParams.set("invite_code", item.code);
-  feedbackUrl.searchParams.set("title", "[Code feedback] " + item.code);
+  const feedbackUrl = new URL("https://github.com/ePlus-DEV/muse-invite-hub/issues");
   const ownerText = item.ownerConfirmed
     ? 'Owner-confirmed by ePlus.DEV. Ownership confirmation does not mean the code has been redeemed or validated by Muse.'
     : 'This community listing has not been independently tested. Its appearance here does not guarantee Muse access.';
