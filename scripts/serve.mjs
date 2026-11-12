@@ -36,7 +36,8 @@ export function createStaticServer(root = process.cwd()) {
       const asset = parts.length ? parts.join("/") : "index.html";
       target=resolve(base,asset);
       const pathStat=await stat(target).catch(()=>null);
-      if (pathStat?.isDirectory() || pathname.endsWith("/")) target=resolve(target,"index.html");
+      if (pathStat?.isDirectory()) target=resolve(target,"index.html");
+      else if (pathname.endsWith("/") && parts.length) throw Error("Directory not found");
       const rel=relative(base,target);
       if (rel===".." || rel.startsWith(".."+sep) || isAbsolute(rel)) throw Error("Path escapes root");
       const real=await realpath(target);
