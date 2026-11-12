@@ -6,8 +6,10 @@ on:
     types: [created]
 
 permissions:
-  contents: read
+  contents: write
   issues: write
+  pull-requests: write
+  actions: write
 
 concurrency:
   group: muse-feedback-issue-${{ github.event.issue.number }}
@@ -33,10 +35,17 @@ jobs:
       - name: Verify trusted feedback handler
         run: |
           node --check scripts/reopen-code-feedback.mjs
-          node --test scripts/code-issue-map.test.mjs
+          node --check scripts/feedback-comment-to-pr.mjs
+          node --test scripts/code-issue-map.test.mjs scripts/feedback-comment-to-pr.test.mjs
       - name: Reopen original code Issue after a real comment
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           COMMENT_ID: ${{ github.event.comment.id }}
         run: node scripts/reopen-code-feedback.mjs
+      - name: Propose review-only Draft PR for a structured report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: node scripts/feedback-comment-to-pr.mjs
