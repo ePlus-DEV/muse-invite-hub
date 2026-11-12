@@ -406,3 +406,19 @@ html.is-page-loading body>.site-footer{display:none!important}
 #muse-action-tooltip{position:fixed;z-index:1000;pointer-events:none;max-width:min(280px,calc(100vw - 20px));width:max-content;padding:10px 12px;border:1px solid rgba(199,222,255,.9);border-radius:10px;background:#15243b;color:#fff;box-shadow:0 10px 26px rgba(16,24,40,.20);font-size:12px;font-weight:600;line-height:1.45;text-align:left;overflow-wrap:anywhere}
 #muse-action-tooltip[hidden]{display:none!important}
 @media(max-width:620px){#muse-action-tooltip{max-width:min(250px,calc(100vw - 20px));font-size:11.5px}}
+
+
+/* Editable feedback report before sending a manual GitHub Issue comment. */
+.feedback-dialog{position:fixed;inset:0;max-width:min(560px,calc(100% - 28px));width:100%;max-height:min(88dvh,750px);padding:0;border:1px solid var(--blue-line);border-radius:22px;background:#fff;color:var(--ink);box-shadow:0 24px 80px rgba(13,36,67,.25);overscroll-behavior:contain}
+.feedback-dialog::backdrop{background:rgba(14,35,67,.56);backdrop-filter:blur(3px)}
+.feedback-dialog-body{display:grid;gap:13px;padding:clamp(20px,3vw,28px);max-height:inherit;overflow:auto}
+.feedback-dialog h2{margin:0;font-size:23px;letter-spacing:-.5px}
+.feedback-dialog #feedback-dialog-help{margin:0;font-size:13px;line-height:1.65;color:var(--muted)}
+.feedback-dialog label{font-size:13px;font-weight:800}
+.feedback-dialog textarea{resize:vertical;width:100%;min-height:152px;padding:13px;border-radius:11px;border:1px solid #b7cbe6;background:#f8fbff;color:var(--ink);font:500 13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}
+.feedback-dialog textarea:focus-visible{outline:3px solid #c0ddff;border-color:var(--blue)}
+.feedback-dialog-note{margin:0;font-size:11.5px;line-height:1.6;color:var(--muted)}
+.feedback-dialog-status{margin:0;min-height:20px;color:var(--blue);font-size:12px;font-weight:750}
+.feedback-dialog-actions{display:flex;flex-wrap:wrap;gap:9px}
+.feedback-dialog-actions .button{flex:1 0 auto;text-align:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+@media(max-width:620px){.feedback-dialog-body{gap:12px;padding:20px 16px}.feedback-dialog h2{font-size:20px}.feedback-dialog-actions{display:grid;grid-template-columns:1fr 1fr}.feedback-dialog-actions .button:first-child{grid-column:1/-1}.feedback-dialog textarea{font-size:12px}}
