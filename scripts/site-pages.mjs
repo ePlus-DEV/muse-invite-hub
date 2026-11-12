@@ -130,6 +130,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '  <script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag(\'js\', new Date());gtag(\'config\', \'G-N1MZ8YLNLJ\');</script>\n' +
     '  <script type="application/ld+json">' + jsonLd(graph) + '</script>\n' +
     '  <script src="../../assets/directory-features.js" defer></script>\n' +
+    '  <script src="../../assets/site-ui.js" defer></script>\n' +
     '  <script src="../../assets/detail.js" defer></script>\n' +
     '</head>\n<body>\n' +
     '  <a class="skip-link" href="#detail-title">Skip to invite details</a>\n' +
@@ -185,13 +186,16 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '    <p id="detail-live" class="sr-only" role="status" aria-live="polite"></p>' +
     '  </main>\n' +
     '  <footer class="site-footer"><div class="container footer-inner">' +
-    '    <div><a class="footer-brand" href="../../"><span class="brand-icon brand-icon-small" aria-hidden="true"><img src="../../assets/favicon.svg" width="30" height="30" alt=""></span> Muse Invite Hub</a>' +
-    '      <p>Small gestures. Bigger possibilities.</p></div>' +
-    '    <div class="footer-links">' +
-    '      <a href="https://muse.ai/" target="_blank" rel="noopener noreferrer">Official Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>' +
-    '      <a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer">GitHub <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>' +
-    '      <a href="https://github.com/ePlus-DEV/muse-invite-hub/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contribute <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>' +
-    '    </div></div><div class="container footer-bottom"><span>© 2026 ePlus.DEV · Open source, community driven.</span><span>Not affiliated with Meta or Muse.</span></div></footer>' +
+    '    <div class="footer-main-row">' +
+    '      <a class="footer-brand" href="../../"><span class="brand-icon brand-icon-small" aria-hidden="true"><img src="../../assets/favicon.svg" width="30" height="30" alt=""></span> Muse Invite Hub</a>' +
+    '      <nav class="footer-links" aria-label="Footer navigation">' +
+    '        <a href="https://muse.ai/" target="_blank" rel="noopener noreferrer">Official Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>' +
+    '        <a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</a>' +
+    '        <a href="https://github.com/ePlus-DEV/muse-invite-hub/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contribute <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>' +
+    '      </nav></div><p class="footer-tagline">Small gestures. Bigger possibilities.</p></div>' +
+    '    <div class="container footer-bottom"><span>© 2026 ePlus.DEV · Open source, community driven.</span>' +
+    '      <span>Independent project · Not affiliated with Meta or Muse.</span></div></footer>' +
+    '  <button class="back-to-top" id="back-to-top" type="button" aria-label="Back to top" title="Back to top" hidden><i class="fa-solid fa-arrow-up" aria-hidden="true"></i><span>Top</span></button>' +
     '\n</body>\n</html>\n';
 }
 export function renderDetailPage(item, options) {

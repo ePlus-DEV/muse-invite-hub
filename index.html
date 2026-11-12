@@ -31,6 +31,7 @@
     gtag('config', 'G-N1MZ8YLNLJ');
   </script>
   <script src="./assets/directory-features.js" defer></script>
+  <script src="./assets/site-ui.js" defer></script>
   <script src="./assets/app.js" defer></script>
 </head>
 <body>
@@ -135,7 +136,8 @@
       <p class="directory-footnote"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Community-reported codes are not independently verified by Muse. Remaining counts are dated, not live.</p>
       <p id="live-message" class="sr-only" role="status" aria-live="polite"></p>
     </section>
-    <section class="help-section container" id="about" aria-label="About this community project">
+    <section class="help-section container" id="about" aria-labelledby="about-title">
+      <h2 class="about-title" id="about-title">About Muse Invite Hub</h2>
       <details class="help-disclosure">
         <summary><span><i class="fa-regular fa-circle-question" aria-hidden="true"></i> How do invite codes work?</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
         <div class="help-content">
@@ -157,6 +159,23 @@
       </details>
     </section>
   </main>
-  <footer class="site-footer"><div class="container footer-inner"><div><a class="footer-brand" href="./"><span class="brand-icon brand-icon-small" aria-hidden="true"><img src="./assets/favicon.svg" width="30" height="30" alt=""></span> Muse Invite Hub</a><p>Small gestures. Bigger possibilities.</p></div><div class="footer-links"><a href="https://muse.ai/" target="_blank" rel="noopener noreferrer">Official Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a><a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</a><a href="https://github.com/ePlus-DEV/muse-invite-hub/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contribute <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div></div><div class="container footer-bottom"><span>© 2026 ePlus.DEV · Open source, community driven.</span><span>Independent project · Not affiliated with Meta or Muse.</span></div></footer>
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-main-row">
+        <a class="footer-brand" href="./"><span class="brand-icon brand-icon-small" aria-hidden="true"><img src="./assets/favicon.svg" width="30" height="30" alt=""></span> Muse Invite Hub</a>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="https://muse.ai/" target="_blank" rel="noopener noreferrer">Official Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+          <a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</a>
+          <a href="https://github.com/ePlus-DEV/muse-invite-hub/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contribute <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+        </nav>
+      </div>
+      <p class="footer-tagline">Small gestures. Bigger possibilities.</p>
+    </div>
+    <div class="container footer-bottom">
+      <span>© 2026 ePlus.DEV · Open source, community driven.</span>
+      <span>Independent project · Not affiliated with Meta or Muse.</span>
+    </div>
+  </footer>
+  <button class="back-to-top" id="back-to-top" type="button" aria-label="Back to top" title="Back to top" hidden><i class="fa-solid fa-arrow-up" aria-hidden="true"></i><span>Top</span></button>
 </body>
 </html>
