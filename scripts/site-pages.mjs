@@ -91,6 +91,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     item.status === "reported-not-working" ?
     "Reported not working (community)" :
     "Not independently confirmed by Muse";
+  const statusLine = item.ownerConfirmed ? 'Verified Owner' : 'Community listing';
   const graph = [
     { "@context": "https://schema.org", "@type": "WebPage", "@id": pageUrl + "#webpage",
       url: pageUrl, name: title, description, isPartOf: { "@type": "WebSite", name: "Muse Invite Hub", url: root + "/" },
