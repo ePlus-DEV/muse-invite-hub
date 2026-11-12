@@ -79,6 +79,11 @@ button{cursor:pointer}
 .sort-option[aria-checked="true"]{background:var(--blue-soft);color:var(--blue)}
 .sort-option>i{visibility:hidden;color:var(--blue)}
 .sort-option[aria-checked="true"]>i{visibility:visible}
+.source-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.source-filter{min-height:35px;padding:7px 13px;border:1px solid var(--blue-line);border-radius:999px;background:#fff;color:var(--muted);font-size:11.5px;font-weight:800;display:inline-flex;align-items:center;gap:7px;transition:border-color .15s,background .15s,color .15s}
+.source-filter:hover{border-color:var(--blue);color:var(--blue)}
+.source-filter[aria-pressed="true"]{background:var(--blue-soft);border-color:#87baff;color:#0057dd}
+.source-filter:focus-visible{outline:3px solid #a9c8ff;outline-offset:2px}
 .cards-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .loading-card{grid-column:1/-1;text-align:center;border:1px dashed var(--blue-line);border-radius:16px;background:white;padding:42px 15px;color:var(--muted)}
 .code-card{min-width:0;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:17px;padding:16px;display:flex;flex-direction:column;gap:9px;min-height:234px;box-shadow:var(--shadow-sm);transition:border-color .16s,box-shadow .16s,transform .16s}
@@ -91,7 +96,9 @@ button{cursor:pointer}
 .status-featured{color:#865919;background:#fff4d8}
 .status-reported-working{color:var(--green);background:var(--green-bg)}
 .status-reported-not-working{color:var(--red);background:var(--red-bg)}
-.card-contributor{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11.5px;min-width:0}
+.card-contributor{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11.5px;min-width:0;flex-wrap:wrap}
+.card-source{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:7px;background:#f2f5fa;color:var(--muted);font-size:10px;font-weight:800;white-space:nowrap}
+.card-source-threads{background:#f1edff;color:#5946a0}
 .card-contributor i{color:var(--blue);flex:none}
 .card-author{min-width:0;overflow-wrap:anywhere;color:var(--text);text-decoration:none}
 .card-author:hover{text-decoration:underline;color:var(--blue)}
