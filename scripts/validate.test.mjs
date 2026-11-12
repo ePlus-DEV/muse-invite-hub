@@ -91,9 +91,9 @@ test("Threads sourceUrl works with trusted main preview schema", () => {
   assert.ok(validateCatalog([{...entry, source: {platform:"threads"}}])
     .some(error => error.includes("unsupported field source")));
   assert.ok(validateCatalog([{...entry, sourceUrl:"https://www.threads.com/@baijiling2?redirect=https://evil.test"}])
-    .some(error => error.includes("public Threads profile")));
+    .some(error => error.includes("supported public social profile")));
   assert.ok(validateCatalog([{...entry, submittedBy:"baijiling2"}])
-    .some(error => error.includes("must not reuse submittedBy")));
+    .some(error => error.includes("must not reuse a GitHub owner identity")));
   assert.ok(validateCatalog([{...entry, sourceUrl:"https://www.threads.com/@baijiling2/post/abc123"}]).length === 0);
 });
 
@@ -104,7 +104,7 @@ test("X and Facebook public provenance URLs validate without claiming GitHub own
     "https://www.facebook.com/example.user/posts/pfbid0123456789",
     "https://www.facebook.com/example.user"
   ]) {
-    const entry = {...sample(), sourceUrl:url};
+    const entry = {...sample(), submittedBy:undefined, sourceUrl:url};
     assert.deepEqual(validateCatalog([entry]), [], url);
     assert.ok(validateCatalog([{...entry, submittedBy:"example"}])
       .some(error => error.includes("must not reuse a GitHub owner identity")));
