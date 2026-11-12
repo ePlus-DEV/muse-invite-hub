@@ -13,6 +13,17 @@
     "usageReportedAt": "2026-11-11"
   },
   {
+    "id": "community-issue-76",
+    "code": "111TI8",
+    "status": "unverified",
+    "addedAt": "2026-11-12",
+    "submittedBy": "flyingakite",
+    "note": "Community-submitted in issue #76; redemption not independently verified.",
+    "submittedById": 130640830,
+    "reportedRemaining": 30,
+    "usageReportedAt": "2026-11-12"
+  },
+  {
     "id": "community-issue-60",
     "code": "0OOKO6",
     "status": "unverified",
