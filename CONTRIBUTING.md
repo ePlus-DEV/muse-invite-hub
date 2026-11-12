@@ -2,7 +2,7 @@
 
 Thanks for helping! **You can share an invite, report feedback or update a count without writing code.** Public GitHub Issue Forms are the preferred path for community information; UI and documentation improvements use Pull Requests.
 
-[Homepage](https://muse.eplus.dev/) · [README](README.md) · [Share code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report feedback](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) · [Update count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml)
+[Homepage](https://muse.eplus.dev/) · [README](README.md) · [Share code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report feedback](https://muse.eplus.dev/#codes) · [Update count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml)
 
 > **Privacy:** GitHub Issues, PRs and repository content are public. Never share passwords, OTPs, authentication codes, session tokens, cookies, private login or invite links, account identifiers, or screenshots containing sensitive details.
 
@@ -18,11 +18,11 @@ For GitHub-owned codes only: if your code is already listed under the same GitHu
 
 ## Report code feedback
 
-1. Use **Give feedback** on a code card or detail page to open the Issue Form with its editable title **`[Code feedback] CODE`** and **Invite code** prefilled. Alternatively, open [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) manually.
-2. Select **Listing platform** from the required GitHub/Threads/X (Twitter)/Facebook dropdown, based on the code's source shown on the website. GitHub cannot preselect dropdown values from URL parameters, so this selection remains manual. Confirm or edit the code/title, then report accepted, rejected, exhausted, no redeem option, duplicate, or other. The bot rejects a platform inconsistent with the catalog.
-3. Include the date and non-sensitive error text or context if helpful. A GitHub user and a Threads user with the same @handle are **different accounts**; the reporter's username does not override the listed source.
+1. Find your code on [Muse Invite Hub](https://muse.eplus.dev/#codes) and click **Give feedback**, **Worked for me** or **Didn't work**. The link opens the **canonical GitHub Issue** for that code (the contributor's original Issue if one exists). Do not open a second report Issue.
+2. Add a comment describing your actual experience. Quick feedback buttons try to copy a suggested message for you to paste and edit. Include a date and only non-sensitive details. GitHub does not support automatically prefilling a comment on an existing Issue.
+3. If the original Issue was closed after publication, the trusted bot reopens it **after** a real user posts a comment. Merely opening the link does not reopen anything, and submitting a comment does not automatically change the published code status.
 
-One attempt is **community feedback**, not proof that every account or region will behave the same way. Clear accepted/rejected feedback can produce an automated **Draft PR** with a community-reported status and date; ambiguous feedback stays for manual triage. Only a reviewed and merged PR should change `status` or `checkedAt`.
+Existing issues remain associated with their original code even after merging. For manually added or imported codes with no local contributor Issue, the trusted production deployment creates one stable tracking Issue. Any status or quota changes still require a separate, reviewed catalog update. Neither comments nor the bot prove Muse redemption, live availability or eligibility.
 
 ## Update remaining invites
 
