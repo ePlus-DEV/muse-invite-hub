@@ -255,8 +255,10 @@
     }
   }
   async function initialize() {
+    const controller = new AbortController();
+    const requestTimeout = window.setTimeout(() => controller.abort(), 7500);
     try {
-      const response = await fetch("./data/invites.json", { cache: "no-store" });
+      const response = await fetch("./data/invites.json", { cache: "no-store", signal: controller.signal });
       if (!response.ok) throw Error("HTTP " + response.status);
       const list = await response.json();
       if (!Array.isArray(list)) throw Error("Invite catalog must be an array");
@@ -266,9 +268,12 @@
       console.error("Could not load invite directory:", error);
       loadFailed = true;
       codes = [];
+    } finally {
+      window.clearTimeout(requestTimeout);
     }
     updateStats();
     render();
+    document.documentElement.classList.remove("is-page-loading");
   }
   searchInput.addEventListener("input", () => render(true));
   for (const button of sourceFilters) {
