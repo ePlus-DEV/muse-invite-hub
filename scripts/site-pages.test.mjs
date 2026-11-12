@@ -25,7 +25,7 @@ test("directory and static generator use the same Load more batch size", () => {
 test("detail links are predictable and safely validated", () => {
   assert.equal(codePath("DPNIHH"), "/codes/DPNIHH/");
   assert.throws(() => codePath("../DPNIHH"), /Invalid/);
-  assert.equal(PAGE_SIZE, 6);
+  assert.equal(PAGE_SIZE, 12);
 });
 test("owner detail is HTML with canonical, status, structured data and dated quota", () => {
   const html = renderDetailPage(owner());
