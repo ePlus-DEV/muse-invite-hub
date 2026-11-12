@@ -18,7 +18,7 @@ For GitHub-owned codes only: if your code is already listed under the same GitHu
 
 ## Report code feedback
 
-1. Use **Give feedback** on a code card or detail page to open the Issue Form with its **Invite code** and **Listing platform** already supplied in the link. You can edit either field before submitting. Alternatively, open [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) manually.
+1. Use **Give feedback** on a code card or detail page to open the Issue Form with an editable title of **`[Code feedback] CODE`**, its **Invite code**, and its **Listing platform** supplied in the link. You can edit the title and fields before submitting. Alternatively, open [Report a code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=report-code.yml) manually.
 2. Confirm the exact code and **Listing platform** (GitHub or Threads) shown on the card, then report accepted, rejected, exhausted, no redeem option, duplicate, or other. GitHub may require you to select the dropdown manually on some clients; always confirm it before submission.
 3. Include the date and non-sensitive error text or context if helpful. A GitHub user and a Threads user with the same @handle are **different accounts**; the reporter's username does not override the listed source.
 
