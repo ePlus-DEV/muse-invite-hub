@@ -73,10 +73,8 @@
       return;
     }
     const contributors = new Set(codes.map(c => {
-      if (c.source?.platform === "threads" && c.source.handle) {
-        return "threads:" + c.source.handle.toLowerCase();
-      }
-      return c.submittedBy ? "github:" + c.submittedBy.toLowerCase() : null;
+      const origin = sourceInfo(c);
+      return origin.handle ? origin.platform.toLowerCase() + ":" + origin.handle.toLowerCase() : null;
     }).filter(Boolean));
     const reported = codes.filter(c => reportedRemaining(c) !== null);
     setStat("stat-total", codes.length.toLocaleString("en-US"));
@@ -114,13 +112,23 @@
       }
     }, 2200);
   }
+  function threadsSource(url) {
+    if (typeof url !== "string") return null;
+    try {
+      const parsed = new URL(url);
+      const match = /^\/@([A-Za-z0-9_.]{1,30})(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.exec(parsed.pathname);
+      if (parsed.protocol !== "https:" ||
+          !["threads.com", "www.threads.com"].includes(parsed.hostname.toLowerCase()) ||
+          parsed.username || parsed.password || parsed.search || parsed.hash || !match) return null;
+      return { platform: "Threads", handle: match[1], url: parsed.href, icon: "fa-brands fa-threads" };
+    } catch { return null; }
+  }
   function sourceInfo(item) {
-    if (item.source?.platform === "threads") {
-      return { platform: "Threads", handle: item.source.handle, url: item.source.url, icon: "fa-brands fa-threads" };
-    }
-    return { platform: "GitHub", handle: item.submittedBy || null,
+    return threadsSource(item.sourceUrl) || {
+      platform: "GitHub", handle: item.submittedBy || null,
       url: item.submittedBy ? "https://github.com/" + encodeURIComponent(item.submittedBy) : null,
-      icon: "fa-brands fa-github" };
+      icon: "fa-brands fa-github"
+    };
   }
   function createCard(item) {
     const status = STATUS[item.status] || STATUS.unverified;
@@ -199,10 +207,10 @@
     if (resetLimit) displayLimit = PAGE_SIZE;
     const q = searchInput.value.trim().toLowerCase();
     const visible = codes.filter(item =>
-      (sourceFilter === "all" || (item.source?.platform === "threads" ? "threads" : "github") === sourceFilter) &&
+      (sourceFilter === "all" || sourceInfo(item).platform.toLowerCase() === sourceFilter) &&
       (item.code.toLowerCase().includes(q) ||
        String(item.submittedBy || "").toLowerCase().includes(q) ||
-       String(item.source?.handle || "").toLowerCase().includes(q) ||
+       String(sourceInfo(item).handle || "").toLowerCase().includes(q) ||
        String(item.note || "").toLowerCase().includes(q))
     );
     const sort = sortValue;
