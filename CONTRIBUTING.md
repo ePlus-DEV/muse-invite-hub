@@ -2,7 +2,7 @@
 
 Thanks for helping! **You can share an invite, report feedback or update a count without writing code.** Public GitHub Issue Forms are the preferred path for community information; UI and documentation improvements use Pull Requests.
 
-[Homepage](https://muse.eplus.dev/) · [README](README.md) · [Share code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report feedback](https://muse.eplus.dev/#codes) · [Update count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml)
+[Homepage](https://muse.eplus.dev/) · [README](README.md) · [Share code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report feedback](https://muse.eplus.dev/#codes) · [Update count](https://muse.eplus.dev/#codes)
 
 > **Privacy:** GitHub Issues, PRs and repository content are public. Never share passwords, OTPs, authentication codes, session tokens, cookies, private login or invite links, account identifiers, or screenshots containing sensitive details.
 
@@ -18,15 +18,17 @@ For GitHub-owned codes only: if your code is already listed under the same GitHu
 
 ## Report code feedback
 
-1. Find your code on [Muse Invite Hub](https://muse.eplus.dev/#codes) and click **Give feedback**, **Worked for me** or **Didn't work**. The link opens the **canonical GitHub Issue** for that code (the contributor's original Issue if one exists). Do not open a second report Issue.
-2. Add a comment describing your actual experience. Quick feedback buttons try to copy a suggested message for you to paste and edit. Include a date and only non-sensitive details. GitHub does not support automatically prefilling a comment on an existing Issue.
-3. If the original Issue was closed after publication, the trusted bot reopens it **after** a real user posts a comment. Merely opening the link does not reopen anything, and submitting a comment does not automatically change the published code status.
+1. Find your code on [Muse Invite Hub](https://muse.eplus.dev/#codes) and click **Give feedback**, **Worked for me** or **Didn't work**. These actions open an editable report dialog tied to the **canonical GitHub Issue** for that code. Do not open a second report Issue.
+2. Review the prefilled code, outcome and date; click **Copy comment**, then **Open Issue #N** to paste and post it. GitHub does not support automatically prefilling a comment in an existing Issue. No report is submitted by merely clicking the link.
+3. If the original Issue was closed after publication, the trusted bot reopens it **after** a human posts the comment. Structured accepted/rejected reports can generate a **review-only Draft PR** from the comment. Informal comments and other observations remain for manual review. Nothing automatically changes the published code status.
 
 Existing issues remain associated with their original code even after merging. For manually added or imported codes with no local contributor Issue, the trusted production deployment creates one stable tracking Issue. Any status or quota changes still require a separate, reviewed catalog update. Neither comments nor the bot prove Muse redemption, live availability or eligibility.
 
 ## Update remaining invites
 
-If you own the public invite, use [Update invite count](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=update-count.yml). Select the listing platform and report the date, code, and only numbers actually shown in **your Muse Invite screen**. Matching usernames across platforms never establish owner identity.
+If you own a listed GitHub-source invite code, find it in [the directory](https://muse.eplus.dev/#codes), click **Update count**, and review the prepared owner-report comment. Enter numbers shown in **your Muse Invite screen**, check the explicit ownership confirmation, click **Copy comment**, and post it on **the code's existing Issue**. The bot verifies your GitHub account against the original listed owner and proposes a **Draft PR** only if the figures are consistent. This does **not** create another Issue.
+
+For Threads, X or Facebook source listings, a GitHub username alone cannot establish ownership; please add evidence as a comment on the linked code Issue for manual maintainer review. The old Update count Issue Form is retained only for backward compatibility, not the preferred workflow.
 
 | Example | Quantity |
 | --- | ---: |
@@ -40,7 +42,9 @@ Amounts are **dated self-reported snapshots**, not live Muse availability. Copyi
 
 ## Automatic Issue-to-Draft-PR
 
-Supported Issue Forms trigger [Issue to Draft PR](.github/workflows/issue-to-pr.yml) when opened, edited or reopened. It uses trusted source code on `main`, treats submitted text as untrusted data, checks duplicates, and creates a separate branch named `auto/issue-<NUMBER>-<TYPE>`. It proposes a change **only to `data/invites.json`** and opens a **Draft PR**. The workflow comments on the originating Issue with the PR link or the reason the report requires manual review. **The Issue stays open during Draft PR review.** Generated PRs do not include GitHub's `Closes #` keywords, which could close an Issue before the acceptance comment is posted.
+New-code Issue Forms trigger [Issue to Draft PR](.github/workflows/issue-to-pr.yml) when opened or edited. Reopening an existing code Issue does **not** rerun the original code-submission bot. It uses trusted source code on `main`, treats submitted text as untrusted data, checks duplicates, and creates a separate branch named `auto/issue-<NUMBER>-<TYPE>`. It proposes a change **only to `data/invites.json`** and opens a **Draft PR**. The workflow comments on the originating Issue with the PR link or the reason the report requires manual review. **The Issue stays open during Draft PR review.** Generated PRs do not include GitHub's `Closes #` keywords, which could close an Issue before the acceptance comment is posted.
+
+**Existing code comments use a separate workflow:** [Reopen Code Feedback Issue](.github/workflows/reopen-code-feedback.yml) processes a human comment on the mapped original Issue. After reopening a closed Issue for review, it parses only explicitly structured redemption reports or confirmed owner quota updates. Eligible reports become independent, review-only Draft PRs from current `main`, one branch per comment; other messages stay for manual review. This workflow never auto-merges or promotes community feedback into official Muse verification. The original code Issue remains the discussion thread and is not auto-closed after a feedback review.
 
 New feedback and count forms require the listing platform. The Issue bot checks the selected platform against the code's cataloged source; if it conflicts, it requests manual review rather than changing the other platform's listing. Old Issues without the field remain backward compatible.
 
