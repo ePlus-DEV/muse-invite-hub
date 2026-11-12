@@ -8,6 +8,14 @@
   const features = window.MuseDirectoryFeatures;
   const detailSave = document.getElementById("detail-save");
   const detailCode = code.textContent.trim();
+  // The trusted PR preview renderer can still use old main HTML. Align DOM focus
+  // order with the new visual order: redemption choices before secondary actions.
+  const feedbackCard = document.querySelector(".detail-feedback");
+  const outcomeControls = feedbackCard?.querySelector(".detail-feedback-actions");
+  const firstSecondary = feedbackCard?.querySelector(":scope > a");
+  if (feedbackCard && outcomeControls && firstSecondary) {
+    feedbackCard.insertBefore(outcomeControls, firstSecondary);
+  }
   if (features && detailSave) {
     function readSavedCodes() {
       try {
