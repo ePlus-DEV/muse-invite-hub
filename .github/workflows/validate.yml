@@ -22,6 +22,11 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
+      - name: Render website-matched social preview (1200 x 630)
+        run: |
+          python3 -m venv .venv-og
+          .venv-og/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0 CairoSVG==2.8.2
+          .venv-og/bin/python scripts/render-og.py
       - name: Check frontend JavaScript syntax
         run: |
           node --check assets/app.js
