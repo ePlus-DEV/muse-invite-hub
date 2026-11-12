@@ -5,6 +5,62 @@
   const live = document.getElementById("detail-live");
   if (!button || !code || !live) return;
 
+  const features = window.MuseDirectoryFeatures;
+  const detailSave = document.getElementById("detail-save");
+  const detailCode = code.textContent.trim();
+  if (features && detailSave) {
+    function readSavedCodes() {
+      try {
+        return new Set(features.parseSaved(window.localStorage.getItem(features.STORAGE_KEY)));
+      } catch {
+        return new Set();
+      }
+    }
+    let savedCodes = readSavedCodes();
+    const saveLabel = detailSave.querySelector(".detail-save-label");
+    const saveIcon = detailSave.querySelector("i");
+    function refreshSavedButton() {
+      const active = savedCodes.has(detailCode);
+      detailSave.setAttribute("aria-pressed", String(active));
+      detailSave.setAttribute("aria-label",
+        (active ? "Remove saved Muse invite code " : "Save Muse invite code ") + detailCode);
+      if (saveLabel) saveLabel.textContent = active ? "Saved" : "Save code";
+      if (saveIcon) saveIcon.className = active ? "fa-solid fa-bookmark" : "fa-regular fa-bookmark";
+    }
+    detailSave.hidden = false;
+    refreshSavedButton();
+    detailSave.addEventListener("click", () => {
+      if (savedCodes.has(detailCode)) savedCodes.delete(detailCode);
+      else if (savedCodes.size < features.MAX_SAVED) savedCodes.add(detailCode);
+      else {
+        live.textContent = "Saved code limit reached.";
+        return;
+      }
+      let persisted = true;
+      try {
+        window.localStorage.setItem(features.STORAGE_KEY, JSON.stringify([...savedCodes]));
+      } catch {
+        persisted = false;
+      }
+      refreshSavedButton();
+      live.textContent = detailCode + (savedCodes.has(detailCode) ?
+        " saved on this device." : " removed from saved codes.") +
+        (persisted ? "" : " Storage is unavailable; changes last only for this tab.");
+    });
+    window.addEventListener("storage", event => {
+      if (event.key !== features.STORAGE_KEY && event.key !== null) return;
+      savedCodes = new Set(features.parseSaved(event.key === null ? null : event.newValue));
+      refreshSavedButton();
+    });
+  }
+  if (features) {
+    document.querySelectorAll(".detail-quick-feedback").forEach(link => {
+      const outcome = link.dataset.feedbackOutcome;
+      link.href = features.quickFeedbackUrl(detailCode, outcome);
+      link.title = "Opens GitHub Issue Form. Select listing platform and result before submitting.";
+    });
+  }
+
   // Hosted PR previews can use a trusted renderer from main. The catalog
   // remains untrusted data: inspect a strict public URL, never inject its HTML.
   async function showSocialProvenance() {
