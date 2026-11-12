@@ -45,7 +45,8 @@
 <text x="657" y="353" fill="#fff" font-size="12" font-weight="800">Share your code</text>
 </g>
 <rect x="882" y="184" width="190" height="187" rx="36" fill="#c7deff" stroke="#fff" stroke-width="5"/>
-<g clip-path="url(#mascot-mask)"><image x="882" y="184" width="190" height="187" preserveAspectRatio="xMidYMid slice" xlink:href="__MASCOT_DATA_URI__"/></g>
+<!-- The official-style on-site mascot poster is embedded at build time, not an AI re-creation. -->
+<g clip-path="url(#mascot-mask)"><image x="882" y="184" width="190" height="187" preserveAspectRatio="xMidYMid meet" xlink:href="__MASCOT_DATA_URI__"/></g>
 <path d="M1092 214l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#3988fa"/>
 <g font-family="Arial,DejaVu Sans,sans-serif">
 <text x="632" y="409" fill="#0064ff" font-size="10" font-weight="800" letter-spacing="1.1">THE DIRECTORY</text>
