@@ -4,10 +4,15 @@ import { resolve } from "node:path";
 const ORIGIN = "https://muse.eplus.dev";
 const CODE = "DPNIHH";
 const PATHS = [
-  "/", "/codes/" + CODE + "/", "/codes/" + CODE + "/index.html",
-  "/assets/styles.css", "/assets/detail.js", "/assets/social-preview.png", "/llms.txt",
+  "/", "/countries/", "/countries/index.html", "/codes/" + CODE + "/", "/codes/" + CODE + "/index.html",
+  "/assets/styles.css", "/assets/detail.js", "/assets/countries.js", "/assets/countries.css",
+  "/data/world-countries.json", "/assets/social-preview.png", "/llms.txt",
   "/sitemap.xml", "/404.html"
 ];
+
+function sitemapHasCountry(xml, root) {
+  return xml.includes("<loc>" + root + "/countries/</loc>");
+}
 
 export async function probeProduction({ origin = ORIGIN, get = fetch, nonce = "check" } = {}) {
   const results = new Map();
@@ -28,6 +33,11 @@ export async function probeProduction({ origin = ORIGIN, get = fetch, nonce = "c
     results.set(path, body);
   }
   const homepage = results.get("/");
+  const country = results.get("/countries/");
+  const countryDirect = results.get("/countries/index.html");
+  const countryJS = results.get("/assets/countries.js");
+  const countryCSS = results.get("/assets/countries.css");
+  const world = results.get("/data/world-countries.json");
   const nested = results.get("/codes/" + CODE + "/");
   const direct = results.get("/codes/" + CODE + "/index.html");
   const css = results.get("/assets/styles.css");
@@ -39,6 +49,27 @@ export async function probeProduction({ origin = ORIGIN, get = fetch, nonce = "c
 
   if (!homepage.includes('rel="canonical" href="' + root + '/"')) {
     throw new Error("/: missing production homepage canonical");
+  }
+  for (const [path, html] of [
+    ["/countries/", country], ["/countries/index.html", countryDirect]
+  ]) {
+    if (!html.includes("<title>Muse Country Availability Map | Muse Invite Hub</title>") ||
+        !html.includes('rel="canonical" href="' + root + '/countries/"') ||
+        html.includes('content="noindex')) {
+      throw new Error(path + ": wrong country page, canonical or robots");
+    }
+    if (!html.includes('../assets/countries.js') || !html.includes('../assets/countries.css')) {
+      throw new Error(path + ": missing relative country assets");
+    }
+  }
+  const mapData = JSON.parse(world);
+  if (!countryJS.includes('map-markers') || !countryCSS.includes('.map-panel') ||
+      mapData.type !== "FeatureCollection" || !Array.isArray(mapData.features) ||
+      !["US", "CA", "JP", "MX"].every(code => mapData.features.some(item => item.code === code))) {
+    throw new Error("/countries/: missing or invalid bundled map assets");
+  }
+  if (!sitemapHasCountry(results.get("/sitemap.xml"), root)) {
+    throw new Error("/sitemap.xml: missing indexable country map URL");
   }
   for (const [path, html] of [
     ["/codes/" + CODE + "/", nested], ["/codes/" + CODE + "/index.html", direct]
