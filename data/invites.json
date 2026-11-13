@@ -14,6 +14,16 @@
     "submittedById": 11882322
   },
   {
+    "id": "community-issue-94",
+    "code": "1X1Y90",
+    "status": "unverified",
+    "addedAt": "2026-11-13",
+    "feedbackIssueNumber": 94,
+    "submittedBy": "nomi128",
+    "note": "Community-submitted in issue #94; redemption not independently verified.",
+    "submittedById": 80985104
+  },
+  {
     "id": "community-issue-76",
     "code": "111TI8",
     "status": "unverified",
