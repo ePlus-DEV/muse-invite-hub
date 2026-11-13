@@ -14,6 +14,19 @@
     "submittedById": 11882322
   },
   {
+    "id": "community-issue-90",
+    "code": "O0NZ1J",
+    "status": "unverified",
+    "addedAt": "2026-11-13",
+    "feedbackIssueNumber": 90,
+    "submittedBy": "Tanglebrook",
+    "note": "Community-submitted in issue #90; redemption not independently verified.",
+    "submittedById": 12240449,
+    "reportedCapacity": 30,
+    "reportedUses": 8,
+    "usageReportedAt": "2026-11-13"
+  },
+  {
     "id": "community-issue-76",
     "code": "111TI8",
     "status": "unverified",
