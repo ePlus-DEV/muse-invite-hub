@@ -22,6 +22,8 @@
 
 ## Contribute
 
+**[See the contribution flow diagram](docs/CONTRIBUTION_FLOW.md)** — explains the difference between adding a new code, posting feedback to a canonical Issue, and legacy Sub-issues.
+
 No coding required:
 
 - [**Share an invite code**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml)
@@ -43,6 +45,6 @@ Open http://localhost:8000/. Generated code-detail pages, Node.js 24 tests, prev
 
 ## Resources
 
-[Country map](https://muse.eplus.dev/countries/) · [Project guide](docs/PROJECT_GUIDE.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Agent rules](AGENTS.md) · [License](LICENSE)
+[Country map](https://muse.eplus.dev/countries/) · [Contribution flow](docs/CONTRIBUTION_FLOW.md) · [Project guide](docs/PROJECT_GUIDE.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Agent rules](AGENTS.md) · [License](LICENSE)
 
 © 2026 ePlus.DEV

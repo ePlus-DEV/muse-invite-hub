@@ -40,6 +40,8 @@ Usage figures are **dated self-reported snapshots**, not live balances. When cap
 
 ## Issue automation and acceptance
 
+See the [visual contribution flow](CONTRIBUTION_FLOW.md) for the canonical Issue vs comment vs legacy Sub-issue paths and their different closure behavior.
+
 The [Issue-to-Draft-PR workflow](../.github/workflows/issue-to-pr.yml) validates Issue Form submissions, checks duplicates and creates review-only Draft PRs for changes to the catalog.
 
 - GitHub owners may propose dated quota updates under ownership checks. A Threads, X or Facebook reporter cannot claim GitHub quota ownership through a matching handle.
