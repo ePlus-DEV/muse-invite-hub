@@ -58,8 +58,18 @@ export function resolveExistingIssue(item, issues) {
   if (item.feedbackIssueNumber && !source) {
     throw Error("Explicit code Issue mapping not found or code mismatch for " + code);
   }
+  // A code can have many historical quota/feedback Issues. A reviewed
+  // feedbackIssueNumber is the canonical conversation, not a duplicate report.
+  // Still fail closed if there is a *different* explicitly marked root thread.
+  if (source) {
+    const competingRoot = candidates.find(issue => issue.number !== source.number &&
+      (String(issue.body || "").includes(issueMarker(code)) ||
+       String(issue.body || "").includes("<!-- muse-code-feedback-root:" + code + " -->")));
+    if (competingRoot) throw Error("Duplicate canonical feedback issues for " + code);
+    return source;
+  }
+  // Without a reviewed mapping, multiple plausible Issues remain ambiguous.
   if (candidates.length > 1) throw Error("Duplicate canonical feedback issues for " + code);
-  if (source) return source;
   return candidates[0] || null;
 }
 
