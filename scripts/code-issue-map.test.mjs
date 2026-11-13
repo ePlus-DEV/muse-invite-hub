@@ -90,6 +90,30 @@ test("reuse original count / Invite Issues and already-created feedback threads 
   assert.equal(shouldReopen({...existing[3],state:"closed"},report,published),true);
 });
 
+test("a new owner count Issue must not replace the reviewed canonical DPNIHH thread",async()=>{
+  const canonical={
+    number:14,title:"[Count update]",state:"closed",
+    body:"### Invite code\n\nDPNIHH\n\n### Remaining invites shown by Muse\n\n3"
+  };
+  const newerReport={
+    number:86,title:"[Count update] DPNIHH",state:"open",
+    body:"### Invite code\n\nDPNIHH\n\n### Remaining invites shown by Muse\n\n25"
+  };
+  const item={...seeded,feedbackIssueNumber:14};
+  assert.equal(resolveExistingIssue(item,[newerReport,canonical]),canonical);
+  const map=await syncCodeIssueMap([item],async()=>[newerReport,canonical],async()=>{
+    throw Error("Must not create another thread");
+  });
+  assert.deepEqual(map,{DPNIHH:14});
+});
+
+test("an explicit conflicting root remains an error even with a reviewed mapping",()=>{
+  const canonical={number:14,title:"[Count update]",body:"### Invite code\n\nDPNIHH"};
+  const duplicateRoot={number:86,title:"[Code] DPNIHH",body:canonicalThreadBody(seeded)};
+  assert.throws(()=>resolveExistingIssue({...seeded,feedbackIssueNumber:14},
+    [canonical,duplicateRoot]),/Duplicate canonical feedback issues/);
+});
+
 test("readonly CI dry-run does not create Issues or invent thread numbers",async()=>{
   const created=[];
   const entries=[contributor,seeded,foreign];
