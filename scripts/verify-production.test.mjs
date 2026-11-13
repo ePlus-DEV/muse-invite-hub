@@ -54,9 +54,19 @@ test("fails if detail is noindex or sitemap lacks the page", async () => {
     probeProduction({get:mockGet({"/codes/DPNIHH/":detail.replace("</head>",'<meta name="robots" content="noindex"></head>')})}),
     /incorrectly marked noindex/
   );
+  // Keep the country entry so this specifically tests a missing code detail.
+  // Using <urlset/> now fails the earlier country-map validation instead.
   await assert.rejects(
-    probeProduction({get:mockGet({"/sitemap.xml":"<urlset/>"})}),
+    probeProduction({get:mockGet({"/sitemap.xml":
+      "<url><loc>" + root + "/countries/</loc></url>"})}),
     /missing indexable detail URL/
+  );
+});
+test("fails if the sitemap omits the country map but includes the code detail", async () => {
+  await assert.rejects(
+    probeProduction({get:mockGet({"/sitemap.xml":
+      "<url><loc>" + root + "/codes/DPNIHH/</loc></url>"})}),
+    /missing indexable country map URL/
   );
 });
 test("fails if country map or its geometry is missing from production", async () => {
