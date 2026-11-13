@@ -15,7 +15,7 @@ const expected = ["US", "CA", "JP", "SG", "MX"];
 
 test("map page and homepage retain the same five documented launch markets", () => {
   const homeCodes = [...home.matchAll(/<li data-country="([A-Z]{2})">/g)].map(x => x[1]);
-  const pageCodes = [...page.matchAll(/<article class="country-card[^"]*" data-code="([A-Z]{2})"/g)].map(x => x[1]);
+  const pageCodes = [...page.matchAll(/<article class="country-card(?: is-selected)?" data-code="([A-Z]{2})"/g)].map(x => x[1]);
   assert.deepEqual(homeCodes, expected);
   assert.deepEqual(pageCodes, expected);
   const sources = [...home.matchAll(/href="(https:\/\/about\.fb\.com\/[^"]+)"/g)].map(x => x[1]);
