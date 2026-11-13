@@ -18,6 +18,7 @@ function walk(dir) {
 }
 for (const dir of ["assets", "data"]) if (existsSync(dir)) walk(dir);
 paths.push("index.html");
+if (existsSync("countries/index.html")) paths.push("countries/index.html");
 const dest = resolve("_offline-preview");
 rmSync(dest, { recursive: true, force: true });
 mkdirSync(dest, { recursive: true });
