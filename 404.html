@@ -38,6 +38,11 @@
       destination.hash = window.location.hash;
       window.location.replace(destination.href);
     }
+    // Country map is a stable, source-backed public route, unlike PR-only codes.
+    if (/^countries(?:\/(?:index\.html)?)?$/.test(suffix)) {
+      redirect("/countries/");
+      return;
+    }
     if (!detail) {
       redirect("/");
       return;
