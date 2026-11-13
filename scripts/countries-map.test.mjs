@@ -30,10 +30,43 @@ test("map page and homepage retain the same five documented launch markets", () 
     assert.ok(home.includes('datetime="' + date + '"'));
     assert.ok(page.includes('datetime="' + date + '"'));
   }
-  assert.ok(page.includes('datetime="2026-11-12"'));
+  assert.ok(page.includes('datetime="2026-11-14"'));
   assert.match(page, /Countries without a confirmed announcement are not necessarily blocked/);
   assert.match(page, /Availability ≠ eligibility/);
   assert.ok(!/guaranteed access|live availability|globally available/i.test(page));
+});
+
+test("press-reported UK is clearly separate from officially confirmed rollout", () => {
+  const source = "https://www.thetimes.com/business/technology/article/mark-zuckerbergs-muse-ai-assistant-uk-launch-c5srqnkb8";
+  assert.match(home, /5 confirmed · 1 press-reported · Updated 14 Nov 2026/);
+  assert.match(home, /availability-expected-label/);
+  assert.match(home, /No official launch date or availability/);
+  assert.ok(home.includes(source));
+  const detail = renderDetailPage({ id:"uk-preview", code:"DPNIHH", status:"unverified", addedAt:"2026-11-11", submittedBy:"hoangsvit" });
+  assert.match(detail, /availability-expected-label/);
+  assert.ok(detail.includes(source));
+  assert.match(page, /<section class="countries-expected" id="expected-markets"/);
+  assert.match(page, /class="country-card expected-card" data-code="GB"/);
+  assert.match(page, /Expected \/ press-reported · No official launch date/);
+  assert.ok(page.includes(source));
+  assert.ok(page.includes('datetime="2026-11-09"'));
+  assert.equal((page.match(/data-code="GB"/g)||[]).length,1);
+  assert.equal((home.match(/<li data-country="[A-Z]{2}">/g)||[]).length,5);
+  assert.equal((page.match(/class="country-card(?: is-selected)?"/g)||[]).length,5);
+  assert.match(page, /1 press-reported market/);
+  assert.match(page, /excluded from the <strong>5 confirmed markets<\/strong> total/);
+  assert.match(page, /map-legend-expected/);
+  assert.match(page, /data-region="europe"/);
+  assert.match(js, /const confirmedMarkets = new Map/);
+  assert.match(js, /const expectedMarkets = new Map/);
+  assert.match(js, /map-land-expected/);
+  assert.match(js, /map-marker-expected/);
+  assert.match(js, /code === "GB" \? "europe"/);
+  assert.match(css, /\.map-land-expected\{/);
+  assert.match(css, /\.map-marker-expected /);
+  assert.match(css, /\.expected-card\{/);
+  assert.match(read("assets/styles.css"), /\.availability-expected\{/);
+  assert.ok(!page.includes('Meta-confirmed · <time datetime="2026-11-09"'));
 });
 
 test("accessible map uses bundled Natural Earth geometry and handles absent geometry", () => {
@@ -41,7 +74,7 @@ test("accessible map uses bundled Natural Earth geometry and handles absent geom
   assert.equal(geo.type, "FeatureCollection");
   assert.ok(geo.features.length >= 170);
   assert.match(geo.attribution, /Natural Earth public domain/);
-  for (const code of ["US", "CA", "JP", "MX"]) {
+  for (const code of ["US", "CA", "JP", "MX", "GB"]) {
     assert.ok(geo.features.some(f => f.code === code && f.geometry), code);
   }
   assert.match(js, /document\.createElementNS/);
