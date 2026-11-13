@@ -23,7 +23,7 @@ export function renderSiteHeader({prefix = "./", current = "home"} = {}) {
       <nav class="nav-links" id="site-nav" aria-label="Main navigation">
 ${navLink(home, "home", "fa-solid fa-house", "Home")}
 ${navLink(countries, "countries", "fa-solid fa-earth-americas", "Country map")}
-${navLink(prefix + "#about", "about", "fa-regular fa-circle-question", "About")}
+${navLink(current === "home" ? "#about" : prefix + "#about", "about", "fa-regular fa-circle-question", "About")}
         <a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</a>
         <a class="nav-mobile-share" href="${share}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-plus" aria-hidden="true"></i> Share code</a>
       </nav>
