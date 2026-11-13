@@ -124,7 +124,7 @@ export async function closeAcceptedIssues({
       const record = records.find(item => item.code === code);
       // Standard bot PRs change one record. PR #95 also carries the
       // one-time concurrency migration; verify its individual record on deploy.
-      const recordFile = record ? recordPath(record) : null;
+      const recordFile = record?.id ? recordPath(record) : null;
       const ordinary = files.length === 1 &&
         ["data/invites.json",recordFile].includes(files[0].filename);
       const migration = prNumber === 95 && recordFile &&
