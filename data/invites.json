@@ -14,14 +14,17 @@
     "submittedById": 11882322
   },
   {
-    "id": "community-issue-94",
-    "code": "1X1Y90",
+    "id": "community-issue-90",
+    "code": "O0NZ1J",
     "status": "unverified",
     "addedAt": "2026-11-13",
-    "feedbackIssueNumber": 94,
-    "submittedBy": "nomi128",
-    "note": "Community-submitted in issue #94; redemption not independently verified.",
-    "submittedById": 80985104
+    "feedbackIssueNumber": 90,
+    "submittedBy": "Tanglebrook",
+    "note": "Community-submitted in issue #90; redemption not independently verified.",
+    "submittedById": 12240449,
+    "reportedCapacity": 30,
+    "reportedUses": 8,
+    "usageReportedAt": "2026-11-13"
   },
   {
     "id": "community-issue-76",

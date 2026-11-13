@@ -111,3 +111,34 @@
 @media(prefers-reduced-motion:reduce){
   .map-land,.country-card{transition:none}
 }
+
+/* Press-reported UK plans are deliberately not styled as Meta-confirmed rollout. */
+.map-land-expected{fill:#f7d28b;stroke:#b86e08;stroke-width:1.4;stroke-dasharray:4 3;cursor:pointer}
+.map-land-expected:hover{fill:#f5be5e}
+.map-land-expected.is-focused{fill:#e6a23b;stroke:#96580d;stroke-width:2}
+.map-marker-expected .map-marker-halo{stroke:#b76b08}
+.map-marker-expected .map-marker-pin{fill:#ce830d}
+.map-marker-expected .map-marker-text{fill:#81510f}
+.map-marker-expected:hover .map-marker-halo,.map-marker-expected.is-selected .map-marker-halo{stroke:#81510f}
+.map-marker-expected.is-selected .map-marker-pin{stroke:#895307;fill:#fff}
+.map-marker-expected.is-selected .map-marker-text{fill:#81510f}
+.map-legend-expected{background:#f7d28b;border:1px dashed #b76b08}
+.countries-expected{padding-top:32px;scroll-margin-top:90px}
+.countries-expected .section-kicker{color:#9e5e09}
+.countries-expected-intro{font-size:12.5px;line-height:1.7;color:var(--muted);margin:-5px 0 16px}
+.expected-card{border-color:#efcf95;background:#fffdf9}
+.expected-card:hover{border-color:#ce8f2b}
+.expected-card.is-selected{border-color:#d79324;box-shadow:0 0 0 2px #fff0cb inset}
+.expected-card .country-select:hover{background:#fff8e7}
+.expected-card.is-selected .country-select>i{color:#a36512}
+.expected-flag{background:#fff2d8;color:#a36512;border-color:#f2d8a2;font-size:19px}
+.country-expected-detail{color:#775629;font-size:12px;line-height:1.7;margin:0;padding:0 17px 13px}
+.country-expected-sources{display:flex;flex-wrap:wrap;gap:14px;border-top:1px solid #f4e6ca;padding:12px 17px}
+.country-expected-sources a{color:#91570c;font-size:12px;font-weight:750}
+.country-expected-sources a:hover{text-decoration:underline;text-underline-offset:3px}
+.country-expected-sources i{font-size:10px}
+@media(max-width:620px){
+  .countries-expected{padding-top:26px}
+  .country-expected-detail{padding-inline:14px}
+  .country-expected-sources{padding-inline:14px}
+}

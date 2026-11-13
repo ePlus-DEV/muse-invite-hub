@@ -47,8 +47,8 @@
       <div>
         <p class="eyebrow"><i class="fa-solid fa-earth-americas" aria-hidden="true"></i> MUSE GLOBAL ROLLOUT</p>
         <h1 id="countries-title">Where is Muse available<span class="heading-period">?</span></h1>
-        <p class="countries-lead">Explore markets confirmed by Meta. Select a highlighted country on the map or browse the source-linked country list.</p>
-        <p class="countries-update"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i> Last reviewed <time datetime="2026-11-12">12 Nov 2026</time> · Not a real-time account eligibility checker</p>
+        <p class="countries-lead">Explore Meta-confirmed markets and separately track press-reported launches. Different map colors distinguish official rollout from unconfirmed expectations.</p>
+        <p class="countries-update"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i> Last reviewed <time datetime="2026-11-14">14 Nov 2026</time> · Not a real-time account eligibility checker</p>
       </div>
       <div class="countries-stat"><strong>5</strong><span>Confirmed launch markets</span><small>Meta announcements</small></div>
     </section>
@@ -58,11 +58,12 @@
         <div class="map-zoom" role="group" aria-label="Map region">
           <button type="button" data-region="world" class="is-current" aria-pressed="true">World</button>
           <button type="button" data-region="americas" aria-pressed="false">Americas</button>
+          <button type="button" data-region="europe" aria-pressed="false">Europe</button>
           <button type="button" data-region="asia" aria-pressed="false">Asia</button>
         </div>
       </div>
       <div class="map-visual">
-        <svg id="availability-map" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Map showing Meta-announced Muse markets: United States, Canada, Japan, Singapore and Mexico. A text list with source links is provided below." preserveAspectRatio="xMidYMid meet">
+        <svg id="availability-map" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Map showing Meta-announced Muse markets: United States, Canada, Japan, Singapore and Mexico. The United Kingdom is highlighted separately as a press-reported expectation, not a Meta-confirmed launch. Source-linked lists are below." preserveAspectRatio="xMidYMid meet">
           <rect width="1000" height="500" class="map-ocean"></rect>
           <g id="map-graticule" aria-hidden="true"></g>
           <g id="map-countries" aria-hidden="true"></g>
@@ -71,12 +72,12 @@
         <p id="map-loading" class="map-loading" role="status">Loading world map… The country list below is always available.</p>
       </div>
       <div class="map-panel-foot">
-        <div class="map-legend"><span><i class="map-legend-dot map-legend-confirmed"></i> Confirmed rollout</span><span><i class="map-legend-dot map-legend-unknown"></i> No verified announcement</span></div>
+        <div class="map-legend"><span><i class="map-legend-dot map-legend-confirmed"></i> Confirmed rollout</span><span><i class="map-legend-dot map-legend-expected"></i> Press-reported, not launched</span><span><i class="map-legend-dot map-legend-unknown"></i> No verified announcement</span></div>
         <p>Map boundaries: <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener noreferrer">Natural Earth</a> (public domain, 1:110m). Singapore is displayed with a location marker.</p>
       </div>
     </section>
     <section class="countries-results" id="markets" aria-labelledby="markets-title">
-      <div class="countries-list-head"><div><p class="section-kicker">VERIFIED ANNOUNCEMENTS</p><h2 id="markets-title">Explore the 5 markets</h2></div><span class="countries-count">Updated 12 Nov 2026</span></div>
+      <div class="countries-list-head"><div><p class="section-kicker">VERIFIED ANNOUNCEMENTS</p><h2 id="markets-title">Explore the 5 markets</h2></div><span class="countries-count">Updated 14 Nov 2026</span></div>
       <div class="countries-list">        <article class="country-card is-selected" data-code="US" id="market-us">
           <button type="button" class="country-select" data-select="US" aria-pressed="true" aria-controls="availability-map">
             <span class="country-flag"><img src="../assets/flags/us.svg" width="34" height="24" alt=""></span>
@@ -119,10 +120,31 @@
         </article>
       </div>
     </section>
+    <section class="countries-expected" id="expected-markets" aria-labelledby="expected-markets-title">
+      <div class="countries-list-head">
+        <div><p class="section-kicker">PRESS REPORT · NOT A META ANNOUNCEMENT</p><h2 id="expected-markets-title">Potential upcoming markets</h2></div>
+        <span class="countries-count">1 press-reported market</span>
+      </div>
+      <p class="countries-expected-intro">These are reported plans, not available markets. Dates are speculative until Meta announces a rollout. They are excluded from the <strong>5 confirmed markets</strong> total.</p>
+      <div class="countries-list">
+        <article class="country-card expected-card" data-code="GB" id="market-gb">
+          <button type="button" class="country-select" data-select="GB" aria-pressed="false" aria-controls="availability-map">
+            <span class="country-flag expected-flag" aria-hidden="true"><i class="fa-solid fa-clock"></i></span>
+            <span class="country-copy"><strong>United Kingdom</strong><span>Expected / press-reported · No official launch date</span></span>
+            <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+          </button>
+          <p class="country-expected-detail">The Times reported on <time datetime="2026-11-09">9 Nov 2026</time> that a UK launch was being prepared in the coming weeks. Meta has not confirmed the timing or opened the market.</p>
+          <div class="country-expected-sources">
+            <a href="https://www.thetimes.com/business/technology/article/mark-zuckerbergs-muse-ai-assistant-uk-launch-c5srqnkb8" target="_blank" rel="noopener noreferrer">The Times report <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+            <a href="https://www.retailgazette.co.uk/blog/2026/11/meta-to-launch-ai-shopping-assistant-muse-in-uk-within-weeks/" target="_blank" rel="noopener noreferrer">Retail Gazette coverage <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+          </div>
+        </article>
+      </div>
+    </section>
     <aside class="country-disclaimer">
       <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
       <div><strong>Availability ≠ eligibility</strong>
-        <p>A country appearing here means Meta has announced a Muse rollout there. It does not establish that your account can sign up, skip a waitlist, redeem an invite, or receive rewards. Countries without a confirmed announcement are not necessarily blocked. Vietnam is not on the announced launch list as of 12 Nov 2026. <a href="https://muse.ai/join" target="_blank" rel="noopener noreferrer">Check with Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>.</p>
+        <p>A country in the confirmed list means Meta has announced a Muse rollout there. An amber expected country is based on press coverage only and is not a launched market. It does not establish that your account can sign up, skip a waitlist, redeem an invite, or receive rewards. Countries without a confirmed announcement are not necessarily blocked. Vietnam is not on the announced launch list as of 14 Nov 2026. <a href="https://muse.ai/join" target="_blank" rel="noopener noreferrer">Check with Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>.</p>
       </div>
     </aside>
   </main>

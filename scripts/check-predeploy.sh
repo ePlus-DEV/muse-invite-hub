@@ -4,6 +4,7 @@
 set -euo pipefail
 
 node scripts/validate.mjs
+node --test scripts/catalog.test.mjs
 node scripts/audit-links.mjs
 node --test scripts/validate.test.mjs scripts/preview.test.mjs scripts/preview-fallback.test.mjs scripts/audit-links.test.mjs
 node --check scripts/site-pages.mjs

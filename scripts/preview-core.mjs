@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { validateCatalog } from "./validate.mjs";
 import { generateSite } from "./site-pages.mjs";
+import { assembleCatalog } from "./catalog.mjs";
 
 export const PREVIEW_PREFIX = "pr-preview";
 export const REQUIRED_FILES = ["index.html", "assets/app.js", "assets/styles.css", "data/invites.json"];
@@ -44,7 +45,7 @@ export function buildPreview({ files, readFile, dest, number, sha, mergeSha = nu
   for (const needed of REQUIRED_FILES) {
     if (!paths.includes(needed)) throw Error("Missing preview source: " + needed);
   }
-  const dataset = JSON.parse(readFile("data/invites.json").toString("utf8"));
+  const dataset = assembleCatalog(paths,readFile);
   const problems = validateCatalog(dataset);
   if (problems.length) throw Error("Invalid PR invite catalog: " + problems.join("; "));
   let budget = 0;
@@ -66,6 +67,8 @@ export function buildPreview({ files, readFile, dest, number, sha, mergeSha = nu
       writeFileSync(output, buffer);
     }
   }
+  // Previews use the same merged catalog without executing PR-supplied scripts.
+  writeFileSync(join(dest,"data/invites.json"),JSON.stringify(dataset,null,2)+"\n");
   if (paths.includes("countries/index.html")) {
     for (const file of ["assets/countries.js", "assets/countries.css", "data/world-countries.json"]) {
       if (!paths.includes(file)) throw Error("Missing country preview dependency: " + file);

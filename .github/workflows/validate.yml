@@ -40,6 +40,7 @@ jobs:
           node --check assets/countries.js
       - name: Validate public invite catalog
         run: node scripts/validate.mjs
+          node --test scripts/catalog.test.mjs
       - name: Test trusted Issue form parser
         run: |
           node --check scripts/issue-to-pr.mjs
