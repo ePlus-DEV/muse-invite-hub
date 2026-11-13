@@ -72,3 +72,9 @@ Copying a code is not the same as redeeming it.
 - Keep the country section compact and accessible as semantic static HTML, with source links and mobile layout. Preserve homepage SEO metadata, GA4, existing invites data, `llms.txt` indexability, and noindex preview rules.
 - Show the same dated, primary-source-backed market disclosure on homepage and every generated detail page; the trusted homepage section is the shared source, with relative flag paths adapted for detail. Preserve all five country sources until verified editorial changes are approved. The mobile directory Search and Sort controls must share one horizontal row at narrow widths without hiding keyboard navigation.
 - Update `scripts/seo-aeo.test.mjs` and the README/llms.txt country references when the Meta-source-backed list changes.
+
+## Country availability map
+- The canonical production map is `/countries/`; keep its dated five Meta-backed entries synchronized with the existing trusted homepage disclosure and the generated detail disclosure.
+- A map highlight means a Meta-announced rollout, **not** live signup success. Countries with no announcement are "No verified announcement" rather than "Unavailable"; an invite never bypasses region or account restrictions.
+- Keep country-list text/links rendered without JavaScript. Map geography comes from the locally bundled, public-domain Natural Earth 1:110m data, with a separate pin for Singapore (not visible as a polygon at this scale). No paid mapping services or API keys.
+- The map page must support mobile layout, country/region selection, keyboard use, and graceful fallback if boundaries fail to load. New routes and assets must be supported by safe PR previews, the trusted Pages copy, the local server, tests, and production sitemap without changing homepage SEO.
