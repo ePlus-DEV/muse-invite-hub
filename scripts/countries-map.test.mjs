@@ -38,7 +38,7 @@ test("map page and homepage retain the same five documented launch markets", () 
 
 test("press-reported UK is clearly separate from officially confirmed rollout", () => {
   const source = "https://www.thetimes.com/business/technology/article/mark-zuckerbergs-muse-ai-assistant-uk-launch-c5srqnkb8";
-  assert.match(home, /5 confirmed · 1 press-reported · Updated 14 Nov 2026/);
+  assert.match(home, /5 confirmed markets · 1 press-reported · Updated 14 Nov 2026/);
   assert.match(home, /availability-expected-label/);
   assert.match(home, /No official launch date or availability/);
   assert.ok(home.includes(source));
