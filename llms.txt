@@ -23,5 +23,5 @@ Meta has confirmed rollouts in the United States, Canada, Japan, Singapore, and 
 
 ## Optional
 
-- [Sitemap](https://muse.eplus.dev/sitemap.xml): Lists Home and every published code-detail page (including unverified community reports); listing does not mean Muse has accepted any code.
+- [Sitemap](https://muse.eplus.dev/sitemap.xml): Lists Home, the country map and every published code-detail page (including unverified community reports); listing does not mean Muse has accepted any code.
 - [Open-source repository](https://github.com/ePlus-DEV/muse-invite-hub): View project source and documentation.
