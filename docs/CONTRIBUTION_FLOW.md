@@ -23,7 +23,7 @@ flowchart TD
     M -->|"Yes"| O["Trusted GitHub Pages deploy"]
     O --> P{"Deployment + live detail verification succeed?"}
     P -->|"No"| Q["Keep acceptance pending; investigate/retry"]
-    P -->|"Yes"| R["Publish and notify contributor"]
+    P -->|"Yes"| R["Publish; completion notifications depend on entry path"]
 ```
 
 ### What happens to the Issue?
@@ -31,7 +31,7 @@ flowchart TD
 | Entry point | GitHub thread | After successful review and deployment |
 | --- | --- | --- |
 | **New code submission** | New Issue with a bot-created review-only Draft PR | Bot posts the canonical detail link **then closes the submitted Issue**; that Issue remains the code's canonical feedback thread. |
-| **Existing-code comment** (preferred for quota or redemption reports) | Comment on the code's mapped canonical Issue. Trusted automation can reopen a closed Issue and propose a Draft PR **per structured comment**. | Maintainer updates the catalog and reply/PR records the outcome. The canonical thread is **not automatically closed again** by the acceptance reconciler after feedback reopening. |
+| **Existing-code comment** (preferred for quota or redemption reports) | Comment on the code's mapped canonical Issue. Trusted automation can reopen a closed Issue and propose a Draft PR **per structured comment**. | The published catalog reflects the reviewed merge; the automation already posts a **Draft PR link** on the canonical thread, but it does **not currently send a separate post-deployment acceptance comment** for comment-origin PRs. The canonical thread is **not automatically closed again** by the acceptance reconciler after feedback reopening. |
 | **Legacy count/feedback Issue Form** | Separate Issue; it may be linked as a GitHub sub-issue under the original code Issue. The normal Issue-to-PR bot can propose a Draft PR. | Once the accepted PR's merge is on the deployed site and the live code detail responds, the bot posts the detail URL **before closing the report Issue**. The canonical code Issue remains the canonical thread. |
 | **Informal report, source mismatch, ownership dispute, or conflicting data** | Existing canonical Issue comment or special review Issue; no automatic catalog update. | Maintainer must resolve; no merge or closure is implied by a mere comment. |
 
