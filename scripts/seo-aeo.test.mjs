@@ -112,6 +112,6 @@ test("country availability panel lists five Meta-confirmed markets with exact so
   }
   assert.match(html, /Vietnam is not among these announced launch markets/);
   assert.match(html, /An invite code does not override geographic restrictions or guarantee signup or rewards/);
-  assert.match(html, /12 Nov 2026/);
+  assert.match(html, /14 Nov 2026/);
   assert.doesNotMatch(html, /FAQPage|guaranteed access|available everywhere/i);
 });
