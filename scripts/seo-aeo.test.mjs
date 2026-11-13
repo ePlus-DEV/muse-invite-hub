@@ -38,6 +38,7 @@ test("llms.txt contains only trustworthy indexable code-page links", () => {
   assert.match(llms, /not a live code-validity feed/);
   assert.ok(llms.includes(origin + "/"));
   assert.ok(llms.includes(origin + "/sitemap.xml"));
+  assert.ok(llms.includes(origin + "/countries/"));
   assert.ok(llms.includes("https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml"));
   const catalog = JSON.parse(read("data/invites.json"));
   const owner = catalog.find(entry => entry.featured === true && entry.ownerConfirmed === true);
@@ -55,9 +56,9 @@ test("robots and generated sitemap include all published codes while previews re
   const catalog = JSON.parse(read("data/invites.json"));
   const sitemap = generateSitemap(catalog);
   const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
-  assert.equal(urls.length, catalog.length + 1, "Sitemap must list Home plus every code");
+  assert.equal(urls.length, catalog.length + 2, "Sitemap must list Home, Country map and every code");
   assert.deepEqual(urls, [
-    origin + "/", ...catalog.map(item => origin + "/codes/" + item.code + "/")
+    origin + "/", origin + "/countries/", ...catalog.map(item => origin + "/codes/" + item.code + "/")
   ]);
   assert.equal(new Set(urls).size, urls.length, "Sitemap must not contain duplicate URLs");
   for (const item of catalog) {
