@@ -69,7 +69,8 @@ export function renderDetailMarketAvailability() {
     .replace('id="availability"', 'id="detail-availability"')
     .replace('aria-labelledby="availability-title"', 'aria-labelledby="detail-availability-title"')
     .replace('id="availability-title"', 'id="detail-availability-title"')
-    .replaceAll('src="./assets/flags/', 'src="../../assets/flags/');
+    .replaceAll('src="./assets/flags/', 'src="../../assets/flags/')
+    .replace('href="./countries/"', 'href="../../countries/"');
 }
 
 function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = false } = {}) {
@@ -160,6 +161,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '    <a class="brand" href="../../" aria-label="Muse Invite Hub homepage"><span class="brand-icon" aria-hidden="true"><img src="../../assets/favicon.svg" width="42" height="42" alt=""></span>' +
     '      <span class="brand-type"><strong>Muse Invite Hub</strong><small>COMMUNITY</small></span></a>' +
     '    <nav class="nav-links" aria-label="Main navigation"><a href="../../">Home</a>' +
+    '      <a href="../../countries/"><i class="fa-solid fa-earth-americas" aria-hidden="true"></i> Country map</a>' +
     '      <a href="../../#about">About</a>' +
     '      <a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</a></nav>' +
     '    <a class="button button-primary nav-share" href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-plus" aria-hidden="true"></i> Share code</a>' +
@@ -214,6 +216,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '    <div class="footer-main-row">' +
     '      <a class="footer-brand" href="../../"><span class="brand-icon brand-icon-small" aria-hidden="true"><img src="../../assets/favicon.svg" width="30" height="30" alt=""></span> Muse Invite Hub</a>' +
     '      <nav class="footer-links" aria-label="Footer navigation">' +
+    '        <a href="../../countries/">Country map</a>' +
     '        <a href="https://muse.ai/" target="_blank" rel="noopener noreferrer">Official Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>' +
     '        <a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</a>' +
     '        <a href="https://github.com/ePlus-DEV/muse-invite-hub/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contribute <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>' +
@@ -229,7 +232,7 @@ export function renderDetailPage(item, options) {
 }
 export function generateSitemap(items, origin = SITE_ORIGIN) {
   const base = origin.replace(/\/+$/, "");
-  const paths = ["/", ...items.filter(canIndexDetail).map(item => codePath(item.code))];
+  const paths = ["/", "/countries/", ...items.filter(canIndexDetail).map(item => codePath(item.code))];
   const rows = paths.map(path => "  <url><loc>" + escapeHtml(base + path) + "</loc></url>").join("\n");
   return '<?xml version="1.0" encoding="UTF-8"?>\n' +
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + rows + '\n</urlset>\n';

@@ -50,6 +50,12 @@ test("deleted preview root and explicit index redirect to production homepage", 
   }
 });
 
+test("expired country map previews redirect to canonical production map", async () => {
+  for (const path of ["/pr-preview/pr-44/countries/", "/pr-preview/pr-44/countries/index.html"]) {
+    assert.deepEqual(await navigate(path), {redirect:"https://muse.eplus.dev/countries/",calls:0});
+  }
+});
+
 test("deleted preview detail routes navigate to published production detail URL", async () => {
   for (const path of [
     "/pr-preview/pr-44/codes/DPNIHH/",

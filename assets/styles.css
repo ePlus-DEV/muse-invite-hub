@@ -524,3 +524,7 @@ html.is-page-loading body>.site-footer{display:none!important}
 .detail-code-panel-copied #detail-copy:hover,.detail-code-panel-copied #detail-copy:focus-visible{background:#e3d7ff;color:#51278d}
 .detail-copy-note{margin:11px 0 0;font-size:12px;font-weight:750;line-height:1.5;color:#6335a4}
 .detail-copy-note::before{content:"";display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:#8252c8;vertical-align:middle}
+
+/* Link from the existing sourced market disclosure to its full map page. */
+.availability-map-link{margin:14px 0 4px}
+.availability-map-link .button{font-size:12px;padding:9px 13px;min-height:40px}

@@ -1,0 +1,113 @@
+/* Country availability map — builds on the site's existing blue/neutral design system. */
+.countries-page{padding-top:24px;padding-bottom:55px}
+.countries-breadcrumb{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;font-weight:700;margin-bottom:26px}
+.countries-breadcrumb a:hover{color:var(--blue)}
+.countries-breadcrumb i{font-size:9px;color:var(--faint)}
+.countries-hero{display:grid;grid-template-columns:minmax(0,1fr) 215px;align-items:center;gap:35px;padding:0 0 26px}
+.countries-hero .eyebrow{margin-bottom:13px}
+.countries-hero h1{color:var(--ink);font-size:clamp(30px,4.1vw,51px);line-height:1.13;font-weight:900;letter-spacing:-1.9px;margin:0 0 15px}
+.countries-lead{font-size:15px;line-height:1.75;color:var(--muted);max-width:700px;margin:0 0 14px}
+.countries-update{display:flex;align-items:center;gap:9px;color:#64748b;font-size:12px;margin:0}
+.countries-update i{color:var(--blue)}
+.countries-stat{padding:24px 19px;background:#fff;border:1px solid var(--blue-line);border-radius:22px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:2px}
+.countries-stat strong{font-size:57px;line-height:1;color:var(--blue);font-weight:900;letter-spacing:-3px}
+.countries-stat span{font-size:13px;font-weight:800;color:var(--ink)}
+.countries-stat small{font-size:11px;color:var(--muted)}
+.map-panel{overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow-sm)}
+.map-panel-head{padding:22px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.map-panel-head .section-kicker{margin:0 0 4px}
+.map-panel-head h2{font-size:19px;font-weight:850;letter-spacing:-.6px;color:var(--ink);margin:0}
+.map-zoom{display:flex;align-items:center;gap:3px;background:#f2f5fa;padding:4px;border-radius:11px;flex:none}
+.map-zoom button{border:0;border-radius:8px;background:transparent;color:var(--muted);min-height:35px;padding:7px 13px;font-size:12px;font-weight:800}
+.map-zoom button:hover{color:var(--blue);background:#e8f1ff}
+.map-zoom button.is-current{background:#fff;color:var(--blue);box-shadow:0 1px 5px rgba(16,24,40,.13)}
+.map-visual{position:relative;overflow-x:auto;background:radial-gradient(ellipse at 50% 45%,#f7fbff,#edf5ff);scrollbar-color:#c5d8f5 transparent}
+.map-visual svg{display:block;width:100%;height:auto;min-height:240px;aspect-ratio:2/1;touch-action:pan-x}
+.map-ocean{fill:#eff6ff}
+.map-gridline{stroke:#d6e6fa;stroke-width:.8;stroke-dasharray:3 8;vector-effect:non-scaling-stroke}
+.map-land{fill:#d8e2ee;stroke:#fff;stroke-width:.9;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round;transition:fill .18s}
+.map-land-confirmed{fill:#82b7ff;stroke:#fff;cursor:pointer}
+.map-land-confirmed:hover{fill:#4c95f8}
+.map-land-confirmed.is-focused{fill:#0064ff}
+.map-marker{cursor:pointer;outline:none}
+.map-marker-halo{fill:#fff;stroke:#0064ff;stroke-width:2.8;vector-effect:non-scaling-stroke;opacity:.92}
+.map-marker-pin{fill:#0064ff;stroke:#fff;stroke-width:1.3;vector-effect:non-scaling-stroke}
+.map-marker-text{font-size:14px;fill:#24364d;font-weight:800;paint-order:stroke;stroke:#f8fbff;stroke-width:4px;stroke-linecap:round;stroke-linejoin:round;user-select:none;pointer-events:none}
+.map-marker:hover .map-marker-halo,.map-marker.is-selected .map-marker-halo{stroke:#084ba8;stroke-width:4}
+.map-marker.is-selected .map-marker-pin{fill:#fff;stroke:#0643a0;stroke-width:3}
+.map-marker.is-selected .map-marker-text{fill:#0643a0}
+.map-marker:focus-visible .map-marker-halo{stroke:#111827;stroke-width:4;stroke-dasharray:3 3}
+.map-loading{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid var(--line);background:rgba(255,255,255,.95);padding:12px 16px;max-width:90%;width:360px;text-align:center;border-radius:13px;color:var(--muted);box-shadow:var(--shadow-sm);font-size:13px}
+.map-panel-foot{display:flex;align-items:center;justify-content:space-between;gap:15px;border-top:1px solid var(--line);padding:15px 22px;color:var(--muted);font-size:11px}
+.map-panel-foot p{margin:0;text-align:right;line-height:1.5}
+.map-panel-foot a{text-decoration:underline;text-decoration-color:#bdc8db;text-underline-offset:3px}
+.map-panel-foot a:hover{color:var(--blue)}
+.map-legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:11px;font-weight:700;color:#475467}
+.map-legend span{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.map-legend-dot{width:12px;height:12px;display:inline-block;border-radius:4px;flex:none}
+.map-legend-confirmed{background:#82b7ff;border:1px solid #397ee8}
+.map-legend-unknown{background:#d8e2ee;border:1px solid #b5c7da}
+.countries-results{padding-top:38px;scroll-margin-top:90px}
+.countries-list-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:16px}
+.countries-list-head .section-kicker{margin:0 0 5px}
+.countries-list-head h2{font-size:25px;letter-spacing:-.75px;color:var(--ink);margin:0}
+.countries-count{font-size:12px;color:var(--muted);font-weight:700}
+.countries-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.country-card{min-width:0;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;border:1px solid var(--line);border-radius:17px;background:#fff;transition:border-color .18s,box-shadow .18s}
+.country-card:hover{border-color:var(--blue-line);box-shadow:var(--shadow-sm)}
+.country-card.is-selected{border-color:#8bbdff;box-shadow:0 0 0 2px #e6f0ff inset}
+.country-select{border:0;background:transparent;display:flex;align-items:center;gap:12px;text-align:left;min-height:80px;padding:14px 17px;color:var(--ink);width:100%}
+.country-select:hover{background:#f7faff}
+.country-select>i{font-size:14px;color:var(--faint);margin-left:auto;flex:none}
+.country-card.is-selected .country-select>i{color:var(--blue)}
+.country-flag{height:38px;width:48px;border-radius:10px;display:grid;place-items:center;flex:none;background:#f1f5f9;border:1px solid #e8edf4}
+.country-flag img{border-radius:3px;display:block;box-shadow:0 1px 3px #0001}
+.country-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.country-copy strong{font-size:15px;font-weight:850;letter-spacing:-.2px}
+.country-copy span{color:var(--muted);font-size:11.5px;line-height:1.4}
+.country-source{border-top:1px solid #eef1f6;color:var(--blue);display:inline-flex;align-items:center;gap:8px;margin:0 17px;padding:12px 0;font-size:12px;font-weight:750}
+.country-source:hover{text-decoration:underline;text-underline-offset:3px}
+.country-source i{font-size:10px}
+.country-disclaimer{display:flex;gap:14px;background:#eff6ff;border:1px solid #cce1ff;border-radius:17px;padding:19px 22px;margin-top:25px;color:#344054}
+.country-disclaimer>i{color:var(--blue);margin-top:4px;font-size:17px}
+.country-disclaimer strong{font-size:13px;color:var(--ink)}
+.country-disclaimer p{font-size:12.5px;line-height:1.8;color:#58677b;margin:6px 0 0}
+.country-disclaimer a{color:var(--blue);font-weight:750;text-decoration:underline;text-underline-offset:2px}
+@media(max-width:800px){
+  .countries-page{padding-top:19px}
+  .countries-hero{grid-template-columns:minmax(0,1fr) 150px;gap:16px}
+  .countries-stat{padding:19px 14px}
+  .countries-stat strong{font-size:46px}
+  .map-panel-foot{align-items:flex-start;flex-direction:column;gap:8px}
+  .map-panel-foot p{text-align:left}
+}
+@media(max-width:620px){
+  .countries-breadcrumb{margin-bottom:21px}
+  .countries-hero{display:block;padding-bottom:23px}
+  .countries-hero h1{font-size:34px;letter-spacing:-1.4px}
+  .countries-lead{font-size:13.5px}
+  .countries-update{font-size:11px;flex-wrap:wrap}
+  .countries-stat{margin-top:20px;display:flex;flex-direction:row;align-items:center;gap:13px;padding:13px 16px}
+  .countries-stat strong{font-size:40px}
+  .countries-stat span{font-size:12px}
+  .countries-stat small{display:none}
+  .map-panel{border-radius:16px}
+  .map-panel-head{flex-direction:column;align-items:stretch;gap:12px;padding:16px}
+  .map-panel-head h2{font-size:17px}
+  .map-zoom{width:100%}
+  .map-zoom button{flex:1}
+  .map-visual svg{width:760px;max-width:none;min-height:380px}
+  .map-panel-foot{padding:14px 15px;font-size:10px}
+  .map-legend{gap:9px;font-size:10px}
+  .countries-results{padding-top:29px}
+  .countries-list-head{align-items:flex-start}
+  .countries-list-head h2{font-size:21px}
+  .countries-count{font-size:10px}
+  .countries-list{grid-template-columns:1fr;gap:10px}
+  .country-select{padding:12px 14px;min-height:73px}
+  .country-source{margin:0 14px}
+  .country-disclaimer{padding:15px;gap:11px}
+}
+@media(prefers-reduced-motion:reduce){
+  .map-land,.country-card{transition:none}
+}

@@ -15,7 +15,7 @@ const TYPES = {
   ".xml":"application/xml; charset=utf-8", ".woff2":"font/woff2"
 };
 const TOP_LEVEL = new Set(["index.html","404.html","robots.txt","sitemap.xml","llms.txt",
-  "CNAME","assets","data","codes","pr-preview"]);
+  "CNAME","assets","data","codes","countries","pr-preview"]);
 
 export function createStaticServer(root = process.cwd()) {
   const base = resolve(root);

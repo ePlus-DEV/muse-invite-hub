@@ -6,7 +6,15 @@ const root = "https://muse.eplus.dev";
 const detail = '<!doctype html><html><head><title>DPNIHH Muse Invite Code | Muse Invite Hub</title><link rel="canonical" href="' +
   root + '/codes/DPNIHH/"></head><body><a href="../../assets/styles.css">Styles</a>' +
   '<script src="../../assets/detail.js"></script><script type="application/ld+json">"BreadcrumbList"</script></body></html>';
+const country = '<!doctype html><title>Muse Country Availability Map | Muse Invite Hub</title>' +
+  '<link rel="canonical" href="' + root + '/countries/"><link href="../assets/countries.css"><script src="../assets/countries.js"></script>';
+const geo = JSON.stringify({type:"FeatureCollection",features:["US","CA","JP","MX"].map(code => ({code,geometry:{type:"Polygon",coordinates:[]}}))});
 const pages = {
+  "/countries/": country,
+  "/countries/index.html": country,
+  "/assets/countries.js": "const places = document.getElementById('map-markers');",
+  "/assets/countries.css": ".map-panel{display:block}",
+  "/data/world-countries.json": geo,
   "/": '<link rel="canonical" href="' + root + '/">',
   "/codes/DPNIHH/": detail,
   "/codes/DPNIHH/index.html": detail,
@@ -14,7 +22,7 @@ const pages = {
   "/assets/detail.js": 'document.getElementById("detail-copy")',
   "/assets/social-preview.png": "a".repeat(600),
   "/llms.txt": "# Muse Invite Hub\n\nThis is not a live code-validity feed.\n\n- [Home](" + root + "/): Browse codes.\n",
-  "/sitemap.xml": "<url><loc>" + root + "/codes/DPNIHH/</loc></url>",
+  "/sitemap.xml": "<url><loc>" + root + "/countries/</loc></url><url><loc>" + root + "/codes/DPNIHH/</loc></url>",
   "/404.html": '<meta name="robots" content="noindex,nofollow,noarchive"><script id="muse-preview-fallback">window.location.replace</script>'
 };
 function mockGet(overrides = {}) {
@@ -27,7 +35,7 @@ function mockGet(overrides = {}) {
 }
 test("verifies production directory route, explicit HTML, JS/CSS and sitemap", async () => {
   const result = await probeProduction({get:mockGet()});
-  assert.deepEqual(result, {checked:9,detailPath:"/codes/DPNIHH/"});
+  assert.deepEqual(result, {checked:14,detailPath:"/codes/DPNIHH/"});
 });
 test("fails when the pretty URL returns 404 even if index.html works", async () => {
   await assert.rejects(
@@ -51,6 +59,11 @@ test("fails if detail is noindex or sitemap lacks the page", async () => {
     /missing indexable detail URL/
   );
 });
+test("fails if country map or its geometry is missing from production", async () => {
+  await assert.rejects(probeProduction({get:mockGet({"/countries/":null})}), /countries\/: HTTP 404/);
+  await assert.rejects(probeProduction({get:mockGet({"/data/world-countries.json":null})}), /world-countries\.json: HTTP 404/);
+});
+
 test("fails when the public AI discovery file is missing", async () => {
   await assert.rejects(probeProduction({get:mockGet({"/llms.txt":null})}), /llms.txt: HTTP 404/);
 });
