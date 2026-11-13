@@ -2,7 +2,7 @@
 
 Thanks for helping! **You can share an invite, report feedback or update a count without writing code.** Use the Share Code GitHub Issue Form **only for new invite codes**. Existing-code feedback and owner-count updates reuse the code’s canonical Issue through the website. UI and documentation improvements use Pull Requests.
 
-[Homepage](https://muse.eplus.dev/) · [README](README.md) · [Share code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report feedback](https://muse.eplus.dev/#codes) · [Update count](https://muse.eplus.dev/#codes)
+[Homepage](https://muse.eplus.dev/) · [README](README.md) · [Visual contribution flow](docs/CONTRIBUTION_FLOW.md) · [Share code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report feedback](https://muse.eplus.dev/#codes) · [Update count](https://muse.eplus.dev/#codes)
 
 > **Privacy:** GitHub Issues, PRs and repository content are public. Never share passwords, OTPs, authentication codes, session tokens, cookies, private login or invite links, account identifiers, or screenshots containing sensitive details.
 
