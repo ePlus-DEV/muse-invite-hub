@@ -31,7 +31,7 @@ test("country disclosure summary is compact and lists the same five sourced coun
   assert.match(home, /class="availability-summary-main"/);
   assert.match(home, /class="availability-summary-end"/);
   assert.match(home, /Where is Muse available\?/);
-  assert.match(home, /5 confirmed · 1 press-reported · Updated 14 Nov 2026/);
+  assert.match(home, /5 confirmed markets · 1 press-reported · Updated 14 Nov 2026/);
   assert.match(css, /\.availability-summary-main\{display:flex;align-items:center/);
   assert.match(css, /\.availability-market-list\{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(css, /\.availability-market-list\{grid-template-columns:1fr;gap:7px\}/);
