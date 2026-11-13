@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { validateCatalog } from "./validate.mjs";
 import { parsePublicSource } from "./source-platform.mjs";
 import { renderPageSkeleton } from "./page-skeleton.mjs";
+import { renderSiteHeader } from "./site-navigation.mjs";
 
 export const SITE_ORIGIN = "https://muse.eplus.dev";
 export const DETAIL_PATH = "codes";
@@ -157,15 +158,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '</head>\n<body>\n' +
     '  <a class="skip-link" href="#detail-title">Skip to invite details</a>\n' +
     renderPageSkeleton("detail") + '\n' +
-    '  <header class="site-header"><div class="container nav-shell">' +
-    '    <a class="brand" href="../../" aria-label="Muse Invite Hub homepage"><span class="brand-icon" aria-hidden="true"><img src="../../assets/favicon.svg" width="42" height="42" alt=""></span>' +
-    '      <span class="brand-type"><strong>Muse Invite Hub</strong><small>COMMUNITY</small></span></a>' +
-    '    <nav class="nav-links" aria-label="Main navigation"><a href="../../">Home</a>' +
-    '      <a href="../../countries/"><i class="fa-solid fa-earth-americas" aria-hidden="true"></i> Country map</a>' +
-    '      <a href="../../#about">About</a>' +
-    '      <a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</a></nav>' +
-    '    <a class="button button-primary nav-share" href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-plus" aria-hidden="true"></i> Share code</a>' +
-    '  </div></header>\n' +
+    renderSiteHeader({ prefix: "../../", current: "detail" }) + "\n" +
     '  <main class="container detail-page">' +
     '    <nav class="detail-breadcrumb" aria-label="Breadcrumb"><a href="../../">Home</a><span aria-hidden="true">/</span>' +
     '      <a href="../../#codes">Invite codes</a><span aria-hidden="true">/</span><span aria-current="page">' + escapeHtml(item.code) + '</span></nav>' +
