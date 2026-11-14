@@ -54,7 +54,7 @@ export function hasRequiredInviteConfirmations(body) {
   return permission && privacy;
 }
 
-export function shouldCloseUnconfirmedInvite(issue) {
+export function inviteNeedsConfirmationReview(issue) {
   if (issue?.state !== "open" || issue.pull_request) return false;
   if (!String(issue.title || "").startsWith("[Invite]") && !isShareCodeIssue(issue)) return false;
   if (!Object.hasOwn(readIssueFields(issue.body), "Invite code")) return false;
@@ -513,17 +513,20 @@ export async function runIssueAutomation({
   if(!token)throw Error("Missing GitHub Actions token.");
   if(!Number.isSafeInteger(number)||number<=0)throw Error("Missing valid Issue number.");
   const issue=await api("GET","issues/"+number,token);
-  if (shouldCloseUnconfirmedInvite(issue)) {
-    // This cannot prevent GitHub from accepting an API-created Issue, but
-    // prevents invalid reports from remaining open or reaching Draft PRs.
+  if (inviteNeedsConfirmationReview(issue)) {
+    // GitHub Issue Forms require consent, but API/other clients may omit the
+    // checklist entirely. Preserve the contributor's Issue for manual triage.
+    // Never synthesize consent, publish a code, or penalize the contributor.
     await comment(issue,token,
-      "⚠️ This submission is missing one or both required contributor confirmations. "+
-      "No Draft PR or public catalog entry was created. Closing this incomplete Issue. "+
-      "Please use the [Share Code form](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) "+
-      "and check both boxes. Alternatively, edit this Issue to include both checked "+
-      "confirmations and reopen it to trigger validation again.");
-    await api("PATCH","issues/"+number,token,{state:"closed",state_reason:"not_planned"});
-    return {outcome:"rejected",reason:"Missing mandatory public-sharing and privacy confirmations."};
+      "⚠️ This Issue arrived without the complete Contributor checklist. "+
+      "The repository form requires both confirmations, so this may be an "+
+      "Issue submission/integration problem rather than contributor error. "+
+      "The Issue remains **open** for maintainer review; no Draft PR or "+
+      "public catalog entry was generated. "+
+      "A maintainer should inspect how the Issue was created and help the "+
+      "contributor supply the missing confirmations without discarding "+
+      "the original submission.");
+    return {outcome:"needs-review",reason:"Missing confirmations in submitted Issue body; retained open for investigation."};
   }
   try{
     const result=await propose(issue,token);
