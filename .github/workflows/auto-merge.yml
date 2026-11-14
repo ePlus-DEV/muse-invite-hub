@@ -57,6 +57,10 @@ jobs:
               process.env.GITHUB_WORKSPACE + "/scripts/issue-to-pr.mjs"
             );
             const { owner, repo } = context.repo;
+            const { execFileSync } = await import("node:child_process");
+            const checkedOutMain = execFileSync("git",["rev-parse","HEAD"],{
+              cwd:process.env.GITHUB_WORKSPACE,encoding:"utf8"
+            }).trim();
             const fullName = owner + "/" + repo;
             const event = context.eventName;
 
@@ -104,6 +108,7 @@ jobs:
               let sourceIssueUpdatedAt = null;
               const inviteMatch = /^auto\/issue-([1-9][0-9]*)-invite$/.exec(pr.head.ref);
               if (inviteMatch &&
+                  pr.base.sha === checkedOutMain &&
                   pr.user?.login === "github-actions[bot]" &&
                   String(pr.body || "").includes(AUTO_PUBLISH_NEW_INVITE_MARKER) &&
                   files.length >= 1 && files.length <= 10 &&
