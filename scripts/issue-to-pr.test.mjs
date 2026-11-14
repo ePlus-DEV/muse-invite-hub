@@ -130,7 +130,7 @@ test("API-created invite Issues without required confirmations are closed before
   assert.equal(shouldCloseUnconfirmedInvite(rawIssue), true);
   assert.throws(() => planIssueChange(rawIssue,[item]), /confirmations/);
   assert.equal(shouldCloseUnconfirmedInvite({...rawIssue,state:"closed"}), false);
-  assert.equal(shouldCloseUnconfirmedInvite({...rawIssue,pull_request:{url:"https://github.com/x/y"}}), false);
+  assert.equal(shouldCloseUnconfirmedInvite({...rawIssue,pull_request:{number:1}}), false);
   assert.equal(shouldCloseUnconfirmedInvite(issue(113,"Support request",missing)), false);
 });
 
