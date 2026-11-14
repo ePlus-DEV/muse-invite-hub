@@ -1,6 +1,6 @@
 # Contributing to Muse Invite Hub
 
-Thanks for helping! **You can share an invite, report feedback or update a count without writing code.** Use the Share Code GitHub Issue Form **only for new invite codes**. You can submit up to **10 distinct new codes in one Issue**, separated by commas, spaces or newlines. They receive **separate catalog records in one review-only Draft PR**; per-code usage/quota fields must be blank for grouped submissions. If one code already exists, submit that code's update through its existing listing instead. Existing-code feedback and owner-count updates reuse the code’s canonical Issue through the website. UI and documentation improvements use Pull Requests.
+Thanks for helping! **You can share an invite, report feedback or update a count without writing code.** Use the Share Code GitHub Issue Form **only for new invite codes**. You can submit up to **10 distinct new codes in one Issue**, separated by commas, spaces or newlines. They receive **separate catalog records in one PR**: eligible new GitHub-owned codes auto-publish after validation, while social-source submissions remain review-only Draft PRs. Per-code usage/quota fields must be blank for grouped submissions. If one code already exists, submit that code's update through its existing listing instead. Existing-code feedback and owner-count updates reuse the code’s canonical Issue through the website. UI and documentation improvements use Pull Requests.
 
 [Homepage](https://muse.eplus.dev/) · [README](README.md) · [Visual contribution flow](docs/CONTRIBUTION_FLOW.md) · [Share code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report feedback](https://muse.eplus.dev/#codes) · [Update count](https://muse.eplus.dev/#codes)
 
@@ -70,7 +70,7 @@ Threads, X and Facebook Issues with a valid-looking **original post permalink** 
 
 No Issue content is published automatically. Draft PRs created by this workflow are **not included in publicly hosted PR previews** until a maintainer marks them ready for review. Once ready, maintainers inspect the proposal and CI/preview, then merge to `main` to deploy. After successful GitHub Pages deployment, trusted automation checks that the merged PR is included in the deployed commit and that the code's production detail is accessible. It posts a comment linking to **https://muse.eplus.dev/codes/CODE/** on the original Issue **before** closing it. If deployment, page verification or commenting fails, the Issue remains open for a later successful deployment. Repeated runs never post duplicate acceptance comments. Repeated Issues or conflicting values do not create duplicate proposals.
 
-**One-time setup:** if GitHub denies PR creation, enable **Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests** (subject to organization policy). No custom token is required. Retry using **Actions → Issue to Draft PR → Run workflow** and enter the original Issue number. The automation never force-pushes or auto-merges.
+**One-time setup:** if GitHub denies PR creation, enable **Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests** (subject to organization policy). No custom token is required. Retry using **Actions → Issue to Draft PR → Run workflow** and enter the original Issue number. The Issue bot never force-pushes or directly merges PRs. A separate trusted workflow may auto-merge only new GitHub-owned codes that pass strict revalidation, or PRs independently authorized by the maintainer.
 
 ## Contribute code or documentation
 
@@ -156,7 +156,7 @@ Historical contributor handles are kept for attribution. Listings do not mean th
 4. Run validation, link audit and tests; check the generated preview on relevant URLs.
 5. Merge the approved PR into `main`. GitHub Pages then deploys production from trusted source.
 
-Issue Forms are **not auto-publication**. Never auto-merge arbitrary user-submitted catalog data.
+Issue Forms do **not** establish Muse validity. Auto-publication is allowed only for new, self-reported GitHub codes when the contributor completed both confirmations, the trusted bot generated exactly matching new JSON records, and CI passes. Never auto-merge arbitrary submitted data, social sources or existing-code updates.
 
 ## Community and security
 
