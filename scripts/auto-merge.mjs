@@ -17,6 +17,8 @@ export function qualifiesForDefaultAutoMerge(pr, files=[]) {
   return files.every(file => {
     if (!["added","modified"].includes(file?.status) || file.previous_filename) return false;
     const name = String(file.filename || "");
+    // Reject relative-directory tricks even when the name happens to end in .md.
+    if (name.split("/").some(part => part === "." || part === "..")) return false;
     return ["README.md", "CONTRIBUTING.md"].includes(name) ||
       /^docs\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.md$/.test(name);
   });
