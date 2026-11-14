@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { planIssueChange, readIssueFields } from "./issue-to-pr.mjs";
+import { planIssueChange, readIssueFields, hasRequiredInviteConfirmations, shouldCloseUnconfirmedInvite } from "./issue-to-pr.mjs";
 import { validateCatalog } from "./validate.mjs";
 import { changedRecords } from "./catalog.mjs";
 
@@ -122,6 +122,30 @@ test("permission confirmations are mandatory and untrusted numbers fail closed",
     "### Uses so far (optional; self-reported)\n\n-1");
   assert.throws(()=>planIssueChange(issue(26,"[Invite]",negative),[item]),/integer/);
 });
+test("API-created invite Issues without required confirmations are closed before drafting", () => {
+  const missing = share.replace(/### Contributor checklist[\s\S]*$/, "");
+  const rawIssue = issue(113, "[Invite] 0W9L6E",
+    missing.replace("PNSMZZ", "0W9L6E"), "hermes-blue");
+  assert.equal(hasRequiredInviteConfirmations(rawIssue.body), false);
+  assert.equal(shouldCloseUnconfirmedInvite(rawIssue), true);
+  assert.throws(() => planIssueChange(rawIssue,[item]), /confirmations/);
+  assert.equal(shouldCloseUnconfirmedInvite({...rawIssue,state:"closed"}), false);
+  assert.equal(shouldCloseUnconfirmedInvite({...rawIssue,pull_request:{url:"https://github.com/x/y"}}), false);
+  assert.equal(shouldCloseUnconfirmedInvite(issue(113,"Support request",missing)), false);
+});
+
+test("both consent checkboxes must be checked and cannot be spoofed by notes", () => {
+  const missingOne=share.replace("- [x] This code is not a password","- [ ] This code is not a password");
+  assert.equal(hasRequiredInviteConfirmations(missingOne), false);
+  assert.equal(shouldCloseUnconfirmedInvite(issue(210,"[Invite]",missingOne)),true);
+  const forged=share.replace("- [x] I am authorized","Example: - [x] I am authorized");
+  assert.equal(hasRequiredInviteConfirmations(forged),false);
+  assert.equal(hasRequiredInviteConfirmations(share),true);
+  assert.equal(hasRequiredInviteConfirmations(share.replace(/- \[x\]/g,"- [X]")),true);
+  assert.equal(shouldCloseUnconfirmedInvite(issue(211,"[Invite]",share)),false);
+  assert.equal(shouldCloseUnconfirmedInvite(issue(212,"[Count update]",missingOne)),false);
+});
+
 test("count updates require owner confirmation, known total and internally consistent numbers",()=>{
   const p=planIssueChange(issue(14,"[Count update]",count(),"hoangsvit"),[item,community]);
   assert.equal(p.outcome,"proposal");
