@@ -152,3 +152,22 @@ test("social parser differentiates identical handles across networks", () => {
   assert.equal(parsePublicSource("https://www.facebook.com/share/p/123"),null);
   assert.equal(parsePublicSource("https://x.com/home"),null);
 });
+
+
+test("multi-code records may share one Issue only with matching source and safe IDs",()=>{
+  const base={status:"unverified",addedAt:"2026-11-14",submittedBy:"contributor-1",feedbackIssueNumber:120};
+  const entries=[
+    {...base,id:"community-issue-120-alfa12",code:"ALFA12"},
+    {...base,id:"community-issue-120-bravo2",code:"BRAVO2"}
+  ];
+  assert.deepEqual(validateCatalog(entries),[]);
+  const unrelated={...entries[1],id:"unrelated-record"};
+  assert.ok(validateCatalog([entries[0],unrelated]).some(e=>e.includes("duplicate feedback Issue")));
+  const differentOwner={...entries[1],submittedBy:"another-owner"};
+  assert.ok(validateCatalog([entries[0],differentOwner]).some(e=>e.includes("duplicate feedback Issue")));
+  const tooMany=Array.from({length:11},(_,i)=>({
+    ...base,id:"community-issue-120-code"+String(i).padStart(2,"0"),
+    code:"CODE"+String(i).padStart(2,"0")
+  }));
+  assert.ok(validateCatalog(tooMany).some(e=>e.includes("at most 10")));
+});
