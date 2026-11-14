@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { validateCatalog } from "./validate.mjs";
-import { fetchGitHubCatalog, changedRecord } from "./catalog.mjs";
+import { fetchGitHubCatalog, changedRecord, changedRecords } from "./catalog.mjs";
 import { parsePublicSource, listedPlatform, LISTING_PLATFORMS } from "./source-platform.mjs";
-import { isShareCodeIssue } from "./code-issue-map.mjs";
+import { isShareCodeIssue, parseInviteCodes } from "./code-issue-map.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
 const MARKER = "<!-- muse-issue-draft-pr -->";
@@ -59,10 +59,8 @@ function reportDate(issue) {
   if (!Number.isFinite(date.getTime())) throw Error("Missing Issue report date.");
   return date.toISOString().slice(0, 10);
 }
-function codeFrom(fields) {
-  const code = field(fields, "Invite code").trim().toUpperCase();
-  if (!CODE_PATTERN.test(code)) throw Error("Invite code must be 4–32 uppercase letters, numbers or hyphens.");
-  return code;
+function codesFrom(fields) {
+  return parseInviteCodes(field(fields, "Invite code"));
 }
 function findCode(records, code) {
   return records.find(item => item.code.toUpperCase() === code) || null;
@@ -110,6 +108,57 @@ function summary(issue, code, action) {
   return "Community Issue #" + issue.number + " (" + action + "), code " + code +
     "; maintainer review required, no live redemption verification.";
 }
+
+function planMultiInvite(issue, current, codes, fields) {
+  const quotas = [
+    "Uses so far (optional; self-reported)",
+    "Invite limit (optional; self-reported)",
+    "Remaining invites (optional; self-reported)"
+  ];
+  if (quotas.some(name => field(fields, name).trim())) {
+    return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
+      reason:"For multiple invite codes, leave per-code uses/limit/remaining fields blank; provide separate owner-count updates after publication."};
+  }
+  const existing = codes.find(code => findCode(current,code));
+  if (existing) {
+    return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
+      reason:"Invite code "+existing+" is already in the catalog. Multi-code Issues must contain only new, distinct codes."};
+  }
+  const parts = String(issue.body || "").split(/^### /m);
+  const index = parts.findIndex(part => /^Invite code\r?\n/.test(part));
+  if (index < 0) throw Error("Invite code field is missing.");
+  let data = current;
+  const notices = [];
+  for (const code of codes) {
+    const fieldsForCode = [...parts];
+    fieldsForCode[index] = "Invite code\n\n"+code+"\n\n";
+    const singleIssue = {...issue,body:fieldsForCode.join("### ")};
+    const plan = planIssueChange(singleIssue,data);
+    if (plan.outcome !== "proposal" || plan.action.startsWith("update")) {
+      return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
+        reason:"Code "+code+" cannot be submitted automatically: "+
+          (plan.reason || "existing or unreviewed code")};
+    }
+    const item = plan.data.find(entry => entry.code === code);
+    if (!item || item.id !== "community-issue-"+issue.number) {
+      throw Error("Multi-code record attribution could not be verified.");
+    }
+    item.id = "community-issue-"+issue.number+"-"+code.toLowerCase();
+    item.feedbackIssueNumber = issue.number;
+    data = plan.data;
+    if (plan.notice) notices.push(code+": "+plan.notice);
+  }
+  const errors = validateCatalog(data);
+  if (errors.length) throw Error("Generated multi-code catalog failed validation: "+errors.join("; "));
+  return {
+    outcome:"proposal",kind:"invite",code:codes[0],codes,
+    action:"add "+codes.length+" codes",data,
+    notice:notices.join("\n") || "All codes remain unverified and require human review.",
+    branch:"auto/issue-"+issue.number+"-invite",
+    summary:summary(issue,codes.join(", "),"add multiple")
+  };
+}
+
 export function planIssueChange(issue, current) {
   if (!Number.isSafeInteger(issue?.number) || issue.number <= 0) throw Error("Invalid Issue number.");
   if (!Array.isArray(current)) throw Error("Expected a catalog array.");
@@ -120,7 +169,14 @@ export function planIssueChange(issue, current) {
     title.startsWith("[Invite]") || isShareCodeIssue(issue) ? "invite" : null;
   if (!kind) return { outcome:"unsupported", reason:"Issue does not use a supported Muse Invite Hub form." };
   const f = readIssueFields(issue.body);
-  const code = codeFrom(f);
+  const codes = codesFrom(f);
+  if (kind !== "invite" && codes.length !== 1) {
+    throw Error("Count/feedback Issues must reference exactly one Invite code.");
+  }
+  if (kind === "invite" && codes.length > 1) {
+    return planMultiInvite(issue, current, codes, f);
+  }
+  const code = codes[0];
   const existing = findCode(current, code);
   const date = reportDate(issue);
   const data = structuredClone(current);
@@ -337,14 +393,20 @@ async function propose(issue,token) {
   const proposed=planIssueChange(issue,catalog);
   if(proposed.outcome!=="proposal")return proposed;
 
-  // Prevent two independent Issue PRs for the same code from racing.
+  // Multi-code Issues create one Draft PR but independent JSON records.
+  // Disallow overlap with other active automated proposals, even when those
+  // proposals contain multiple codes.
+  const codes=proposed.codes || [proposed.code];
+  const codesLabel=codes.join(", ");
   const prs=await openBotPrs(token);
   const matching=prs.find(pr=>pr.head.ref===proposed.branch);
-  if(matching)return {outcome:"already-open",url:matching.html_url,code:proposed.code};
+  if(matching)return {outcome:"already-open",url:matching.html_url,code:codesLabel};
   for (const pr of prs.filter(pr=>pr.head.ref.startsWith("auto/"))) {
-    if (String(pr.title || "").startsWith("data: review " + proposed.code + " ")) {
-      return {outcome:"needs-review",code:proposed.code,
-        reason:"Another open automated PR already changes this code: "+pr.html_url};
+    const title=/^data: review (.+) (?:invite|count|feedback) \(issue #[1-9][0-9]*\)$/.exec(String(pr.title || ""));
+    const listed=title ? title[1].split(", ") : [];
+    if (codes.some(code=>listed.includes(code))) {
+      return {outcome:"needs-review",code:codesLabel,
+        reason:"Another open automated PR already changes one of these codes: "+pr.html_url};
     }
   }
 
@@ -354,8 +416,8 @@ async function propose(issue,token) {
   const existing=await api("GET","git/ref/heads/"+encoded,token,undefined,true);
   if(existing){
     const prepared=await getCatalog(token,existing.object.sha);
-    if(JSON.stringify(prepared.find(x=>x.code===proposed.code)) !==
-       JSON.stringify(proposed.data.find(x=>x.code===proposed.code))){
+    if(codes.some(code=>JSON.stringify(prepared.find(x=>x.code===code)) !==
+       JSON.stringify(proposed.data.find(x=>x.code===code)))){
       return {outcome:"needs-review",code:proposed.code,
         reason:"An older automation branch exists with different data. A maintainer must reconcile it; the bot will not overwrite history."};
     }
@@ -363,24 +425,30 @@ async function propose(issue,token) {
   if (!existing) {
     // The branch tree is sourced from the exact current trusted main commit.
     const base=await api("GET","git/commits/"+mainSHA,token);
-    const record=changedRecord(catalog,proposed.data,proposed.code);
-    const blob=await api("POST","git/blobs",token,{content:record.content,encoding:"utf-8"});
+    const records=codes.length===1
+      ? [changedRecord(catalog,proposed.data,proposed.code)]
+      : changedRecords(catalog,proposed.data,codes);
+    const entries=[];
+    for (const record of records) {
+      const blob=await api("POST","git/blobs",token,{content:record.content,encoding:"utf-8"});
+      entries.push({path:record.path,mode:"100644",type:"blob",sha:blob.sha});
+    }
     const tree=await api("POST","git/trees",token,{
       base_tree:base.tree.sha,
-      tree:[{path:record.path,mode:"100644",type:"blob",sha:blob.sha}]
+      tree:entries
     });
     const commit=await api("POST","git/commits",token,{
-      message:"data: "+proposed.action+" "+proposed.code+" (issue #"+issue.number+")",
+      message:"data: "+proposed.action+" "+codesLabel+" (issue #"+issue.number+")",
       tree:tree.sha,parents:[mainSHA]
     });
     await api("POST","git/refs",token,{ref:"refs/heads/"+proposed.branch,sha:commit.sha});
   }
-  const title="data: review "+proposed.code+" "+proposed.kind+" (issue #"+issue.number+")";
+  const title="data: review "+codesLabel+" "+proposed.kind+" (issue #"+issue.number+")";
   const body=[
     "## Automated draft proposal",
     "",
     "Prepared from public Issue #"+issue.number+" by @"+issue.user.login+".",
-    "Code: **"+proposed.code+"**. Change: **"+proposed.action+"**.",
+    (codes.length===1?"Code: **":"Codes: **")+codesLabel+"**. Change: **"+proposed.action+"**.",
     "",
     proposed.notice || "All published figures remain dated community/owner reports, never live Muse availability.",
     "",
@@ -414,17 +482,17 @@ async function propose(issue,token) {
     throw error;
   }
   await comment(issue,token,"Created [Draft PR #"+pr.number+"]("+pr.html_url+
-    ") for **"+proposed.code+"**. It needs maintainer review; no website data has been published.");
+    ") for **"+codesLabel+"**. It needs maintainer review; no website data has been published.");
   // Explicitly dispatch validation on the generated branch. GITHUB_TOKEN PR
   // activity does not reliably start an ordinary CI workflow automatically.
   try {
     await api("POST","actions/workflows/validate.yml/dispatches",token,{ref:proposed.branch});
   } catch(error) {
     await comment(issue,token,"Created [Draft PR #"+pr.number+"]("+pr.html_url+
-      ") for **"+proposed.code+"**, but explicit validation dispatch failed: "+
+      ") for **"+codesLabel+"**, but explicit validation dispatch failed: "+
       error.message.slice(0,220)+". A maintainer must run CI before review.");
   }
-  return {outcome:"created",url:pr.html_url,number:pr.number,code:proposed.code};
+  return {outcome:"created",url:pr.html_url,number:pr.number,code:codesLabel};
 }
 export async function runIssueAutomation({
   number, token=process.env.GH_TOKEN, repository=process.env.GITHUB_REPOSITORY
