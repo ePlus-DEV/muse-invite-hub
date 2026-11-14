@@ -54,6 +54,38 @@ export function hasRequiredInviteConfirmations(body) {
   return permission && privacy;
 }
 
+// Give contributors concrete edit-in-place instructions without treating missing
+// fields as their fault or ever checking a consent box on their behalf.
+export function missingInviteConfirmationGuidance() {
+  return [
+    "⚠️ The Contributor checklist was missing or incomplete when this Issue arrived. "+
+      "This may be caused by the submission form or integration, not by the contributor.",
+    "",
+    "**You do not need to create another Issue. This one stays open.**",
+    "",
+    "To fix the existing Issue: choose **… → Edit** on the first Issue message, "+
+      "find the **Contributor checklist** section (or add it at the end), "+
+      "and personally confirm both statements if they are true:",
+    "",
+    "```markdown",
+    "### Contributor checklist",
+    "",
+    "- [ ] I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
+    "- [ ] This code is not a password, 2FA code, session token or private credential.",
+    "```",
+    "",
+    "Change each `[ ]` to `[x]` **only after you personally agree**. "+
+      "Save the edited Issue; the automation will re-check this same Issue. "+
+      "If you cannot confirm a statement, leave it unchecked and ask a maintainer for help.",
+    "",
+    "For future submissions, please use the "+
+      "[Share Code form](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml), "+
+      "which requests both confirmations before submission.",
+    "",
+    "No Draft PR or public catalog update was made from the incomplete submission."
+  ].join("\\n");
+}
+
 export function inviteNeedsConfirmationReview(issue) {
   if (issue?.state !== "open" || issue.pull_request) return false;
   if (!String(issue.title || "").startsWith("[Invite]") && !isShareCodeIssue(issue)) return false;
@@ -517,15 +549,7 @@ export async function runIssueAutomation({
     // GitHub Issue Forms require consent, but API/other clients may omit the
     // checklist entirely. Preserve the contributor's Issue for manual triage.
     // Never synthesize consent, publish a code, or penalize the contributor.
-    await comment(issue,token,
-      "⚠️ This Issue arrived without the complete Contributor checklist. "+
-      "The repository form requires both confirmations, so this may be an "+
-      "Issue submission/integration problem rather than contributor error. "+
-      "The Issue remains **open** for maintainer review; no Draft PR or "+
-      "public catalog entry was generated. "+
-      "A maintainer should inspect how the Issue was created and help the "+
-      "contributor supply the missing confirmations without discarding "+
-      "the original submission.");
+    await comment(issue,token,missingInviteConfirmationGuidance());
     return {outcome:"needs-review",reason:"Missing confirmations in submitted Issue body; retained open for investigation."};
   }
   try{
