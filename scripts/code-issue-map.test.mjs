@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  issueMarker, issueCode, originalIssueNumber, canonicalThreadBody,
+  issueMarker, issueCode, issueCodes, parseInviteCodes, originalIssueNumber, canonicalThreadBody,
   syncCodeIssueMap, validIssueMap, resolveExistingIssue
 } from "./code-issue-map.mjs";
 import { feedbackCodeForIssue, shouldReopen } from "./reopen-code-feedback.mjs";
@@ -156,4 +156,25 @@ test("original Share Code form remains canonical even if its title is edited",()
   assert.equal(issueCode(form),"D8190Y");
   assert.equal(resolveExistingIssue(item,[form]),form);
   assert.equal(issueCode({...form,body:"### Invite code\n\nD8190Y"}),null);
+});
+
+
+test("multi-code form maps both independent records back to its single canonical Issue",async()=>{
+  const form={number:120,title:"[Invite] two codes",state:"open",
+    body:"### Invite code\n\nALFA12,\nBRAVO2\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [x] authorized"};
+  const items=["ALFA12","BRAVO2"].map(code=>({
+    id:"community-issue-120-"+code.toLowerCase(),code,feedbackIssueNumber:120
+  }));
+  assert.deepEqual(parseInviteCodes(" alfa12; BRAVO2 "),["ALFA12","BRAVO2"]);
+  assert.deepEqual(issueCodes(form),["ALFA12","BRAVO2"]);
+  assert.equal(issueCode(form),"ALFA12");
+  assert.equal(resolveExistingIssue(items[0],[form]),form);
+  assert.equal(resolveExistingIssue(items[1],[form]),form);
+  const map=await syncCodeIssueMap(items,async()=>[form],async()=>{
+    throw Error("Must not create a new Issue");
+  });
+  assert.deepEqual(map,{ALFA12:120,BRAVO2:120});
+  assert.equal(feedbackCodeForIssue(form,items,"Code: BRAVO2\nResult: worked"),"BRAVO2");
+  assert.equal(feedbackCodeForIssue(form,[items[1]]),"BRAVO2");
+  assert.throws(()=>parseInviteCodes("ALFA12, ALFA12"),/distinct/);
 });
