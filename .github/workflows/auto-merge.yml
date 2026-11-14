@@ -1,0 +1,151 @@
+name: Maintainer-authorized PR auto-merge
+
+# Never execute untrusted PR scripts with the write-scoped workflow token.
+# A human @hoangsvit review approval or exact-head /automerge command is required.
+on:
+  pull_request_target:
+    types: [ready_for_review, reopened, synchronize, labeled, unlabeled]
+  pull_request_review:
+    types: [submitted, dismissed]
+  issue_comment:
+    types: [created, edited]
+  workflow_run:
+    workflows: ["Validate website and invite catalog"]
+    types: [completed]
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  actions: write
+  checks: read
+
+# All merges target main. Serialize decisions to avoid racing independent PRs.
+concurrency:
+  group: muse-maintainer-auto-merge-main
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: github.event_name != 'issue_comment' || github.event.issue.pull_request != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted main only
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Merge only a reviewed, green, current-head PR
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const { autoMergeDecision } = await import(
+              process.env.GITHUB_WORKSPACE + "/scripts/auto-merge.mjs"
+            );
+            const { owner, repo } = context.repo;
+            const fullName = owner + "/" + repo;
+            const event = context.eventName;
+
+            // In issue_comment and PR events, scan only the relevant PR.
+            // In workflow_run, restrict to the completed validation head.
+            // Scheduled reconciliation catches GITHUB_TOKEN-created PRs.
+            const eventPr = (event === "issue_comment" ||
+                event === "pull_request_review" ||
+                event === "pull_request_target")
+              ? (context.payload.issue?.number || context.payload.pull_request?.number)
+              : null;
+            const validatedHead = event === "workflow_run" &&
+              context.payload.workflow_run?.conclusion === "success"
+              ? context.payload.workflow_run.head_sha : null;
+
+            if (event === "workflow_run" && !validatedHead) {
+              core.info("Skipping unsuccessful CI run.");
+              return;
+            }
+
+            const open = await github.paginate(github.rest.pulls.list, {
+              owner,repo,state:"open",per_page:100
+            });
+            const candidates = open.filter(pr =>
+              (!eventPr || pr.number === eventPr) &&
+              (!validatedHead || pr.head.sha === validatedHead) &&
+              !pr.draft && pr.base.ref === "main" &&
+              pr.head.repo?.full_name === fullName
+            );
+
+            for (const candidate of candidates) {
+              const number = candidate.number;
+              const [fetched, comments, reviews] = await Promise.all([
+                github.rest.pulls.get({owner,repo,pull_number:number}),
+                github.paginate(github.rest.issues.listComments,
+                  {owner,repo,issue_number:number,per_page:100}),
+                github.paginate(github.rest.pulls.listReviews,
+                  {owner,repo,pull_number:number,per_page:100})
+              ]);
+              const pr = fetched.data;
+              // Do not spend CI API quota until a current-head maintainer
+              // authorization and all other PR gates have passed.
+              const beforeCi = autoMergeDecision({
+                pr,comments,reviews,runs:[],repo:fullName
+              });
+              if (beforeCi.reason !==
+                "Current head SHA has no successful Validate website and invite catalog run.") {
+                core.info("PR #" + number + ": " + beforeCi.reason);
+                continue;
+              }
+              const validations = await github.rest.actions.listWorkflowRuns({
+                owner,repo,workflow_id:"validate.yml",head_sha:pr.head.sha,per_page:100
+              });
+              const decision = autoMergeDecision({
+                pr,comments,reviews,runs:validations.data.workflow_runs,repo:fullName
+              });
+              if (!decision.eligible) {
+                core.info("PR #" + number + ": " + decision.reason);
+                continue;
+              }
+              // Re-read just before merging. SHA-bound authorizations and
+              // GitHub's merge endpoint reject post-approval head changes.
+              const latest = (await github.rest.pulls.get({
+                owner,repo,pull_number:number
+              })).data;
+              if (latest.head.sha !== decision.sha ||
+                  latest.state !== "open" || latest.draft ||
+                  latest.mergeable !== true || latest.mergeable_state !== "clean") {
+                core.info("PR #" + number + " changed during approval; skipping.");
+                continue;
+              }
+              core.info("Merging authorized PR #" + number +
+                " at " + decision.sha + " (authorization: " + decision.method + ").");
+              let merged;
+              try {
+                merged = await github.rest.pulls.merge({
+                  owner,repo,pull_number:number,sha:decision.sha,
+                  merge_method:"squash"
+                });
+              } catch (error) {
+                if ([403,405,409,422].includes(error.status)) {
+                  core.warning("PR #" + number + " could not merge: " + error.message);
+                  continue;
+                }
+                throw error;
+              }
+              if (!merged.data.merged) {
+                core.warning("PR #" + number + " merge was not accepted.");
+                continue;
+              }
+              // A merge authored by GITHUB_TOKEN does not trigger the usual
+              // push-triggered Pages workflow. Dispatch trusted Pages explicitly.
+              await github.rest.actions.createWorkflowDispatch({
+                owner,repo,workflow_id:"pages.yml",ref:"main"
+              });
+              core.info("Merged PR #" + number +
+                " and dispatched trusted production deployment.");
+              // Main moved. Never merge another PR in the same run without
+              // fresh mergeability and CI evaluation.
+              break;
+            }
