@@ -20,9 +20,17 @@
 - **Community contributions:** submit new codes with an Issue Form; report feedback and owner-count updates on the existing code Issue using the website's editable comment dialog.
 - **Validated contributions:** new GitHub-owned invite codes can be published automatically as **unverified** after checks for consent, duplicates, exact records and green CI; social-source submissions and updates require maintainer review. Accepted Issues receive a link to their published code after deployment.
 
+## How publication works
+
+1. **New GitHub-owned invite codes:** use the [Share Code Issue Form](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml), enter 1–10 distinct new codes, select **GitHub (my own code)** and personally check both consent/privacy boxes. The bot checks duplicates, creates separate JSON records in a **Ready PR**, and validates the exact submission again before auto-merging after green CI. Grouped submissions cannot include shared quota figures.
+2. **New codes from Threads, X or Facebook:** include the original public post URL. These submissions stay in a **review-only Draft PR** for a maintainer to verify the source and attribution. Existing-code updates and feedback also require review.
+3. **After publication:** GitHub Pages is built from trusted `main`. The bot verifies the live code detail, comments the canonical link on the original Issue, and **only then** closes an accepted new-code Issue. Published community codes remain **`unverified`**; listing a code never guarantees Muse redemption or available invites.
+
+Missing confirmations or malformed fields are handled on the **existing open Issue** with editing instructions—there is no need to create a replacement Issue. For a code already published, use its existing canonical Issue for reports and quota updates. Automatic merge can be blocked by failed CI, a conflict, `do-not-merge` or an explicit maintainer cancellation.
+
 ## Contribute
 
-**[See the contribution flow diagram](docs/CONTRIBUTION_FLOW.md)** — explains the difference between adding a new code, posting feedback to a canonical Issue, and legacy Sub-issues.
+**[See the latest contribution flow diagram](docs/CONTRIBUTION_FLOW.md)** — distinguishes automatically published new GitHub codes, human-reviewed social sources and existing-code feedback.
 
 No coding required:
 
@@ -31,7 +39,7 @@ No coding required:
 - [**Update invite count on an existing code**](https://muse.eplus.dev/#codes)
 - [**Contribute code or documentation**](CONTRIBUTING.md#contribute-code-or-documentation)
 
-All Issue submissions are public and reviewed; never share passwords, session tokens or private account information. See the [contribution guide](CONTRIBUTING.md) for instructions.
+All Issues and comments are public. New GitHub-owned codes may publish automatically after repository checks, **without human review of validity**; never share passwords, session tokens or private account information. See the [contribution guide](CONTRIBUTING.md) for instructions.
 
 ## Development
 
