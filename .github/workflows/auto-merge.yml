@@ -98,6 +98,16 @@ jobs:
                 core.info("PR #" + number + ": " + beforeCi.reason);
                 continue;
               }
+              // Require the reviewed head to include current main. A green
+              // test from an older base is not evidence for the newest base.
+              const compared = await github.rest.repos.compareCommits({
+                owner,repo,base:"main",head:pr.head.sha
+              });
+              if (compared.data.behind_by !== 0) {
+                core.info("PR #" + number + " is behind main by " +
+                  compared.data.behind_by + " commits; update and re-authorize.");
+                continue;
+              }
               const validations = await github.rest.actions.listWorkflowRuns({
                 owner,repo,workflow_id:"validate.yml",head_sha:pr.head.sha,per_page:100
               });
@@ -114,6 +124,7 @@ jobs:
                 owner,repo,pull_number:number
               })).data;
               if (latest.head.sha !== decision.sha ||
+                  latest.base.sha !== pr.base.sha ||
                   latest.state !== "open" || latest.draft ||
                   latest.mergeable !== true || latest.mergeable_state !== "clean") {
                 core.info("PR #" + number + " changed during approval; skipping.");
