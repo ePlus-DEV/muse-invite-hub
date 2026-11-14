@@ -7,7 +7,8 @@ body:
       value: |
         **For a new, unlisted code only.** Search https://muse.eplus.dev/#codes first. If the code already exists, use **Give feedback** or **Update count** on its card to comment in the original Issue instead of creating a duplicate. Issues are public. Choose **your own GitHub code** or a **public code found on Threads, X (Twitter) or Facebook**.
         For a social post, provide the original public post permalink: a profile alone cannot prove authorship and needs manual review. Your GitHub account is only the reporter, NOT automatically the owner of someone else's code.
-        You may submit up to 10 new codes in one Issue (comma, space, or newline separated). One reviewed Draft PR keeps each code in a separate record. For multiple codes, do not fill per-code quota/count fields.\n        Never submit passwords, authentication codes, sessions, cookies or private account information. All accepted reports produce review-only Draft PRs, never automatic publication.
+        You may submit up to 10 new codes in one Issue (comma, space, or newline separated). One reviewed Draft PR keeps each code in a separate record. For multiple codes, do not fill per-code quota/count fields.
+        Never submit passwords, authentication codes, sessions, cookies or private account information. All accepted reports produce review-only Draft PRs, never automatic publication.
   - type: textarea
     id: invite_code
     attributes:
