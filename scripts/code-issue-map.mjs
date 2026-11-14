@@ -6,7 +6,7 @@ const CODE = /^[A-Z0-9-]{4,32}$/;
 // Issue Forms accept one or more public invite codes. Never silently drop
 // malformed or duplicate tokens: each code must be reviewed individually.
 export function parseInviteCodes(value) {
-  const tokens = String(value ?? "").trim().toUpperCase().split(/[\\s,;，；]+/).filter(Boolean);
+  const tokens = String(value ?? "").trim().toUpperCase().split(/[\s,;，；]+/).filter(Boolean);
   if (tokens.length < 1 || tokens.length > 10 || tokens.some(code => !CODE.test(code)) ||
       new Set(tokens).size !== tokens.length) {
     throw Error("Invite code must contain 1–10 distinct 4–32 character codes (letters, digits or hyphens), separated by whitespace, commas or semicolons.");
@@ -43,11 +43,11 @@ export function issueCodes(issue) {
   const marker = new RegExp("<!-- " + MARKER + ": ([A-Z0-9-]{4,32}) -->").exec(body) ||
     /<!-- muse-code-feedback-root:([A-Z0-9-]{4,32}) -->/.exec(body);
   if (marker) return [marker[1]];
-  if (!/^\\[(?:Invite|Count update|Code feedback)\\]/.test(String(issue?.title || "")) &&
+  if (!/^\[(?:Invite|Count update|Code feedback)\]/.test(String(issue?.title || "")) &&
       !isShareCodeIssue(issue)) return [];
-  const heading = /^### Invite code[ \\t]*\\r?$/m.exec(body);
+  const heading = /^### Invite code[ \t]*\r?$/m.exec(body);
   if (!heading) return [];
-  const rest = body.slice(heading.index + heading[0].length).replace(/^\\r?\\n/, "");
+  const rest = body.slice(heading.index + heading[0].length).replace(/^\r?\n/, "");
   const next = rest.search(/^### /m);
   const value = (next < 0 ? rest : rest.slice(0, next)).trim();
   try {
