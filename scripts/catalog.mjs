@@ -125,6 +125,6 @@ export function changedRecords(before, after, codes) {
   }
   return items.map(item => ({
     path: recordPath(item),
-    content: JSON.stringify(item, null, 2) + "\\n"
+    content: JSON.stringify(item, null, 2) + "\n"
   }));
 }
