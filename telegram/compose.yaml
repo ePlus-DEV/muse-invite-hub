@@ -1,0 +1,47 @@
+services:
+  telegram-bot:
+    image: ${BOT_IMAGE:-ghcr.io/eplus-dev/muse-invite-hub-telegram:latest}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    user: "1000:1000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATA_DIR: /data
+      BOT_DOMAIN: ${BOT_DOMAIN:?Set_BOT_DOMAIN_in_dotenv}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?Set_TELEGRAM_BOT_TOKEN_in_dotenv}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?Set_TELEGRAM_WEBHOOK_SECRET_in_dotenv}
+      GITHUB_ISSUES_TOKEN: ${GITHUB_ISSUES_TOKEN:?Set_GITHUB_ISSUES_TOKEN_in_dotenv}
+    volumes:
+      - ./state:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      telegram-bot:
+        condition: service_healthy
+    environment:
+      BOT_DOMAIN: ${BOT_DOMAIN:?Set_BOT_DOMAIN_in_dotenv}
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  caddy-data:
+  caddy-config:

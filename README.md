@@ -41,6 +41,16 @@ No coding required:
 
 All Issues and comments are public. New GitHub-owned codes may publish automatically after repository checks, **without human review of validity**; never share passwords, session tokens or private account information. See the [contribution guide](CONTRIBUTING.md) for instructions.
 
+## Optional Telegram Bot (OCI ARM64)
+
+The Telegram bot is an **optional**, separate Node.js 24 webhook service for an Oracle Cloud Ampere A1 ARM64 VM. Its Docker image can be built manually for `linux/arm64` and served behind Caddy HTTPS. GitHub Pages and the trusted `main` catalog remain the source of public website data.
+
+- [Telegram deployment guide](telegram/README.md) — VM, Docker Compose, DNS, BotFather, HTTPS and private credentials.
+- [Manual ARM64 image workflow](.github/workflows/telegram-oci-image.yml) — build and publish to GHCR from trusted `main`; it never provisions or deploys the VM.
+- Telegram's `/submit` and `/report` requests use the **existing GitHub Issue/comment discussion queue**, require user confirmation and **remain human-reviewed**. They do not establish GitHub code ownership and cannot bypass the website's separate GitHub-owned new-code auto-publish safeguards.
+
+This repository does not provision a Telegram bot account, Oracle VM, domain name or runtime secrets.
+
 ## Development
 
 Static HTML, CSS and JavaScript — no backend or npm dependencies. To run the homepage locally:

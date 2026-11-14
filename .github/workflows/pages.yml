@@ -53,6 +53,13 @@ jobs:
           node -e 'const b = require("node:fs").readFileSync("assets/social-preview.png"); if(b.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a" || b.readUInt32BE(16) !== 1200 || b.readUInt32BE(20) !== 630) { throw Error("Invalid OG image: expected PNG 1200x630"); } console.log("Static OG PNG verified: 1200x630");'
       - name: Validate production data and preview utilities (shared PR gate)
         run: bash scripts/check-predeploy.sh
+      - name: Check optional Telegram bot before deployment
+        run: |
+          node --check telegram/bot.mjs
+          node --check telegram/github.mjs
+          node --check telegram/server.mjs
+          node --check telegram/register-webhook.mjs
+          node --test telegram/telegram.test.mjs
       - name: Build main site and eligible PR previews
         env:
           GH_TOKEN: ${{ github.token }}

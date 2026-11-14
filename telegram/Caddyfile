@@ -1,0 +1,11 @@
+# BOT_DOMAIN must point to the OCI public IPv4 address before starting.
+{$BOT_DOMAIN} {
+  encode zstd gzip
+  @bot path /telegram/webhook /healthz
+  handle @bot {
+    reverse_proxy telegram-bot:3000
+  }
+  handle {
+    respond "Not Found" 404
+  }
+}

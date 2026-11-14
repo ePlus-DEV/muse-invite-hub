@@ -1,0 +1,8 @@
+**
+!telegram/
+!telegram/Dockerfile
+!telegram/bot.mjs
+!telegram/github.mjs
+!telegram/server.mjs
+
+!telegram/register-webhook.mjs
