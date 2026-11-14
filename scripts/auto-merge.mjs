@@ -3,6 +3,26 @@
 export const AUTO_MERGE_MAINTAINER = "hoangsvit";
 export const AUTO_MERGE_BLOCK_LABEL = "do-not-merge";
 
+// Safe, default-on path: maintainer-authored documentation-only PRs.
+// Catalog data, code, templates, workflows, configuration, and mixed PRs
+// deliberately require per-head authorization instead.
+export const AUTO_MERGE_DEFAULT_AUTHOR = "hoangsvit";
+export const AUTO_MERGE_MAX_DOC_FILES = 15;
+
+export function qualifiesForDefaultAutoMerge(pr, files=[]) {
+  if (login(pr?.user) !== AUTO_MERGE_DEFAULT_AUTHOR) return false;
+  if (!Number.isSafeInteger(pr?.changed_files) ||
+      pr.changed_files < 1 || pr.changed_files > AUTO_MERGE_MAX_DOC_FILES ||
+      !Array.isArray(files) || files.length !== pr.changed_files) return false;
+  return files.every(file => {
+    if (!["added","modified"].includes(file?.status) || file.previous_filename) return false;
+    const name = String(file.filename || "");
+    return ["README.md", "CONTRIBUTING.md"].includes(name) ||
+      /^docs\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.md$/.test(name);
+  });
+}
+
+
 const AUTO_MERGE_COMMAND = /^\/automerge\s+([0-9a-f]{40})\s*$/i;
 const AUTO_MERGE_CANCEL = /^\/automerge\s+(?:off|cancel)\s*$/i;
 
@@ -61,10 +81,10 @@ export function getMaintainerAuthorization({headSha,comments=[],reviews=[]}) {
   ].sort(byTime);
 
   const lastApproval = approvals.at(-1);
-  if (!lastApproval) return {authorized:false,reason:"Await @hoangsvit approval or /automerge <40-char-head-SHA>."};
-  if (lastCancel && byTime(lastApproval,lastCancel) <= 0) {
+  if (lastCancel && (!lastApproval || byTime(lastApproval,lastCancel) <= 0)) {
     return {authorized:false,reason:"Auto-merge was cancelled by @hoangsvit."};
   }
+  if (!lastApproval) return {authorized:false,reason:"Await @hoangsvit approval or /automerge <40-char-head-SHA>."};
   return {authorized:true,method:maintainerReview &&
     lastApproval.id === maintainerReview.id ? "review" : "comment"};
 }
@@ -79,7 +99,7 @@ export function ciHasPassed({headSha,runs=[]}) {
   return Boolean(latest && latest.status === "completed" && latest.conclusion === "success");
 }
 
-export function autoMergeDecision({pr,comments=[],reviews=[],runs=[],repo="ePlus-DEV/muse-invite-hub"}) {
+export function autoMergeDecision({pr,comments=[],reviews=[],runs=[],files=[],repo="ePlus-DEV/muse-invite-hub"}) {
   if (!pr || pr.state !== "open" || pr.draft) return {eligible:false,reason:"PR is not open and ready."};
   if (pr.base?.ref !== "main" || pr.head?.repo?.full_name !== repo) {
     return {eligible:false,reason:"Only same-repository PRs targeting main are eligible."};
@@ -93,9 +113,19 @@ export function autoMergeDecision({pr,comments=[],reviews=[],runs=[],repo="ePlus
   }
   const sha=pr.head.sha;
   const authorization=getMaintainerAuthorization({headSha:sha,comments,reviews});
-  if (!authorization.authorized) return {eligible:false,reason:authorization.reason};
+  // An outstanding CHANGES_REQUESTED review or a maintainer cancellation
+  // blocks *both* the default docs policy and the explicit review path.
+  if (authorization.reason === "A reviewer still requests changes." ||
+      authorization.reason === "Auto-merge was cancelled by @hoangsvit.") {
+    return {eligible:false,reason:authorization.reason};
+  }
+  const safeDefault=qualifiesForDefaultAutoMerge(pr,files);
+  if (!safeDefault && !authorization.authorized) {
+    return {eligible:false,reason:authorization.reason};
+  }
   if (!ciHasPassed({headSha:sha,runs})) {
     return {eligible:false,reason:"Current head SHA has no successful Validate website and invite catalog run."};
   }
-  return {eligible:true,sha,method:authorization.method};
+  return {eligible:true,sha,method:safeDefault && !authorization.authorized
+    ? "default-safe-docs" : authorization.method};
 }
