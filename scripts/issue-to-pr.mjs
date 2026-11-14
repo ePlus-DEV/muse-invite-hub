@@ -227,7 +227,10 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
   }
   const code = codes[0];
   const existing = findCode(current, code);
-  const date = reportDate(issue);
+  // New invite codes keep their original submission date. Comments,
+  // automated labels and maintainer replies must not change addedAt.
+  const date = kind === "invite" && !existing
+    ? reportDate({...issue,updated_at:issue.created_at}) : reportDate(issue);
   const data = structuredClone(current);
   let action, notice = "";
   if (kind === "count" || kind === "feedback") {
