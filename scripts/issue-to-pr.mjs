@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { validateCatalog } from "./validate.mjs";
+import { fetchGitHubCatalog, changedRecord } from "./catalog.mjs";
 import { parsePublicSource, listedPlatform, LISTING_PLATFORMS } from "./source-platform.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
@@ -319,9 +320,8 @@ async function comment(issue,token,body) {
   }
 }
 async function getCatalog(token,sha){
-  const file=await api("GET","contents/data/invites.json?ref="+sha,token);
-  if(file.encoding!=="base64")throw Error("Unexpected catalog encoding.");
-  return JSON.parse(Buffer.from(file.content.replace(/\s/g,""),"base64").toString("utf8"));
+  return fetchGitHubCatalog((path,allow404=false)=>
+    api("GET",path,token,undefined,allow404),sha);
 }
 async function openBotPrs(token){
   const result=await api("GET","pulls?state=open&per_page=100",token);
@@ -339,10 +339,8 @@ async function propose(issue,token) {
   const prs=await openBotPrs(token);
   const matching=prs.find(pr=>pr.head.ref===proposed.branch);
   if(matching)return {outcome:"already-open",url:matching.html_url,code:proposed.code};
-  for (const pr of prs.filter(pr=>pr.head.ref.startsWith("auto/issue-"))) {
-    const other=await getCatalog(token,pr.head.sha);
-    if(JSON.stringify(other.find(x=>x.code===proposed.code)) !==
-       JSON.stringify(catalog.find(x=>x.code===proposed.code))) {
+  for (const pr of prs.filter(pr=>pr.head.ref.startsWith("auto/"))) {
+    if (String(pr.title || "").startsWith("data: review " + proposed.code + " ")) {
       return {outcome:"needs-review",code:proposed.code,
         reason:"Another open automated PR already changes this code: "+pr.html_url};
     }
@@ -354,7 +352,8 @@ async function propose(issue,token) {
   const existing=await api("GET","git/ref/heads/"+encoded,token,undefined,true);
   if(existing){
     const prepared=await getCatalog(token,existing.object.sha);
-    if(JSON.stringify(prepared)!==JSON.stringify(proposed.data)){
+    if(JSON.stringify(prepared.find(x=>x.code===proposed.code)) !==
+       JSON.stringify(proposed.data.find(x=>x.code===proposed.code))){
       return {outcome:"needs-review",code:proposed.code,
         reason:"An older automation branch exists with different data. A maintainer must reconcile it; the bot will not overwrite history."};
     }
@@ -362,11 +361,11 @@ async function propose(issue,token) {
   if (!existing) {
     // The branch tree is sourced from the exact current trusted main commit.
     const base=await api("GET","git/commits/"+mainSHA,token);
-    const content=JSON.stringify(proposed.data,null,2)+"\n";
-    const blob=await api("POST","git/blobs",token,{content,encoding:"utf-8"});
+    const record=changedRecord(catalog,proposed.data,proposed.code);
+    const blob=await api("POST","git/blobs",token,{content:record.content,encoding:"utf-8"});
     const tree=await api("POST","git/trees",token,{
       base_tree:base.tree.sha,
-      tree:[{path:"data/invites.json",mode:"100644",type:"blob",sha:blob.sha}]
+      tree:[{path:record.path,mode:"100644",type:"blob",sha:blob.sha}]
     });
     const commit=await api("POST","git/commits",token,{
       message:"data: "+proposed.action+" "+proposed.code+" (issue #"+issue.number+")",

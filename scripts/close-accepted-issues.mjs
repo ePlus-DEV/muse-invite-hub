@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { readIssueFields } from "./issue-to-pr.mjs";
+import { readCatalog, recordPath } from "./catalog.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
 const ORIGIN = "https://muse.eplus.dev";
@@ -96,7 +97,7 @@ export async function closeAcceptedIssues({
   if (repository !== REPO || !token || !SHA.test(deployedSha || "")) {
     throw Error("Expected trusted repo, GitHub token and exact deployed main SHA.");
   }
-  const records = catalog ?? JSON.parse(readFileSync(new URL("../data/invites.json", import.meta.url), "utf8"));
+  const records = catalog ?? readCatalog();
   if (!Array.isArray(records)) throw Error("Trusted production catalog is not an array.");
   const published = new Set(records.map(item => item.code));
   const api = githubApi(request, token);
@@ -120,7 +121,15 @@ export async function closeAcceptedIssues({
           readIssueFields(issue.body)["Invite code"]?.trim().toUpperCase() !== code ||
           !published.has(code)) { summary.pending++; continue; }
       const files = await api("GET","pulls/" + prNumber + "/files?per_page=100");
-      if (files.length !== 1 || files[0].filename !== "data/invites.json") {
+      const record = records.find(item => item.code === code);
+      // Standard bot PRs change one record. PR #95 also carries the
+      // one-time concurrency migration; verify its individual record on deploy.
+      const recordFile = record?.id ? recordPath(record) : null;
+      const ordinary = files.length === 1 &&
+        ["data/invites.json",recordFile].includes(files[0].filename);
+      const migration = prNumber === 95 && recordFile &&
+        files.some(file => file.filename === recordFile);
+      if (!record || !(ordinary || migration)) {
         summary.pending++; continue;
       }
       // The deployed main commit must contain the PR merge, even for quota or

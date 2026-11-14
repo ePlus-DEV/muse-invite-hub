@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { issueCode, issueMarker, originalIssueNumber, REPO } from "./code-issue-map.mjs";
+import { readCatalog } from "./catalog.mjs";
 
 const ACK_MARKER = "<!-- muse-code-feedback-reopened -->";
 
@@ -59,7 +60,7 @@ export async function reopenOnFeedback({
       !Number.isSafeInteger(commentId) || commentId <= 0) {
     throw Error("Trusted repository, token, issue and comment identifiers required");
   }
-  const rawEntries = catalog ?? JSON.parse(readFileSync(new URL("../data/invites.json", import.meta.url), "utf8"));
+  const rawEntries = catalog ?? readCatalog();
   const roots = catalog ? {} : JSON.parse(readFileSync(new URL("../data/code-issues.json", import.meta.url), "utf8"));
   const entries = rawEntries.map(item => ({
     ...item,
