@@ -133,7 +133,7 @@ function planMultiInvite(issue, current, codes, fields) {
     const fieldsForCode = [...parts];
     fieldsForCode[index] = "Invite code\n\n"+code+"\n\n";
     const singleIssue = {...issue,body:fieldsForCode.join("### ")};
-    const plan = planIssueChange(singleIssue,data);
+    const plan = planIssueChange(singleIssue,data,{deferValidation:true});
     if (plan.outcome !== "proposal" || plan.action.startsWith("update")) {
       return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
         reason:"Code "+code+" cannot be submitted automatically: "+
@@ -159,7 +159,7 @@ function planMultiInvite(issue, current, codes, fields) {
   };
 }
 
-export function planIssueChange(issue, current) {
+export function planIssueChange(issue, current, {deferValidation=false}={}) {
   if (!Number.isSafeInteger(issue?.number) || issue.number <= 0) throw Error("Invalid Issue number.");
   if (!Array.isArray(current)) throw Error("Expected a catalog array.");
   if (!USER_PATTERN.test(issue.user?.login || "")) throw Error("Invalid contributor username.");
@@ -338,7 +338,7 @@ export function planIssueChange(issue, current) {
     action="review reported status";
     notice="This is one contributor's report, NOT confirmation by Muse and NOT evidence of global redemption availability.";
   }
-  const errs=validateCatalog(data);
+  const errs=deferValidation ? [] : validateCatalog(data);
   if(errs.length) throw Error("Generated catalog failed validation: "+errs.join("; "));
   return {outcome:"proposal",kind,code,action,data,notice,
     branch:"auto/issue-"+issue.number+"-"+kind,summary:summary(issue,code,action)};
