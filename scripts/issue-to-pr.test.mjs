@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { planIssueChange, readIssueFields } from "./issue-to-pr.mjs";
+import { planIssueChange, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance } from "./issue-to-pr.mjs";
 import { validateCatalog } from "./validate.mjs";
 import { changedRecords } from "./catalog.mjs";
 
@@ -122,6 +122,42 @@ test("permission confirmations are mandatory and untrusted numbers fail closed",
     "### Uses so far (optional; self-reported)\n\n-1");
   assert.throws(()=>planIssueChange(issue(26,"[Invite]",negative),[item]),/integer/);
 });
+test("API-created invite Issues without required confirmations remain open for review", () => {
+  const missing = share.replace(/### Contributor checklist[\s\S]*$/, "");
+  const rawIssue = issue(113, "[Invite] 0W9L6E",
+    missing.replace("PNSMZZ", "0W9L6E"), "hermes-blue");
+  assert.equal(hasRequiredInviteConfirmations(rawIssue.body), false);
+  assert.equal(inviteNeedsConfirmationReview(rawIssue), true);
+  assert.throws(() => planIssueChange(rawIssue,[item]), /confirmations/);
+  assert.equal(inviteNeedsConfirmationReview({...rawIssue,state:"closed"}), false);
+  assert.equal(inviteNeedsConfirmationReview({...rawIssue,pull_request:{number:1}}), false);
+  assert.equal(inviteNeedsConfirmationReview(issue(113,"Support request",missing)), false);
+});
+
+test("missing confirmations receive actionable guidance without closure or impersonated consent", () => {
+  const guidance=missingInviteConfirmationGuidance();
+  assert.match(guidance,/This one stays open/);
+  assert.match(guidance,/… → Edit/);
+  assert.match(guidance,/### Contributor checklist/);
+  assert.match(guidance,/- \[ \] I own this public code/);
+  assert.match(guidance,/- \[ \] This code is not a password/);
+  assert.doesNotMatch(guidance,/- \[x\]/);
+  assert.match(guidance,/\[Share Code form\]/);
+  assert.match(guidance,/\n\n/);
+});
+
+test("both consent checkboxes must be checked and cannot be spoofed by notes", () => {
+  const missingOne=share.replace("- [x] This code is not a password","- [ ] This code is not a password");
+  assert.equal(hasRequiredInviteConfirmations(missingOne), false);
+  assert.equal(inviteNeedsConfirmationReview(issue(210,"[Invite]",missingOne)),true);
+  const forged=share.replace("- [x] I am authorized","Example: - [x] I am authorized");
+  assert.equal(hasRequiredInviteConfirmations(forged),false);
+  assert.equal(hasRequiredInviteConfirmations(share),true);
+  assert.equal(hasRequiredInviteConfirmations(share.replace(/- \[x\]/g,"- [X]")),true);
+  assert.equal(inviteNeedsConfirmationReview(issue(211,"[Invite]",share)),false);
+  assert.equal(inviteNeedsConfirmationReview(issue(212,"[Count update]",missingOne)),false);
+});
+
 test("count updates require owner confirmation, known total and internally consistent numbers",()=>{
   const p=planIssueChange(issue(14,"[Count update]",count(),"hoangsvit"),[item,community]);
   assert.equal(p.outcome,"proposal");
