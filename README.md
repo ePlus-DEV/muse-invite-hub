@@ -18,7 +18,7 @@
 - **Quick feedback:** each published invite has one canonical GitHub Issue for reports and discussion. Contributor-submitted codes reuse their original Issue; other published codes receive a unique Issue during trusted Pages deploy. Worked/Didn't work buttons open an editable comment dialog before linking to that Issue. Posting a structured report can reopen a closed thread and propose a Draft PR for maintainer review; feedback never automatically verifies Muse redemption.
 - **Code details:** copy and share individual codes, view source attribution and community-reported status.
 - **Community contributions:** submit new codes with an Issue Form; report feedback and owner-count updates on the existing code Issue using the website's editable comment dialog.
-- **Reviewed updates:** maintainers review contributions before publication; accepted Issues receive a link to their published code.
+- **Validated contributions:** new GitHub-owned invite codes can be published automatically as **unverified** after checks for consent, duplicates, exact records and green CI; social-source submissions and updates require maintainer review. Accepted Issues receive a link to their published code after deployment.
 
 ## Contribute
 
