@@ -1,8 +1,10 @@
-name: Maintainer-authorized PR auto-merge
+name: Conditional PR auto-merge
 
 # Never execute untrusted PR scripts with the write-scoped workflow token.
-# Safe maintainer-authored documentation-only PRs default to auto-merge after CI.
-# All other PRs require a human @hoangsvit approval or exact-head command.
+# Newly submitted GitHub-owned public invite codes auto-publish as unverified
+# after trusted record/Issue comparison and green CI. Documentation-only
+# maintainer PRs also use safe default auto-merge.
+# Social-source, updates, and all other PRs still require human approval.
 on:
   pull_request_target:
     types: [ready_for_review, reopened, synchronize, labeled, unlabeled]
@@ -45,8 +47,14 @@ jobs:
         with:
           github-token: ${{ github.token }}
           script: |
-            const { autoMergeDecision } = await import(
+            const { autoMergeDecision, verifyNewGithubInvitePR } = await import(
               process.env.GITHUB_WORKSPACE + "/scripts/auto-merge.mjs"
+            );
+            const { readCatalog } = await import(
+              process.env.GITHUB_WORKSPACE + "/scripts/catalog.mjs"
+            );
+            const { AUTO_PUBLISH_NEW_INVITE_MARKER } = await import(
+              process.env.GITHUB_WORKSPACE + "/scripts/issue-to-pr.mjs"
             );
             const { owner, repo } = context.repo;
             const fullName = owner + "/" + repo;
@@ -91,11 +99,57 @@ jobs:
                   {owner,repo,pull_number:number,per_page:100})
               ]);
               const pr = fetched.data;
+              let newInviteEligible = false;
+              let sourceIssueNo = null;
+              let sourceIssueUpdatedAt = null;
+              const inviteMatch = /^auto\/issue-([1-9][0-9]*)-invite$/.exec(pr.head.ref);
+              if (inviteMatch &&
+                  pr.user?.login === "github-actions[bot]" &&
+                  String(pr.body || "").includes(AUTO_PUBLISH_NEW_INVITE_MARKER) &&
+                  files.length >= 1 && files.length <= 10 &&
+                  files.every(f => f.status === "added" &&
+                    /^data\/invite-records\/community-issue-[a-z0-9-]+\.json$/.test(f.filename))) {
+                try {
+                  const issue_number=Number(inviteMatch[1]);
+                  const issue=(await github.rest.issues.get({
+                    owner,repo,issue_number
+                  })).data;
+                  const fileContents={};
+                  for (const file of files) {
+                    const result=(await github.rest.repos.getContent({
+                      owner,repo,path:file.filename,ref:pr.head.sha
+                    })).data;
+                    if (Array.isArray(result) || result.type !== "file" ||
+                        result.encoding !== "base64" ||
+                        typeof result.content !== "string" ||
+                        result.size > 16000) {
+                      throw Error("Invalid bot record contents: " + file.filename);
+                    }
+                    fileContents[file.filename] = Buffer.from(
+                      result.content.replace(/\s/g,""),"base64"
+                    ).toString("utf8");
+                  }
+                  newInviteEligible = verifyNewGithubInvitePR({
+                    pr,issue,catalog:readCatalog(process.env.GITHUB_WORKSPACE),
+                    files,fileContents,repo:fullName
+                  });
+                  if (newInviteEligible) {
+                    sourceIssueNo=issue_number;
+                    sourceIssueUpdatedAt=issue.updated_at;
+                    core.info("PR #" + number + " matches original Issue #" +
+                      issue_number + " and all generated invite records.");
+                  }
+                } catch (error) {
+                  core.warning("PR #" + number +
+                    " cannot auto-publish invite records: " + error.message);
+                }
+              }
               // Spend CI API quota only when this PR is either explicitly
               // authorized or is a trusted maintainer-authored docs-only
-              // change eligible for the default safe policy.
+              // change eligible for either a verified new GitHub invite
+              // or the default safe docs policy.
               const beforeCi = autoMergeDecision({
-                pr,comments,reviews,files,runs:[],repo:fullName
+                pr,comments,reviews,files,newInviteEligible,runs:[],repo:fullName
               });
               if (beforeCi.reason !==
                 "Current head SHA has no successful Validate website and invite catalog run.") {
@@ -116,7 +170,8 @@ jobs:
                 owner,repo,workflow_id:"validate.yml",head_sha:pr.head.sha,per_page:100
               });
               const decision = autoMergeDecision({
-                pr,comments,reviews,files,runs:validations.data.workflow_runs,repo:fullName
+                pr,comments,reviews,files,newInviteEligible,
+                runs:validations.data.workflow_runs,repo:fullName
               });
               if (!decision.eligible) {
                 core.info("PR #" + number + ": " + decision.reason);
@@ -133,6 +188,17 @@ jobs:
                   latest.mergeable !== true || latest.mergeable_state !== "clean") {
                 core.info("PR #" + number + " changed during approval; skipping.");
                 continue;
+              }
+              if (sourceIssueNo !== null) {
+                const issueNow=(await github.rest.issues.get({
+                  owner,repo,issue_number:sourceIssueNo
+                })).data;
+                if (issueNow.state !== "open" ||
+                    issueNow.updated_at !== sourceIssueUpdatedAt) {
+                  core.info("PR #" + number +
+                    " source Issue changed since validation; retry after re-check.");
+                  continue;
+                }
               }
               core.info("Merging authorized PR #" + number +
                 " at " + decision.sha + " (authorization: " + decision.method + ").");
