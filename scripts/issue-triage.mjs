@@ -5,7 +5,7 @@ export const TRIAGE_ASSIGNEE = "hoangsvit";
 export const TRIAGE_LABELS = Object.freeze({
   "type: invite": {
     color: "7057ff",
-    description: "New community Muse invite-code submission requiring review"
+    description: "New community invite-code submission; publication does not verify redemption"
   },
   "type: count-update": {
     color: "1d76db",
@@ -42,7 +42,10 @@ export function classifyIssue(issue) {
   const body = String(issue?.body || "");
   // Check specific forms before the generic Invite form. Never classify
   // a discussion or a count report as a fresh invite submission.
-  if (/^\[Code discussion\]/i.test(title) || body.includes("<!-- muse-code-feedback-root:")) {
+  if (/^\[Code discussion\]/i.test(title) ||
+      /^\[Code\]\s+[A-Z0-9-]{4,32}\b/i.test(title) ||
+      body.includes("<!-- muse-code-feedback-root:") ||
+      body.includes("<!-- muse-code-feedback-thread:")) {
     return "type: discussion";
   }
   if (/^\[Count update\]/i.test(title) ||
