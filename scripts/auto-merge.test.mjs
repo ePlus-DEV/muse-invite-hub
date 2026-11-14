@@ -1,9 +1,11 @@
+import { planIssueChange, isAutoPublishableNewGithubInvite, AUTO_PUBLISH_NEW_INVITE_MARKER } from "./issue-to-pr.mjs";
+import { changedRecord, changedRecords } from "./catalog.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
   AUTO_MERGE_MAINTAINER, AUTO_MERGE_BLOCK_LABEL,
   getMaintainerAuthorization, ciHasPassed, autoMergeDecision,
-  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES
+  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR
 } from "./auto-merge.mjs";
 
 const HEAD="a".repeat(40);
@@ -187,4 +189,130 @@ test("draft, do-not-merge, CI failure, and reviewer objections block safe docs",
               cmd("/automerge "+HEAD,AUTO_MERGE_MAINTAINER,after,2)],
     runs:[run()]
   }).eligible,true);
+});
+
+
+const existingCatalog=[{
+  id:"eplus-owner-dpnihh",code:"DPNIHH",status:"unverified",
+  addedAt:"2026-11-10",submittedBy:"hoangsvit",
+  featured:true,ownerConfirmed:true
+}];
+
+const newCodeIssue=(codes="PNSMZZ",source="GitHub (my own code)")=>({
+  number:230,title:"[Invite] sample",state:"open",
+  user:{login:"real-contributor",id:12345,type:"User"},
+  created_at:"2026-11-14T09:00:00Z",
+  updated_at:"2026-11-15T10:00:00Z", // bot comments do not change addedAt
+  body:[
+    "### Invite code","",codes,"",
+    "### Code source","",source,"",
+    "### Public confirmation or context (optional)","","_No response_","",
+    "### Contributor checklist","",
+    "- [x] I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
+    "- [x] This code is not a password, 2FA code, session token or private credential."
+  ].join("\n")
+});
+
+function botProposal(issue=newCodeIssue(),catalog=existingCatalog){
+  const plan=planIssueChange(issue,catalog);
+  if(plan.outcome !== "proposal") throw Error("Expected proposal");
+  const codes=plan.codes || [plan.code];
+  const records=codes.length===1
+    ? [changedRecord(catalog,plan.data,codes[0])]
+    : changedRecords(catalog,plan.data,codes);
+  const files=records.map(r=>({filename:r.path,status:"added"}));
+  const fileContents=Object.fromEntries(records.map(r=>[r.path,r.content]));
+  const botPr=pr({
+    user:{login:"github-actions[bot]"},
+    head:{sha:HEAD,ref:"auto/issue-"+issue.number+"-invite",
+      repo:{full_name:"ePlus-DEV/muse-invite-hub"}},
+    title:"data: review "+codes.join(", ")+" invite (issue #"+issue.number+")",
+    body:AUTO_PUBLISH_NEW_INVITE_MARKER,
+    changed_files:records.length
+  });
+  return {issue,files,fileContents,pr:botPr,catalog};
+}
+
+test("new GitHub-owned Issue can auto-publish only as unverified",()=>{
+  const data=botProposal();
+  const p=planIssueChange(data.issue,data.catalog);
+  assert.equal(isAutoPublishableNewGithubInvite(data.issue,p),true);
+  assert.equal(p.data.find(i=>i.code==="PNSMZZ").status,"unverified");
+  assert.equal(p.data.find(i=>i.code==="PNSMZZ").addedAt,"2026-11-14");
+  assert.equal(verifyNewGithubInvitePR(data),true);
+  const d=autoMergeDecision({
+    pr:data.pr,files:data.files,newInviteEligible:verifyNewGithubInvitePR(data),
+    runs:[run()]
+  });
+  assert.deepEqual(d,{eligible:true,sha:HEAD,method:"verified-new-github-invite"});
+  assert.equal(autoMergeDecision({pr:data.pr,files:data.files,runs:[run()]}).eligible,false);
+});
+
+test("one Issue may auto-publish independently validated multiple new codes",()=>{
+  const data=botProposal(newCodeIssue("ABC123, DEF456, 11ZKLM"));
+  assert.equal(data.files.length,3);
+  assert.equal(verifyNewGithubInvitePR(data),true);
+  assert.equal(autoMergeDecision({
+    pr:data.pr,files:data.files,newInviteEligible:true,runs:[run()]
+  }).method,"verified-new-github-invite");
+});
+
+test("existing, social, missing-consent or edited Issues cannot trigger auto-publish",()=>{
+  const d=botProposal();
+  const cases=[
+    {...d.issue,body:d.issue.body.replace("GitHub (my own code)","Threads (public code I found)")},
+    {...d.issue,body:d.issue.body.replace("- [x] This code is not a password","- [ ] This code is not a password")},
+    {...d.issue,body:d.issue.body.replace("PNSMZZ","NEW777")},
+    {...d.issue,state:"closed"},
+    {...d.issue,number:234}
+  ];
+  for(const issue of cases){
+    assert.equal(verifyNewGithubInvitePR({...d,issue}),false);
+  }
+  const duplicate=[...existingCatalog,{
+    id:"already-there",code:"PNSMZZ",status:"unverified",
+    addedAt:"2026-11-10",submittedBy:"someone"
+  }];
+  assert.equal(verifyNewGithubInvitePR({...d,catalog:duplicate}),false);
+});
+
+test("untrusted PR metadata and modified records cannot spoof automated bot source",()=>{
+  const d=botProposal();
+  const broken=[
+    {pr:{...d.pr,user:{login:"attacker"}}},
+    {pr:{...d.pr,body:"no trusted marker"}},
+    {pr:{...d.pr,head:{...d.pr.head,ref:"not-the-bot-branch"}}},
+    {pr:{...d.pr,title:"data: review another invite (issue #230)"}},
+    {pr:{...d.pr,changed_files:2}},
+    {files:[{...d.files[0],status:"modified"}]},
+    {files:[...d.files,{filename:".github/workflows/hijack.yml",status:"added"}]},
+    {fileContents:{[d.files[0].filename]:d.fileContents[d.files[0].filename].replace('"status": "unverified"','"status": "reported-working"')}},
+    {fileContents:{[d.files[0].filename]:d.fileContents[d.files[0].filename].replace('"submittedBy": "real-contributor"','"submittedBy": "attacker"')}}
+  ];
+  for(const changes of broken) {
+    assert.equal(verifyNewGithubInvitePR({...d,...changes}),false,JSON.stringify(changes).slice(0,100));
+  }
+});
+
+test("unverified auto-publish still obeys all global stop conditions",()=>{
+  const d=botProposal();
+  for(const p of [
+    {...d.pr,draft:true},
+    {...d.pr,mergeable:false},
+    {...d.pr,labels:[{name:"do-not-merge"}]},
+    {...d.pr,mergeable_state:"behind"}
+  ]){
+    assert.equal(autoMergeDecision({pr:p,files:d.files,newInviteEligible:true,runs:[run()]}).eligible,false);
+  }
+  assert.equal(autoMergeDecision({
+    pr:d.pr,files:d.files,newInviteEligible:true,runs:[run(HEAD,"failure")]
+  }).eligible,false);
+  assert.equal(autoMergeDecision({
+    pr:d.pr,files:d.files,newInviteEligible:true,runs:[run()],
+    reviews:[review("CHANGES_REQUESTED","another-reviewer")]
+  }).eligible,false);
+  assert.equal(autoMergeDecision({
+    pr:d.pr,files:d.files,newInviteEligible:true,runs:[run()],
+    comments:[cmd("/automerge off")]
+  }).eligible,false);
 });
