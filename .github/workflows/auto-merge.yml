@@ -80,18 +80,21 @@ jobs:
 
             for (const candidate of candidates) {
               const number = candidate.number;
-              const [fetched, comments, reviews] = await Promise.all([
+              const [fetched, comments, reviews, files] = await Promise.all([
                 github.rest.pulls.get({owner,repo,pull_number:number}),
                 github.paginate(github.rest.issues.listComments,
                   {owner,repo,issue_number:number,per_page:100}),
                 github.paginate(github.rest.pulls.listReviews,
+                  {owner,repo,pull_number:number,per_page:100}),
+                github.paginate(github.rest.pulls.listFiles,
                   {owner,repo,pull_number:number,per_page:100})
               ]);
               const pr = fetched.data;
-              // Do not spend CI API quota until a current-head maintainer
-              // authorization and all other PR gates have passed.
+              // Spend CI API quota only when this PR is either explicitly
+              // authorized or is a trusted maintainer-authored docs-only
+              // change eligible for the default safe policy.
               const beforeCi = autoMergeDecision({
-                pr,comments,reviews,runs:[],repo:fullName
+                pr,comments,reviews,files,runs:[],repo:fullName
               });
               if (beforeCi.reason !==
                 "Current head SHA has no successful Validate website and invite catalog run.") {
@@ -112,7 +115,7 @@ jobs:
                 owner,repo,workflow_id:"validate.yml",head_sha:pr.head.sha,per_page:100
               });
               const decision = autoMergeDecision({
-                pr,comments,reviews,runs:validations.data.workflow_runs,repo:fullName
+                pr,comments,reviews,files,runs:validations.data.workflow_runs,repo:fullName
               });
               if (!decision.eligible) {
                 core.info("PR #" + number + ": " + decision.reason);
