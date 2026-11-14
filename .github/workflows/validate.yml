@@ -48,7 +48,10 @@ jobs:
           node --check scripts/reopen-code-feedback.mjs
           node --check scripts/feedback-comment-to-pr.mjs
           node --test scripts/issue-to-pr.test.mjs scripts/close-accepted-issues.test.mjs
+          node --test scripts/auto-merge.test.mjs
+          node --check scripts/issue-triage.mjs
           node --test scripts/issue-triage.test.mjs
+          node --check scripts/auto-merge.mjs
           node --check scripts/close-accepted-issues.mjs
       - name: Audit website and repository links
         run: node scripts/audit-links.mjs
