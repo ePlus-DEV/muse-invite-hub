@@ -1,7 +1,8 @@
 name: Maintainer-authorized PR auto-merge
 
 # Never execute untrusted PR scripts with the write-scoped workflow token.
-# A human @hoangsvit review approval or exact-head /automerge command is required.
+# Safe maintainer-authored documentation-only PRs default to auto-merge after CI.
+# All other PRs require a human @hoangsvit approval or exact-head command.
 on:
   pull_request_target:
     types: [ready_for_review, reopened, synchronize, labeled, unlabeled]
