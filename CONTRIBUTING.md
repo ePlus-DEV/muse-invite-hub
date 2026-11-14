@@ -18,6 +18,20 @@ Each accepted code contribution is stored as an independent reviewed JSON record
 
 For GitHub-owned codes only: if your code is already listed under the same GitHub username, resubmitting an updated count (including a remaining-only number) can prepare an **update Draft PR**, not a duplicate listing. If a code is already listed from Threads, or someone files it under a different source, the bot will request manual review rather than replace the attribution or update the quota automatically. Existing listing IDs, contributor attribution and original listing dates are preserved. Numeric GitHub IDs help protect subsequent updates from username reuse. Actions checks the code and duplicates and can prepare an **automated Draft PR**. A maintainer reviews the data, marks the PR ready and merges it when appropriate. **An Issue never automatically publishes a code.** Community submissions start as `unverified`, and total quota alone never implies all invites remain.
 
+## Optional maintainer-authorized auto-merge
+
+Auto-merge is **off by default on every PR**. Passing tests never independently approves a community invite code.
+
+After reviewing the real submitted code, source, attribution and diff, **@hoangsvit** can:
+
+1. Ensure the PR is **Ready for review**, not Draft.
+2. Approve the **current commit** in GitHub's PR review UI (when GitHub allows a review), **or** comment exactly `/automerge FULL_40_CHARACTER_HEAD_SHA` on the PR. A PR author who cannot approve their own PR can use the explicit SHA-bound comment.
+3. Let the trusted workflow check the latest PR head, successful **Validate website and invite catalog** CI run, GitHub mergeability, and any outstanding `CHANGES_REQUESTED` reviews. It then squash-merges the PR and explicitly starts the trusted Pages deployment workflow.
+
+The command is tied to the precise 40-character HEAD SHA shown under the PR's commits. A new commit requires **fresh approval or a fresh command**; there is no blanket approval for future commits. To cancel a prior authorization, comment `/automerge off`; a `do-not-merge` label also blocks automation.
+
+The reviewer must still verify contributor consent and the original public source. A green test suite is **not** Muse redemption verification. The trusted workflow never executes unmerged PR code with write-scoped permissions. GitHub's native repository-level Auto-merge switch is currently disabled; this workflow does not depend on that setting. The automatic merge is **not** allowed to bypass protected-branch requirements.
+
 ## Report code feedback
 
 1. Find your code on [Muse Invite Hub](https://muse.eplus.dev/#codes) and click **Give feedback**, **Worked for me** or **Didn't work**. These actions open an editable report dialog tied to the **canonical GitHub Issue** for that code. Do not open a second report Issue.
