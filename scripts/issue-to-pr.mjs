@@ -83,7 +83,7 @@ export function missingInviteConfirmationGuidance() {
       "which requests both confirmations before submission.",
     "",
     "No Draft PR or public catalog update was made from the incomplete submission."
-  ].join("\\n");
+  ].join("\n");
 }
 
 export function inviteNeedsConfirmationReview(issue) {
