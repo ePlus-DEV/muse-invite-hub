@@ -146,7 +146,7 @@ export async function proposeCommentDraft({
   // Independent branches from main only; never stack on an unmerged PR.
   for(const pr of own) {
     if(!pr.head.ref.startsWith("auto/"))continue;
-    const title=/^data: review (.+) (?:invite|count|feedback) \\(issue #[1-9][0-9]*\\)$/.exec(String(pr.title||""));
+    const title=/^data: review (.+) (?:invite|count|feedback) \(issue #[1-9][0-9]*\)$/.exec(String(pr.title||""));
     const grouped=title ? title[1].split(", ") : [];
     if (grouped.includes(code) ||
         String(pr.title||"").startsWith("data: review "+code+" ")) {
