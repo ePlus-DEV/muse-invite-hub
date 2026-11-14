@@ -20,13 +20,15 @@ For GitHub-owned codes only: if your code is already listed under the same GitHu
 
 ## Optional maintainer-authorized auto-merge
 
-Auto-merge is **off by default on every PR**. Passing tests never independently approves a community invite code.
+Auto-merge is **conditionally on by default** for a small, low-risk class of PRs: **@hoangsvit-authored, ready-for-review, documentation-only changes** touching only `README.md`, `CONTRIBUTING.md`, or Markdown files under `docs/` (at most 15 changed files). These PRs can merge automatically after the current-head CI passes, without a separate authorization command. Any mixed change, other contributor, deletions, file renames, code, catalog data, workflows, or configuration changes always require manual authorization. Passing tests never independently approves a community invite code.
 
-After reviewing the real submitted code, source, attribution and diff, **@hoangsvit** can:
+For all **other** Ready PRs, after reviewing the real submitted code, source, attribution and diff, **@hoangsvit** can:
 
 1. Ensure the PR is **Ready for review**, not Draft.
 2. Approve the **current commit** in GitHub's PR review UI (when GitHub allows a review), **or** comment exactly `/automerge FULL_40_CHARACTER_HEAD_SHA` on the PR. A PR author who cannot approve their own PR can use the explicit SHA-bound comment.
 3. Let the trusted workflow check the latest PR head, successful **Validate website and invite catalog** CI run, GitHub mergeability, and any outstanding `CHANGES_REQUESTED` reviews. It then squash-merges the PR and explicitly starts the trusted Pages deployment workflow.
+
+On both routes, a `do-not-merge` label, an outstanding requested-changes review, Draft status, failed CI, or a branch behind `main` prevents auto-merge. For docs-only default candidates, `/automerge off` can also disable automatic merging for that PR.
 
 The command is tied to the precise 40-character HEAD SHA shown under the PR's commits. A new commit requires **fresh approval or a fresh command**; there is no blanket approval for future commits. The PR branch must also include the latest `main`; update a stale branch and authorize its new SHA before auto-merge. To cancel a prior authorization, comment `/automerge off`; a `do-not-merge` label also blocks automation.
 
