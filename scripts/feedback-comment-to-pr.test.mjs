@@ -117,3 +117,20 @@ test("trusted Issue action never posts an unverified result directly to the cata
   assert.match(flow,/run: node scripts\/reopen-code-feedback\.mjs/);
   assert.match(flow,/run: node scripts\/feedback-comment-to-pr\.mjs/);
 });
+
+
+test("feedback on second code of a shared original Issue produces the correct Draft proposal",()=>{
+  const root={number:120,title:"[Invite] ALFA12 and BRAVO2",state:"closed",
+    body:"### Invite code\n\nALFA12,\nBRAVO2\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [x] agreed"};
+  const base={status:"unverified",addedAt:"2026-11-11",submittedBy:"contributor",feedbackIssueNumber:120};
+  const first={...base,id:"community-issue-120-alfa12",code:"ALFA12"};
+  const second={...base,id:"community-issue-120-bravo2",code:"BRAVO2"};
+  const report=member("Code: BRAVO2\nResult: Muse accepted my code");
+  const result=planCommentProposal(root,report,[first,second]);
+  assert.equal(result.outcome,"proposal");
+  assert.equal(result.code,"BRAVO2");
+  assert.equal(result.data.find(entry=>entry.code==="BRAVO2").status,"reported-working");
+  assert.equal(result.data.find(entry=>entry.code==="ALFA12").status,"unverified");
+  assert.equal(result.branch,"auto/comment-120-1025-feedback");
+  assert.equal(planCommentProposal(root,member("Code: UNKNOWN\nResult: Muse accepted my code"),[first,second]).outcome,"ignored");
+});
