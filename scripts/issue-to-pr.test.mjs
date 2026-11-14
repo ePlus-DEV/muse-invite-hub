@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { planIssueChange, readIssueFields } from "./issue-to-pr.mjs";
 import { validateCatalog } from "./validate.mjs";
+import { changedRecords } from "./catalog.mjs";
 
 const date="2026-11-11T10:00:00Z";
 const share = [
@@ -372,4 +373,45 @@ test("structured Share Code form accepts contributor-edited title and uppercase 
   assert.throws(()=>planIssueChange(issue(100,"Custom title",unchecked),[item]),/confirmations/);
   const unstructured = share.replace("- [x]","- [X]");
   assert.equal(planIssueChange(issue(101,"Free-form code",unstructured),[item]).outcome,"unsupported");
+});
+
+
+test("a single Share Code Issue can propose two independently stored codes",()=>{
+  const body=share.replace("PNSMZZ","ALFA12,\nBRAVO2")
+    .replace("### Invite limit (optional; self-reported)\n\n30",
+      "### Invite limit (optional; self-reported)\n\n_No response_");
+  const original=[item];
+  const result=planIssueChange(issue(120,"[Invite] two codes",body),original);
+  assert.equal(result.outcome,"proposal");
+  assert.deepEqual(result.codes,["ALFA12","BRAVO2"]);
+  assert.equal(result.branch,"auto/issue-120-invite");
+  const first=result.data.find(entry=>entry.code==="ALFA12");
+  const second=result.data.find(entry=>entry.code==="BRAVO2");
+  assert.equal(first.id,"community-issue-120-alfa12");
+  assert.equal(second.id,"community-issue-120-bravo2");
+  assert.equal(first.feedbackIssueNumber,120);
+  assert.equal(second.feedbackIssueNumber,120);
+  assert.equal(first.reportedCapacity,undefined);
+  assert.equal(second.reportedCapacity,undefined);
+  assert.deepEqual(changedRecords(original,result.data,result.codes).map(x=>x.path),
+    ["data/invite-records/community-issue-120-alfa12.json",
+      "data/invite-records/community-issue-120-bravo2.json"]);
+  assert.deepEqual(validateCatalog(result.data),[]);
+  assert.equal(original.length,1);
+});
+
+test("multiple code submissions reject duplicates, malformed tokens and shared quota",()=>{
+  const clean=share.replace("### Invite limit (optional; self-reported)\n\n30",
+    "### Invite limit (optional; self-reported)\n\n_No response_");
+  const makeCodes=value=>clean.replace("PNSMZZ",value);
+  assert.throws(()=>planIssueChange(issue(121,"[Invite]",makeCodes("ALFA12, alfa12")),[item]),
+    /distinct/);
+  assert.throws(()=>planIssueChange(issue(121,"[Invite]",makeCodes("ALFA12, ../bad")),[item]),
+    /Invite code/);
+  const quota=planIssueChange(issue(121,"[Invite]",share.replace("PNSMZZ","ALFA12, BRAVO2")),[item]);
+  assert.equal(quota.outcome,"needs-review");
+  assert.match(quota.reason,/per-code/);
+  const existing=planIssueChange(issue(121,"[Invite]",makeCodes("PNSMZZ, BRAVO2")),[item,community]);
+  assert.equal(existing.outcome,"needs-review");
+  assert.match(existing.reason,/already/);
 });
