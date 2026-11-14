@@ -18,7 +18,10 @@ export function validateCatalog(data) {
   if (!Array.isArray(data)) return ["Catalog must be a JSON array."];
   const ids = new Set();
   const codes = new Set();
-  const feedbackIssues = new Set();
+  const feedbackIssues = new Map();
+  const groupedCode = (entry, issueNo) =>
+    typeof entry?.code === "string" &&
+    entry.id === "community-issue-"+issueNo+"-"+entry.code.toLowerCase();
   let featuredCount = 0;
 
   data.forEach((item, index) => {
@@ -46,9 +49,22 @@ export function validateCatalog(data) {
       const issueNo = item.feedbackIssueNumber;
       if (!Number.isSafeInteger(issueNo) || issueNo <= 0) {
         errors.push(at + ": feedbackIssueNumber must be a positive GitHub Issue number.");
-      } else if (feedbackIssues.has(issueNo)) {
-        errors.push(at + ": duplicate feedback Issue #"+issueNo+".");
-      } else feedbackIssues.add(issueNo);
+      } else {
+        const group=feedbackIssues.get(issueNo) || [];
+        // Only independently named records from the same original multi-code
+        // submission may intentionally share its canonical feedback Issue.
+        if (group.length && (!groupedCode(item,issueNo) ||
+            group.some(other => !groupedCode(other,issueNo) ||
+              other.submittedBy !== item.submittedBy ||
+              other.submittedById !== item.submittedById ||
+              other.sourceUrl !== item.sourceUrl))) {
+          errors.push(at + ": duplicate feedback Issue #"+issueNo+".");
+        } else if (group.length >= 10) {
+          errors.push(at + ": at most 10 invite codes may share a feedback Issue.");
+        } else {
+          feedbackIssues.set(issueNo,[...group,item]);
+        }
+      }
     }
     if (!statuses.has(item.status)) errors.push(at + ": invalid community status.");
     if (item.featured !== undefined && typeof item.featured !== "boolean") errors.push(at + ": featured must be a boolean.");
