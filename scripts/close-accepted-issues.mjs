@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { readIssueFields } from "./issue-to-pr.mjs";
 import { readCatalog, recordPath } from "./catalog.mjs";
+import { isShareCodeIssue } from "./code-issue-map.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
 const ORIGIN = "https://muse.eplus.dev";
@@ -117,7 +118,8 @@ export async function closeAcceptedIssues({
       const expectedTitle = {
         invite:"[Invite]",count:"[Count update]",feedback:"[Code feedback]"
       }[kind];
-      if (!issue.title?.startsWith(expectedTitle) ||
+      if (!(issue.title?.startsWith(expectedTitle) ||
+            (kind === "invite" && isShareCodeIssue(issue))) ||
           readIssueFields(issue.body)["Invite code"]?.trim().toUpperCase() !== code ||
           !published.has(code)) { summary.pending++; continue; }
       const files = await api("GET","pulls/" + prNumber + "/files?per_page=100");

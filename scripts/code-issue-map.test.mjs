@@ -148,3 +148,12 @@ test("reopen only genuine user feedback on the canonical code issue",()=>{
   const mapped={number:103,state:"closed",title:"[Code] DPNIHH",body:canonicalThreadBody(seeded)};
   assert.equal(shouldReopen(mapped,regularComment,[seeded]),true);
 });
+
+test("original Share Code form remains canonical even if its title is edited",()=>{
+  const form={number:93,title:"Get 30 billion Muse tokens.",state:"closed",
+    body:"### Invite code\n\nD8190Y\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [X] consent"};
+  const item={id:"community-issue-93",code:"D8190Y",feedbackIssueNumber:93};
+  assert.equal(issueCode(form),"D8190Y");
+  assert.equal(resolveExistingIssue(item,[form]),form);
+  assert.equal(issueCode({...form,body:"### Invite code\n\nD8190Y"}),null);
+});

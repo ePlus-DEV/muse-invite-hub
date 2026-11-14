@@ -357,3 +357,19 @@ test("X and Facebook reports cannot hijack same-named GitHub or Threads accounts
   assert.equal(planIssueChange(issue(94,"[Invite]",
     updatedShare("GitHub (my own code)").replace("18I70N","XX1234"),"sameperson"),[item,...existing]).outcome,"needs-review");
 });
+
+test("structured Share Code form accepts contributor-edited title and uppercase checkmarks",()=>{
+  const body = share.replaceAll("- [x]", "- [X]")
+    .replace("### Public confirmation or context (optional)",
+      "### Code source\n\nGitHub (my own code)\n\n### Public confirmation or context (optional)");
+  for (const title of ["Get 30 billion Muse tokens.", "9NEXQ8 US ONLY", "[Invite] PNSMZZ"]) {
+    const result = planIssueChange(issue(99,title,body),[item]);
+    assert.equal(result.outcome,"proposal");
+    assert.equal(result.kind,"invite");
+    assert.deepEqual(validateCatalog(result.data),[]);
+  }
+  const unchecked = body.replace("- [X] This code is not a password","- [ ] This code is not a password");
+  assert.throws(()=>planIssueChange(issue(100,"Custom title",unchecked),[item]),/confirmations/);
+  const unstructured = share.replace("- [x]","- [X]");
+  assert.equal(planIssueChange(issue(101,"Free-form code",unstructured),[item]).outcome,"unsupported");
+});
