@@ -62,7 +62,7 @@ export function getMaintainerAuthorization({headSha,comments=[],reviews=[]}) {
 
   const lastApproval = approvals.at(-1);
   if (!lastApproval) return {authorized:false,reason:"Await @hoangsvit approval or /automerge <40-char-head-SHA>."};
-  if (lastCancel && byTime(lastApproval,lastCancel) >= 0) {
+  if (lastCancel && byTime(lastApproval,lastCancel) <= 0) {
     return {authorized:false,reason:"Auto-merge was cancelled by @hoangsvit."};
   }
   return {authorized:true,method:maintainerReview &&
