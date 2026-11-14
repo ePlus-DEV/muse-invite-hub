@@ -3,6 +3,16 @@ export const REPO = "ePlus-DEV/muse-invite-hub";
 export const MARKER = "muse-code-feedback-thread";
 const CODE = /^[A-Z0-9-]{4,32}$/;
 
+// GitHub Issue Form titles are editable. Identify structured Share Code forms
+// by the submitted fields, not by an optional [Invite] prefix.
+export function isShareCodeIssue(issue) {
+  if (!issue || issue.pull_request) return false;
+  const body = String(issue.body || "");
+  return /^### Invite code\s*$/m.test(body) &&
+    /^### Code source\s*$/m.test(body) &&
+    /^### Contributor checklist\s*$/m.test(body);
+}
+
 export function issueMarker(code) {
   if (!CODE.test(code)) throw Error("Invalid invite code");
   return "<!-- " + MARKER + ": " + code + " -->";
@@ -23,7 +33,8 @@ export function issueCode(issue) {
   if (match) return match[1];
   // Historical contributor submission and count-update Issues remain the original
   // conversation, even when the entry id came from a different repository.
-  if (!/^\[(?:Invite|Count update|Code feedback)\]/.test(String(issue?.title || ""))) return null;
+  if (!/^\[(?:Invite|Count update|Code feedback)\]/.test(String(issue?.title || "")) &&
+      !isShareCodeIssue(issue)) return null;
   return /^### Invite code\s*\n\s*([A-Z0-9-]{4,32})\s*(?:\n|$)/m.exec(body)?.[1] || null;
 }
 
@@ -52,6 +63,7 @@ export function resolveExistingIssue(item, issues) {
     issueCode(issue) === code &&
     (issue.number === issueNo ||
       /^\[(?:Invite|Count update|Code feedback)\]/.test(String(issue.title || "")) ||
+      isShareCodeIssue(issue) ||
       String(issue.body || "").includes(issueMarker(code)) ||
       /<!-- muse-code-feedback-root:[A-Z0-9-]{4,32} -->/.test(String(issue.body || ""))));
   const source = candidates.find(x => x.number === issueNo);

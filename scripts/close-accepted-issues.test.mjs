@@ -158,3 +158,14 @@ test("refuses write access without the expected repository and deployed SHA",asy
   await assert.rejects(closeAcceptedIssues({token:"test",deployedSha:deployed,repository:"untrusted/repo"}),/Expected trusted/);
   await assert.rejects(closeAcceptedIssues({token:"test",deployedSha:"main"}),/Expected trusted/);
 });
+
+test("Share Code form with custom title is accepted after reviewed bot PR and live deployment",async()=>{
+  const original=issue({title:"Custom contributor title",
+    body:"### Invite code\n\nALFA12\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [X] confirmed"});
+  const m=mock({initialIssue:original});
+  const result=await closeAcceptedIssues({
+    request:m.request,token:"test-token",deployedSha:deployed,catalog:[{code}]
+  });
+  assert.equal(result.closed,1);
+  assert.equal(result.notified,1);
+});

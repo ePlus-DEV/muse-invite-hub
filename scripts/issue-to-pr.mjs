@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { validateCatalog } from "./validate.mjs";
 import { fetchGitHubCatalog, changedRecord } from "./catalog.mjs";
 import { parsePublicSource, listedPlatform, LISTING_PLATFORMS } from "./source-platform.mjs";
+import { isShareCodeIssue } from "./code-issue-map.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
 const MARKER = "<!-- muse-issue-draft-pr -->";
@@ -114,9 +115,9 @@ export function planIssueChange(issue, current) {
   if (!Array.isArray(current)) throw Error("Expected a catalog array.");
   if (!USER_PATTERN.test(issue.user?.login || "")) throw Error("Invalid contributor username.");
   const title = String(issue.title || "").trim();
-  const kind = title.startsWith("[Invite]") ? "invite" :
-    title.startsWith("[Count update]") ? "count" :
-    title.startsWith("[Code feedback]") ? "feedback" : null;
+  const kind = title.startsWith("[Count update]") ? "count" :
+    title.startsWith("[Code feedback]") ? "feedback" :
+    title.startsWith("[Invite]") || isShareCodeIssue(issue) ? "invite" : null;
   if (!kind) return { outcome:"unsupported", reason:"Issue does not use a supported Muse Invite Hub form." };
   const f = readIssueFields(issue.body);
   const code = codeFrom(f);
@@ -142,7 +143,8 @@ export function planIssueChange(issue, current) {
     }
   }
   if (kind === "invite") {
-    const checklist = field(f,"Contributor checklist");
+    const checklist = field(f,"Contributor checklist")
+      .replace(/-\s*\[X\]/g,"- [x]");
     const authorized = checklist.includes("[x] I am authorized to share this code publicly") ||
       checklist.includes("[x] I own this public code or am reporting a code explicitly shared publicly");
     if (!authorized || !checklist.includes("[x] This code is not a password")) {
