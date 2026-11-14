@@ -25,6 +25,10 @@ jobs:
     steps:
       - name: Checkout trusted repository code
         uses: actions/checkout@v6
+      - name: Check trusted triage script and tests
+        run: |
+          node --check scripts/issue-triage.mjs
+          node --test scripts/issue-triage.test.mjs
       - name: Auto-label and assign to hoangsvit
         uses: actions/github-script@v8
         with:
@@ -40,13 +44,23 @@ jobs:
             } else {
               // Catch issues opened by repository GITHUB_TOKEN automation;
               // restrict reconciliation to recent submissions.
-              const recent = await github.rest.issues.listForRepo({
-                owner,repo,state:"all",sort:"created",direction:"desc",per_page:100
-              });
               const cutoff = Date.now() - 48 * 60 * 60 * 1000;
-              issues = recent.data.filter(issue =>
-                Date.parse(issue.created_at || "") >= cutoff
-              );
+              issues = [];
+              // Iterate across pages instead of silently dropping Issues
+              // when more than 100 PRs/Issues were created in 48 hours.
+              for await (const response of github.paginate.iterator(
+                github.rest.issues.listForRepo, {
+                  owner,repo,state:"all",sort:"created",
+                  direction:"desc",per_page:100
+                }
+              )) {
+                for (const issue of response.data) {
+                  if (Date.parse(issue.created_at || "") >= cutoff) issues.push(issue);
+                }
+                if (response.data.some(issue =>
+                  Date.parse(issue.created_at || "") < cutoff
+                )) break;
+              }
             }
             for (const issue of issues) {
               const decision = triageDecision(issue);
