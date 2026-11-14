@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   AUTO_MERGE_MAINTAINER, AUTO_MERGE_BLOCK_LABEL,
-  getMaintainerAuthorization, ciHasPassed, autoMergeDecision
+  getMaintainerAuthorization, ciHasPassed, autoMergeDecision,
+  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES
 } from "./auto-merge.mjs";
 
 const HEAD="a".repeat(40);
@@ -105,4 +106,85 @@ test("new, unreviewed invite Draft PRs stay unmerged even with passing CI",()=>{
   assert.equal(autoMergeDecision({pr:pr(),runs:[run()]}).eligible,false);
   assert.equal(autoMergeDecision({pr:pr(),reviews:[review()],runs:[]}).eligible,false);
   assert.equal(autoMergeDecision({pr:pr(),comments:[cmd("/automerge "+HEAD)],runs:[run()]}).eligible,true);
+});
+
+
+const maintainerDocs=(overrides={}) => pr({
+  user:{login:AUTO_MERGE_DEFAULT_AUTHOR},
+  changed_files:1,
+  ...overrides
+});
+const mdFile=(filename="README.md",status="modified")=>({filename,status});
+
+test("trusted maintainer docs-only PRs are default-on after green CI",()=>{
+  assert.equal(qualifiesForDefaultAutoMerge(maintainerDocs(),[mdFile()]),true);
+  assert.deepEqual(autoMergeDecision({
+    pr:maintainerDocs(),
+    files:[mdFile()],runs:[run()]
+  }),{eligible:true,sha:HEAD,method:"default-safe-docs"});
+  assert.equal(autoMergeDecision({
+    pr:maintainerDocs({changed_files:3}),
+    files:[mdFile("README.md"),mdFile("CONTRIBUTING.md"),mdFile("docs/operations/notes.md")],
+    runs:[run()]
+  }).method,"default-safe-docs");
+});
+
+test("default docs policy never covers community submissions or executable changes",()=>{
+  const safe=[mdFile("README.md")];
+  assert.equal(qualifiesForDefaultAutoMerge(
+    maintainerDocs({user:{login:"github-actions[bot]"}}),safe),false);
+  assert.equal(qualifiesForDefaultAutoMerge(
+    maintainerDocs({user:{login:"another-collaborator"}}),safe),false);
+  for (const unsafe of [
+    "data/invite-records/community-issue-113.json","assets/app.js",
+    ".github/workflows/validate.yml","AGENTS.md","package.json",
+    "scripts/issue-to-pr.mjs","docs/start.html","docs/../README.md",
+    "docs/hidden.yaml","README.md/evil","CODEOWNERS",
+    ".github/ISSUE_TEMPLATE/share-code.yml"
+  ]) {
+    const mixed=maintainerDocs({changed_files:2});
+    assert.equal(qualifiesForDefaultAutoMerge(
+      mixed,[mdFile("README.md"),mdFile(unsafe)]),false,unsafe);
+  }
+  assert.equal(qualifiesForDefaultAutoMerge(
+    maintainerDocs({changed_files:2}),[mdFile("README.md")]),false);
+  assert.equal(qualifiesForDefaultAutoMerge(
+    maintainerDocs({changed_files:0}),[]),false);
+  assert.equal(qualifiesForDefaultAutoMerge(
+    maintainerDocs({changed_files:AUTO_MERGE_MAX_DOC_FILES+1}),
+    Array.from({length:AUTO_MERGE_MAX_DOC_FILES+1},()=>mdFile())),false);
+  assert.equal(qualifiesForDefaultAutoMerge(
+    maintainerDocs(),[mdFile("README.md","removed")]),false);
+  assert.equal(qualifiesForDefaultAutoMerge(
+    maintainerDocs(),[{...mdFile(),previous_filename:"old.md"}]),false);
+  assert.equal(autoMergeDecision({
+    pr:pr({user:{login:"someone-else"},changed_files:1}),
+    files:safe,runs:[run()]
+  }).eligible,false);
+});
+
+test("draft, do-not-merge, CI failure, and reviewer objections block safe docs",()=>{
+  const files=[mdFile()];
+  for (const props of [{draft:true},{labels:[{name:"do-not-merge"}]},
+                      {mergeable:false},{mergeable_state:"behind"}]) {
+    assert.equal(autoMergeDecision({
+      pr:maintainerDocs(props),files,runs:[run()]
+    }).eligible,false);
+  }
+  assert.equal(autoMergeDecision({
+    pr:maintainerDocs(),files,runs:[run(HEAD,"failure")]
+  }).eligible,false);
+  assert.equal(autoMergeDecision({
+    pr:maintainerDocs(),files,reviews:[review("CHANGES_REQUESTED","reviewer")],runs:[run()]
+  }).eligible,false);
+  assert.equal(autoMergeDecision({
+    pr:maintainerDocs(),files,
+    comments:[cmd("/automerge off")],runs:[run()]
+  }).eligible,false);
+  assert.equal(autoMergeDecision({
+    pr:maintainerDocs(),files,
+    comments:[cmd("/automerge off",AUTO_MERGE_MAINTAINER,at,1),
+              cmd("/automerge "+HEAD,AUTO_MERGE_MAINTAINER,after,2)],
+    runs:[run()]
+  }).eligible,true);
 });
