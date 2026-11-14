@@ -1,3 +1,9 @@
+import {
+  planIssueChange, isAutoPublishableNewGithubInvite,
+  AUTO_PUBLISH_NEW_INVITE_MARKER
+} from "./issue-to-pr.mjs";
+import { changedRecord, changedRecords } from "./catalog.mjs";
+
 // Pure, fail-closed policy for PR auto-merge. Executed ONLY from trusted main.
 // GitHub metadata is untrusted input; this module never executes PR contents.
 export const AUTO_MERGE_MAINTAINER = "hoangsvit";
@@ -91,6 +97,46 @@ export function getMaintainerAuthorization({headSha,comments=[],reviews=[]}) {
     lastApproval.id === maintainerReview.id ? "review" : "comment"};
 }
 
+// Independently verify that the bot PR is an exact deterministic projection
+// of a *current* public Issue on trusted main. Never trust the PR title,
+// checklist summary, patch text, or bot marker alone.
+export function verifyNewGithubInvitePR({
+  pr,issue,catalog,files=[],fileContents={},repo="ePlus-DEV/muse-invite-hub"
+}) {
+  if (!pr || !issue || !Array.isArray(catalog) ||
+      !Array.isArray(files) || !fileContents ||
+      typeof fileContents !== "object" || Array.isArray(fileContents)) return false;
+  if (pr.user?.login !== "github-actions[bot]" ||
+      pr.head?.repo?.full_name !== repo ||
+      pr.base?.ref !== "main" ||
+      !Number.isSafeInteger(issue.number) || issue.number < 1 ||
+      pr.head?.ref !== "auto/issue-"+issue.number+"-invite" ||
+      !String(pr.body || "").includes(AUTO_PUBLISH_NEW_INVITE_MARKER)) return false;
+
+  try {
+    const proposal=planIssueChange(issue,catalog);
+    if (!isAutoPublishableNewGithubInvite(issue,proposal)) return false;
+    const codes=proposal.codes || [proposal.code];
+    if (pr.title !== "data: review "+codes.join(", ")+" invite (issue #"+issue.number+")") return false;
+    const expected=codes.length === 1
+      ? [changedRecord(catalog,proposal.data,codes[0])]
+      : changedRecords(catalog,proposal.data,codes);
+    if (pr.changed_files !== expected.length ||
+        files.length !== expected.length ||
+        Object.keys(fileContents).length !== expected.length) return false;
+    return expected.every(record => {
+      const changed=files.find(file=>file.filename === record.path);
+      return changed?.status === "added" &&
+        changed.previous_filename === undefined &&
+        fileContents[record.path] === record.content;
+    });
+  } catch {
+    // Duplicated, edited, unsafe, malformed and now-published code Issues
+    // require maintainer review instead of automatic publication.
+    return false;
+  }
+}
+
 export function ciHasPassed({headSha,runs=[]}) {
   const relevant=(runs || [])
     .filter(run=>run.head_sha === headSha &&
@@ -101,7 +147,7 @@ export function ciHasPassed({headSha,runs=[]}) {
   return Boolean(latest && latest.status === "completed" && latest.conclusion === "success");
 }
 
-export function autoMergeDecision({pr,comments=[],reviews=[],runs=[],files=[],repo="ePlus-DEV/muse-invite-hub"}) {
+export function autoMergeDecision({pr,comments=[],reviews=[],runs=[],files=[],newInviteEligible=false,repo="ePlus-DEV/muse-invite-hub"}) {
   if (!pr || pr.state !== "open" || pr.draft) return {eligible:false,reason:"PR is not open and ready."};
   if (pr.base?.ref !== "main" || pr.head?.repo?.full_name !== repo) {
     return {eligible:false,reason:"Only same-repository PRs targeting main are eligible."};
@@ -122,12 +168,13 @@ export function autoMergeDecision({pr,comments=[],reviews=[],runs=[],files=[],re
     return {eligible:false,reason:authorization.reason};
   }
   const safeDefault=qualifiesForDefaultAutoMerge(pr,files);
-  if (!safeDefault && !authorization.authorized) {
+  if (!safeDefault && !newInviteEligible && !authorization.authorized) {
     return {eligible:false,reason:authorization.reason};
   }
   if (!ciHasPassed({headSha:sha,runs})) {
     return {eligible:false,reason:"Current head SHA has no successful Validate website and invite catalog run."};
   }
-  return {eligible:true,sha,method:safeDefault && !authorization.authorized
-    ? "default-safe-docs" : authorization.method};
+  return {eligible:true,sha,method:newInviteEligible && !authorization.authorized
+    ? "verified-new-github-invite" : safeDefault && !authorization.authorized
+      ? "default-safe-docs" : authorization.method};
 }
