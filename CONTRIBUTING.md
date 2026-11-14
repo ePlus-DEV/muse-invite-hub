@@ -1,6 +1,6 @@
 # Contributing to Muse Invite Hub
 
-Thanks for helping! **You can share an invite, report feedback or update a count without writing code.** Use the Share Code GitHub Issue Form **only for new invite codes**. Existing-code feedback and owner-count updates reuse the code’s canonical Issue through the website. UI and documentation improvements use Pull Requests.
+Thanks for helping! **You can share an invite, report feedback or update a count without writing code.** Use the Share Code GitHub Issue Form **only for new invite codes**. You can submit up to **10 distinct new codes in one Issue**, separated by commas, spaces or newlines. They receive **separate catalog records in one review-only Draft PR**; per-code usage/quota fields must be blank for grouped submissions. If one code already exists, submit that code's update through its existing listing instead. Existing-code feedback and owner-count updates reuse the code’s canonical Issue through the website. UI and documentation improvements use Pull Requests.
 
 [Homepage](https://muse.eplus.dev/) · [README](README.md) · [Visual contribution flow](docs/CONTRIBUTION_FLOW.md) · [Share code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report feedback](https://muse.eplus.dev/#codes) · [Update count](https://muse.eplus.dev/#codes)
 

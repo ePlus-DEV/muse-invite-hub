@@ -3,6 +3,18 @@ export const REPO = "ePlus-DEV/muse-invite-hub";
 export const MARKER = "muse-code-feedback-thread";
 const CODE = /^[A-Z0-9-]{4,32}$/;
 
+// Issue Forms accept one or more public invite codes. Never silently drop
+// malformed or duplicate tokens: each code must be reviewed individually.
+export function parseInviteCodes(value) {
+  const tokens = String(value ?? "").trim().toUpperCase().split(/[\s,;，；]+/).filter(Boolean);
+  if (tokens.length < 1 || tokens.length > 10 || tokens.some(code => !CODE.test(code)) ||
+      new Set(tokens).size !== tokens.length) {
+    throw Error("Invite code must contain 1–10 distinct 4–32 character codes (letters, digits or hyphens), separated by whitespace, commas or semicolons.");
+  }
+  return tokens;
+}
+
+
 // GitHub Issue Form titles are editable. Identify structured Share Code forms
 // by the submitted fields, not by an optional [Invite] prefix.
 export function isShareCodeIssue(issue) {
@@ -25,17 +37,28 @@ export function originalIssueNumber(item) {
   return match ? Number(match[1]) : null;
 }
 
-export function issueCode(issue) {
-  if (issue?.pull_request) return null;
+export function issueCodes(issue) {
+  if (issue?.pull_request) return [];
   const body = String(issue?.body || "");
-  const match = new RegExp("<!-- " + MARKER + ": ([A-Z0-9-]{4,32}) -->").exec(body) ||
+  const marker = new RegExp("<!-- " + MARKER + ": ([A-Z0-9-]{4,32}) -->").exec(body) ||
     /<!-- muse-code-feedback-root:([A-Z0-9-]{4,32}) -->/.exec(body);
-  if (match) return match[1];
-  // Historical contributor submission and count-update Issues remain the original
-  // conversation, even when the entry id came from a different repository.
+  if (marker) return [marker[1]];
   if (!/^\[(?:Invite|Count update|Code feedback)\]/.test(String(issue?.title || "")) &&
-      !isShareCodeIssue(issue)) return null;
-  return /^### Invite code\s*\n\s*([A-Z0-9-]{4,32})\s*(?:\n|$)/m.exec(body)?.[1] || null;
+      !isShareCodeIssue(issue)) return [];
+  const heading = /^### Invite code[ \t]*\r?$/m.exec(body);
+  if (!heading) return [];
+  const rest = body.slice(heading.index + heading[0].length).replace(/^\r?\n/, "");
+  const next = rest.search(/^### /m);
+  const value = (next < 0 ? rest : rest.slice(0, next)).trim();
+  try {
+    return parseInviteCodes(value);
+  } catch {
+    return [];
+  }
+}
+
+export function issueCode(issue) {
+  return issueCodes(issue)[0] || null;
 }
 
 export function canonicalThreadBody(item) {
@@ -60,7 +83,7 @@ export function resolveExistingIssue(item, issues) {
   const issueNo = originalIssueNumber(item);
   const candidates = issues.filter(issue => !issue.pull_request &&
     Number.isSafeInteger(issue.number) && issue.number > 0 &&
-    issueCode(issue) === code &&
+    issueCodes(issue).includes(code) &&
     (issue.number === issueNo ||
       /^\[(?:Invite|Count update|Code feedback)\]/.test(String(issue.title || "")) ||
       isShareCodeIssue(issue) ||

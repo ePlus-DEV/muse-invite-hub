@@ -33,7 +33,7 @@ export function planCommentProposal(issue, comment, catalog) {
       comment.body.length > MAX_COMMENT || !comment.user?.login ||
       comment.user?.type === "Bot" || comment.user?.login.endsWith("[bot]") ||
       !Number.isSafeInteger(comment.id) || comment.id <= 0) return {outcome:"ignored"};
-  const code = feedbackCodeForIssue(issue,catalog);
+  const code = feedbackCodeForIssue(issue,catalog,comment.body);
   if (!code) return {outcome:"ignored"};
   const fields = lines(comment.body);
   if (fields.Code !== code) return {outcome:"ignored"};
@@ -146,7 +146,10 @@ export async function proposeCommentDraft({
   // Independent branches from main only; never stack on an unmerged PR.
   for(const pr of own) {
     if(!pr.head.ref.startsWith("auto/"))continue;
-    if(String(pr.title||"").startsWith("data: review "+code+" ")) {
+    const title=/^data: review (.+) (?:invite|count|feedback) \(issue #[1-9][0-9]*\)$/.exec(String(pr.title||""));
+    const grouped=title ? title[1].split(", ") : [];
+    if (grouped.includes(code) ||
+        String(pr.title||"").startsWith("data: review "+code+" ")) {
       return {outcome:"needs-review",code,kind,reason:"A Draft PR already changes this code: "+pr.html_url};
     }
   }

@@ -104,3 +104,27 @@ export function changedRecord(before,after,code) {
   }
   return {path:recordPath(item),content:JSON.stringify(item,null,2)+"\n"};
 }
+
+export function changedRecords(before, after, codes) {
+  if (!Array.isArray(before) || !Array.isArray(after) ||
+      !Array.isArray(codes) || codes.length < 2 ||
+      new Set(codes).size !== codes.length) {
+    throw Error("Expected distinct invite codes and catalog arrays");
+  }
+  const original = new Map(before.map(entry => [entry.id, entry]));
+  const updated = new Map(after.map(entry => [entry.id, entry]));
+  const ids = new Set([...original.keys(), ...updated.keys()]);
+  const differences = [...ids].filter(id =>
+    JSON.stringify(original.get(id)) !== JSON.stringify(updated.get(id)));
+  const items = codes.map(code => after.find(entry => entry.code === code));
+  const changedIds = new Set(items.map(item => item?.id));
+  if (items.some(item => !item) || changedIds.size !== codes.length ||
+      differences.length !== codes.length ||
+      differences.some(id => !changedIds.has(id))) {
+    throw Error("A multi-code contribution must change exactly its own invite records");
+  }
+  return items.map(item => ({
+    path: recordPath(item),
+    content: JSON.stringify(item, null, 2) + "\n"
+  }));
+}
