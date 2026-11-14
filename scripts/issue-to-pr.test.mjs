@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { planIssueChange, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview } from "./issue-to-pr.mjs";
+import { planIssueChange, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance } from "./issue-to-pr.mjs";
 import { validateCatalog } from "./validate.mjs";
 import { changedRecords } from "./catalog.mjs";
 
@@ -132,6 +132,18 @@ test("API-created invite Issues without required confirmations remain open for r
   assert.equal(inviteNeedsConfirmationReview({...rawIssue,state:"closed"}), false);
   assert.equal(inviteNeedsConfirmationReview({...rawIssue,pull_request:{number:1}}), false);
   assert.equal(inviteNeedsConfirmationReview(issue(113,"Support request",missing)), false);
+});
+
+test("missing confirmations receive actionable guidance without closure or impersonated consent", () => {
+  const guidance=missingInviteConfirmationGuidance();
+  assert.match(guidance,/This one stays open/);
+  assert.match(guidance,/… → Edit/);
+  assert.match(guidance,/### Contributor checklist/);
+  assert.match(guidance,/- \[ \] I own this public code/);
+  assert.match(guidance,/- \[ \] This code is not a password/);
+  assert.doesNotMatch(guidance,/- \[x\]/);
+  assert.match(guidance,/\[Share Code form\]/);
+  assert.match(guidance,/\n\n/);
 });
 
 test("both consent checkboxes must be checked and cannot be spoofed by notes", () => {
