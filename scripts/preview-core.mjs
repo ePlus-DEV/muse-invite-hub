@@ -2,17 +2,19 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { validateCatalog } from "./validate.mjs";
 import { generateSite } from "./site-pages.mjs";
+import { assembleCatalog } from "./catalog.mjs";
 
 export const PREVIEW_PREFIX = "pr-preview";
 export const REQUIRED_FILES = ["index.html", "assets/app.js", "assets/styles.css", "data/invites.json"];
-const ALLOWED = /^(?:index\.html|llms\.txt|assets\/[a-zA-Z0-9_./-]+\.(?:js|css|svg|png|jpg|jpeg|webp|avif|mp4)|data\/[a-zA-Z0-9_./-]+\.json)$/;
+const ALLOWED = /^(?:countries\/index\.html|index\.html|llms\.txt|assets\/[a-zA-Z0-9_./-]+\.(?:js|css|svg|png|jpg|jpeg|webp|avif|mp4)|data\/[a-zA-Z0-9_./-]+\.json)$/;
 
 export function isSafeSiteFile(path) {
   return typeof path === "string" && path.length < 200 && !path.includes("..") &&
     !path.includes("//") && ALLOWED.test(path);
 }
 
-export function cleanPreviewHtml(html, { number, sha, origin, hosted = true }) {
+export function cleanPreviewHtml(html, { number, sha, origin, hosted = true, pagePath = "" }) {
+  if (pagePath !== "" && pagePath !== "countries/") throw Error("Unsafe preview page path");
   if (!Number.isSafeInteger(number) || number < 1) throw Error("Invalid PR number");
   if (!/^[0-9a-f]{40}$/.test(sha)) throw Error("Invalid PR head SHA");
   if (!html.includes("<head>") || !html.includes("</head>") || !html.includes("<body>")) {
@@ -22,12 +24,12 @@ export function cleanPreviewHtml(html, { number, sha, origin, hosted = true }) {
   let result = html.replace(/<link\s+rel=["']canonical["'][^>]*>\s*/gi, "")
     .replace(/<meta\s+property=["']og:url["'][^>]*>\s*/gi, "")
     .replace(/<meta\s+name=["']robots["'][^>]*>\s*/gi, "");
-  const location = origin.replace(/\/+$/, "") + "/pr-preview/pr-" + number + "/";
+  const location = origin.replace(/\/+$/, "") + "/pr-preview/pr-" + number + "/" + pagePath;
   const previewHead = [
     '<meta name="robots" content="noindex,nofollow,noarchive">',
     '<meta name="muse-preview-head" content="' + sha + '">',
     '<meta property="og:url" content="' + location + '">',
-    hosted ? '<base href="/pr-preview/pr-' + number + '/">' : ""
+    hosted ? '<base href="/pr-preview/pr-' + number + '/' + pagePath + '">' : ""
   ].filter(Boolean).join("\n  ");
   result = result.replace("</head>", "  " + previewHead + "\n</head>");
   // No production analytics or root-relative local asset paths in preview.
@@ -43,7 +45,7 @@ export function buildPreview({ files, readFile, dest, number, sha, mergeSha = nu
   for (const needed of REQUIRED_FILES) {
     if (!paths.includes(needed)) throw Error("Missing preview source: " + needed);
   }
-  const dataset = JSON.parse(readFile("data/invites.json").toString("utf8"));
+  const dataset = assembleCatalog(paths,readFile);
   const problems = validateCatalog(dataset);
   if (problems.length) throw Error("Invalid PR invite catalog: " + problems.join("; "));
   let budget = 0;
@@ -55,11 +57,21 @@ export function buildPreview({ files, readFile, dest, number, sha, mergeSha = nu
     }
     const output = join(dest, path);
     mkdirSync(dirname(output), { recursive: true });
-    if (path === "index.html") {
-      const html = cleanPreviewHtml(buffer.toString("utf8"), { number, sha, origin, hosted });
+    if (path === "index.html" || path === "countries/index.html") {
+      const html = cleanPreviewHtml(buffer.toString("utf8"), {
+        number, sha, origin, hosted,
+        pagePath: path === "countries/index.html" ? "countries/" : ""
+      });
       writeFileSync(output, html);
     } else {
       writeFileSync(output, buffer);
+    }
+  }
+  // Previews use the same merged catalog without executing PR-supplied scripts.
+  writeFileSync(join(dest,"data/invites.json"),JSON.stringify(dataset,null,2)+"\n");
+  if (paths.includes("countries/index.html")) {
+    for (const file of ["assets/countries.js", "assets/countries.css", "data/world-countries.json"]) {
+      if (!paths.includes(file)) throw Error("Missing country preview dependency: " + file);
     }
   }
   writeFileSync(join(dest, ".nojekyll"), "");

@@ -12,16 +12,18 @@ test("serves source homepage and generated detail pages with correct content typ
     await mkdir(join(root,"assets"),{recursive:true});
     await mkdir(join(root,"data"),{recursive:true});
     await mkdir(join(root,"codes","DEMO12"),{recursive:true});
+    await mkdir(join(root,"countries"),{recursive:true});
     await writeFile(join(root,"index.html"),"<h1>Muse</h1>");
     await writeFile(join(root,"data","invites.json"),"[]");
     await writeFile(join(root,"assets","styles.css"),"body{}");
     await writeFile(join(root,"codes","DEMO12","index.html"),"<title>Detail</title>");
+    await writeFile(join(root,"countries","index.html"),"<title>Country map</title>");
     await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
     const addr="http://127.0.0.1:"+server.address().port;
     for(const [path,part,type] of [
       ["/","Muse","text/html"],["/data/invites.json","[]","application/json"],
       ["/assets/styles.css","body{}","text/css"],
-      ["/codes/DEMO12/","Detail","text/html"]
+      ["/codes/DEMO12/","Detail","text/html"],["/countries/","Country map","text/html"]
     ]){
       const response=await fetch(addr+path);
       assert.equal(response.status,200,path);

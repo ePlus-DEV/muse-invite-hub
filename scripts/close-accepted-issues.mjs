@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { readIssueFields } from "./issue-to-pr.mjs";
+import { readCatalog, recordPath } from "./catalog.mjs";
+import { isShareCodeIssue, issueCodes, parseInviteCodes } from "./code-issue-map.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
 const ORIGIN = "https://muse.eplus.dev";
@@ -16,21 +18,30 @@ export function acceptedCandidate(pr) {
       pr.user?.login !== "github-actions[bot]") return null;
   const issueNumber = Number(match[1]), kind = match[2];
   if (!Number.isSafeInteger(issueNumber)) return null;
-  const code = /\bCode: \*\*([A-Z0-9-]{4,32})\*\*\. Change:/.exec(pr.body || "")?.[1];
-  if (!code || !CODE.test(code) ||
-      pr.title !== "data: review " + code + " " + kind + " (issue #" + issueNumber + ")" ||
+  const single=/\bCode: \*\*([A-Z0-9-]{4,32})\*\*\. Change:/.exec(pr.body || "")?.[1];
+  const group=/\bCodes: \*\*([A-Z0-9-]{4,32}(?:, [A-Z0-9-]{4,32}){1,9})\*\*\. Change:/.exec(pr.body || "")?.[1];
+  if (!single && !group || (group && kind!=="invite")) return null;
+  let codes;
+  try {
+    codes = parseInviteCodes(group || single);
+  } catch { return null; }
+  if ((group && codes.length<2) || (single && codes.length!==1)) return null;
+  const code=codes[0], label=codes.join(", ");
+  if (!CODE.test(code) ||
+      pr.title !== "data: review " + label + " " + kind + " (issue #" + issueNumber + ")" ||
       !(pr.body || "").includes("Prepared from public Issue #" + issueNumber + " by @")) return null;
-  return { issueNumber, kind, code, prNumber:pr.number, mergeSha:pr.merge_commit_sha };
+  return { issueNumber, kind, code, ...(group?{codes}:{}),prNumber:pr.number, mergeSha:pr.merge_commit_sha };
 }
 
-export function acceptanceComment({ code, prNumber }) {
-  const detail = ORIGIN + "/codes/" + code + "/";
+export function acceptanceComment({ code, codes=[code], prNumber }) {
+  const links = codes.map(value =>
+    "[View " + value + "](" + ORIGIN + "/codes/" + value + "/)");
   return [
     MARKER,
     "✅ **Your contribution has been accepted and published on Muse Invite Hub.**",
     "",
-    "**Invite code:** " + code,
-    "**Published detail:** [View " + code + "](" + detail + ")",
+    (codes.length===1?"**Invite code:** ":"**Invite codes:** ") + codes.join(", "),
+    (codes.length===1?"**Published detail:** ":"**Published details:** ") + links.join(" · "),
     "**Reviewed PR:** #" + prNumber,
     "",
     "This confirms your contribution was added to our public directory (or its report was updated). " +
@@ -96,7 +107,7 @@ export async function closeAcceptedIssues({
   if (repository !== REPO || !token || !SHA.test(deployedSha || "")) {
     throw Error("Expected trusted repo, GitHub token and exact deployed main SHA.");
   }
-  const records = catalog ?? JSON.parse(readFileSync(new URL("../data/invites.json", import.meta.url), "utf8"));
+  const records = catalog ?? readCatalog();
   if (!Array.isArray(records)) throw Error("Trusted production catalog is not an array.");
   const published = new Set(records.map(item => item.code));
   const api = githubApi(request, token);
@@ -111,23 +122,39 @@ export async function closeAcceptedIssues({
       if (!candidate || seen.has(candidate.issueNumber)) continue;
       seen.add(candidate.issueNumber);
       const {issueNumber,kind,code,prNumber,mergeSha} = candidate;
+      const codes=candidate.codes || [code];
       const issue = await api("GET","issues/" + issueNumber);
       if (issue.state !== "open" || issue.pull_request) { summary.skipped++; continue; }
       const expectedTitle = {
         invite:"[Invite]",count:"[Count update]",feedback:"[Code feedback]"
       }[kind];
-      if (!issue.title?.startsWith(expectedTitle) ||
-          readIssueFields(issue.body)["Invite code"]?.trim().toUpperCase() !== code ||
-          !published.has(code)) { summary.pending++; continue; }
+      if (!(issue.title?.startsWith(expectedTitle) ||
+            (kind === "invite" && isShareCodeIssue(issue))) ||
+          !codes.every(value=>issueCodes(issue).includes(value)) ||
+          !codes.every(value=>published.has(value))) { summary.pending++; continue; }
       const files = await api("GET","pulls/" + prNumber + "/files?per_page=100");
-      if (files.length !== 1 || files[0].filename !== "data/invites.json") {
+      const selected=codes.map(value=>records.find(item=>item.code===value));
+      const recordFiles=selected.map(item=>item?.id?recordPath(item):null);
+      // Each batch changes precisely one independent JSON record per code.
+      // Preserve legacy single-record and one-time migration PR support.
+      const ordinary = codes.length===1 && files.length===1 &&
+        ["data/invites.json",recordFiles[0]].includes(files[0].filename);
+      const batch = codes.length>1 && files.length===codes.length &&
+        recordFiles.every(path=>path && files.some(file=>file.filename===path));
+      const migration = codes.length===1 && prNumber===95 && recordFiles[0] &&
+        files.some(file=>file.filename===recordFiles[0]);
+      if (selected.some(item=>!item) || !(ordinary || batch || migration)) {
         summary.pending++; continue;
       }
       // The deployed main commit must contain the PR merge, even for quota or
       // feedback updates where the code's detail page existed before this PR.
       const comparison = await api("GET","compare/" + mergeSha + "..." + deployedSha);
       if (!["identical","ahead"].includes(comparison.status)) { summary.pending++; continue; }
-      if (!await liveDetailReady(request, code)) { summary.pending++; continue; }
+      let allLive=true;
+      for (const value of codes) {
+        if (!await liveDetailReady(request, value)) { allLive=false; break; }
+      }
+      if (!allLive) { summary.pending++; continue; }
 
       // Order matters: post the accepted detail link, THEN close the Issue.
       const flags = await issueCommentFlags(api,issueNumber);
@@ -136,12 +163,12 @@ export async function closeAcceptedIssues({
       if (flags.feedbackReopened) { summary.skipped++; continue; }
       if (!flags.accepted) {
         await api("POST","issues/" + issueNumber + "/comments",
-          {body:acceptanceComment({code,prNumber})});
+          {body:acceptanceComment({code,codes,prNumber})});
         summary.notified++;
       }
       await api("PATCH","issues/" + issueNumber,{state:"closed",state_reason:"completed"});
       summary.closed++;
-      console.log("Accepted Issue #" + issueNumber + " published at " + ORIGIN + "/codes/" + code + "/");
+      console.log("Accepted Issue #" + issueNumber + " published codes: " + codes.join(", "));
     }
     if (prs.length < 100) break;
   }

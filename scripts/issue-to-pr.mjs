@@ -2,13 +2,16 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { validateCatalog } from "./validate.mjs";
+import { fetchGitHubCatalog, changedRecord, changedRecords } from "./catalog.mjs";
 import { parsePublicSource, listedPlatform, LISTING_PLATFORMS } from "./source-platform.mjs";
+import { isShareCodeIssue, parseInviteCodes } from "./code-issue-map.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
 const MARKER = "<!-- muse-issue-draft-pr -->";
 const CODE_PATTERN = /^[A-Z0-9-]{4,32}$/;
 const USER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 const GITHUB_OWN = "GitHub (my own code)";
+export const AUTO_PUBLISH_NEW_INVITE_MARKER = "<!-- muse-auto-publish-new-github-v1 -->";
 const THREADS_FOUND = "Threads (public code I found)";
 const X_FOUND = "X (Twitter) (public code I found)";
 const FACEBOOK_FOUND = "Facebook (public code I found)";
@@ -42,6 +45,54 @@ export function readIssueFields(body) {
 function field(fields, name) {
   return fields[name] || "";
 }
+// The web form requires these checkboxes, but Issues created through the API
+// or other non-form entry points can omit them. Validate the actual Issue body.
+export function hasRequiredInviteConfirmations(body) {
+  const checklist = field(readIssueFields(body), "Contributor checklist");
+  const checked = checklist.replace(/-\s*\[X\]/g, "- [x]");
+  const permission = /^\s*-\s*\[x\]\s*(?:I am authorized to share this code publicly|I own this public code or am reporting a code explicitly shared publicly)/m.test(checked);
+  const privacy = /^\s*-\s*\[x\]\s*This code is not a password, 2FA code, session token or private credential\./m.test(checked);
+  return permission && privacy;
+}
+
+// Give contributors concrete edit-in-place instructions without treating missing
+// fields as their fault or ever checking a consent box on their behalf.
+export function missingInviteConfirmationGuidance() {
+  return [
+    "⚠️ The Contributor checklist was missing or incomplete when this Issue arrived. "+
+      "This may be caused by the submission form or integration, not by the contributor.",
+    "",
+    "**You do not need to create another Issue. This one stays open.**",
+    "",
+    "To fix the existing Issue: choose **… → Edit** on the first Issue message, "+
+      "find the **Contributor checklist** section (or add it at the end), "+
+      "and personally confirm both statements if they are true:",
+    "",
+    "```markdown",
+    "### Contributor checklist",
+    "",
+    "- [ ] I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
+    "- [ ] This code is not a password, 2FA code, session token or private credential.",
+    "```",
+    "",
+    "Change each `[ ]` to `[x]` **only after you personally agree**. "+
+      "Save the edited Issue; the automation will re-check this same Issue. "+
+      "If you cannot confirm a statement, leave it unchecked and ask a maintainer for help.",
+    "",
+    "For future submissions, please use the "+
+      "[Share Code form](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml), "+
+      "which requests both confirmations before submission.",
+    "",
+    "No Draft PR or public catalog update was made from the incomplete submission."
+  ].join("\n");
+}
+
+export function inviteNeedsConfirmationReview(issue) {
+  if (issue?.state !== "open" || issue.pull_request) return false;
+  if (!String(issue.title || "").startsWith("[Invite]") && !isShareCodeIssue(issue)) return false;
+  if (!Object.hasOwn(readIssueFields(issue.body), "Invite code")) return false;
+  return !hasRequiredInviteConfirmations(issue.body);
+}
 function optionalInteger(value, name, max = 1000) {
   const str = String(value ?? "").trim();
   if (!str) return null;
@@ -57,10 +108,8 @@ function reportDate(issue) {
   if (!Number.isFinite(date.getTime())) throw Error("Missing Issue report date.");
   return date.toISOString().slice(0, 10);
 }
-function codeFrom(fields) {
-  const code = field(fields, "Invite code").trim().toUpperCase();
-  if (!CODE_PATTERN.test(code)) throw Error("Invite code must be 4–32 uppercase letters, numbers or hyphens.");
-  return code;
+function codesFrom(fields) {
+  return parseInviteCodes(field(fields, "Invite code"));
 }
 function findCode(records, code) {
   return records.find(item => item.code.toUpperCase() === code) || null;
@@ -108,19 +157,80 @@ function summary(issue, code, action) {
   return "Community Issue #" + issue.number + " (" + action + "), code " + code +
     "; maintainer review required, no live redemption verification.";
 }
-export function planIssueChange(issue, current) {
+
+function planMultiInvite(issue, current, codes, fields) {
+  const quotas = [
+    "Uses so far (optional; self-reported)",
+    "Invite limit (optional; self-reported)",
+    "Remaining invites (optional; self-reported)"
+  ];
+  if (quotas.some(name => field(fields, name).trim())) {
+    return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
+      reason:"For multiple invite codes, leave per-code uses/limit/remaining fields blank; provide separate owner-count updates after publication."};
+  }
+  const existing = codes.find(code => findCode(current,code));
+  if (existing) {
+    return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
+      reason:"Invite code "+existing+" is already in the catalog. Multi-code Issues must contain only new, distinct codes."};
+  }
+  const parts = String(issue.body || "").split(/^### /m);
+  const index = parts.findIndex(part => /^Invite code\r?\n/.test(part));
+  if (index < 0) throw Error("Invite code field is missing.");
+  let data = current;
+  const notices = [];
+  for (const code of codes) {
+    const fieldsForCode = [...parts];
+    fieldsForCode[index] = "Invite code\n\n"+code+"\n\n";
+    const singleIssue = {...issue,body:fieldsForCode.join("### ")};
+    const plan = planIssueChange(singleIssue,data,{deferValidation:true});
+    if (plan.outcome !== "proposal" || plan.action.startsWith("update")) {
+      return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
+        reason:"Code "+code+" cannot be submitted automatically: "+
+          (plan.reason || "existing or unreviewed code")};
+    }
+    const item = plan.data.find(entry => entry.code === code);
+    if (!item || item.id !== "community-issue-"+issue.number) {
+      throw Error("Multi-code record attribution could not be verified.");
+    }
+    item.id = "community-issue-"+issue.number+"-"+code.toLowerCase();
+    item.feedbackIssueNumber = issue.number;
+    data = plan.data;
+    if (plan.notice) notices.push(code+": "+plan.notice);
+  }
+  const errors = validateCatalog(data);
+  if (errors.length) throw Error("Generated multi-code catalog failed validation: "+errors.join("; "));
+  return {
+    outcome:"proposal",kind:"invite",code:codes[0],codes,
+    action:"add "+codes.length+" codes",data,
+    notice:notices.join("\n") || "All codes remain unverified and require human review.",
+    branch:"auto/issue-"+issue.number+"-invite",
+    summary:summary(issue,codes.join(", "),"add multiple")
+  };
+}
+
+export function planIssueChange(issue, current, {deferValidation=false}={}) {
   if (!Number.isSafeInteger(issue?.number) || issue.number <= 0) throw Error("Invalid Issue number.");
   if (!Array.isArray(current)) throw Error("Expected a catalog array.");
   if (!USER_PATTERN.test(issue.user?.login || "")) throw Error("Invalid contributor username.");
   const title = String(issue.title || "").trim();
-  const kind = title.startsWith("[Invite]") ? "invite" :
-    title.startsWith("[Count update]") ? "count" :
-    title.startsWith("[Code feedback]") ? "feedback" : null;
+  const kind = title.startsWith("[Count update]") ? "count" :
+    title.startsWith("[Code feedback]") ? "feedback" :
+    title.startsWith("[Invite]") || isShareCodeIssue(issue) ? "invite" : null;
   if (!kind) return { outcome:"unsupported", reason:"Issue does not use a supported Muse Invite Hub form." };
   const f = readIssueFields(issue.body);
-  const code = codeFrom(f);
+  const codes = codesFrom(f);
+  if (kind !== "invite" && codes.length !== 1) {
+    throw Error("Count/feedback Issues must reference exactly one Invite code.");
+  }
+  if (kind === "invite" && codes.length > 1) {
+    return planMultiInvite(issue, current, codes, f);
+  }
+  const code = codes[0];
   const existing = findCode(current, code);
-  const date = reportDate(issue);
+  // New invite codes keep their original submission date. Comments,
+  // automated labels and maintainer replies must not change addedAt.
+  const date = kind === "invite" && !existing
+    ? reportDate({...issue,updated_at:issue.created_at}) : reportDate(issue);
   const data = structuredClone(current);
   let action, notice = "";
   if (kind === "count" || kind === "feedback") {
@@ -141,10 +251,7 @@ export function planIssueChange(issue, current) {
     }
   }
   if (kind === "invite") {
-    const checklist = field(f,"Contributor checklist");
-    const authorized = checklist.includes("[x] I am authorized to share this code publicly") ||
-      checklist.includes("[x] I own this public code or am reporting a code explicitly shared publicly");
-    if (!authorized || !checklist.includes("[x] This code is not a password")) {
+    if (!hasRequiredInviteConfirmations(issue.body)) {
       throw Error("Contributor permission and privacy confirmations are required.");
     }
     const selectedSource = field(f,"Code source").trim();
@@ -279,10 +386,42 @@ export function planIssueChange(issue, current) {
     action="review reported status";
     notice="This is one contributor's report, NOT confirmation by Muse and NOT evidence of global redemption availability.";
   }
-  const errs=validateCatalog(data);
+  const errs=deferValidation ? [] : validateCatalog(data);
   if(errs.length) throw Error("Generated catalog failed validation: "+errs.join("; "));
   return {outcome:"proposal",kind,code,action,data,notice,
     branch:"auto/issue-"+issue.number+"-"+kind,summary:summary(issue,code,action)};
+}
+
+// Automatically publish only genuinely *new*, self-reported GitHub codes.
+// Consent must come from the contributor. Social sources, quota updates,
+// code feedback, malformed/ambiguous Issues, and existing-code updates stay
+// in the human-review queue. The published status remains "unverified".
+export function isAutoPublishableNewGithubInvite(issue,proposal) {
+  if (!issue || issue.state !== "open" || issue.pull_request ||
+      !proposal || proposal.outcome !== "proposal" ||
+      proposal.kind !== "invite" ||
+      !(proposal.action === "add" || /^add (?:[2-9]|10) codes$/.test(proposal.action))) {
+    return false;
+  }
+  const fields = readIssueFields(issue.body);
+  if (field(fields,"Code source").trim() !== GITHUB_OWN ||
+      !hasRequiredInviteConfirmations(issue.body)) return false;
+  const codes = proposal.codes || [proposal.code];
+  if (codes.length < 1 || codes.length > 10 ||
+      new Set(codes).size !== codes.length) return false;
+  return codes.every(code => {
+    const item = proposal.data.find(row => row.code === code);
+    const expectedId = codes.length === 1
+      ? "community-issue-"+issue.number
+      : "community-issue-"+issue.number+"-"+code.toLowerCase();
+    return item && item.id === expectedId &&
+      item.feedbackIssueNumber === issue.number &&
+      item.status === "unverified" &&
+      item.submittedBy === issue.user?.login &&
+      item.sourceUrl === undefined &&
+      item.ownerConfirmed !== true &&
+      item.featured !== true;
+  });
 }
 
 const apiRoot="https://api.github.com/repos/"+REPO+"/";
@@ -319,9 +458,8 @@ async function comment(issue,token,body) {
   }
 }
 async function getCatalog(token,sha){
-  const file=await api("GET","contents/data/invites.json?ref="+sha,token);
-  if(file.encoding!=="base64")throw Error("Unexpected catalog encoding.");
-  return JSON.parse(Buffer.from(file.content.replace(/\s/g,""),"base64").toString("utf8"));
+  return fetchGitHubCatalog((path,allow404=false)=>
+    api("GET",path,token,undefined,allow404),sha);
 }
 async function openBotPrs(token){
   const result=await api("GET","pulls?state=open&per_page=100",token);
@@ -335,16 +473,20 @@ async function propose(issue,token) {
   const proposed=planIssueChange(issue,catalog);
   if(proposed.outcome!=="proposal")return proposed;
 
-  // Prevent two independent Issue PRs for the same code from racing.
+  // Multi-code Issues create one Draft PR but independent JSON records.
+  // Disallow overlap with other active automated proposals, even when those
+  // proposals contain multiple codes.
+  const codes=proposed.codes || [proposed.code];
+  const codesLabel=codes.join(", ");
   const prs=await openBotPrs(token);
   const matching=prs.find(pr=>pr.head.ref===proposed.branch);
-  if(matching)return {outcome:"already-open",url:matching.html_url,code:proposed.code};
-  for (const pr of prs.filter(pr=>pr.head.ref.startsWith("auto/issue-"))) {
-    const other=await getCatalog(token,pr.head.sha);
-    if(JSON.stringify(other.find(x=>x.code===proposed.code)) !==
-       JSON.stringify(catalog.find(x=>x.code===proposed.code))) {
-      return {outcome:"needs-review",code:proposed.code,
-        reason:"Another open automated PR already changes this code: "+pr.html_url};
+  if(matching)return {outcome:"already-open",url:matching.html_url,code:codesLabel};
+  for (const pr of prs.filter(pr=>pr.head.ref.startsWith("auto/"))) {
+    const title=/^data: review (.+) (?:invite|count|feedback) \(issue #[1-9][0-9]*\)$/.exec(String(pr.title || ""));
+    const listed=title ? title[1].split(", ") : [];
+    if (codes.some(code=>listed.includes(code))) {
+      return {outcome:"needs-review",code:codesLabel,
+        reason:"Another open automated PR already changes one of these codes: "+pr.html_url};
     }
   }
 
@@ -354,7 +496,8 @@ async function propose(issue,token) {
   const existing=await api("GET","git/ref/heads/"+encoded,token,undefined,true);
   if(existing){
     const prepared=await getCatalog(token,existing.object.sha);
-    if(JSON.stringify(prepared)!==JSON.stringify(proposed.data)){
+    if(codes.some(code=>JSON.stringify(prepared.find(x=>x.code===code)) !==
+       JSON.stringify(proposed.data.find(x=>x.code===code)))){
       return {outcome:"needs-review",code:proposed.code,
         reason:"An older automation branch exists with different data. A maintainer must reconcile it; the bot will not overwrite history."};
     }
@@ -362,44 +505,62 @@ async function propose(issue,token) {
   if (!existing) {
     // The branch tree is sourced from the exact current trusted main commit.
     const base=await api("GET","git/commits/"+mainSHA,token);
-    const content=JSON.stringify(proposed.data,null,2)+"\n";
-    const blob=await api("POST","git/blobs",token,{content,encoding:"utf-8"});
+    const records=codes.length===1
+      ? [changedRecord(catalog,proposed.data,proposed.code)]
+      : changedRecords(catalog,proposed.data,codes);
+    const entries=[];
+    for (const record of records) {
+      const blob=await api("POST","git/blobs",token,{content:record.content,encoding:"utf-8"});
+      entries.push({path:record.path,mode:"100644",type:"blob",sha:blob.sha});
+    }
     const tree=await api("POST","git/trees",token,{
       base_tree:base.tree.sha,
-      tree:[{path:"data/invites.json",mode:"100644",type:"blob",sha:blob.sha}]
+      tree:entries
     });
     const commit=await api("POST","git/commits",token,{
-      message:"data: "+proposed.action+" "+proposed.code+" (issue #"+issue.number+")",
+      message:"data: "+proposed.action+" "+codesLabel+" (issue #"+issue.number+")",
       tree:tree.sha,parents:[mainSHA]
     });
     await api("POST","git/refs",token,{ref:"refs/heads/"+proposed.branch,sha:commit.sha});
   }
-  const title="data: review "+proposed.code+" "+proposed.kind+" (issue #"+issue.number+")";
+  const autoPublish=isAutoPublishableNewGithubInvite(issue,proposed);
+  const title="data: review "+codesLabel+" "+proposed.kind+" (issue #"+issue.number+")";
   const body=[
-    "## Automated draft proposal",
+    autoPublish ? AUTO_PUBLISH_NEW_INVITE_MARKER : "",
+    autoPublish ? "## Automated community submission — automatic publication after validation" :
+      "## Automated draft proposal",
     "",
     "Prepared from public Issue #"+issue.number+" by @"+issue.user.login+".",
-    "Code: **"+proposed.code+"**. Change: **"+proposed.action+"**.",
+    (codes.length===1?"Code: **":"Codes: **")+codesLabel+"**. Change: **"+proposed.action+"**.",
     "",
     proposed.notice || "All published figures remain dated community/owner reports, never live Muse availability.",
     "",
-    "### Required human checks",
-    "- [ ] Verify the submitter, code and any ownership or usage claims",
-    proposed.action.startsWith("add ") && proposed.action.endsWith(" source")
-      ? "- [ ] Open the original public social post and confirm it contains this code and matches the attributed account"
-      : "- [ ] Confirm the original GitHub owner attribution and any account-reported quota",
-    "- [ ] Review catalog diff, duplicates and contributor attribution",
-    "- [ ] CI and security checks pass",
-    "- [ ] Confirm website preview after marking the draft ready",
-    "",
-    "**Do not auto-merge**. This is not Muse redemption verification.",
+    ...(autoPublish
+      ? ["### Automatic publication checks",
+         "- [x] Contributor selected GitHub (my own code) and checked both confirmations",
+         "- [x] New code only; data generated by the trusted Issue bot",
+         "- [ ] Re-check Issue content, exact per-code records, duplicates and current main",
+         "- [ ] Full CI must pass for the current PR head",
+         "",
+         "**Automatically publish as unverified only after all checks pass.** "+
+           "This does not independently verify Muse redemption or actual ownership."]
+      : ["### Required human checks",
+         "- [ ] Verify the submitter, code and any ownership or usage claims",
+         proposed.action.startsWith("add ") && proposed.action.endsWith(" source")
+           ? "- [ ] Open the original public social post and confirm it contains this code and matches the attributed account"
+           : "- [ ] Confirm the original GitHub owner attribution and any account-reported quota",
+         "- [ ] Review catalog diff, duplicates and contributor attribution",
+         "- [ ] CI and security checks pass",
+         "- [ ] Confirm website preview after marking the draft ready",
+         "",
+         "**Do not auto-merge without maintainer authorization.** This is not Muse redemption verification."]),
     "",
     "Tracks Issue #"+issue.number+". The Issue is closed only after the reviewed change is merged, live, and a detail link has been posted."
   ].join("\n");
   let pr;
   try {
     pr=await api("POST","pulls",token,{
-      title,head:proposed.branch,base:"main",body,draft:true,
+      title,head:proposed.branch,base:"main",body,draft:!autoPublish,
       maintainer_can_modify:true
     });
   } catch(error){
@@ -412,18 +573,23 @@ async function propose(issue,token) {
     }
     throw error;
   }
-  await comment(issue,token,"Created [Draft PR #"+pr.number+"]("+pr.html_url+
-    ") for **"+proposed.code+"**. It needs maintainer review; no website data has been published.");
+  await comment(issue,token,autoPublish
+    ? "Created [PR #"+pr.number+"]("+pr.html_url+") for **"+codesLabel+
+      "**. This new GitHub-sourced code is eligible for automatic publication "+
+      "as **unverified** after CI, source/consent checks and duplicate checks pass. "+
+      "The Issue stays open until successful deployment."
+    : "Created [Draft PR #"+pr.number+"]("+pr.html_url+") for **"+codesLabel+
+      "**. This submission needs maintainer review; no website data has been published.");
   // Explicitly dispatch validation on the generated branch. GITHUB_TOKEN PR
   // activity does not reliably start an ordinary CI workflow automatically.
   try {
     await api("POST","actions/workflows/validate.yml/dispatches",token,{ref:proposed.branch});
   } catch(error) {
-    await comment(issue,token,"Created [Draft PR #"+pr.number+"]("+pr.html_url+
-      ") for **"+proposed.code+"**, but explicit validation dispatch failed: "+
+    await comment(issue,token,"Created ["+(autoPublish?"PR":"Draft PR")+" #"+pr.number+"]("+pr.html_url+
+      ") for **"+codesLabel+"**, but explicit validation dispatch failed: "+
       error.message.slice(0,220)+". A maintainer must run CI before review.");
   }
-  return {outcome:"created",url:pr.html_url,number:pr.number,code:proposed.code};
+  return {outcome:"created",url:pr.html_url,number:pr.number,code:codesLabel};
 }
 export async function runIssueAutomation({
   number, token=process.env.GH_TOKEN, repository=process.env.GITHUB_REPOSITORY
@@ -432,6 +598,13 @@ export async function runIssueAutomation({
   if(!token)throw Error("Missing GitHub Actions token.");
   if(!Number.isSafeInteger(number)||number<=0)throw Error("Missing valid Issue number.");
   const issue=await api("GET","issues/"+number,token);
+  if (inviteNeedsConfirmationReview(issue)) {
+    // GitHub Issue Forms require consent, but API/other clients may omit the
+    // checklist entirely. Preserve the contributor's Issue for manual triage.
+    // Never synthesize consent, publish a code, or penalize the contributor.
+    await comment(issue,token,missingInviteConfirmationGuidance());
+    return {outcome:"needs-review",reason:"Missing confirmations in submitted Issue body; retained open for investigation."};
+  }
   try{
     const result=await propose(issue,token);
     console.log(JSON.stringify(result));

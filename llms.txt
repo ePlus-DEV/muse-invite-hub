@@ -19,9 +19,9 @@ This guide helps readers and AI agents find public information. It is not a live
 
 ## Countries with announced Muse availability (checked 12 November 2026)
 
-Meta has confirmed rollouts in the United States, Canada, Japan, Singapore, and Mexico. See the concise, source-linked [country availability section](https://muse.eplus.dev/#availability) before attempting registration. Vietnam is not in the verified launch list. The list can change, and an invite code does not bypass geographic restrictions or guarantee access.
+Meta has confirmed rollouts in the United States, Canada, Japan, Singapore, and Mexico. Browse the source-linked [interactive country availability map](https://muse.eplus.dev/countries/) or the [compact homepage country list](https://muse.eplus.dev/#availability) before attempting registration. Vietnam is not in the verified launch list. The list can change, and an invite code does not bypass geographic restrictions or guarantee access.
 
 ## Optional
 
-- [Sitemap](https://muse.eplus.dev/sitemap.xml): Lists Home and every published code-detail page (including unverified community reports); listing does not mean Muse has accepted any code.
+- [Sitemap](https://muse.eplus.dev/sitemap.xml): Lists Home, the country map and every published code-detail page (including unverified community reports); listing does not mean Muse has accepted any code.
 - [Open-source repository](https://github.com/ePlus-DEV/muse-invite-hub): View project source and documentation.

@@ -2,25 +2,31 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
-import { issueCode, issueMarker, originalIssueNumber, REPO } from "./code-issue-map.mjs";
+import { issueCodes, issueMarker, originalIssueNumber, REPO } from "./code-issue-map.mjs";
+import { readCatalog } from "./catalog.mjs";
 
 const ACK_MARKER = "<!-- muse-code-feedback-reopened -->";
 
-export function feedbackCodeForIssue(issue, catalog) {
+export function feedbackCodeForIssue(issue, catalog, commentBody="") {
   if (!issue || issue.pull_request || !Number.isSafeInteger(issue.number)) return null;
-  const code = issueCode(issue);
-  if (!code) return null;
-  const item = catalog.find(entry => entry.code === code);
-  if (!item) return null;
-  // The historical Issue is authoritative even if its catalog entry id does
-  // not carry a local issue number (e.g. owner count update or imported entry).
-  const canonicalNumber = originalIssueNumber(item);
-  // Never reopen an arbitrary Issue with the same code: the single linked Issue
-  // number is the source of truth for old contributions as well as new threads.
-  if (canonicalNumber !== null) return canonicalNumber === issue.number ? code : null;
-  return String(issue.body || "").includes(issueMarker(code)) ||
-    String(issue.body || "").includes("<!-- muse-code-feedback-root:" + code + " -->") ?
-    code : null;
+  const codes = issueCodes(issue);
+  // A multi-code Issue may be the canonical thread for several separate
+  // listings. Prefer the explicitly named code in the user's feedback.
+  const requested = /^Code:\s*([A-Z0-9-]{4,32})\s*$/mi.exec(commentBody)?.[1];
+  const ordered = requested && codes.includes(requested)
+    ? [requested,...codes.filter(code=>code!==requested)] : codes;
+  for (const code of ordered) {
+    const item = catalog.find(entry=>entry.code===code);
+    if (!item) continue;
+    const canonicalNumber = originalIssueNumber(item);
+    if (canonicalNumber !== null) {
+      if (canonicalNumber===issue.number) return code;
+      continue;
+    }
+    if (String(issue.body || "").includes(issueMarker(code)) ||
+        String(issue.body || "").includes("<!-- muse-code-feedback-root:" + code + " -->")) return code;
+  }
+  return null;
 }
 
 export function shouldReopen(issue, comment, catalog) {
@@ -59,7 +65,7 @@ export async function reopenOnFeedback({
       !Number.isSafeInteger(commentId) || commentId <= 0) {
     throw Error("Trusted repository, token, issue and comment identifiers required");
   }
-  const rawEntries = catalog ?? JSON.parse(readFileSync(new URL("../data/invites.json", import.meta.url), "utf8"));
+  const rawEntries = catalog ?? readCatalog();
   const roots = catalog ? {} : JSON.parse(readFileSync(new URL("../data/code-issues.json", import.meta.url), "utf8"));
   const entries = rawEntries.map(item => ({
     ...item,
@@ -73,7 +79,7 @@ export async function reopenOnFeedback({
     console.log("No action: not new community feedback on a closed canonical code Issue.");
     return { outcome:"ignored" };
   }
-  const code = feedbackCodeForIssue(issue, entries);
+  const code = feedbackCodeForIssue(issue, entries, comment.body);
   // Marker prevents the older accepted-Issue reconciler from closing the
   // reopened feedback thread during the next Pages deployment.
   const note = ACK_MARKER + "\nNew community feedback for **" + code +

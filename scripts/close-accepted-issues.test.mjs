@@ -30,7 +30,9 @@ function mock({pull=pr(),posted=false,reopened=false,live=true,comparison="ahead
     const url=new URL(rawUrl), method=options.method || "GET";
     if (url.host==="muse.eplus.dev") {
       events.push("live");
-      return {ok:live,status:live?200:404,text:async()=>live?html():"404"};
+      const ready=typeof live==="function"?live(url.pathname):live;
+      const target=url.pathname.split("/")[2];
+      return {ok:ready,status:ready?200:404,text:async()=>ready?html(target):"404"};
     }
     assert.equal(url.host,"api.github.com");
     assert.match(options.headers.Authorization,/^Bearer /);
@@ -157,4 +159,53 @@ test("comment API failure does not close accepted Issue",async()=>{
 test("refuses write access without the expected repository and deployed SHA",async()=>{
   await assert.rejects(closeAcceptedIssues({token:"test",deployedSha:deployed,repository:"untrusted/repo"}),/Expected trusted/);
   await assert.rejects(closeAcceptedIssues({token:"test",deployedSha:"main"}),/Expected trusted/);
+});
+
+test("Share Code form with custom title is accepted after reviewed bot PR and live deployment",async()=>{
+  const original=issue({title:"Custom contributor title",
+    body:"### Invite code\n\nALFA12\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [X] confirmed"});
+  const m=mock({initialIssue:original});
+  const result=await closeAcceptedIssues({
+    request:m.request,token:"test-token",deployedSha:deployed,catalog:[{code}]
+  });
+  assert.equal(result.closed,1);
+  assert.equal(result.notified,1);
+});
+
+
+test("batch PR reconciles both codes together and waits for every published detail",async()=>{
+  const codes=["ALFA12","BRAVO2"];
+  const batchPr=pr({
+    title:"data: review ALFA12, BRAVO2 invite (issue #90)",
+    body:"## Automated draft proposal\nPrepared from public Issue #90 by @contributor.\nCodes: **ALFA12, BRAVO2**. Change: **add 2 codes**."
+  });
+  const batchIssue=issue({
+    body:"### Invite code\n\nALFA12\nBRAVO2\n\n### Code source\n\nGitHub (my own code)"
+  });
+  const entries=codes.map(value=>({
+    id:"community-issue-90-"+value.toLowerCase(),code:value,feedbackIssueNumber:90
+  }));
+  const files=entries.map(entry=>({filename:"data/invite-records/"+entry.id+".json"}));
+  assert.deepEqual(acceptedCandidate(batchPr).codes,codes);
+  assert.match(acceptanceComment({code:codes[0],codes,prNumber:91}),/codes\/BRAVO2\//);
+  const pending=mock({pull:batchPr,initialIssue:batchIssue,files,
+    live:path=>path!=="/codes/BRAVO2/"});
+  const notReady=await closeAcceptedIssues({
+    request:pending.request,token:"test-token",deployedSha:deployed,catalog:entries
+  });
+  assert.equal(notReady.closed,0);
+  assert.equal(notReady.pending,1);
+  assert.ok(!pending.events.includes("POST issues/90/comments"));
+  const success=mock({pull:batchPr,initialIssue:batchIssue,files});
+  const result=await closeAcceptedIssues({
+    request:success.request,token:"test-token",deployedSha:deployed,catalog:entries
+  });
+  assert.deepEqual(result,{notified:1,closed:1,pending:0,skipped:0});
+  assert.ok(success.events.indexOf("PATCH issues/90")>success.events.indexOf("POST issues/90/comments"));
+  const missingFile=mock({pull:batchPr,initialIssue:batchIssue,files:files.slice(0,1)});
+  const incomplete=await closeAcceptedIssues({
+    request:missingFile.request,token:"test-token",deployedSha:deployed,catalog:entries
+  });
+  assert.equal(incomplete.closed,0);
+  assert.equal(incomplete.pending,1);
 });

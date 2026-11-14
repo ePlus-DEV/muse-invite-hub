@@ -11,15 +11,26 @@
 ## Features
 
 - **One directory:** browse, search, filter and sort invite codes shared on GitHub, Threads, X (Twitter) and Facebook.
+- **[Country availability map](https://muse.eplus.dev/countries/):** interactive, accessible world map showing five Meta-announced Muse launch markets as of 12 November 2026, with primary sources. Highlighted countries do not guarantee individual account eligibility. Boundaries: Natural Earth (public domain).
 - **Saved codes:** bookmark codes on the homepage or detail page and filter by saved items. Bookmarks are stored only in this browser (no accounts or server synchronization).
 - **Copied codes:** successfully copied codes get a separate violet highlight and **Copy again** label on both directory cards and detail pages, persisting only in this browser. Copying is not proof that Muse accepted the code.
 - **Recently updated:** sort by the latest recorded listing date, reported usage date or catalog check. This does not verify current Muse redemption.
 - **Quick feedback:** each published invite has one canonical GitHub Issue for reports and discussion. Contributor-submitted codes reuse their original Issue; other published codes receive a unique Issue during trusted Pages deploy. Worked/Didn't work buttons open an editable comment dialog before linking to that Issue. Posting a structured report can reopen a closed thread and propose a Draft PR for maintainer review; feedback never automatically verifies Muse redemption.
 - **Code details:** copy and share individual codes, view source attribution and community-reported status.
 - **Community contributions:** submit new codes with an Issue Form; report feedback and owner-count updates on the existing code Issue using the website's editable comment dialog.
-- **Reviewed updates:** maintainers review contributions before publication; accepted Issues receive a link to their published code.
+- **Validated contributions:** new GitHub-owned invite codes can be published automatically as **unverified** after checks for consent, duplicates, exact records and green CI; social-source submissions and updates require maintainer review. Accepted Issues receive a link to their published code after deployment.
+
+## How publication works
+
+1. **New GitHub-owned invite codes:** use the [Share Code Issue Form](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml), enter 1–10 distinct new codes, select **GitHub (my own code)** and personally check both consent/privacy boxes. The bot checks duplicates, creates separate JSON records in a **Ready PR**, and validates the exact submission again before auto-merging after green CI. Grouped submissions cannot include shared quota figures.
+2. **New codes from Threads, X or Facebook:** include the original public post URL. These submissions stay in a **review-only Draft PR** for a maintainer to verify the source and attribution. Existing-code updates and feedback also require review.
+3. **After publication:** GitHub Pages is built from trusted `main`. The bot verifies the live code detail, comments the canonical link on the original Issue, and **only then** closes an accepted new-code Issue. Published community codes remain **`unverified`**; listing a code never guarantees Muse redemption or available invites.
+
+Missing confirmations or malformed fields are handled on the **existing open Issue** with editing instructions—there is no need to create a replacement Issue. For a code already published, use its existing canonical Issue for reports and quota updates. Automatic merge can be blocked by failed CI, a conflict, `do-not-merge` or an explicit maintainer cancellation.
 
 ## Contribute
+
+**[See the latest contribution flow diagram](docs/CONTRIBUTION_FLOW.md)** — distinguishes automatically published new GitHub codes, human-reviewed social sources and existing-code feedback.
 
 No coding required:
 
@@ -28,16 +39,17 @@ No coding required:
 - [**Update invite count on an existing code**](https://muse.eplus.dev/#codes)
 - [**Contribute code or documentation**](CONTRIBUTING.md#contribute-code-or-documentation)
 
-All Issue submissions are public and reviewed; never share passwords, session tokens or private account information. See the [contribution guide](CONTRIBUTING.md) for instructions.
+All Issues and comments are public. New GitHub-owned codes may publish automatically after repository checks, **without human review of validity**; never share passwords, session tokens or private account information. See the [contribution guide](CONTRIBUTING.md) for instructions.
 
-## Telegram Bot on Oracle Always Free
+## Optional Telegram Bot (OCI ARM64)
 
-The optional Telegram Bot runs as a **linux/arm64 Docker image** on an Oracle Cloud Always Free Ampere A1 VM, with Caddy HTTPS and an HTTPS webhook. GitHub Pages remains the only published catalog. Bot-submitted codes and feedback go into the **existing GitHub Issues** review queue; Telegram does not establish GitHub identity or Muse redemption, and nothing auto-merges.
+The Telegram bot is an **optional**, separate Node.js 24 webhook service for an Oracle Cloud Ampere A1 ARM64 VM. Its Docker image can be built manually for `linux/arm64` and served behind Caddy HTTPS. GitHub Pages and the trusted `main` catalog remain the source of public website data.
 
-- [Telegram deployment runbook](telegram/README.md) — OCI ARM64 VM, DNS, BotFather, Docker Compose, secrets and webhook registration.
-- [Build Telegram OCI ARM64 image](.github/workflows/telegram-oci-image.yml) — **manual only** after review and merge to main.
+- [Telegram deployment guide](telegram/README.md) — VM, Docker Compose, DNS, BotFather, HTTPS and private credentials.
+- [Manual ARM64 image workflow](.github/workflows/telegram-oci-image.yml) — build and publish to GHCR from trusted `main`; it never provisions or deploys the VM.
+- Telegram's `/submit` and `/report` requests use the **existing GitHub Issue/comment discussion queue**, require user confirmation and **remain human-reviewed**. They do not establish GitHub code ownership and cannot bypass the website's separate GitHub-owned new-code auto-publish safeguards.
 
-No bot, VM, cloud credentials or hostname is provisioned by the repository itself.
+This repository does not provision a Telegram bot account, Oracle VM, domain name or runtime secrets.
 
 ## Development
 
@@ -51,6 +63,6 @@ Open http://localhost:8000/. Generated code-detail pages, Node.js 24 tests, prev
 
 ## Resources
 
-[Project guide](docs/PROJECT_GUIDE.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Agent rules](AGENTS.md) · [License](LICENSE)
+[Country map](https://muse.eplus.dev/countries/) · [Contribution flow](docs/CONTRIBUTION_FLOW.md) · [Project guide](docs/PROJECT_GUIDE.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Agent rules](AGENTS.md) · [License](LICENSE)
 
 © 2026 ePlus.DEV

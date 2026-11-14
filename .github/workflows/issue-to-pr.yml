@@ -4,7 +4,7 @@ name: Issue to Draft PR
 # Untrusted Issue text is read as data and is NEVER embedded in shell commands.
 on:
   issues:
-    types: [opened, edited]
+    types: [opened, edited, reopened]
   workflow_dispatch:
     inputs:
       issue_number:
@@ -29,7 +29,10 @@ jobs:
       (github.event.issue.pull_request == null &&
        (startsWith(github.event.issue.title, '[Invite]') ||
         startsWith(github.event.issue.title, '[Count update]') ||
-        startsWith(github.event.issue.title, '[Code feedback]')))
+        startsWith(github.event.issue.title, '[Code feedback]') ||
+        (contains(github.event.issue.body, '### Invite code') &&
+         contains(github.event.issue.body, '### Code source') &&
+         contains(github.event.issue.body, '### Contributor checklist'))))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

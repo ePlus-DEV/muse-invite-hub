@@ -26,6 +26,9 @@ button{cursor:pointer}
 .nav-links a{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .nav-links a[aria-current="page"],.nav-links a:hover,.footer-links a:hover{color:var(--blue)}
 .nav-share{flex:none}
+.nav-links .nav-mobile-share{display:none}
+.nav-toggle{display:none;flex:none;width:42px;height:42px;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);font-size:17px}
+.nav-toggle:hover,.nav-toggle[aria-expanded="true"]{background:var(--blue-soft);color:var(--blue);border-color:var(--blue-line)}
 .button{border:1px solid transparent;border-radius:12px;padding:11px 18px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:9px;font-size:13px;font-weight:800;transition:background .16s,border-color .16s,box-shadow .16s,transform .16s}
 .button:hover{transform:translateY(-1px)}
 .button-primary{background:var(--blue);color:#fff;box-shadow:0 6px 14px rgba(0,100,255,.16)}
@@ -155,7 +158,14 @@ button{cursor:pointer}
 }
 @media(max-width:800px){
   .container{padding-inline:22px}
-  .nav-links{gap:14px}
+  /* One accessible dropdown on narrow desktops/tablets; the same links on every page. */
+  .nav-shell{position:relative;gap:12px}
+  .nav-links{position:absolute;top:calc(100% - 1px);left:22px;right:22px;z-index:5;display:flex;flex-direction:column;align-items:stretch;gap:3px;margin-left:0;padding:10px;border:1px solid var(--line);border-radius:0 0 15px 15px;background:var(--surface);box-shadow:var(--shadow-md)}
+  .site-header.nav-enhanced .nav-links:not(.is-open){display:none}
+  .site-header.nav-enhanced .nav-toggle{display:inline-flex}
+  .nav-links>a{display:flex;min-height:44px;padding:11px 12px;border-radius:9px;font-size:13px}
+  .nav-links>a:hover,.nav-links>a[aria-current="page"]{background:var(--blue-soft)}
+  .nav-share{margin-left:auto}
   .hero{grid-template-columns:1fr .7fr;gap:10px;padding-top:34px;padding-bottom:23px;min-height:0}
   .hero-art{transform:scale(.8);transform-origin:right center}
   .cards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -169,8 +179,10 @@ button{cursor:pointer}
   .brand-icon{width:34px;height:34px}
   .brand-type strong{font-size:15px}
   .brand-type small{font-size:8px}
-  .nav-links{display:none}
-  .nav-share{margin-left:auto;min-height:40px;padding:8px 12px;font-size:12px;white-space:nowrap}
+  .nav-links{left:17px;right:17px}
+  .nav-links .nav-mobile-share{display:flex;color:var(--blue);border-top:1px solid var(--line);border-radius:0}
+  .nav-share{display:none}
+  .nav-toggle{margin-left:auto}
   .hero{display:block;padding-top:27px;padding-bottom:24px}
   .hero-art{display:none}
   .eyebrow{font-size:10px;margin-bottom:13px}
@@ -524,3 +536,14 @@ html.is-page-loading body>.site-footer{display:none!important}
 .detail-code-panel-copied #detail-copy:hover,.detail-code-panel-copied #detail-copy:focus-visible{background:#e3d7ff;color:#51278d}
 .detail-copy-note{margin:11px 0 0;font-size:12px;font-weight:750;line-height:1.5;color:#6335a4}
 .detail-copy-note::before{content:"";display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:#8252c8;vertical-align:middle}
+
+/* Link from the existing sourced market disclosure to its full map page. */
+.availability-map-link{margin:14px 0 4px}
+.availability-map-link .button{font-size:12px;padding:9px 13px;min-height:40px}
+
+/* Press coverage is a separate tier; never count it as an official Muse launch. */
+.availability-expected{background:#fff8eb;border:1px solid #efd2a3;border-radius:12px;padding:12px 14px;margin:13px 0 2px;color:#734d19}
+.availability-expected-label{display:inline-flex;align-items:center;gap:7px;font-weight:800;font-size:11.5px;color:#975b0c}
+.availability-expected p{margin:6px 0 0;font-size:11.5px;line-height:1.65}
+.availability-expected a{font-weight:800;color:#90540b;text-decoration:underline;text-underline-offset:2px}
+.availability-expected a:hover{color:#703e05}

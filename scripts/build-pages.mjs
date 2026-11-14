@@ -4,6 +4,8 @@ import { dirname, join, resolve } from "node:path";
 import { buildPreview, isSafeSiteFile } from "./preview-core.mjs";
 import { generateSite } from "./site-pages.mjs";
 import { syncCodeIssueMap, validIssueMap } from "./code-issue-map.mjs";
+import { readCatalog } from "./catalog.mjs";
+import { validateCatalog } from "./validate.mjs";
 
 const REPO = process.env.GITHUB_REPOSITORY;
 const ORIGIN = "https://muse.eplus.dev";
@@ -28,14 +30,16 @@ function copyTrusted(path) {
     copyFileSync(full, to);
   }
 }
-for (const file of ["index.html", "404.html", ".nojekyll", "CNAME", "robots.txt", "sitemap.xml", "llms.txt", "assets", "data"]) {
+for (const file of ["index.html", "404.html", ".nojekyll", "CNAME", "robots.txt", "sitemap.xml", "llms.txt", "assets", "data", "countries"]) {
   if (existsSync(file)) copyTrusted(file);
 }
-for (const required of ["index.html", "404.html", "llms.txt", "assets/app.js", "assets/site-ui.js", "assets/styles.css", "data/invites.json"]) {
+for (const required of ["index.html", "404.html", "llms.txt", "assets/app.js", "assets/site-ui.js", "assets/styles.css", "assets/countries.js", "assets/countries.css", "data/world-countries.json", "countries/index.html", "data/invites.json"]) {
   if (!existsSync(join(output, required))) throw Error("Production output missing " + required);
 }
-const code = JSON.parse(readFileSync(join(output, "data/invites.json"), "utf8"));
-if (!Array.isArray(code)) throw Error("Production catalog is not an array");
+const code = readCatalog();
+const catalogErrors = validateCatalog(code);
+if (catalogErrors.length) throw Error("Production catalog invalid: " + catalogErrors.join("; "));
+writeFileSync(join(output,"data/invites.json"),JSON.stringify(code,null,2)+"\n");
 async function api(path) {
   const res = await fetch("https://api.github.com/" + path, {
     headers: {

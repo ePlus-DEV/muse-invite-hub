@@ -22,7 +22,7 @@ node --test scripts/validate.test.mjs scripts/audit-links.test.mjs scripts/previ
 node --check assets/app.js
 node --check assets/detail.js
 node --check scripts/issue-to-pr.mjs
-node --test scripts/issue-to-pr.test.mjs scripts/close-accepted-issues.test.mjs
+node --test scripts/issue-to-pr.test.mjs scripts/auto-merge.test.mjs scripts/close-accepted-issues.test.mjs
 ~~~
 
 For a complete generated site before merging, download the muse-invite-hub-pr-preview-N artifact from the PR Validate workflow, extract it and serve that folder over HTTP. Detail pages will be at /codes/CODE/. Test mobile/desktop, search, filtering, sort, copy, empty and network-error states, and feedback links.
@@ -38,17 +38,20 @@ The published catalog is [data/invites.json](../data/invites.json). Codes are un
 
 Usage figures are **dated self-reported snapshots**, not live balances. When capacity and used count are known, remaining = capacity - used. A remaining-only report is also allowed without guessing a total. The owner reported **3 of 30 remaining** for DPNIHH in [Issue #14](https://github.com/ePlus-DEV/muse-invite-hub/issues/14) on 2026-11-11. Owner confirmation proves ownership only; copying a code does not redeem it.
 
-## Issue automation and acceptance
+## Issue automation, conditional merge and acceptance
 
-The [Issue-to-Draft-PR workflow](../.github/workflows/issue-to-pr.yml) validates Issue Form submissions, checks duplicates and creates review-only Draft PRs for changes to the catalog.
+See the [visual contribution flow](CONTRIBUTION_FLOW.md) for the new-code auto-publication route, human-review routes and canonical Issue closure semantics.
 
-- GitHub owners may propose dated quota updates under ownership checks. A Threads, X or Facebook reporter cannot claim GitHub quota ownership through a matching handle.
-- The directory links feedback to one canonical GitHub Issue per published code. Contributor-submitted codes reuse their original Issue. Missing threads for manual/imported codes are created once during trusted production Pages build; PR validation is read-only.
-- A human comment on a closed canonical Issue reopens it for review. Structured accepted/rejected reports or GitHub-owner-confirmed quota updates are passed through the existing catalog validator and may produce a **review-only Draft PR**. Ordinary discussion, conflicting updates or unsupported ownership remain for manual review. A comment never directly changes `status`, `checkedAt` or Muse availability. The contribution acceptance bot skips reopened feedback threads; legacy feedback/count Issue Forms remain fallback-only.
-- Maintainers must review and merge accepted PRs into main. Submitting an Issue or opening a Draft PR never publishes a code automatically.
-- After successful deployment, trusted automation verifies the approved merge is deployed and the detail page is accessible. It comments https://muse.eplus.dev/codes/CODE/ on the original Issue **before** closing it. If checks or commenting fail, the Issue stays open.
+- **New GitHub-owned code:** the historically named [Issue-to-Draft-PR workflow](../.github/workflows/issue-to-pr.yml) runs trusted code on `main` and can create a **Ready PR** when an open, consent-confirmed Issue contains 1–10 distinct *new* `GitHub (my own code)` submissions. Each code gets a standalone `data/invite-records/<id>.json` file. Auto-publication is restricted to new records with `status: unverified`, never an assertion that Muse validated the code or capacity.
+- **Independent merge validation:** [Conditional PR auto-merge](../.github/workflows/auto-merge.yml) loads its implementation from trusted `main`, verifies the originating Issue and bot-authored PR provenance, compares **all** added record files to the exact deterministic proposal generated against current catalog data, blocks duplicates/changed source/extra paths, then requires current-head CI, current `main`, GitHub clean mergeability and no blocker. It squash-merges and dispatches the Pages workflow explicitly after a `GITHUB_TOKEN` merge.
+- **Manual cases:** new Threads/X/Facebook codes, existing-code owner quota/feedback updates, source mismatches, malformed submissions, ownership disputes and duplicate codes stay in review-only Draft PRs or manual triage. Missing checkboxes mean the **original Issue remains open**, with a bot comment showing how to edit it—never auto-check permissions or close the contributor's submission.
+- **Other PRs:** docs-only Ready PRs by @hoangsvit (README, CONTRIBUTING or Markdown under docs/, up to 15 files, no renames/deletions) can auto-merge after CI; all code, workflow, UI, config and mixed PRs require explicit @hoangsvit approval of the current head or `/automerge FULL_SHA`. Draft, `do-not-merge`, `/automerge off`, active review objections, stale main, conflicts or incomplete CI prevent merging.
+- **Existing code discussion:** the directory links feedback to one canonical Issue per published code using `data/code-issues.json`. Contributor Issues are reused; threads for manually added codes are created once by the trusted Pages build. Human structured comments can reopen canonical Issues and propose **review-only Draft PRs**; they never directly change published status or count. Historical standalone count/feedback forms remain a fallback.
+- **Production acceptance:** only trusted `main` is deployed. After the merge is included in a successful Pages deployment and the live detail endpoint works, `scripts/close-accepted-issues.mjs` posts the canonical `https://muse.eplus.dev/codes/CODE/` link and **then** closes the original new-code or legacy-report Issue. A failed deploy, missing page or failed acceptance comment leaves it open. Canonical Issues reopened for later feedback are not automatically reclosed.
 
-The detailed step-by-step instructions for contributors and reviewers are in [CONTRIBUTING.md](../CONTRIBUTING.md).
+The Issue bot explicitly dispatches validation because PRs created using `GITHUB_TOKEN` may not trigger normal PR checks. The merge workflow similarly dispatches Pages on its own token-initiated merges. Neither workflow executes unmerged PR source code with write permissions.
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for user-facing steps and [AGENTS.md](../AGENTS.md) for the non-negotiable publishing policy.
 
 ## Previews and GitHub Pages deployment
 
@@ -71,11 +74,11 @@ The [country availability section](https://muse.eplus.dev/#availability) is date
 | Path | Purpose |
 | --- | --- |
 | index.html, assets/ | Homepage, controls, styles, images and detail assets |
-| data/invites.json | Reviewed public code catalog |
+| data/invites.json, data/invite-records/ | Trusted legacy seed and independent per-code records assembled into one public catalog |
 | scripts/validate.mjs, scripts/audit-links.mjs | Data and link validation |
 | scripts/site-pages.mjs | Generated detail pages and sitemap |
 | scripts/preview-core.mjs, scripts/build-pages.mjs | Preview and production site assembly |
-| scripts/issue-to-pr.mjs, scripts/close-accepted-issues.mjs | Review-only Issue proposals and acceptance notification |
+| scripts/issue-to-pr.mjs, scripts/auto-merge.mjs, scripts/close-accepted-issues.mjs | Conditional Issue PR creation, trusted merge gate and post-deploy acceptance |
 | .github/ISSUE_TEMPLATE/, .github/workflows/ | Issue Forms, CI and Pages deployment |
 
 Preserve contributor attribution and project independence from Muse/Meta. See [AGENTS.md](../AGENTS.md) for non-negotiable safety and SEO policies.

@@ -1,0 +1,94 @@
+name: Auto-label and assign new Issues
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+  # GITHUB_TOKEN-created Issues do not trigger other "issues" workflows.
+  # Reconcile recently created Issues to include Issues opened by trusted bots.
+  schedule:
+    - cron: "*/30 * * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: muse-issue-triage-${{ github.event.issue.number || 'reconcile' }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    if: github.event_name != 'issues' || github.event.issue.pull_request == null
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted repository code
+        uses: actions/checkout@v6
+      - name: Check trusted triage script and tests
+        run: |
+          node --check scripts/issue-triage.mjs
+          node --test scripts/issue-triage.test.mjs
+      - name: Auto-label and assign to hoangsvit
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const { triageDecision, TRIAGE_LABELS } = await import(
+              process.env.GITHUB_WORKSPACE + "/scripts/issue-triage.mjs"
+            );
+            const {owner,repo} = context.repo;
+            let issues;
+            if (context.eventName === "issues") {
+              issues = [context.payload.issue];
+            } else {
+              // Catch issues opened by repository GITHUB_TOKEN automation;
+              // restrict reconciliation to recent submissions.
+              const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+              issues = [];
+              // Iterate across pages instead of silently dropping Issues
+              // when more than 100 PRs/Issues were created in 48 hours.
+              for await (const response of github.paginate.iterator(
+                github.rest.issues.listForRepo, {
+                  owner,repo,state:"all",sort:"created",
+                  direction:"desc",per_page:100
+                }
+              )) {
+                for (const issue of response.data) {
+                  if (Date.parse(issue.created_at || "") >= cutoff) issues.push(issue);
+                }
+                if (response.data.some(issue =>
+                  Date.parse(issue.created_at || "") < cutoff
+                )) break;
+              }
+            }
+            for (const issue of issues) {
+              const decision = triageDecision(issue);
+              if (!decision || (!decision.addLabel && !decision.addAssignee)) continue;
+              const issue_number = decision.number;
+              if (decision.addLabel) {
+                const label = decision.label;
+                const spec = TRIAGE_LABELS[label];
+                try {
+                  await github.rest.issues.getLabel({owner,repo,name:label});
+                } catch (error) {
+                  if (error.status !== 404) throw error;
+                  try {
+                    await github.rest.issues.createLabel({owner,repo,name:label,
+                      color:spec.color,description:spec.description});
+                  } catch (createError) {
+                    // A parallel new-Issue run may already have created it.
+                    if (createError.status !== 422) throw createError;
+                    await github.rest.issues.getLabel({owner,repo,name:label});
+                  }
+                }
+                await github.rest.issues.addLabels({owner,repo,issue_number,labels:[label]});
+              }
+              if (decision.addAssignee) {
+                // Adds hoangsvit without overwriting any existing assignees.
+                await github.rest.issues.addAssignees({owner,repo,issue_number,
+                  assignees:[decision.assignee]});
+              }
+              core.info("Triaged Issue #" + issue_number + ": " + decision.label +
+                " / @" + decision.assignee);
+            }

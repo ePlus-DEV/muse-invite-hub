@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { planIssueChange, readIssueFields } from "./issue-to-pr.mjs";
+import { planIssueChange, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance } from "./issue-to-pr.mjs";
 import { validateCatalog } from "./validate.mjs";
+import { changedRecords } from "./catalog.mjs";
 
 const date="2026-11-11T10:00:00Z";
 const share = [
@@ -121,6 +122,42 @@ test("permission confirmations are mandatory and untrusted numbers fail closed",
     "### Uses so far (optional; self-reported)\n\n-1");
   assert.throws(()=>planIssueChange(issue(26,"[Invite]",negative),[item]),/integer/);
 });
+test("API-created invite Issues without required confirmations remain open for review", () => {
+  const missing = share.replace(/### Contributor checklist[\s\S]*$/, "");
+  const rawIssue = issue(113, "[Invite] 0W9L6E",
+    missing.replace("PNSMZZ", "0W9L6E"), "hermes-blue");
+  assert.equal(hasRequiredInviteConfirmations(rawIssue.body), false);
+  assert.equal(inviteNeedsConfirmationReview(rawIssue), true);
+  assert.throws(() => planIssueChange(rawIssue,[item]), /confirmations/);
+  assert.equal(inviteNeedsConfirmationReview({...rawIssue,state:"closed"}), false);
+  assert.equal(inviteNeedsConfirmationReview({...rawIssue,pull_request:{number:1}}), false);
+  assert.equal(inviteNeedsConfirmationReview(issue(113,"Support request",missing)), false);
+});
+
+test("missing confirmations receive actionable guidance without closure or impersonated consent", () => {
+  const guidance=missingInviteConfirmationGuidance();
+  assert.match(guidance,/This one stays open/);
+  assert.match(guidance,/… → Edit/);
+  assert.match(guidance,/### Contributor checklist/);
+  assert.match(guidance,/- \[ \] I own this public code/);
+  assert.match(guidance,/- \[ \] This code is not a password/);
+  assert.doesNotMatch(guidance,/- \[x\]/);
+  assert.match(guidance,/\[Share Code form\]/);
+  assert.match(guidance,/\n\n/);
+});
+
+test("both consent checkboxes must be checked and cannot be spoofed by notes", () => {
+  const missingOne=share.replace("- [x] This code is not a password","- [ ] This code is not a password");
+  assert.equal(hasRequiredInviteConfirmations(missingOne), false);
+  assert.equal(inviteNeedsConfirmationReview(issue(210,"[Invite]",missingOne)),true);
+  const forged=share.replace("- [x] I am authorized","Example: - [x] I am authorized");
+  assert.equal(hasRequiredInviteConfirmations(forged),false);
+  assert.equal(hasRequiredInviteConfirmations(share),true);
+  assert.equal(hasRequiredInviteConfirmations(share.replace(/- \[x\]/g,"- [X]")),true);
+  assert.equal(inviteNeedsConfirmationReview(issue(211,"[Invite]",share)),false);
+  assert.equal(inviteNeedsConfirmationReview(issue(212,"[Count update]",missingOne)),false);
+});
+
 test("count updates require owner confirmation, known total and internally consistent numbers",()=>{
   const p=planIssueChange(issue(14,"[Count update]",count(),"hoangsvit"),[item,community]);
   assert.equal(p.outcome,"proposal");
@@ -356,4 +393,61 @@ test("X and Facebook reports cannot hijack same-named GitHub or Threads accounts
     withListingPlatform(fbCount,"Facebook"),"sameperson"),[item,...existing]).outcome,"needs-review");
   assert.equal(planIssueChange(issue(94,"[Invite]",
     updatedShare("GitHub (my own code)").replace("18I70N","XX1234"),"sameperson"),[item,...existing]).outcome,"needs-review");
+});
+
+test("structured Share Code form accepts contributor-edited title and uppercase checkmarks",()=>{
+  const body = share.replaceAll("- [x]", "- [X]")
+    .replace("### Public confirmation or context (optional)",
+      "### Code source\n\nGitHub (my own code)\n\n### Public confirmation or context (optional)");
+  for (const title of ["Get 30 billion Muse tokens.", "9NEXQ8 US ONLY", "[Invite] PNSMZZ"]) {
+    const result = planIssueChange(issue(99,title,body),[item]);
+    assert.equal(result.outcome,"proposal");
+    assert.equal(result.kind,"invite");
+    assert.deepEqual(validateCatalog(result.data),[]);
+  }
+  const unchecked = body.replace("- [X] This code is not a password","- [ ] This code is not a password");
+  assert.throws(()=>planIssueChange(issue(100,"Custom title",unchecked),[item]),/confirmations/);
+  const unstructured = share.replace("- [x]","- [X]");
+  assert.equal(planIssueChange(issue(101,"Free-form code",unstructured),[item]).outcome,"unsupported");
+});
+
+
+test("a single Share Code Issue can propose two independently stored codes",()=>{
+  const body=share.replace("PNSMZZ","ALFA12,\nBRAVO2")
+    .replace("### Invite limit (optional; self-reported)\n\n30",
+      "### Invite limit (optional; self-reported)\n\n_No response_");
+  const original=[item];
+  const result=planIssueChange(issue(120,"[Invite] two codes",body),original);
+  assert.equal(result.outcome,"proposal");
+  assert.deepEqual(result.codes,["ALFA12","BRAVO2"]);
+  assert.equal(result.branch,"auto/issue-120-invite");
+  const first=result.data.find(entry=>entry.code==="ALFA12");
+  const second=result.data.find(entry=>entry.code==="BRAVO2");
+  assert.equal(first.id,"community-issue-120-alfa12");
+  assert.equal(second.id,"community-issue-120-bravo2");
+  assert.equal(first.feedbackIssueNumber,120);
+  assert.equal(second.feedbackIssueNumber,120);
+  assert.equal(first.reportedCapacity,undefined);
+  assert.equal(second.reportedCapacity,undefined);
+  assert.deepEqual(changedRecords(original,result.data,result.codes).map(x=>x.path),
+    ["data/invite-records/community-issue-120-alfa12.json",
+      "data/invite-records/community-issue-120-bravo2.json"]);
+  assert.deepEqual(validateCatalog(result.data),[]);
+  assert.equal(original.length,1);
+});
+
+test("multiple code submissions reject duplicates, malformed tokens and shared quota",()=>{
+  const clean=share.replace("### Invite limit (optional; self-reported)\n\n30",
+    "### Invite limit (optional; self-reported)\n\n_No response_");
+  const makeCodes=value=>clean.replace("PNSMZZ",value);
+  assert.throws(()=>planIssueChange(issue(121,"[Invite]",makeCodes("ALFA12, alfa12")),[item]),
+    /distinct/);
+  assert.throws(()=>planIssueChange(issue(121,"[Invite]",makeCodes("ALFA12, ../bad")),[item]),
+    /Invite code/);
+  const quota=planIssueChange(issue(121,"[Invite]",share.replace("PNSMZZ","ALFA12, BRAVO2")),[item]);
+  assert.equal(quota.outcome,"needs-review");
+  assert.match(quota.reason,/per-code/);
+  const existing=planIssueChange(issue(121,"[Invite]",makeCodes("PNSMZZ, BRAVO2")),[item,community]);
+  assert.equal(existing.outcome,"needs-review");
+  assert.match(existing.reason,/already/);
 });

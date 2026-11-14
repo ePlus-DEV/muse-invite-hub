@@ -8,6 +8,7 @@ import { planIssueChange } from "./issue-to-pr.mjs";
 import { feedbackCodeForIssue } from "./reopen-code-feedback.mjs";
 import { REPO } from "./code-issue-map.mjs";
 import { listedPlatform } from "./source-platform.mjs";
+import { readCatalog, fetchGitHubCatalog, changedRecord } from "./catalog.mjs";
 
 const CODE = /^[A-Z0-9-]{4,32}$/;
 const API = "https://api.github.com/repos/" + REPO + "/";
@@ -32,7 +33,7 @@ export function planCommentProposal(issue, comment, catalog) {
       comment.body.length > MAX_COMMENT || !comment.user?.login ||
       comment.user?.type === "Bot" || comment.user?.login.endsWith("[bot]") ||
       !Number.isSafeInteger(comment.id) || comment.id <= 0) return {outcome:"ignored"};
-  const code = feedbackCodeForIssue(issue,catalog);
+  const code = feedbackCodeForIssue(issue,catalog,comment.body);
   if (!code) return {outcome:"ignored"};
   const fields = lines(comment.body);
   if (fields.Code !== code) return {outcome:"ignored"};
@@ -117,7 +118,7 @@ export async function proposeCommentDraft({
 }={}) {
   if(repository!==REPO || !token || !Number.isSafeInteger(issueNumber)||issueNumber<=0||
     !Number.isSafeInteger(commentId)||commentId<=0) throw Error("Trusted repository, token and comment IDs required.");
-  const entries=catalog??JSON.parse(readFileSync(new URL("../data/invites.json",import.meta.url),"utf8"));
+  const entries=catalog??readCatalog();
   const [issue,comment]=await Promise.all([
     api("GET","issues/"+issueNumber,token),
     api("GET","issues/comments/"+commentId,token)
@@ -138,20 +139,17 @@ export async function proposeCommentDraft({
   // Reject overlapping unreviewed changes to the SAME entry from other PRs.
   const ref=await api("GET","git/ref/heads/main",token);
   const mainSha=ref.object.sha;
-  const baseContent=await api("GET","contents/data/invites.json?ref="+mainSha,token);
-  if(baseContent.encoding!=="base64")throw Error("Unexpected main catalog encoding");
-  const mainCatalog=JSON.parse(Buffer.from(baseContent.content.replace(/\s/g,""),"base64").toString("utf8"));
+  const mainCatalog=await fetchGitHubCatalog(
+    (path,allow404=false)=>api("GET",path,token,undefined,allow404),mainSha);
   const current=planCommentProposal(issue,comment,mainCatalog);
   if(current.outcome!=="proposal")return current;
   // Independent branches from main only; never stack on an unmerged PR.
   for(const pr of own) {
     if(!pr.head.ref.startsWith("auto/"))continue;
-    const candidate=await api("GET","contents/data/invites.json?ref="+encodeURIComponent(pr.head.sha),token,undefined,true);
-    if(!candidate||candidate.encoding!=="base64")continue;
-    const diff=JSON.parse(Buffer.from(candidate.content.replace(/\s/g,""),"base64").toString("utf8"));
-    const from=mainCatalog.find(item=>item.code===code);
-    const proposedItem=diff.find(item=>item.code===code);
-    if(JSON.stringify(from)!==JSON.stringify(proposedItem)) {
+    const title=/^data: review (.+) (?:invite|count|feedback) \(issue #[1-9][0-9]*\)$/.exec(String(pr.title||""));
+    const grouped=title ? title[1].split(", ") : [];
+    if (grouped.includes(code) ||
+        String(pr.title||"").startsWith("data: review "+code+" ")) {
       return {outcome:"needs-review",code,kind,reason:"A Draft PR already changes this code: "+pr.html_url};
     }
   }
@@ -159,11 +157,12 @@ export async function proposeCommentDraft({
   const existingBranch=await api("GET","git/ref/heads/"+branch.split("/").map(encodeURIComponent).join("/"),token,undefined,true);
   if(existingBranch)return {outcome:"needs-review",code,reason:"Previous proposal branch exists; review before retry: "+branch};
   const parent=await api("GET","git/commits/"+mainSha,token);
+  const record=changedRecord(mainCatalog,current.data,code);
   const blob=await api("POST","git/blobs",token,{
-    content:JSON.stringify(current.data,null,2)+"\n",encoding:"utf-8"
+    content:record.content,encoding:"utf-8"
   });
   const tree=await api("POST","git/trees",token,{base_tree:parent.tree.sha,
-    tree:[{path:"data/invites.json",mode:"100644",type:"blob",sha:blob.sha}]});
+    tree:[{path:record.path,mode:"100644",type:"blob",sha:blob.sha}]});
   const commit=await api("POST","git/commits",token,{
     message:"data: review "+code+" community "+kind+" (comment "+commentId+")",
     tree:tree.sha,parents:[mainSha]});

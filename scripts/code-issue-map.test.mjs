@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  issueMarker, issueCode, originalIssueNumber, canonicalThreadBody,
+  issueMarker, issueCode, issueCodes, parseInviteCodes, originalIssueNumber, canonicalThreadBody,
   syncCodeIssueMap, validIssueMap, resolveExistingIssue
 } from "./code-issue-map.mjs";
 import { feedbackCodeForIssue, shouldReopen } from "./reopen-code-feedback.mjs";
@@ -90,6 +90,30 @@ test("reuse original count / Invite Issues and already-created feedback threads 
   assert.equal(shouldReopen({...existing[3],state:"closed"},report,published),true);
 });
 
+test("a new owner count Issue must not replace the reviewed canonical DPNIHH thread",async()=>{
+  const canonical={
+    number:14,title:"[Count update]",state:"closed",
+    body:"### Invite code\n\nDPNIHH\n\n### Remaining invites shown by Muse\n\n3"
+  };
+  const newerReport={
+    number:86,title:"[Count update] DPNIHH",state:"open",
+    body:"### Invite code\n\nDPNIHH\n\n### Remaining invites shown by Muse\n\n25"
+  };
+  const item={...seeded,feedbackIssueNumber:14};
+  assert.equal(resolveExistingIssue(item,[newerReport,canonical]),canonical);
+  const map=await syncCodeIssueMap([item],async()=>[newerReport,canonical],async()=>{
+    throw Error("Must not create another thread");
+  });
+  assert.deepEqual(map,{DPNIHH:14});
+});
+
+test("an explicit conflicting root remains an error even with a reviewed mapping",()=>{
+  const canonical={number:14,title:"[Count update]",body:"### Invite code\n\nDPNIHH"};
+  const duplicateRoot={number:86,title:"[Code] DPNIHH",body:canonicalThreadBody(seeded)};
+  assert.throws(()=>resolveExistingIssue({...seeded,feedbackIssueNumber:14},
+    [canonical,duplicateRoot]),/Duplicate canonical feedback issues/);
+});
+
 test("readonly CI dry-run does not create Issues or invent thread numbers",async()=>{
   const created=[];
   const entries=[contributor,seeded,foreign];
@@ -123,4 +147,34 @@ test("reopen only genuine user feedback on the canonical code issue",()=>{
   assert.equal(shouldReopen({...oldIssue,body:"wrong"},regularComment,[contributor]),false);
   const mapped={number:103,state:"closed",title:"[Code] DPNIHH",body:canonicalThreadBody(seeded)};
   assert.equal(shouldReopen(mapped,regularComment,[seeded]),true);
+});
+
+test("original Share Code form remains canonical even if its title is edited",()=>{
+  const form={number:93,title:"Get 30 billion Muse tokens.",state:"closed",
+    body:"### Invite code\n\nD8190Y\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [X] consent"};
+  const item={id:"community-issue-93",code:"D8190Y",feedbackIssueNumber:93};
+  assert.equal(issueCode(form),"D8190Y");
+  assert.equal(resolveExistingIssue(item,[form]),form);
+  assert.equal(issueCode({...form,body:"### Invite code\n\nD8190Y"}),null);
+});
+
+
+test("multi-code form maps both independent records back to its single canonical Issue",async()=>{
+  const form={number:120,title:"[Invite] two codes",state:"open",
+    body:"### Invite code\n\nALFA12,\nBRAVO2\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [x] authorized"};
+  const items=["ALFA12","BRAVO2"].map(code=>({
+    id:"community-issue-120-"+code.toLowerCase(),code,feedbackIssueNumber:120
+  }));
+  assert.deepEqual(parseInviteCodes(" alfa12; BRAVO2 "),["ALFA12","BRAVO2"]);
+  assert.deepEqual(issueCodes(form),["ALFA12","BRAVO2"]);
+  assert.equal(issueCode(form),"ALFA12");
+  assert.equal(resolveExistingIssue(items[0],[form]),form);
+  assert.equal(resolveExistingIssue(items[1],[form]),form);
+  const map=await syncCodeIssueMap(items,async()=>[form],async()=>{
+    throw Error("Must not create a new Issue");
+  });
+  assert.deepEqual(map,{ALFA12:120,BRAVO2:120});
+  assert.equal(feedbackCodeForIssue(form,items,"Code: BRAVO2\nResult: worked"),"BRAVO2");
+  assert.equal(feedbackCodeForIssue(form,[items[1]]),"BRAVO2");
+  assert.throws(()=>parseInviteCodes("ALFA12, ALFA12"),/distinct/);
 });

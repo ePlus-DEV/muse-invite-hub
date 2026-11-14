@@ -1,4 +1,4 @@
-/* Shared, dependency-free navigation enhancements for the homepage and code details. */
+/* Shared navigation and accessibility enhancements for all site pages. */
 (() => {
   "use strict";
 
@@ -10,6 +10,39 @@
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const behavior = () => prefersReducedMotion() ? "auto" : "smooth";
+
+    // All page types share the same header, links, and accessible mobile menu.
+    // Keep static links usable when JavaScript is unavailable.
+    const header = document.querySelector(".site-header");
+    const nav = header?.querySelector(".nav-links");
+    const toggle = header?.querySelector(".nav-toggle");
+    if (header && nav && toggle) {
+      const closeMenu = (focusToggle = false) => {
+        nav.classList.remove("is-open");
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.setAttribute("aria-label", "Open navigation menu");
+        if (focusToggle) toggle.focus();
+      };
+      toggle.addEventListener("click", () => {
+        const opening = !nav.classList.contains("is-open");
+        nav.classList.toggle("is-open", opening);
+        toggle.setAttribute("aria-expanded", String(opening));
+        toggle.setAttribute("aria-label", opening ? "Close navigation menu" : "Open navigation menu");
+      });
+      nav.addEventListener("click", event => {
+        if (event.target.closest("a")) closeMenu();
+      });
+      document.addEventListener("pointerdown", event => {
+        if (!header.contains(event.target)) closeMenu();
+      });
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && nav.classList.contains("is-open")) closeMenu(true);
+      });
+      window.addEventListener("resize", () => {
+        if (window.innerWidth > 800) closeMenu();
+      });
+      header.classList.add("nav-enhanced");
+    }
 
     // About is an actual disclosure. Opening its contents *before* scrolling
     // fixes both repeated clicks and deep links arriving from code detail pages.

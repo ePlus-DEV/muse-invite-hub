@@ -1,10 +1,12 @@
 # Contributing to Muse Invite Hub
 
-Thanks for helping! **You can share an invite, report feedback or update a count without writing code.** Use the Share Code GitHub Issue Form **only for new invite codes**. Existing-code feedback and owner-count updates reuse the code’s canonical Issue through the website. UI and documentation improvements use Pull Requests.
+Thanks for helping! **You can share an invite, report feedback or update a count without writing code.** Use the Share Code GitHub Issue Form **only for new invite codes**. You can submit up to **10 distinct new codes in one Issue**, separated by commas, spaces or newlines. They receive **separate catalog records in one PR**: eligible new GitHub-owned codes auto-publish after validation, while social-source submissions remain review-only Draft PRs. Per-code usage/quota fields must be blank for grouped submissions. If one code already exists, submit that code's update through its existing listing instead. Existing-code feedback and owner-count updates reuse the code’s canonical Issue through the website. UI and documentation improvements use Pull Requests.
 
-[Homepage](https://muse.eplus.dev/) · [README](README.md) · [Share code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report feedback](https://muse.eplus.dev/#codes) · [Update count](https://muse.eplus.dev/#codes)
+[Homepage](https://muse.eplus.dev/) · [README](README.md) · [Visual contribution flow](docs/CONTRIBUTION_FLOW.md) · [Share code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report feedback](https://muse.eplus.dev/#codes) · [Update count](https://muse.eplus.dev/#codes)
 
 > **Privacy:** GitHub Issues, PRs and repository content are public. Never share passwords, OTPs, authentication codes, session tokens, cookies, private login or invite links, account identifiers, or screenshots containing sensitive details.
+
+Each accepted code contribution is stored as an independent reviewed JSON record to reduce merge conflicts. The trusted build combines these with the historical catalog; the website still loads a single generated directory. Multiple submissions for the same code require review and are never silently merged.
 
 ## Share a public invite code
 
@@ -14,7 +16,23 @@ Thanks for helping! **You can share an invite, report feedback or update a count
 4. Enter quota figures **only for your own GitHub-owned code** from your Muse account; never infer them from a social post. Add optional non-sensitive notes.
 5. Check both public sharing/privacy confirmations, then submit.
 
-For GitHub-owned codes only: if your code is already listed under the same GitHub username, resubmitting an updated count (including a remaining-only number) can prepare an **update Draft PR**, not a duplicate listing. If a code is already listed from Threads, or someone files it under a different source, the bot will request manual review rather than replace the attribution or update the quota automatically. Existing listing IDs, contributor attribution and original listing dates are preserved. Numeric GitHub IDs help protect subsequent updates from username reuse. Actions checks the code and duplicates and can prepare an **automated Draft PR**. A maintainer reviews the data, marks the PR ready and merges it when appropriate. **An Issue never automatically publishes a code.** Community submissions start as `unverified`, and total quota alone never implies all invites remain.
+For GitHub-owned codes only: if your code is already listed under the same GitHub username, resubmitting an updated count (including a remaining-only number) can prepare an **update Draft PR**, not a duplicate listing. If a code is already listed from Threads, or someone files it under a different source, the bot will request manual review rather than replace the attribution or update the quota automatically. Existing listing IDs, contributor attribution and original listing dates are preserved. Numeric GitHub IDs help protect subsequent updates from username reuse. Actions checks the code and duplicates. **For a new GitHub-owned code with both confirmations checked**, the bot creates a Ready PR and can automatically merge it **only after** CI passes and a trusted workflow re-checks the current Issue, all generated JSON files and duplicate codes. Accepted codes are shown as `unverified` (community-submitted, not redemption-verified). **Public Threads/X/Facebook sources, updates to existing codes, incomplete or ambiguous Issues and feedback** still create review-only Draft PRs and require maintainer review. Total quota alone never implies all invites remain.
+
+## Conditional auto-merge policy
+
+There are **three different routes**. Passing CI does **not** prove that a code works in Muse.
+
+| PR type | Default behavior |
+| --- | --- |
+| **New, self-reported GitHub invite code** from a complete Issue, not yet in the catalog | **Automatic:** trusted Issue bot makes a Ready PR, then trusted automation checks consent, source, original Issue, exact new JSON record(s), duplicates, current-head CI and mergeability before merging. Listing remains `unverified`. |
+| **Documentation-only PR authored by @hoangsvit** | **Automatic** after green CI if Ready, only `README.md`, `CONTRIBUTING.md` or Markdown under `docs/` (1–15 changed files, no deletion/rename/mixed code). |
+| **Social-source, existing-code, feedback, quota, code, UI, workflow or other PRs** | **Manual review:** keep generated community proposals in Draft until reviewed; `@hoangsvit` may authorize merge of the current Ready PR head. |
+
+For the manual route, after reviewing the source and diff, @hoangsvit may approve the current HEAD in GitHub (where possible) **or** comment `/automerge FULL_40_CHARACTER_HEAD_SHA` on the PR. A new commit invalidates that authorization. The trusted workflow checks current-head validation, GitHub mergeability and the up-to-date `main` branch, then uses squash merge and explicitly dispatches the trusted Pages deployment.
+
+**All three routes can be blocked:** `do-not-merge` label, `/automerge off` by @hoangsvit, Draft status, an unresolved `CHANGES_REQUESTED` review, failed or in-progress CI, merge conflict, or a branch behind `main`. Do not use auto-merge to bypass branch protection. GitHub's built-in repository-level **Allow auto-merge** setting is separate and currently disabled; this workflow implements the conditional policy without a personal access token.
+
+For the GitHub Issue route, the submitting account is recorded as a community reporter, **not independently proven to own the code**. Auto-publication is not live redemption validation. Do not automatically publish third-party social links or existing-code modifications.
 
 ## Report code feedback
 
@@ -40,19 +58,21 @@ If only a remaining number is shown, report it without inventing the total. The 
 
 Amounts are **dated self-reported snapshots**, not live Muse availability. Copying a code is not redeeming it. Missing or incomplete values display **Not reported**.
 
-## Automatic Issue-to-Draft-PR
+## Automatic Issue-to-PR and publication
 
-New-code Issue Forms trigger [Issue to Draft PR](.github/workflows/issue-to-pr.yml) when opened or edited. Reopening an existing code Issue does **not** rerun the original code-submission bot. It uses trusted source code on `main`, treats submitted text as untrusted data, checks duplicates, and creates a separate branch named `auto/issue-<NUMBER>-<TYPE>`. It proposes a change **only to `data/invites.json`** and opens a **Draft PR**. The workflow comments on the originating Issue with the PR link or the reason the report requires manual review. **The Issue stays open during Draft PR review.** Generated PRs do not include GitHub's `Closes #` keywords, which could close an Issue before the acceptance comment is posted.
+**New invite codes:** the [Issue to Draft PR workflow](.github/workflows/issue-to-pr.yml) also creates **Ready PRs** for eligible new GitHub-owned codes despite its historical name. It executes trusted `main` code on Issue creation, edits or reopening; validates the two contributor confirmations, source selection and code format; checks the catalog; then writes only independent `data/invite-records/<id>.json` files on a dedicated `auto/issue-<NUMBER>-invite` branch. A single Issue may contain **1–10 distinct new codes**; grouped submissions cannot share quota figures. The bot comments with a PR link or clear correction instructions.
 
-**Existing code comments use a separate workflow:** [Reopen Code Feedback Issue](.github/workflows/reopen-code-feedback.yml) processes a human comment on the mapped original Issue. After reopening a closed Issue for review, it parses only explicitly structured redemption reports or confirmed owner quota updates. Eligible reports become independent, review-only Draft PRs from current `main`, one branch per comment; other messages stay for manual review. This workflow never auto-merges or promotes community feedback into official Muse verification. The original code Issue remains the discussion thread and is not auto-closed after a feedback review.
+**Automatic GitHub-code path:** a complete, new `GitHub (my own code)` submission gets a **Ready PR**. [Conditional PR auto-merge](.github/workflows/auto-merge.yml) independently re-reads the original open Issue, validates the contributor's actual checklist, compares **every changed JSON file** against deterministic expected records from the current catalog and verifies bot provenance. No duplicate code or code/update/extra-file change qualifies. It then requires successful validation for the exact PR head, an up-to-date `main`, clean mergeability and no blocking review/label/command before squash-merging. Codes publish as **`unverified`**, not validated by Muse.
 
-New feedback and count forms require the listing platform. The Issue bot checks the selected platform against the code's cataloged source; if it conflicts, it requests manual review rather than changing the other platform's listing. Old Issues without the field remain backward compatible.
+**Review-only path:** new codes sourced from Threads, X or Facebook require an original public post link and a **Draft PR** for human source/attribution review. Existing-code updates, quota/feedback reports, ownership mismatches, ambiguous/invalid sources and duplicate codes must **not** use new-code auto-merge. Invalid or missing contributor confirmations never authorize publication: keep the original Issue open and guide the contributor to edit it; do not tick the checkboxes for them or require a duplicate Issue.
 
-Threads, X and Facebook Issues with a valid-looking **original post permalink** may propose an **unverified** Draft PR; maintainers must confirm the post actually contains the code and credits the correct author. Profile-only, Facebook share-shortlink, malformed, duplicated or ambiguous sources require manual review. Issue reporters are never automatically treated as owners of other platforms' accounts.
+**Canonical feedback comments:** [Reopen Code Feedback Issue](.github/workflows/reopen-code-feedback.yml) handles human comments on each published code's mapped Issue. It can reopen a closed thread and propose independent review-only Draft PRs for correctly structured usage, worked/not-working reports and GitHub-owner quota changes. Ordinary discussion stays in the existing Issue; posting a comment is not automatic status verification. Older standalone count/feedback Issue Forms remain accepted for compatibility and must match the published source platform.
 
-No Issue content is published automatically. Draft PRs created by this workflow are **not included in publicly hosted PR previews** until a maintainer marks them ready for review. Once ready, maintainers inspect the proposal and CI/preview, then merge to `main` to deploy. After successful GitHub Pages deployment, trusted automation checks that the merged PR is included in the deployed commit and that the code's production detail is accessible. It posts a comment linking to **https://muse.eplus.dev/codes/CODE/** on the original Issue **before** closing it. If deployment, page verification or commenting fails, the Issue remains open for a later successful deployment. Repeated runs never post duplicate acceptance comments. Repeated Issues or conflicting values do not create duplicate proposals.
+**Deployment and closure:** only merged `main` is deployed. The trusted [Pages workflow](.github/workflows/pages.yml) verifies the live catalog, code detail and merged commit, then [posts the canonical detail link before closing](scripts/close-accepted-issues.mjs) an accepted new-code/legacy report Issue. If deployment, validation or posting the comment fails, keep the Issue open. The original Issue remains the permanent feedback thread and must **not** be automatically re-closed after later feedback comments reopen it. Comment-origin PRs currently do **not** receive an additional post-deployment acceptance comment.
 
-**One-time setup:** if GitHub denies PR creation, enable **Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests** (subject to organization policy). No custom token is required. Retry using **Actions → Issue to Draft PR → Run workflow** and enter the original Issue number. The automation never force-pushes or auto-merges.
+**Setup and recovery:** GitHub Actions needs permission to create PRs (**Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests**, when permitted by organization policy). If the bot could not create a PR, rerun **Actions → Issue to Draft PR → Run workflow** for the **original Issue number**. Because PRs made with `GITHUB_TOKEN` may not trigger standard PR workflows, the bot explicitly dispatches validation. A trusted auto-merge also explicitly dispatches Pages; no personal token is needed. Never force-push the user's Issue/branch history.
+
+For the exact decision diagram and different Issue closure rules, see [Contribution flow](docs/CONTRIBUTION_FLOW.md).
 
 ## Contribute code or documentation
 
@@ -60,7 +80,7 @@ No Issue content is published automatically. Draft PRs created by this workflow 
 2. Branch from the latest `main` (or fork the repo and create a branch from its `main`). Use one branch per independent change.
 3. Make a focused edit, preserve existing SEO text/canonical unless explicitly authorized, and run the checks below.
 4. Open a PR **targeting `main`**, describe what changed, link related Issues, and note any data, SEO or UI impact.
-5. Review the CI results, relevant pages and Preview if eligible. A maintainer merges approved changes. **Only a merge to `main` publishes production.**
+5. Review the CI results, relevant pages and Preview if eligible. A maintainer reviews sensitive changes; authorized Ready PRs and eligible low-risk documentation PRs may merge through the trusted conditional workflow. **Only a merge to `main` publishes production.**
 
 Do not directly push to `main`, force-push rewritten contributor history, base unrelated work on an unmerged PR, invent invitation details, or add promotional links to unrelated GitHub repositories.
 
@@ -138,7 +158,7 @@ Historical contributor handles are kept for attribution. Listings do not mean th
 4. Run validation, link audit and tests; check the generated preview on relevant URLs.
 5. Merge the approved PR into `main`. GitHub Pages then deploys production from trusted source.
 
-Issue Forms are **not auto-publication**. Never auto-merge arbitrary user-submitted catalog data.
+Issue Forms do **not** establish Muse validity. Auto-publication is allowed only for new, self-reported GitHub codes when the contributor completed both confirmations, the trusted bot generated exactly matching new JSON records, and CI passes. Never auto-merge arbitrary submitted data, social sources or existing-code updates.
 
 ## Community and security
 

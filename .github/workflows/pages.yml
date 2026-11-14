@@ -51,26 +51,15 @@ jobs:
         run: |
           test -s assets/social-preview.png
           node -e 'const b = require("node:fs").readFileSync("assets/social-preview.png"); if(b.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a" || b.readUInt32BE(16) !== 1200 || b.readUInt32BE(20) !== 630) { throw Error("Invalid OG image: expected PNG 1200x630"); } console.log("Static OG PNG verified: 1200x630");'
-      - name: Validate production data and preview utilities
+      - name: Validate production data and preview utilities (shared PR gate)
+        run: bash scripts/check-predeploy.sh
+      - name: Check optional Telegram bot before deployment
         run: |
-          node scripts/validate.mjs
-          node scripts/audit-links.mjs
-          node --test scripts/validate.test.mjs scripts/preview.test.mjs scripts/preview-fallback.test.mjs scripts/audit-links.test.mjs
+          node --check telegram/bot.mjs
+          node --check telegram/github.mjs
           node --check telegram/server.mjs
+          node --check telegram/register-webhook.mjs
           node --test telegram/telegram.test.mjs
-          node --check scripts/site-pages.mjs
-          node --test scripts/site-pages.test.mjs scripts/verify-production.test.mjs scripts/seo-aeo.test.mjs scripts/page-skeleton.test.mjs scripts/directory-features.test.mjs scripts/copied-codes.test.mjs scripts/site-ui.test.mjs scripts/market-layout.test.mjs scripts/code-issue-map.test.mjs scripts/feedback-comment-to-pr.test.mjs
-          node --check scripts/verify-production.mjs
-          node --check assets/app.js
-          node --check assets/detail.js
-          node --check assets/site-ui.js
-          node --check scripts/build-pages.mjs
-          node --check scripts/code-issue-map.mjs
-          node --check scripts/reopen-code-feedback.mjs
-          node --check scripts/feedback-comment-to-pr.mjs
-          node --check scripts/post-preview-status.mjs
-          node --check scripts/close-accepted-issues.mjs
-          node --test scripts/close-accepted-issues.test.mjs
       - name: Build main site and eligible PR previews
         env:
           GH_TOKEN: ${{ github.token }}
@@ -78,6 +67,10 @@ jobs:
       - name: Verify production and generated preview files
         run: |
           test -s _site/index.html
+          test -s _site/countries/index.html
+          test -s _site/assets/countries.js
+          test -s _site/assets/countries.css
+          test -s _site/data/world-countries.json
           test -s _site/404.html
           test -s _site/llms.txt
           test -s _site/assets/app.js
@@ -100,12 +93,18 @@ jobs:
           }
           const expectedUrls = [
             'https://muse.eplus.dev/',
+            'https://muse.eplus.dev/countries/',
             ...entries.map(({code}) => 'https://muse.eplus.dev/codes/' + code + '/')
           ];
           const sitemap = fs.readFileSync('_site/sitemap.xml', 'utf8');
           const actualUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
           if (JSON.stringify(actualUrls) !== JSON.stringify(expectedUrls)) {
-            throw Error('Production sitemap must include Home and every published code exactly once');
+            throw Error('Production sitemap must include Home, Country map and every published code exactly once');
+          }
+          const countryPage = fs.readFileSync('_site/countries/index.html','utf8');
+          if(!countryPage.includes('rel="canonical" href="https://muse.eplus.dev/countries/"') ||
+             !countryPage.includes('name="robots" content="index,follow"')) {
+            throw Error('Country page missing production canonical or index robots');
           }
           for (const {code} of entries) {
             const html = fs.readFileSync('_site/codes/' + code + '/index.html', 'utf8');
@@ -131,6 +130,16 @@ jobs:
             const metadata = JSON.parse(fs.readFileSync(path+'preview-meta.json','utf8'));
             if (metadata.detail_pages !== (preview.detail_pages ?? 0)) {
               throw Error('Mismatched deep-preview count #'+preview.number);
+            }
+            if (fs.existsSync(path+'countries/index.html')) {
+              const country = fs.readFileSync(path+'countries/index.html','utf8');
+              if (!country.includes('noindex,nofollow,noarchive') ||
+                  !country.includes('<base href="/pr-preview/pr-'+preview.number+'/countries/">') ||
+                  !fs.existsSync(path+'assets/countries.css') ||
+                  !fs.existsSync(path+'assets/countries.js') ||
+                  !fs.existsSync(path+'data/world-countries.json')) {
+                throw Error('Incomplete nested map preview #'+preview.number);
+              }
             }
             if (metadata.detail_pages > 0) {
               const list = JSON.parse(fs.readFileSync(path+'data/invites.json','utf8'));
