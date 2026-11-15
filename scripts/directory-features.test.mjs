@@ -278,7 +278,7 @@ test("owner-count comment requires real, consistent figures before Safari copy",
 
 test("guided mobile owner count fields generate the canonical GitHub report", () => {
   const report = features.ownerCountComment("DPNIHH", "3", "", "");
-  assert.match(report, /^Code: DPNIHH\\nUpdate type: Owner count\\nRemaining invites: 3/m);
+  assert.match(report, /^Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 3/m);
   const preparedRemaining = features.prepareOwnerCountComment(report);
   assert.equal(preparedRemaining.error, undefined);
   assert.match(preparedRemaining.text, /Remaining invites: 3/);
@@ -292,15 +292,15 @@ test("guided mobile owner count fields generate the canonical GitHub report", ()
 
   const helper = read("assets/directory-features.js");
   const style = read("assets/styles.css");
-  assert.match(helper, /remainingInput\\.inputMode = "numeric"/);
-  assert.match(helper, /remainingInput\\.placeholder = "e\\.g\\. 3"/);
-  assert.match(helper, /optionalSummary\\.textContent = "Have total and used counts\\? \\(optional\\)"/);
-  assert.match(helper, /commentEditor\\.open = !isCount/);
-  assert.match(helper, /textarea\\.value = isCount \\? ownerCountComment\\(code\\)/);
-  assert.match(helper, /copy\\.textContent = isCount \\? "Copy report" : "Copy comment"/);
-  assert.match(helper, /countFields\\.hidden = !isCount/);
-  assert.match(style, /\\.feedback-count-fields\\[hidden\\]\\{display:none\\}/);
-  assert.match(style, /\\.feedback-count-grid\\{display:grid;grid-template-columns:repeat\\(2,minmax\\(0,1fr\\)\\)/);
+  assert.match(helper, /remainingInput\.inputMode = "numeric"/);
+  assert.match(helper, /remainingInput\.placeholder = "e\.g\. 3"/);
+  assert.match(helper, /optionalSummary\.textContent = "Have total and used counts\? \(optional\)"/);
+  assert.match(helper, /commentEditor\.open = !isCount/);
+  assert.match(helper, /textarea\.value = isCount \? ownerCountComment\(code\)/);
+  assert.match(helper, /copy\.textContent = isCount \? "Copy report" : "Copy comment"/);
+  assert.match(helper, /countFields\.hidden = !isCount/);
+  assert.match(style, /\.feedback-count-fields\[hidden\]\{display:none\}/);
+  assert.match(style, /\.feedback-count-grid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
 
 test("homepage token potential totals only dated reported remaining uses", () => {
