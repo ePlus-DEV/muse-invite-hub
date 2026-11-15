@@ -1,11 +1,12 @@
 import { planIssueChange, isAutoPublishableNewGithubInvite, AUTO_PUBLISH_NEW_INVITE_MARKER } from "./issue-to-pr.mjs";
 import { changedRecord, changedRecords } from "./catalog.mjs";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import {
   AUTO_MERGE_MAINTAINER, AUTO_MERGE_BLOCK_LABEL,
   getMaintainerAuthorization, ciHasPassed, autoMergeDecision,
-  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR, botApprovalDecision
+  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR, needsEplusBotReview
 } from "./auto-merge.mjs";
 
 const HEAD="a".repeat(40);
@@ -276,6 +277,24 @@ test("existing, social, missing-consent or edited Issues cannot trigger auto-pub
   assert.equal(verifyNewGithubInvitePR({...d,catalog:duplicate}),false);
 });
 
+test("bot-authored new Issue PR uses full trusted gate without self-review",()=>{
+  const data=botProposal();
+  const authored={...data.pr,user:{login:"eplus-bot"}};
+  const checked={...data,pr:authored};
+  assert.equal(verifyNewGithubInvitePR(checked),true);
+  const decision=autoMergeDecision({
+    pr:authored,files:data.files,newInviteEligible:verifyNewGithubInvitePR(checked),
+    runs:[run()]
+  });
+  assert.equal(decision.eligible,true);
+  assert.equal(decision.method,"verified-new-github-invite");
+  assert.equal(needsEplusBotReview({
+    pr:authored,files:data.files,newInviteEligible:true,runs:[run()]
+  }).required,false,"eplus-bot cannot approve a PR authored by eplus-bot");
+  const fake={...authored,user:{login:"outsider"}};
+  assert.equal(verifyNewGithubInvitePR({...checked,pr:fake}),false);
+});
+
 test("untrusted PR metadata and modified records cannot spoof automated bot source",()=>{
   const d=botProposal();
   const broken=[
@@ -317,60 +336,84 @@ test("unverified auto-publish still obeys all global stop conditions",()=>{
   }).eligible,false);
 });
 
-
-test("ePlus GitHub App reviews verified new code only after current-head CI and branch sync",()=>{
-  const d=botProposal();
-  const app="eplus-reviewer[bot]";
-  const allowed=botApprovalDecision({
-    pr:{...d.pr,mergeable_state:"unstable"},newInviteEligible:verifyNewGithubInvitePR(d),
-    files:d.files,runs:[run()],botLogin:app,behindBy:0
-  });
-  assert.deepEqual(allowed,{eligible:true,sha:HEAD,method:"verified-new-github-invite"});
-  for(const changes of [
-    {behindBy:1},
-    {runs:[run(HEAD,"failure")]},
-    {botLogin:"github-actions[bot]"},
-    {botLogin:""},
-    {pr:{...d.pr,mergeable_state:"dirty"}},
-    {pr:{...d.pr,mergeable:false}},
-    {pr:{...d.pr,draft:true}},
-    {pr:{...d.pr,labels:[{name:"do-not-merge"}]}},
-    {reviews:[review("CHANGES_REQUESTED","security-reviewer")]},
-    {comments:[cmd("/automerge off")]}
-  ]) {
-    assert.equal(botApprovalDecision({
-      pr:{...d.pr,mergeable_state:"unstable"},
-      newInviteEligible:true,files:d.files,runs:[run()],botLogin:app,behindBy:0,...changes
-    }).eligible,false,JSON.stringify(changes));
-  }
-  assert.equal(botApprovalDecision({
-    pr:{...d.pr,mergeable_state:"unstable"},newInviteEligible:true,files:d.files,
-    runs:[run()],botLogin:app,behindBy:0,
-    reviews:[review("APPROVED",app,HEAD)]
-  }).eligible,false,"do not create duplicate bot reviews for the same commit");
+test("ePlus Bot is a workflow name, not a separate App or a forged approval",()=>{
+  const verified=botProposal();
+  assert.deepEqual(autoMergeDecision({
+    pr:{...verified.pr,mergeable_state:"unstable"},
+    files:verified.files,newInviteEligible:verifyNewGithubInvitePR(verified),
+    runs:[run()]
+  }),{eligible:true,sha:HEAD,method:"verified-new-github-invite"});
+  const unverified={...verified.pr,mergeable_state:"unstable"};
+  assert.equal(autoMergeDecision({
+    pr:unverified,files:verified.files,runs:[run()]
+  }).eligible,false,"unstable status never bypasses independent Issue verification");
+  const arbitrary=pr({mergeable_state:"unstable",user:{login:"hoangsvit"},changed_files:1});
+  assert.equal(autoMergeDecision({
+    pr:arbitrary,files:[mdFile("README.md")],runs:[run()]
+  }).eligible,false,"docs must still be clean, even if otherwise default-safe");
+  assert.equal(autoMergeDecision({
+    pr:{...verified.pr,mergeable_state:"dirty"},
+    files:verified.files,newInviteEligible:true,runs:[run()]
+  }).eligible,false);
+  assert.equal(autoMergeDecision({
+    pr:{...verified.pr,mergeable_state:"unstable"},files:verified.files,
+    newInviteEligible:true,runs:[run()],
+    comments:[cmd("/automerge off")]
+  }).eligible,false);
+  assert.equal(autoMergeDecision({
+    pr:{...verified.pr,mergeable_state:"unstable"},files:verified.files,
+    newInviteEligible:true,runs:[run(HEAD,"failure")]
+  }).eligible,false);
 });
 
-test("ePlus bot never approves arbitrary code PRs without human authorization",()=>{
-  const app="eplus-reviewer[bot]";
-  const codePr=pr({user:{login:"developer"},changed_files:1,mergeable_state:"unstable"});
-  const file=[mdFile("scripts/auto-merge.mjs")];
-  assert.equal(botApprovalDecision({
-    pr:codePr,files:file,runs:[run()],botLogin:app
-  }).eligible,false);
-  assert.equal(botApprovalDecision({
-    pr:codePr,files:file,runs:[run()],botLogin:app,
-    comments:[cmd("/automerge "+HEAD)]
-  }).eligible,true,"maintainer authorization of exact SHA permits independent App review");
-  assert.equal(botApprovalDecision({
-    pr:codePr,files:file,runs:[run()],botLogin:app,
-    comments:[cmd("/automerge "+NEXT)]
-  }).eligible,false);
-  const docs=maintainerDocs({mergeable_state:"unstable"});
-  assert.equal(botApprovalDecision({
-    pr:docs,files:[mdFile("README.md")],runs:[run()],botLogin:app
-  }).method,"default-safe-docs");
-  assert.equal(botApprovalDecision({
-    pr:pr({user:{login:app},mergeable_state:"unstable"}),files:[mdFile("README.md")],
-    runs:[run()],botLogin:app,newInviteEligible:true
-  }).eligible,false,"App cannot self-approve an App-authored PR");
+
+test("real eplus-bot only reviews verified new GitHub invite PR head",()=>{
+  const data=botProposal();
+  const eligible={pr:{...data.pr,mergeable_state:"unstable"},
+    files:data.files,newInviteEligible:verifyNewGithubInvitePR(data),runs:[run()]};
+  assert.deepEqual(needsEplusBotReview(eligible),{required:true,sha:HEAD});
+  assert.equal(needsEplusBotReview({...eligible,
+    reviews:[review("APPROVED","eplus-bot",HEAD)]}).required,false);
+  assert.equal(needsEplusBotReview({...eligible,
+    reviews:[review("APPROVED","eplus-bot",NEXT)]}).required,true);
+  assert.equal(needsEplusBotReview({...eligible,
+    reviews:[review("CHANGES_REQUESTED","reviewer")]}).required,false);
+  for(const changes of [
+    {newInviteEligible:false},
+    {runs:[run(HEAD,"failure")]},
+    {pr:{...data.pr,draft:true}},
+    {pr:{...data.pr,user:{login:"eplus-bot"}}},
+    {pr:{...data.pr,mergeable_state:"dirty"}},
+    {pr:{...data.pr,labels:[{name:"do-not-merge"}]}}
+  ]) assert.equal(needsEplusBotReview({...eligible,...changes}).required,false,
+    JSON.stringify(changes));
+  assert.equal(needsEplusBotReview({...eligible,
+    comments:[cmd("/automerge off")]}).required,false);
+  assert.equal(needsEplusBotReview({
+    pr:pr({user:{login:"developer"},changed_files:1}),
+    files:[mdFile("scripts/main.mjs")],
+    newInviteEligible:false,runs:[run()]
+  }).required,false,"passing CI never auto-approves arbitrary code PRs");
+});
+
+
+test("actual eplus-bot credential and exact-head review are wired safely",()=>{
+  const workflow=readFileSync(new URL("../.github/workflows/auto-merge.yml",import.meta.url),"utf8");
+  const manual=readFileSync(new URL("../.github/workflows/eplus-bot-review-command.yml",import.meta.url),"utf8");
+  assert.match(workflow,/EPLUS_BOT_TOKEN: \$\{\{ secrets\.EPLUS_BOT_TOKEN \}\}/);
+  const proposer=readFileSync(new URL("../.github/workflows/issue-to-pr.yml",import.meta.url),"utf8");
+  assert.match(proposer,/GH_TOKEN: \$\{\{ secrets\.EPLUS_BOT_TOKEN \}\}/);
+  assert.match(proposer,/gh api user --jq \.login/);
+  assert.doesNotMatch(proposer,/GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(workflow,/identity\.json\(\)\)\.login!=="eplus-bot"/);
+  assert.match(workflow,/event:"APPROVE",commit_id:decision\.sha/);
+  assert.match(workflow,/reviewGate\.required/);
+  assert.match(workflow,/sourceIssueUpdatedAt/);
+  assert.doesNotMatch(workflow,/EPLUS_REVIEW_BOT_CLIENT_ID|EPLUS_REVIEW_BOT_PRIVATE_KEY/);
+  assert.match(manual,/github\.event\.comment\.body == '@eplus-bot review'/);
+  assert.match(manual,/test "\$AUTHOR" != "eplus-bot"/);
+  assert.match(manual,/\.head\.sha == \$sha/);
+  assert.match(manual,/\.status == "completed" and \.conclusion == "success"/);
+  assert.match(manual,/secrets\.EPLUS_BOT_TOKEN/);
+  assert.doesNotMatch(manual,/actions\/checkout/);
 });
