@@ -463,3 +463,22 @@ test("real eplus-bot Issue PR workflow never attempts to update legacy bot comme
   assert.match(workflow,/test "\$\(gh api user --jq \.login\)" = "eplus-bot"/);
   assert.doesNotMatch(workflow,/GH_TOKEN: \$\{\{ github\.token \}\}/);
 });
+
+
+test("Issue #167 promotional text with explicit Code line still produces a safe new invite proposal",()=>{
+  const pasted="Check out Muse, your personal AI agent. Redeem my code in Settings within 48 hours of joining and we'll both get 1 billion Muse tokens.\n\nCode: 8IJ5BD";
+  const fullBody=share.replace("### Invite code\n\nPNSMZZ","### Invite code\n\n"+pasted)
+    .replace("### Invite limit (optional; self-reported)\n\n30",
+      "### Invite limit (optional; self-reported)\n\n_No response_");
+  const incoming=issue(167,"8IJ5BD",fullBody,"devampatel1208-del");
+  const planned=planIssueChange(incoming,[item]);
+  assert.equal(planned.outcome,"proposal");
+  assert.equal(planned.code,"8IJ5BD");
+  assert.equal(planned.branch,"auto/issue-167-invite");
+  const record=planned.data.find(x=>x.code==="8IJ5BD");
+  assert.equal(record.status,"unverified");
+  assert.equal(record.reportedCapacity,undefined);
+  assert.equal(record.reportedUses,undefined);
+  assert.equal(record.submittedBy,"devampatel1208-del");
+  assert.deepEqual(validateCatalog(planned.data),[]);
+});
