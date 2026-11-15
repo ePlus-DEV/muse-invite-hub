@@ -25,8 +25,9 @@ There are **three different routes**. Passing CI does **not** prove that a code 
 | PR type | Default behavior |
 | --- | --- |
 | **New, self-reported GitHub invite code** from a complete Issue, not yet in the catalog | **Automatic:** trusted Issue bot makes a Ready PR, then trusted automation checks consent, source, original Issue, exact new JSON record(s), duplicates, current-head CI and mergeability before merging. Listing remains `unverified`. |
+| **New code cited from a public Threads, X or Facebook post** | **Automatic as unverified report:** only one new code, a strict original HTTPS post permalink on the selected platform, both contributor checkboxes, no owner-count claims, no duplicate, a bot-only one-file diff and passing exact-head CI. No promise that the URL still works, the post really contains the code or Muse accepts it. |
 | **Documentation-only PR authored by @hoangsvit** | **Automatic** after green CI if Ready, only `README.md`, `CONTRIBUTING.md` or Markdown under `docs/` (1–15 changed files, no deletion/rename/mixed code). |
-| **Social-source, existing-code, feedback, quota, code, UI, workflow or other PRs** | **Manual review:** keep generated community proposals in Draft until reviewed; `@hoangsvit` may authorize merge of the current Ready PR head. |
+| **Existing-code, ambiguous social-source, feedback, quota, code, UI, workflow or other PRs** | **Manual review:** keep generated community proposals in Draft until reviewed; `@hoangsvit` may authorize merge of the current Ready PR head. |
 
 ### Real ePlus Bot reviews (same account as Free Tier Hub)
 
@@ -34,14 +35,14 @@ Muse Invite Hub reuses the **existing GitHub account `@eplus-bot`** and reposito
 
 **One-time setup:** Open Muse repository **Settings → Secrets and variables → Actions**, and create a secret named `EPLUS_BOT_TOKEN` using the existing eplus-bot account's authorized token. Alternatively give this repository access to an **organization** secret of that name. Secrets owned by Free Tier Hub are not automatically shared with Muse. The account must have permission to review PRs here. Never paste the token into Issues, commits or CI output. No GitHub App Client ID or private key is required.
 
-After configuration, `Issue to Draft PR` uses `@eplus-bot` to create PRs, and `Conditional PR auto-merge` (every 15 minutes plus event triggers) reconciles safe branches, dispatches CI and conditionally merges verified new invites. The bot submits real APPROVED reviews only for eligible PRs created by `github-actions[bot]` (never its own PRs). Missing or invalid credentials fail closed at proposal creation. Existing-code updates, social sources, owner quotas, feedback and changes to application code/workflows remain manual.
+After configuration, `Issue to Draft PR` uses `@eplus-bot` to create PRs, and `Conditional PR auto-merge` (every 15 minutes plus event triggers) reconciles safe branches, dispatches CI and conditionally merges verified new invites. The bot submits real APPROVED reviews only for eligible PRs created by `github-actions[bot]` (never its own PRs). Missing or invalid credentials fail closed at proposal creation. Existing-code updates, ambiguous or multi-code social sources, owner quotas, feedback and changes to application code/workflows remain manual. A user-submitted valid post URL is a reference only, not independent verification; contributors are responsible for accurate submissions and visitors should verify codes before using them.
 
 A repository OWNER/MEMBER/COLLABORATOR can ask for a real review on a green **Ready** PR by commenting exactly `@eplus-bot review`. This command cannot approve a Draft, blocked or eplus-bot-authored PR, and never by itself authorizes automatic merging of arbitrary code/workflow changes.
 For the manual route, after reviewing the source and diff, @hoangsvit may approve the current HEAD in GitHub (where possible) **or** comment `/automerge FULL_40_CHARACTER_HEAD_SHA` on the PR. A new commit invalidates that authorization. The trusted workflow checks current-head validation, GitHub mergeability and the up-to-date `main` branch, then uses squash merge and explicitly dispatches the trusted Pages deployment.
 
 **All three routes can be blocked:** `do-not-merge` label, `/automerge off` by @hoangsvit, Draft status, an unresolved `CHANGES_REQUESTED` review, failed or in-progress CI, merge conflict, or a branch behind `main`. Do not use auto-merge to bypass branch protection. GitHub's built-in repository-level **Allow auto-merge** setting is separate and currently disabled; this workflow implements the conditional policy without a personal access token.
 
-For the GitHub Issue route, the submitting account is recorded as a community reporter, **not independently proven to own the code**. Auto-publication is not live redemption validation. Do not automatically publish third-party social links or existing-code modifications.
+For the GitHub Issue route, the submitting account is recorded as a community reporter, **not independently proven to own the code**. Auto-publication is not live redemption validation. Publish newly submitted strict social post permalinks only with an explicit unverified disclaimer; do not automatically modify existing codes or trust reported social ownership/quotas.
 
 ## Report code feedback
 

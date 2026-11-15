@@ -1,7 +1,7 @@
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
-import { planIssueChange, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance } from "./issue-to-pr.mjs";
+import { planIssueChange, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance, isAutoPublishableNewSocialInvite } from "./issue-to-pr.mjs";
 import { validateCatalog } from "./validate.mjs";
 import { changedRecords } from "./catalog.mjs";
 
@@ -483,4 +483,31 @@ test("Issue #167 promotional text with explicit Code line still produces a safe 
   assert.equal(record.reportedUses,undefined);
   assert.equal(record.submittedBy,"devampatel1208-del");
   assert.deepEqual(validateCatalog(planned.data),[]);
+});
+
+
+test("new public-post social code is auto-listable as unverified with user responsibility",()=>{
+  const publicX=updatedShare("X (Twitter) (public code I found)",
+    "https://x.com/xiyaodao/status/2121891507309314522").replace("18I70N","BM69LI");
+  const incoming=issue(163,"[Invite] BM69LI",publicX,"xiyaodaozhu");
+  const planned=planIssueChange(incoming,[item]);
+  assert.equal(planned.outcome,"proposal");
+  assert.equal(isAutoPublishableNewSocialInvite(incoming,planned),true);
+  const entry=planned.data.find(row=>row.code==="BM69LI");
+  assert.equal(entry.status,"unverified");
+  assert.equal(entry.sourceUrl,"https://x.com/xiyaodao/status/2121891507309314522");
+  assert.equal(entry.submittedBy,undefined);
+  assert.equal(entry.reportedRemaining,undefined);
+  assert.match(planned.notice,/NOT independently verified/);
+  for(const bad of [
+    incoming.body.replace("x.com/xiyaodao/status/2121891507309314522","x.com/xiyaodao"),
+    incoming.body.replace("- [x] I own this public code","- [ ] I own this public code"),
+    incoming.body.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+      "### Remaining invites (optional; self-reported)\n\n30")
+  ]){
+    const altered={...incoming,body:bad};
+    let next;
+    try{next=planIssueChange(altered,[item])}catch{continue}
+    assert.equal(isAutoPublishableNewSocialInvite(altered,next),false);
+  }
 });

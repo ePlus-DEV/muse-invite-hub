@@ -12,6 +12,7 @@ const CODE_PATTERN = /^[A-Z0-9-]{4,32}$/;
 const USER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 const GITHUB_OWN = "GitHub (my own code)";
 export const AUTO_PUBLISH_NEW_INVITE_MARKER = "<!-- muse-auto-publish-new-github-v1 -->";
+export const AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER = "<!-- muse-auto-publish-new-public-post-v1 -->";
 const THREADS_FOUND = "Threads (public code I found)";
 const X_FOUND = "X (Twitter) (public code I found)";
 const FACEBOOK_FOUND = "Facebook (public code I found)";
@@ -320,7 +321,7 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
         feedbackIssueNumber:issue.number,
         ...(socialSubmission
           ? {sourceUrl:social.url, note:"Public "+social.platform+" code reported in issue #"+issue.number+
-              "; original post and Muse redemption require human review."}
+              "; original post content and Muse redemption are unverified community reports."}
           : {submittedBy:issue.user.login, note:"Community-submitted in issue #"+issue.number+
               "; redemption not independently verified."})
       };
@@ -336,7 +337,7 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
         else notice="Usage numbers were absent or incomplete; no available-slot count has been guessed.";
       } else {
         notice=social.platform+" @"+social.handle+" is the cited public source, NOT the GitHub reporter or a verified code owner. "+
-          "Verify the original post and code before merging; do NOT invent availability or redemption results.";
+          "This is a contributor-supplied post URL, NOT independently verified; visitors must check it themselves. Do NOT invent availability or redemption results.";
       }
       const firstCommunity=data.findIndex(item=>item.featured!==true);
       data.splice(firstCommunity<0?data.length:firstCommunity,0,entry);
@@ -422,6 +423,39 @@ export function isAutoPublishableNewGithubInvite(issue,proposal) {
       item.ownerConfirmed !== true &&
       item.featured !== true;
   });
+}
+
+// Public-post reports can be listed as unverified without independently
+// verifying their remote post contents. The reporter's checklist is required;
+// the URL must still be a strict HTTPS permalink on the selected platform.
+// Do not confer ownership or allow counts, existing-code updates or multi-code
+// social claims through this automatic path.
+export function isAutoPublishableNewSocialInvite(issue,proposal) {
+  if (!issue || issue.state!=="open" || issue.pull_request ||
+      !proposal || proposal.outcome!=="proposal" || proposal.kind!=="invite" ||
+      !hasRequiredInviteConfirmations(issue.body)) return false;
+  const f=readIssueFields(issue.body);
+  const selected=field(f,"Code source").trim();
+  if (![THREADS_FOUND,X_FOUND,FACEBOOK_FOUND].includes(selected)) return false;
+  const platform=SUBMISSION_PLATFORMS.get(selected);
+  const urlField=field(f,SOCIAL_FIELD).trim() || field(f,THREADS_FIELD).trim();
+  const social=parsePublicSource(urlField);
+  if (!social?.post || social.platform!==platform ||
+      proposal.action!=="add "+platform+" source") return false;
+  if (["Invite limit (optional; self-reported)","Uses so far (optional; self-reported)",
+       "Remaining invites (optional; self-reported)"].some(k=>field(f,k).trim())) return false;
+  const codes=proposal.codes||[proposal.code];
+  if(codes.length!==1) return false;
+  const entry=proposal.data.find(row=>row.code===codes[0]);
+  return Boolean(entry &&
+    entry.id==="community-issue-"+issue.number &&
+    entry.feedbackIssueNumber===issue.number &&
+    entry.sourceUrl===social.url &&
+    entry.status==="unverified" &&
+    entry.submittedBy===undefined && entry.submittedById===undefined &&
+    entry.ownerConfirmed!==true && entry.featured!==true &&
+    entry.reportedUses===undefined && entry.reportedCapacity===undefined &&
+    entry.reportedRemaining===undefined);
 }
 
 const apiRoot="https://api.github.com/repos/"+REPO+"/";
@@ -525,10 +559,12 @@ async function propose(issue,token) {
     });
     await api("POST","git/refs",token,{ref:"refs/heads/"+proposed.branch,sha:commit.sha});
   }
-  const autoPublish=isAutoPublishableNewGithubInvite(issue,proposed);
+  const socialAutoPublish=isAutoPublishableNewSocialInvite(issue,proposed);
+  const autoPublish=isAutoPublishableNewGithubInvite(issue,proposed)||socialAutoPublish;
   const title="data: review "+codesLabel+" "+proposed.kind+" (issue #"+issue.number+")";
   const body=[
-    autoPublish ? AUTO_PUBLISH_NEW_INVITE_MARKER : "",
+    autoPublish ? (socialAutoPublish
+      ? AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER : AUTO_PUBLISH_NEW_INVITE_MARKER) : "",
     autoPublish ? "## Automated community submission — automatic publication after validation" :
       "## Automated draft proposal",
     "",
@@ -539,13 +575,16 @@ async function propose(issue,token) {
     "",
     ...(autoPublish
       ? ["### Automatic publication checks",
-         "- [x] Contributor selected GitHub (my own code) and checked both confirmations",
+         socialAutoPublish
+           ? "- [x] Reporter selected a syntactically valid public post URL and checked both confirmations"
+           : "- [x] Contributor selected GitHub (my own code) and checked both confirmations",
          "- [x] New code only; data generated by the trusted Issue bot",
          "- [ ] Re-check Issue content, exact per-code records, duplicates and current main",
          "- [ ] Full CI must pass for the current PR head",
          "",
          "**Automatically publish as unverified only after all checks pass.** "+
-           "This does not independently verify Muse redemption or actual ownership."]
+           "This does not independently verify the source post, Muse redemption or actual ownership. "+
+           "Contributors are responsible for what they submit; visitors must check the original source and code themselves."]
       : ["### Required human checks",
          "- [ ] Verify the submitter, code and any ownership or usage claims",
          proposed.action.startsWith("add ") && proposed.action.endsWith(" source")
@@ -577,7 +616,8 @@ async function propose(issue,token) {
   }
   await comment(issue,token,autoPublish
     ? "Created [PR #"+pr.number+"]("+pr.html_url+") for **"+codesLabel+
-      "**. This new GitHub-sourced code is eligible for automatic publication "+
+      "**. This new "+(socialAutoPublish?"public-post-reported":"GitHub-sourced")+
+      " code is eligible for automatic publication "+
       "as **unverified** after CI, source/consent checks and duplicate checks pass. "+
       "The Issue stays open until successful deployment."
     : "Created [Draft PR #"+pr.number+"]("+pr.html_url+") for **"+codesLabel+
