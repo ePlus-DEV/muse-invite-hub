@@ -128,6 +128,47 @@
   }
 
 
+  // Validate the owner report before copying. A template with only placeholder
+  // values is not a quota report and must not be mistaken for a submission.
+  function prepareOwnerCountComment(text) {
+    const fields = {
+      "Remaining invites": null,
+      "Total invites": null,
+      "Used invites": null
+    };
+    const seen = new Set();
+    for (const line of text.split(/\r?\n/)) {
+      const hit = /^(Remaining invites|Total invites|Used invites):\s*(.*)$/.exec(line.trim());
+      if (!hit) continue;
+      const [, name, rawValue] = hit;
+      if (seen.has(name)) return {error: "Each invite count should appear only once."};
+      seen.add(name);
+      const value = rawValue.trim();
+      if (!value || /^\[(?:optional|enter actual number or leave blank)\]$/.test(value)) continue;
+      if (!/^\d{1,4}$/.test(value) || Number(value) > 1000) {
+        return {error: "Use actual whole-number invite counts between 0 and 1000."};
+      }
+      fields[name] = Number(value);
+    }
+    const remaining = fields["Remaining invites"];
+    const total = fields["Total invites"];
+    const used = fields["Used invites"];
+    if (remaining === null && (total === null || used === null)) {
+      return {error: "Enter your actual Remaining invites number, or both Total invites and Used invites, before copying."};
+    }
+    if ((total !== null && total < 1) ||
+        (total !== null && used !== null && used > total) ||
+        (remaining !== null && total !== null && remaining > total) ||
+        (remaining !== null && total !== null && used !== null && remaining !== total - used)) {
+      return {error: "The counts must be consistent: remaining = total − used."};
+    }
+    return {
+      text: text.replace(/\[enter actual number or leave blank\]|\[optional\]/g, "")
+        .replace(/Owner confirmation:.*$/m,
+          "Owner confirmation: I confirm these figures came from my own Muse invite screen.")
+    };
+  }
+
   // Existing GitHub Issues cannot prefill comments through a URL. Instead this
   // browser-only dialog prepares an editable comment, lets the visitor copy it,
   // and opens the ONE linked Issue. Never submit or reopen on mere page clicks.
@@ -197,22 +238,13 @@
           ownerCheckbox.focus();
           return;
         }
-        const countFields = {};
-        for (const line of text.split(/\r?\n/)) {
-          const hit = /^(Remaining invites|Total invites|Used invites):\s*(.*)$/.exec(line.trim());
-          if (hit) countFields[hit[1]] = hit[2].trim();
-        }
-        const values = Object.values(countFields);
-        const numbers = values.filter(value => /^\d{1,4}$/.test(value));
-        if (!numbers.length || values.some(value =>
-          value && !/^\d{1,4}$/.test(value) && !/^\[(?:optional|enter actual number or leave blank)\]$/.test(value))) {
-          feedbackStatus.textContent = "Enter a real remaining count, or a consistent total and used count.";
+        const prepared = prepareOwnerCountComment(text);
+        if (prepared.error) {
+          feedbackStatus.textContent = prepared.error;
           textarea.focus();
           return;
         }
-        text = text.replace(/\[enter actual number or leave blank\]|\[optional\]/g,"").replace(
-          /Owner confirmation:.*$/m,
-          "Owner confirmation: I confirm these figures came from my own Muse invite screen.");
+        text = prepared.text;
         textarea.value = text;
       }
       if (!text) {
@@ -220,15 +252,31 @@
         textarea.focus();
         return;
       }
+      let copied = false;
       try {
-        if (!navigator.clipboard || !window.isSecureContext) throw Error("Clipboard API unavailable");
-        await navigator.clipboard.writeText(text);
-        feedbackStatus.textContent = "Copied. Open the linked Issue, paste and submit the comment.";
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          copied = true;
+        }
       } catch {
+        // iOS Safari and embedded browsers can reject the async Clipboard API.
+      }
+      if (!copied) {
+        // Legacy selection-copy works on some Safari versions where writeText fails.
+        // Never report success unless the browser confirms the fallback succeeded.
         textarea.focus();
         textarea.select();
-        feedbackStatus.textContent = "Clipboard access was blocked. Copy the selected text manually, then open the Issue.";
+        textarea.setSelectionRange(0, textarea.value.length);
+        try {
+          copied = typeof document.execCommand === "function" &&
+            document.execCommand("copy") === true;
+        } catch {
+          copied = false;
+        }
       }
+      feedbackStatus.textContent = copied ?
+        "Copied. Open the linked Issue, paste and submit the comment." :
+        "Automatic copy was blocked. Long-press the selected comment and choose Copy, then open the Issue.";
     });
     close.addEventListener("click", () => dialog.close());
     dialog.addEventListener("close", () => {
@@ -258,7 +306,9 @@
         textarea.value = feedbackComment(code, outcome).replace("[add date]", localDate);
         open.href = quickFeedbackUrl(code, outcome, issueNumber);
         open.textContent = "Open Issue #" + issueNumber;
-        feedbackStatus.textContent = "No comment has been submitted. Copy the text before opening GitHub.";
+        feedbackStatus.textContent = outcome === "count" ?
+          "Enter your actual Remaining invites number, or both Total and Used. Then tap Copy comment." :
+          "No comment has been submitted. Copy the text before opening GitHub.";
         trigger = opener || document.activeElement;
         if (dialog.open) dialog.close();
         dialog.showModal();
@@ -387,5 +437,5 @@
 
   return { STORAGE_KEY, COPIED_STORAGE_KEY, MAX_SAVED, tokenPotential, parseSaved, parseCopied,
     rememberCopiedCode, activityDate, compareCodes, quickFeedbackUrl,
-    feedbackComment, issueNumberFor, openFeedbackDialog, enableTooltips };
+    feedbackComment, prepareOwnerCountComment, issueNumberFor, openFeedbackDialog, enableTooltips };
 });
