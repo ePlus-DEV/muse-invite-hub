@@ -1,0 +1,79 @@
+name: eplus-bot review command
+
+# Real @eplus-bot account, token shared by permission (not copied from Free Tier Hub).
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+concurrency:
+  group: muse-eplus-bot-review-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  review:
+    if: >-
+      github.event.issue.pull_request != null &&
+      github.event.comment.body == '@eplus-bot review' &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify independent bot token
+        env:
+          GH_TOKEN: ${{ secrets.EPLUS_BOT_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GH_TOKEN:-}" || { echo "::error::Configure EPLUS_BOT_TOKEN"; exit 1; }
+          test "$(gh api user --jq .login)" = "eplus-bot" || { echo "::error::Token must belong to eplus-bot"; exit 1; }
+
+      - name: Approve exact validated current head
+        env:
+          GH_TOKEN: ${{ secrets.EPLUS_BOT_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          PR="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
+          HEAD_SHA="$(jq -r '.head.sha' <<<"$PR")"
+          AUTHOR="$(jq -r '.user.login' <<<"$PR")"
+          jq -e --arg repo "$GITHUB_REPOSITORY" \
+            '.state == "open" and .draft == false and .base.ref == "main" and
+             .head.repo.full_name == $repo and .mergeable != false' <<<"$PR" >/dev/null
+          test "$AUTHOR" != "eplus-bot" || { echo "::error::Bot cannot review own PR"; exit 1; }
+          if jq -e 'any(.labels[]?; .name == "do-not-merge")' <<<"$PR" >/dev/null; then
+            echo "::error::do-not-merge blocks approval"
+            exit 1
+          fi
+          REVIEWS="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews?per_page=100" --paginate --slurp | jq -c 'add')"
+          if jq -e 'any(.[]; .state == "CHANGES_REQUESTED")' <<<"$REVIEWS" >/dev/null; then
+            echo "::error::Resolve CHANGES_REQUESTED review before approval"
+            exit 1
+          fi
+          if jq -e --arg sha "$HEAD_SHA" 'any(.[]; .user.login == "eplus-bot" and .state == "APPROVED" and .commit_id == $sha)' <<<"$REVIEWS" >/dev/null; then
+            echo "Already approved exact head"
+            exit 0
+          fi
+          RUNS="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/validate.yml/runs?head_sha=$HEAD_SHA&per_page=100")"
+          jq -e --arg sha "$HEAD_SHA" '
+            [.workflow_runs[] | select(
+               .head_sha == $sha and
+               (.event == "pull_request" or .event == "workflow_dispatch") and
+               .conclusion != "action_required")] |
+            sort_by(.created_at) | reverse | .[0] |
+            .status == "completed" and .conclusion == "success"
+          ' <<<"$RUNS" >/dev/null || {
+            echo "::error::Exact-head validation must pass before review"
+            exit 1
+          }
+          LATEST="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
+          jq -e --arg sha "$HEAD_SHA" '.state == "open" and .draft == false and .head.sha == $sha' <<<"$LATEST" >/dev/null
+          gh api --method POST "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews" \
+            -f event=APPROVE -f commit_id="$HEAD_SHA" \
+            -f body="Approved by @eplus-bot after trusted validation passed at exact head $HEAD_SHA."
+          echo "eplus-bot approved PR #$PR_NUMBER at $HEAD_SHA"
