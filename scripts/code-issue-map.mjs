@@ -6,12 +6,25 @@ const CODE = /^[A-Z0-9-]{4,32}$/;
 // Issue Forms accept one or more public invite codes. Never silently drop
 // malformed or duplicate tokens: each code must be reviewed individually.
 export function parseInviteCodes(value) {
-  const tokens = String(value ?? "").trim().toUpperCase().split(/[\s,;，；]+/).filter(Boolean);
-  if (tokens.length < 1 || tokens.length > 10 || tokens.some(code => !CODE.test(code)) ||
-      new Set(tokens).size !== tokens.length) {
-    throw Error("Invite code must contain 1–10 distinct 4–32 character codes (letters, digits or hyphens), separated by whitespace, commas or semicolons.");
+  const input=String(value ?? "").trim();
+  const tokens=input.toUpperCase().split(/[\s,;，；]+/).filter(Boolean);
+  const valid=tokens.length >= 1 && tokens.length <= 10 &&
+    tokens.every(code => CODE.test(code)) &&
+    new Set(tokens).size === tokens.length;
+  if (valid) return tokens;
+
+  // Some users paste Muse's full referral message into the Code field,
+  // with one standalone "Code: ABC123" line. Accept that explicit label,
+  // never guess a code by searching arbitrary promotional text. Multiple
+  // labelled codes and malformed labels remain invalid instead of selecting
+  // one silently. The original Issue consent/source checks still apply.
+  const labelled=input.split(/\r?\n/).filter(line =>
+    /^\s*(?:Invite\s+code|Code)\s*:/i.test(line));
+  if (labelled.length === 1) {
+    const exact=/^\s*(?:Invite\s+code|Code)\s*:\s*([A-Z0-9-]{4,32})\s*$/i.exec(labelled[0]);
+    if (exact) return [exact[1].toUpperCase()];
   }
-  return tokens;
+  throw Error("Invite code must contain 1–10 distinct 4–32 character codes (letters, digits or hyphens), separated by whitespace, commas or semicolons; or a single standalone 'Code: ABC123' line in a pasted referral message.");
 }
 
 

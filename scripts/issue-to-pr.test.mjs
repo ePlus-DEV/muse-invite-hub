@@ -1,4 +1,5 @@
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { planIssueChange, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance } from "./issue-to-pr.mjs";
 import { validateCatalog } from "./validate.mjs";
@@ -450,4 +451,36 @@ test("multiple code submissions reject duplicates, malformed tokens and shared q
   const existing=planIssueChange(issue(121,"[Invite]",makeCodes("PNSMZZ, BRAVO2")),[item,community]);
   assert.equal(existing.outcome,"needs-review");
   assert.match(existing.reason,/already/);
+});
+
+
+test("real eplus-bot Issue PR workflow never attempts to update legacy bot comments",()=>{
+  const source=readFileSync(new URL("./issue-to-pr.mjs",import.meta.url),"utf8");
+  assert.match(source,/entry\.user\?\.login==="eplus-bot"/);
+  assert.doesNotMatch(source,/messages\.find\(entry=>\["github-actions\[bot\]","eplus-bot"\]/);
+  const workflow=readFileSync(new URL("../.github/workflows/issue-to-pr.yml",import.meta.url),"utf8");
+  assert.match(workflow,/GH_TOKEN: \$\{\{ secrets\.EPLUS_BOT_TOKEN \}\}/);
+  assert.match(workflow,/test "\$\(gh api user --jq \.login\)" = "eplus-bot"/);
+  assert.doesNotMatch(workflow,/GH_TOKEN: \$\{\{ github\.token \}\}/);
+});
+
+
+test("Issue #167 promotional text with explicit Code line still produces a safe new invite proposal",()=>{
+  const pasted="Check out Muse, your personal AI agent. Redeem my code in Settings within 48 hours of joining and we'll both get 1 billion Muse tokens.\n\nCode: 8IJ5BD";
+  const fullBody=share.replace("### Invite code\n\nPNSMZZ","### Invite code\n\n"+pasted)
+    .replace("### Public confirmation or context (optional)",
+      "### Code source\n\nGitHub (my own code)\n\n### Public confirmation or context (optional)")
+    .replace("### Invite limit (optional; self-reported)\n\n30",
+      "### Invite limit (optional; self-reported)\n\n_No response_");
+  const incoming=issue(167,"8IJ5BD",fullBody,"devampatel1208-del");
+  const planned=planIssueChange(incoming,[item]);
+  assert.equal(planned.outcome,"proposal");
+  assert.equal(planned.code,"8IJ5BD");
+  assert.equal(planned.branch,"auto/issue-167-invite");
+  const record=planned.data.find(x=>x.code==="8IJ5BD");
+  assert.equal(record.status,"unverified");
+  assert.equal(record.reportedCapacity,undefined);
+  assert.equal(record.reportedUses,undefined);
+  assert.equal(record.submittedBy,"devampatel1208-del");
+  assert.deepEqual(validateCatalog(planned.data),[]);
 });
