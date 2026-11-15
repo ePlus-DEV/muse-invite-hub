@@ -277,6 +277,24 @@ test("existing, social, missing-consent or edited Issues cannot trigger auto-pub
   assert.equal(verifyNewGithubInvitePR({...d,catalog:duplicate}),false);
 });
 
+test("bot-authored new Issue PR uses full trusted gate without self-review",()=>{
+  const data=botProposal();
+  const authored={...data.pr,user:{login:"eplus-bot"}};
+  const checked={...data,pr:authored};
+  assert.equal(verifyNewGithubInvitePR(checked),true);
+  const decision=autoMergeDecision({
+    pr:authored,files:data.files,newInviteEligible:verifyNewGithubInvitePR(checked),
+    runs:[run()]
+  });
+  assert.equal(decision.eligible,true);
+  assert.equal(decision.method,"verified-new-github-invite");
+  assert.equal(needsEplusBotReview({
+    pr:authored,files:data.files,newInviteEligible:true,runs:[run()]
+  }).required,false,"eplus-bot cannot approve a PR authored by eplus-bot");
+  const fake={...authored,user:{login:"outsider"}};
+  assert.equal(verifyNewGithubInvitePR({...checked,pr:fake}),false);
+});
+
 test("untrusted PR metadata and modified records cannot spoof automated bot source",()=>{
   const d=botProposal();
   const broken=[
@@ -383,6 +401,10 @@ test("actual eplus-bot credential and exact-head review are wired safely",()=>{
   const workflow=readFileSync(new URL("../.github/workflows/auto-merge.yml",import.meta.url),"utf8");
   const manual=readFileSync(new URL("../.github/workflows/eplus-bot-review-command.yml",import.meta.url),"utf8");
   assert.match(workflow,/EPLUS_BOT_TOKEN: \$\{\{ secrets\.EPLUS_BOT_TOKEN \}\}/);
+  const proposer=readFileSync(new URL("../.github/workflows/issue-to-pr.yml",import.meta.url),"utf8");
+  assert.match(proposer,/GH_TOKEN: \$\{\{ secrets\.EPLUS_BOT_TOKEN \}\}/);
+  assert.match(proposer,/gh api user --jq \.login/);
+  assert.doesNotMatch(proposer,/GH_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(workflow,/identity\.json\(\)\)\.login!=="eplus-bot"/);
   assert.match(workflow,/event:"APPROVE",commit_id:decision\.sha/);
   assert.match(workflow,/reviewGate\.required/);

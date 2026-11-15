@@ -106,7 +106,7 @@ export function verifyNewGithubInvitePR({
   if (!pr || !issue || !Array.isArray(catalog) ||
       !Array.isArray(files) || !fileContents ||
       typeof fileContents !== "object" || Array.isArray(fileContents)) return false;
-  if (pr.user?.login !== "github-actions[bot]" ||
+  if (!["github-actions[bot]","eplus-bot"].includes(pr.user?.login) ||
       pr.head?.repo?.full_name !== repo ||
       pr.base?.ref !== "main" ||
       !Number.isSafeInteger(issue.number) || issue.number < 1 ||

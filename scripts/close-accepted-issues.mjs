@@ -15,7 +15,7 @@ export function acceptedCandidate(pr) {
   const match = /^auto\/issue-([1-9][0-9]*)-(invite|count|feedback)$/.exec(pr?.head?.ref || "");
   if (!match || !pr.merged_at || !SHA.test(pr.merge_commit_sha || "") ||
       pr.head?.repo?.full_name !== REPO || pr.base?.ref !== "main" ||
-      pr.user?.login !== "github-actions[bot]") return null;
+      !["github-actions[bot]","eplus-bot"].includes(pr.user?.login)) return null;
   const issueNumber = Number(match[1]), kind = match[2];
   if (!Number.isSafeInteger(issueNumber)) return null;
   const single=/\bCode: \*\*([A-Z0-9-]{4,32})\*\*\. Change:/.exec(pr.body || "")?.[1];
@@ -74,7 +74,7 @@ async function issueCommentFlags(api, issueNumber) {
   for (let page = 1; page <= 10; page++) {
     const comments = await api("GET", "issues/" + issueNumber + "/comments?per_page=100&page=" + page);
     for (const entry of comments) {
-      if (entry.user?.login !== "github-actions[bot]") continue;
+      if (!["github-actions[bot]","eplus-bot"].includes(entry.user?.login)) continue;
       if (entry.body?.includes(MARKER)) accepted = true;
       if (entry.body?.includes("<!-- muse-code-feedback-reopened -->")) feedbackReopened = true;
     }
