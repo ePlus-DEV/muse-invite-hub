@@ -265,3 +265,15 @@ test("homepage token potential totals only dated reported remaining uses", () =>
   assert.match(styles, /overview-shell\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(styles, /overview-shell\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/);
 });
+
+test("four homepage statistics retain readable mobile 2x2 spacing", () => {
+  const style=read("assets/styles.css");
+  assert.equal((home.match(/class="overview-stat"/g)||[]).length,4);
+  assert.match(style,/\.overview-stat:nth-child\(3\)\{border-left:0\}/);
+  assert.match(style,/\.overview-stat:nth-child\(-n\+2\)\{border-bottom:1px solid var\(--line\)\}/);
+  assert.match(style,/\.overview-stat\{gap:6px;min-height:116px;padding:14px 8px;flex-direction:column;text-align:center\}/);
+  assert.match(style,/\.overview-stat>div\{min-width:0;gap:3px\}/);
+  assert.match(style,/\.overview-stat span\{font-size:11px;line-height:1.35\}/);
+  assert.match(style,/\.overview-note,\.overview-source\{font-size:11px;line-height:1.55;margin-inline:5px;text-align:left\}/);
+  assert.doesNotMatch(style,/\.overview-stat\{gap:5px;min-height:64px/);
+});

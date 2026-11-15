@@ -172,11 +172,11 @@ button{cursor:pointer}
   .hero{grid-template-columns:1fr .7fr;gap:10px;padding-top:34px;padding-bottom:23px;min-height:0}
   .hero-art{transform:scale(.8);transform-origin:right center}
   .cards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .overview-shell{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .overview-stat{gap:8px}
+  .overview-shell{grid-template-columns:repeat(2,minmax(0,1fr));padding:12px}
+  .overview-stat{gap:10px;min-height:110px;padding:12px 10px;box-sizing:border-box}
   .overview-stat:nth-child(3){border-left:0}
   .overview-stat:nth-child(-n+2){border-bottom:1px solid var(--line)}
-  .overview-stat>i{width:36px;height:36px;font-size:14px}
+  .overview-stat>i{width:36px;height:36px;font-size:14px;flex:none}
   .overview-stat span{white-space:normal}
 }
 @media(max-width:620px){
@@ -197,12 +197,15 @@ button{cursor:pointer}
   .hero-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
   .hero-actions .button{padding:10px 7px;font-size:11.5px;min-height:42px}
   .overview{padding-bottom:15px}
-  .overview-shell{padding:12px 3px;border-radius:15px}
-  .overview-stat{gap:5px;min-height:64px;flex-direction:column;text-align:center}
-  .overview-stat>i{height:25px;width:25px;font-size:12px}
-  .overview-stat strong{font-size:21px}
-  .overview-stat span{font-size:10px}
-  .overview-note,.overview-source{font-size:10px;line-height:1.5;margin-inline:3px}
+  .overview-shell{padding:10px;border-radius:16px}
+  .overview-stat{gap:6px;min-height:116px;padding:14px 8px;flex-direction:column;text-align:center}
+  .overview-stat>i{height:32px;width:32px;font-size:14px}
+  .overview-stat>div{min-width:0;gap:3px}
+  .overview-stat strong{font-size:23px}
+  .overview-stat span{font-size:11px;line-height:1.35}
+  .overview-note,.overview-source{font-size:11px;line-height:1.55;margin-inline:5px;text-align:left}
+  .overview-note{margin-top:11px}
+  .overview-source{margin-top:5px}
   .directory{padding-top:12px}
   .directory-heading{align-items:flex-end;margin-bottom:14px}
   .directory-heading h2{font-size:25px}
