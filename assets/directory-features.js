@@ -13,6 +13,39 @@
   const CODE_PATTERN = /^[A-Z0-9-]{4,32}$/;
   const MAX_SAVED = 200;
 
+  // One billion tokens per qualifying new-user redemption per Muse's
+  // September 2026 announcement. Keep the amount in billions for safe display.
+  // This is potential based on dated owner/community remaining-use reports,
+  // not live available tokens and not a tally of completed redemptions.
+  function tokenPotential(records) {
+    const list = Array.isArray(records) ? records : [];
+    let reportedCodes = 0;
+    let remainingUses = 0;
+    for (const item of list) {
+      if (!item || typeof item.usageReportedAt !== "string" ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(item.usageReportedAt)) continue;
+      let remaining = null;
+      if (Number.isSafeInteger(item.reportedRemaining) &&
+          item.reportedRemaining >= 0 && item.reportedRemaining <= 1000) {
+        remaining = item.reportedRemaining;
+      } else if (Number.isSafeInteger(item.reportedCapacity) &&
+          Number.isSafeInteger(item.reportedUses) &&
+          item.reportedCapacity > 0 && item.reportedCapacity <= 1000 &&
+          item.reportedUses >= 0 && item.reportedUses <= item.reportedCapacity) {
+        remaining = item.reportedCapacity - item.reportedUses;
+      }
+      if (remaining === null) continue;
+      reportedCodes++;
+      remainingUses += remaining;
+    }
+    return {
+      reportedCodes,
+      unknownCodes: list.length - reportedCodes,
+      remainingUses,
+      potentialBillions: remainingUses
+    };
+  }
+
   function parseSaved(raw) {
     try {
       const values = JSON.parse(raw);
@@ -352,7 +385,7 @@
     }
   }
 
-  return { STORAGE_KEY, COPIED_STORAGE_KEY, MAX_SAVED, parseSaved, parseCopied,
+  return { STORAGE_KEY, COPIED_STORAGE_KEY, MAX_SAVED, tokenPotential, parseSaved, parseCopied,
     rememberCopiedCode, activityDate, compareCodes, quickFeedbackUrl,
     feedbackComment, issueNumberFor, openFeedbackDialog, enableTooltips };
 });

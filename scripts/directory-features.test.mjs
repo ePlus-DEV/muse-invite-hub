@@ -235,3 +235,33 @@ test("editable feedback dialog prepares a report and reuses the linked Issue wit
   const feedbackSection = detail.split('class="detail-info-card detail-feedback"')[1].split("</aside>")[0];
   assert.doesNotMatch(feedbackSection, /issues\/new\?/);
 });
+
+test("homepage token potential totals only dated reported remaining uses", () => {
+  const sample = [
+    {code:"WITH1", usageReportedAt:"2026-11-14", reportedCapacity:30, reportedUses:5},
+    {code:"WITH2", usageReportedAt:"2026-11-15", reportedRemaining:10},
+    {code:"ZERO1", usageReportedAt:"2026-11-15", reportedRemaining:0},
+    {code:"UNKNOWN"}, // Never assume 20 or 30 remaining by default.
+    {code:"STALE1", reportedRemaining:20}, // A missing report date is unknown.
+    {code:"INVALID", usageReportedAt:"2026-11-15", reportedCapacity:30, reportedUses:99}
+  ];
+  const potential = features.tokenPotential(sample);
+  assert.deepEqual(potential,{
+    reportedCodes:3,unknownCodes:3,remainingUses:35,potentialBillions:35
+  });
+  assert.deepEqual(features.tokenPotential([]),{
+    reportedCodes:0,unknownCodes:0,remainingUses:0,potentialBillions:0
+  });
+  assert.deepEqual(features.tokenPotential(null),{
+    reportedCodes:0,unknownCodes:0,remainingUses:0,potentialBillions:0
+  });
+  assert.match(home, /id="stat-tokens">—<\/strong>/);
+  assert.match(home, /id="stat-token-context"/);
+  assert.match(home, /1 billion tokens per eligible redemption/);
+  assert.match(home, /not live availability or guaranteed rewards/);
+  assert.match(app, /features\.tokenPotential\(codes\)/);
+  assert.match(app, /potential\.unknownCodes/);
+  const styles=read("assets/styles.css");
+  assert.match(styles, /overview-shell\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(styles, /overview-shell\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/);
+});

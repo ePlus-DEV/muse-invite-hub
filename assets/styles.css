@@ -51,13 +51,16 @@ button{cursor:pointer}
 .art-star-one{top:8px;left:14%}
 .art-star-two{bottom:6px;right:3%}
 .overview{padding-bottom:20px}
-.overview-shell{display:grid;grid-template-columns:repeat(3,1fr);padding:17px 12px;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow-sm)}
+.overview-shell{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:17px 12px;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow-sm)}
 .overview-stat{display:flex;align-items:center;justify-content:center;gap:16px;min-height:66px}
 .overview-stat+.overview-stat{border-left:1px solid var(--line)}
 .overview-stat>i{height:44px;width:44px;display:grid;place-items:center;font-size:17px;color:var(--blue);background:var(--blue-soft);border-radius:50%}
 .overview-stat>div{display:flex;flex-direction:column;gap:0}
 .overview-stat strong{font-size:27px;color:var(--ink);line-height:1.2;font-weight:900}
-.overview-stat span{font-size:12px;color:var(--muted);white-space:nowrap}
+.overview-stat span{font-size:12px;color:var(--muted);white-space:normal}
+.overview-note,.overview-source{font-size:11px;line-height:1.55;color:var(--muted);text-align:center;margin:7px 6px 0}
+.overview-source{margin-top:3px;color:var(--faint)}
+.overview-source a{color:var(--blue);text-decoration:underline;text-underline-offset:2px}
 .directory{padding-top:17px;scroll-margin-top:92px}
 .directory-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:18px}
 .section-kicker{font-size:11px;letter-spacing:1.5px;color:var(--blue);font-weight:800;margin:0 0 7px}
@@ -169,7 +172,10 @@ button{cursor:pointer}
   .hero{grid-template-columns:1fr .7fr;gap:10px;padding-top:34px;padding-bottom:23px;min-height:0}
   .hero-art{transform:scale(.8);transform-origin:right center}
   .cards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .overview-shell{grid-template-columns:repeat(2,minmax(0,1fr))}
   .overview-stat{gap:8px}
+  .overview-stat:nth-child(3){border-left:0}
+  .overview-stat:nth-child(-n+2){border-bottom:1px solid var(--line)}
   .overview-stat>i{width:36px;height:36px;font-size:14px}
   .overview-stat span{white-space:normal}
 }
@@ -195,7 +201,8 @@ button{cursor:pointer}
   .overview-stat{gap:5px;min-height:64px;flex-direction:column;text-align:center}
   .overview-stat>i{height:25px;width:25px;font-size:12px}
   .overview-stat strong{font-size:21px}
-  .overview-stat span{font-size:9.5px}
+  .overview-stat span{font-size:10px}
+  .overview-note,.overview-source{font-size:10px;line-height:1.5;margin-inline:3px}
   .directory{padding-top:12px}
   .directory-heading{align-items:flex-end;margin-bottom:14px}
   .directory-heading h2{font-size:25px}
