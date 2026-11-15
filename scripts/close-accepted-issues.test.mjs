@@ -45,7 +45,7 @@ function mock({pull=pr(),posted=false,reopened=false,live=true,comparison="ahead
     else if(op==="GET pulls/91/files") data=files;
     else if(op==="GET compare/"+merged+"..."+deployed) data={status:comparison};
     else if(op==="GET issues/90/comments") data=[
-      ...(accepted?[{user:{login:"github-actions[bot]"},
+      ...(accepted?[{user:{login:"eplus-bot"},
         body:"<!-- muse-accepted-contribution -->"}]:[]),
       ...(reopened?[{user:{login:"github-actions[bot]"},
         body:"<!-- muse-code-feedback-reopened -->"}]:[])
@@ -71,6 +71,9 @@ test("only merged bot PRs with trusted Issue provenance qualify",()=>{
   assert.deepEqual(acceptedCandidate(pr()),{
     issueNumber:90,kind:"invite",code,prNumber:91,mergeSha:merged
   });
+  assert.deepEqual(acceptedCandidate(pr({user:{login:"eplus-bot"}})),{
+    issueNumber:90,kind:"invite",code,prNumber:91,mergeSha:merged
+  });
   assert.equal(acceptedCandidate(pr({merged_at:null})),null);
   assert.equal(acceptedCandidate(pr({head:{ref:"auto/issue-90-invite",repo:{full_name:"someone/other"}}})),null);
   assert.equal(acceptedCandidate(pr({user:{login:"malicious-user"}})),null);
@@ -92,6 +95,14 @@ test("after deployed merge and live detail verification, comment comes before cl
   assert.ok(commentIndex>0 && closeIndex>commentIndex);
   assert.ok(m.events.indexOf("live")<commentIndex);
   assert.equal(m.issue.state,"closed");
+});
+
+test("bot-authored new invite PR is accepted after live deployment",async()=>{
+  const m=mock({pull:pr({user:{login:"eplus-bot"}})});
+  const result=await closeAcceptedIssues({
+    request:m.request,token:"test-token",deployedSha:deployed,catalog:[{code}]
+  });
+  assert.deepEqual(result,{notified:1,closed:1,pending:0,skipped:0});
 });
 
 test("an already posted acceptance comment is not duplicated on retry",async()=>{
