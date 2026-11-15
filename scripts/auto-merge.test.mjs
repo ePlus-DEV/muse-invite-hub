@@ -1,11 +1,12 @@
 import { planIssueChange, isAutoPublishableNewGithubInvite, AUTO_PUBLISH_NEW_INVITE_MARKER } from "./issue-to-pr.mjs";
 import { changedRecord, changedRecords } from "./catalog.mjs";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import {
   AUTO_MERGE_MAINTAINER, AUTO_MERGE_BLOCK_LABEL,
   getMaintainerAuthorization, ciHasPassed, autoMergeDecision,
-  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR
+  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR, needsEplusBotReview
 } from "./auto-merge.mjs";
 
 const HEAD="a".repeat(40);
@@ -345,4 +346,52 @@ test("ePlus Bot is a workflow name, not a separate App or a forged approval",()=
     pr:{...verified.pr,mergeable_state:"unstable"},files:verified.files,
     newInviteEligible:true,runs:[run(HEAD,"failure")]
   }).eligible,false);
+});
+
+
+test("real eplus-bot only reviews verified new GitHub invite PR head",()=>{
+  const data=botProposal();
+  const eligible={pr:{...data.pr,mergeable_state:"unstable"},
+    files:data.files,newInviteEligible:verifyNewGithubInvitePR(data),runs:[run()]};
+  assert.deepEqual(needsEplusBotReview(eligible),{required:true,sha:HEAD});
+  assert.equal(needsEplusBotReview({...eligible,
+    reviews:[review("APPROVED","eplus-bot",HEAD)]}).required,false);
+  assert.equal(needsEplusBotReview({...eligible,
+    reviews:[review("APPROVED","eplus-bot",NEXT)]}).required,true);
+  assert.equal(needsEplusBotReview({...eligible,
+    reviews:[review("CHANGES_REQUESTED","reviewer")]}).required,false);
+  for(const changes of [
+    {newInviteEligible:false},
+    {runs:[run(HEAD,"failure")]},
+    {pr:{...data.pr,draft:true}},
+    {pr:{...data.pr,user:{login:"eplus-bot"}}},
+    {pr:{...data.pr,mergeable_state:"dirty"}},
+    {pr:{...data.pr,labels:[{name:"do-not-merge"}]}}
+  ]) assert.equal(needsEplusBotReview({...eligible,...changes}).required,false,
+    JSON.stringify(changes));
+  assert.equal(needsEplusBotReview({...eligible,
+    comments:[cmd("/automerge off")]}).required,false);
+  assert.equal(needsEplusBotReview({
+    pr:pr({user:{login:"developer"},changed_files:1}),
+    files:[mdFile("scripts/main.mjs")],
+    newInviteEligible:false,runs:[run()]
+  }).required,false,"passing CI never auto-approves arbitrary code PRs");
+});
+
+
+test("actual eplus-bot credential and exact-head review are wired safely",()=>{
+  const workflow=readFileSync(new URL("../.github/workflows/auto-merge.yml",import.meta.url),"utf8");
+  const manual=readFileSync(new URL("../.github/workflows/eplus-bot-review-command.yml",import.meta.url),"utf8");
+  assert.match(workflow,/EPLUS_BOT_TOKEN: \$\{\{ secrets\.EPLUS_BOT_TOKEN \}\}/);
+  assert.match(workflow,/identity\.json\(\)\)\.login!=="eplus-bot"/);
+  assert.match(workflow,/event:"APPROVE",commit_id:decision\.sha/);
+  assert.match(workflow,/reviewGate\.required/);
+  assert.match(workflow,/sourceIssueUpdatedAt/);
+  assert.doesNotMatch(workflow,/EPLUS_REVIEW_BOT_CLIENT_ID|EPLUS_REVIEW_BOT_PRIVATE_KEY/);
+  assert.match(manual,/github\.event\.comment\.body == '@eplus-bot review'/);
+  assert.match(manual,/test "\$AUTHOR" != "eplus-bot"/);
+  assert.match(manual,/\.head\.sha == \$sha/);
+  assert.match(manual,/\.status == "completed" and \.conclusion == "success"/);
+  assert.match(manual,/secrets\.EPLUS_BOT_TOKEN/);
+  assert.doesNotMatch(manual,/actions\/checkout/);
 });

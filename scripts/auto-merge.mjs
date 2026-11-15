@@ -185,3 +185,25 @@ export function autoMergeDecision({pr,comments=[],reviews=[],runs=[],files=[],ne
     ? "verified-new-github-invite" : safeDefault && !authorization.authorized
       ? "default-safe-docs" : authorization.method};
 }
+
+
+// The independent @eplus-bot token may approve only a deterministic,
+// fully verified new GitHub invite record (not arbitrary code or workflows).
+// The SHA-bound review is performed by the trusted workflow, never PR code.
+export function needsEplusBotReview({
+  pr,comments=[],reviews=[],runs=[],files=[],newInviteEligible=false,
+  repo="ePlus-DEV/muse-invite-hub"
+}) {
+  if (!newInviteEligible || pr?.user?.login !== "github-actions[bot]") {
+    return {required:false,reason:"Only independently verified new invite PRs are eligible."};
+  }
+  const decision=autoMergeDecision({
+    pr,comments,reviews,runs,files,newInviteEligible,repo
+  });
+  if (!decision.eligible) return {required:false,reason:decision.reason};
+  if (reviews.some(review=>login(review.user)==="eplus-bot" &&
+      review.state==="APPROVED" && review.commit_id===decision.sha)) {
+    return {required:false,reason:"Exact head already approved by @eplus-bot."};
+  }
+  return {required:true,sha:decision.sha};
+}
