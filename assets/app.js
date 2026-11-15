@@ -160,7 +160,8 @@
   }
   function updateStats() {
     if (loadFailed) {
-      ["stat-total", "stat-contributors", "stat-reported"].forEach(id => setStat(id, "—"));
+      ["stat-total", "stat-contributors", "stat-reported", "stat-tokens"].forEach(id => setStat(id, "—"));
+      setStat("stat-token-context", "Token estimates unavailable because the directory could not load.");
       return;
     }
     const contributors = new Set(codes.map(c => {
@@ -171,6 +172,15 @@
     setStat("stat-total", codes.length.toLocaleString("en-US"));
     setStat("stat-contributors", contributors.size.toLocaleString("en-US"));
     setStat("stat-reported", reported.length.toLocaleString("en-US"));
+    const potential = features.tokenPotential(codes);
+    setStat("stat-tokens", potential.reportedCodes ?
+      potential.potentialBillions.toLocaleString("en-US") + "B" : "—");
+    setStat("stat-token-context", potential.reportedCodes ?
+      potential.remainingUses.toLocaleString("en-US") + " reported remaining uses across " +
+      potential.reportedCodes.toLocaleString("en-US") + " codes; " +
+      potential.unknownCodes.toLocaleString("en-US") +
+      " codes have no reported availability. This is potential, not earned tokens." :
+      "No codes have reported remaining invite uses. Token potential is unknown.");
   }
   function fallbackCopy(value) {
     const input = el("textarea");
