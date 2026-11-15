@@ -263,7 +263,7 @@ test("homepage token potential totals only dated reported remaining uses", () =>
   assert.match(app, /potential\.unknownCodes/);
   const styles=read("assets/styles.css");
   assert.match(styles, /overview-shell\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
-  assert.match(styles, /overview-shell\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/);
+  assert.match(styles, /overview-shell\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\);padding:12px\}/);
 });
 
 test("four homepage statistics retain readable mobile 2x2 spacing", () => {
