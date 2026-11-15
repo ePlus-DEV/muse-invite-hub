@@ -214,7 +214,7 @@ test("editable feedback dialog prepares a report and reuses the linked Issue wit
   assert.equal(typeof features.openFeedbackDialog, "function");
   assert.match(helper, /document\.createElement\("dialog"\)/);
   assert.match(helper, /dialog\.showModal\(\)/);
-  assert.match(helper, /textarea\.value = feedbackComment\(code, outcome\)/);
+  assert.match(helper, /feedbackComment\(code, outcome\)\.replace/);
   assert.match(helper, /textarea\.maxLength = 3000/);
   assert.match(helper, /navigator\.clipboard\.writeText\(text\)/);
   assert.match(helper, /open\.href = quickFeedbackUrl\(code, outcome, issueNumber\)/);
@@ -273,7 +273,34 @@ test("owner-count comment requires real, consistent figures before Safari copy",
   assert.match(helper, /document\.execCommand\("copy"\) === true/);
   assert.match(helper, /textarea\.setSelectionRange\(0, textarea\.value\.length\)/);
   assert.match(helper, /Automatic copy was blocked\. Long-press/);
-  assert.match(helper, /Enter your actual Remaining invites number, or both Total and Used/);
+  assert.match(helper, /Enter your actual Remaining invites number, or both Total invites and Used invites/);
+});
+
+test("guided mobile owner count fields generate the canonical GitHub report", () => {
+  const report = features.ownerCountComment("DPNIHH", "3", "", "");
+  assert.match(report, /^Code: DPNIHH\\nUpdate type: Owner count\\nRemaining invites: 3/m);
+  const preparedRemaining = features.prepareOwnerCountComment(report);
+  assert.equal(preparedRemaining.error, undefined);
+  assert.match(preparedRemaining.text, /Remaining invites: 3/);
+  const detailed = features.prepareOwnerCountComment(
+    features.ownerCountComment("DPNIHH", "", "30", "27")
+  );
+  assert.equal(detailed.error, undefined);
+  assert.match(detailed.text, /Total invites: 30/);
+  assert.match(detailed.text, /Used invites: 27/);
+  assert.match(detailed.text, /Owner confirmation: I confirm these figures/);
+
+  const helper = read("assets/directory-features.js");
+  const style = read("assets/styles.css");
+  assert.match(helper, /remainingInput\\.inputMode = "numeric"/);
+  assert.match(helper, /remainingInput\\.placeholder = "e\\.g\\. 3"/);
+  assert.match(helper, /optionalSummary\\.textContent = "Have total and used counts\\? \\(optional\\)"/);
+  assert.match(helper, /commentEditor\\.open = !isCount/);
+  assert.match(helper, /textarea\\.value = isCount \\? ownerCountComment\\(code\\)/);
+  assert.match(helper, /copy\\.textContent = isCount \\? "Copy report" : "Copy comment"/);
+  assert.match(helper, /countFields\\.hidden = !isCount/);
+  assert.match(style, /\\.feedback-count-fields\\[hidden\\]\\{display:none\\}/);
+  assert.match(style, /\\.feedback-count-grid\\{display:grid;grid-template-columns:repeat\\(2,minmax\\(0,1fr\\)\\)/);
 });
 
 test("homepage token potential totals only dated reported remaining uses", () => {
