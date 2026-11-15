@@ -502,7 +502,8 @@ test("new public-post social code is auto-listable as unverified with user respo
   for(const bad of [
     incoming.body.replace("x.com/xiyaodao/status/2121891507309314522","x.com/xiyaodao"),
     incoming.body.replace("- [x] I own this public code","- [ ] I own this public code"),
-    incoming.body.replace("### Notes (optional)","### Remaining invites (optional; self-reported)\n\n30\n\n### Notes (optional)")
+    incoming.body.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+      "### Remaining invites (optional; self-reported)\n\n30")
   ]){
     const altered={...incoming,body:bad};
     let next;
