@@ -236,6 +236,46 @@ test("editable feedback dialog prepares a report and reuses the linked Issue wit
   assert.doesNotMatch(feedbackSection, /issues\/new\?/);
 });
 
+test("owner-count comment requires real, consistent figures before Safari copy", () => {
+  const template = features.feedbackComment("DPNIHH", "count");
+  const blank = features.prepareOwnerCountComment(template);
+  assert.match(blank.error, /Enter your actual Remaining invites/);
+  const remainingOnly = features.prepareOwnerCountComment(
+    template.replace("[enter actual number or leave blank]", "0")
+  );
+  assert.equal(remainingOnly.error, undefined);
+  assert.match(remainingOnly.text, /Remaining invites: 0/);
+  assert.doesNotMatch(remainingOnly.text, /\[optional\]|\[enter actual number/);
+  assert.match(remainingOnly.text, /Owner confirmation: I confirm these figures/);
+
+  const totalUsed = features.prepareOwnerCountComment(template
+    .replace("Total invites: [optional]", "Total invites: 30")
+    .replace("Used invites: [optional]", "Used invites: 27"));
+  assert.equal(totalUsed.error, undefined);
+  assert.match(totalUsed.text, /Total invites: 30/);
+
+  for (const invalid of [
+    template.replace("Total invites: [optional]", "Total invites: 30"),
+    template.replace("[enter actual number or leave blank]", "-1"),
+    template.replace("[enter actual number or leave blank]", "1001"),
+    template.replace("Total invites: [optional]", "Total invites: 5")
+      .replace("Used invites: [optional]", "Used invites: 6"),
+    template.replace("[enter actual number or leave blank]", "8")
+      .replace("Total invites: [optional]", "Total invites: 10")
+      .replace("Used invites: [optional]", "Used invites: 1"),
+    template.replace("Remaining invites: [enter actual number or leave blank]",
+      "Remaining invites: 2\nRemaining invites: 3")
+  ]) {
+    assert.equal(typeof features.prepareOwnerCountComment(invalid).error, "string");
+  }
+
+  const helper = read("assets/directory-features.js");
+  assert.match(helper, /document\.execCommand\("copy"\) === true/);
+  assert.match(helper, /textarea\.setSelectionRange\(0, textarea\.value\.length\)/);
+  assert.match(helper, /Automatic copy was blocked\. Long-press/);
+  assert.match(helper, /Enter your actual Remaining invites number, or both Total and Used/);
+});
+
 test("homepage token potential totals only dated reported remaining uses", () => {
   const sample = [
     {code:"WITH1", usageReportedAt:"2026-11-14", reportedCapacity:30, reportedUses:5},
