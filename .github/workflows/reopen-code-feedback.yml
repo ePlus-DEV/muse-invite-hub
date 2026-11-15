@@ -3,7 +3,7 @@ name: Reopen Code Feedback Issue
 # Trusted main script only. Untrusted comments are inspected as data.
 on:
   issue_comment:
-    types: [created]
+    types: [created, edited]
 
 permissions:
   contents: write

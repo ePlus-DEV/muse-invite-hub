@@ -30,6 +30,24 @@ export function issueMarker(code) {
   return "<!-- " + MARKER + ": " + code + " -->";
 }
 
+// Resolve the same trusted canonical map in the Issue reopener and PR proposer.
+export function withCanonicalIssueRefs(records, mapping) {
+  if (!Array.isArray(records) || !mapping || Array.isArray(mapping) ||
+      typeof mapping !== "object") throw Error("Expected catalog and canonical Issue map");
+  return records.map(entry => {
+    const issueNumber = mapping[entry.code];
+    if (issueNumber === undefined) return entry;
+    if (!Number.isSafeInteger(issueNumber) || issueNumber <= 0) {
+      throw Error("Invalid canonical Issue mapping for " + entry.code);
+    }
+    if (Number.isSafeInteger(entry.feedbackIssueNumber) &&
+        entry.feedbackIssueNumber !== issueNumber) {
+      throw Error("Conflicting canonical Issue mapping for " + entry.code);
+    }
+    return {...entry,feedbackIssueNumber:issueNumber};
+  });
+}
+
 export function originalIssueNumber(item) {
   const linked = item?.feedbackIssueNumber;
   if (Number.isSafeInteger(linked) && linked > 0) return linked;

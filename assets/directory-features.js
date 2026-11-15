@@ -128,6 +128,56 @@
   }
 
 
+  // Validate the owner report before copying. A template with only placeholder
+  // values is not a quota report and must not be mistaken for a submission.
+  function prepareOwnerCountComment(text) {
+    const fields = {
+      "Remaining invites": null,
+      "Total invites": null,
+      "Used invites": null
+    };
+    const seen = new Set();
+    for (const line of text.split(/\r?\n/)) {
+      const hit = /^(Remaining invites|Total invites|Used invites):\s*(.*)$/.exec(line.trim());
+      if (!hit) continue;
+      const [, name, rawValue] = hit;
+      if (seen.has(name)) return {error: "Each invite count should appear only once."};
+      seen.add(name);
+      const value = rawValue.trim();
+      if (!value || /^\[(?:optional|enter actual number or leave blank)\]$/.test(value)) continue;
+      if (!/^\d{1,4}$/.test(value) || Number(value) > 1000) {
+        return {error: "Use actual whole-number invite counts between 0 and 1000."};
+      }
+      fields[name] = Number(value);
+    }
+    const remaining = fields["Remaining invites"];
+    const total = fields["Total invites"];
+    const used = fields["Used invites"];
+    if (remaining === null && (total === null || used === null)) {
+      return {error: "Enter your actual Remaining invites number, or both Total invites and Used invites, before copying."};
+    }
+    if ((total !== null && total < 1) ||
+        (total !== null && used !== null && used > total) ||
+        (remaining !== null && total !== null && remaining > total) ||
+        (remaining !== null && total !== null && used !== null && remaining !== total - used)) {
+      return {error: "The counts must be consistent: remaining = total − used."};
+    }
+    return {
+      text: text.replace(/\[enter actual number or leave blank\]|\[optional\]/g, "")
+        .replace(/Owner confirmation:.*$/m,
+          "Owner confirmation: I confirm these figures came from my own Muse invite screen.")
+    };
+  }
+
+  // The form generates the canonical text; visitors never need to edit code or
+  // placeholder labels just to report their remaining slots.
+  function ownerCountComment(code, remaining = "", total = "", used = "") {
+    return feedbackComment(code, "count")
+      .replace("[enter actual number or leave blank]", String(remaining).trim())
+      .replace("Total invites: [optional]", "Total invites: " + String(total).trim())
+      .replace("Used invites: [optional]", "Used invites: " + String(used).trim());
+  }
+
   // Existing GitHub Issues cannot prefill comments through a URL. Instead this
   // browser-only dialog prepares an editable comment, lets the visitor copy it,
   // and opens the ONE linked Issue. Never submit or reopen on mere page clicks.
@@ -153,6 +203,70 @@
     textarea.id = "feedback-comment-text";
     textarea.rows = 7;
     textarea.maxLength = 3000;
+    const countFields = document.createElement("div");
+    countFields.className = "feedback-count-fields";
+    const remainingLabel = document.createElement("label");
+    remainingLabel.setAttribute("for", "feedback-count-remaining");
+    remainingLabel.textContent = "Remaining invites";
+    const remainingHint = document.createElement("p");
+    remainingHint.className = "feedback-count-hint";
+    remainingHint.textContent = "How many invites are left in your Muse account? Enter 0 if none.";
+    const remainingInput = document.createElement("input");
+    remainingInput.id = "feedback-count-remaining";
+    remainingInput.type = "text";
+    remainingInput.inputMode = "numeric";
+    remainingInput.pattern = "[0-9]*";
+    remainingInput.maxLength = 4;
+    remainingInput.autocomplete = "off";
+    remainingInput.placeholder = "e.g. 3";
+    remainingInput.setAttribute("aria-describedby", "feedback-count-hint");
+    remainingHint.id = "feedback-count-hint";
+    const optionalCounts = document.createElement("details");
+    optionalCounts.className = "feedback-count-extra";
+    const optionalSummary = document.createElement("summary");
+    optionalSummary.textContent = "Have total and used counts? (optional)";
+    const optionalHelp = document.createElement("p");
+    optionalHelp.textContent = "If you do not know the remaining count, enter BOTH total and used.";
+    optionalHelp.className = "feedback-count-hint";
+    const optionalGrid = document.createElement("div");
+    optionalGrid.className = "feedback-count-grid";
+    function optionalCountField(id, text, placeholder) {
+      const wrapper = document.createElement("div");
+      const label = document.createElement("label");
+      label.setAttribute("for", id);
+      label.textContent = text;
+      const input = document.createElement("input");
+      input.id = id;
+      input.type = "text";
+      input.inputMode = "numeric";
+      input.pattern = "[0-9]*";
+      input.maxLength = 4;
+      input.autocomplete = "off";
+      input.placeholder = placeholder;
+      wrapper.append(label, input);
+      return { wrapper, input };
+    }
+    const totalField = optionalCountField("feedback-count-total", "Total invites", "e.g. 30");
+    const usedField = optionalCountField("feedback-count-used", "Used invites", "e.g. 27");
+    optionalGrid.append(totalField.wrapper, usedField.wrapper);
+    optionalCounts.append(optionalSummary, optionalHelp, optionalGrid);
+    countFields.append(remainingLabel, remainingHint, remainingInput, optionalCounts);
+    countFields.hidden = true;
+
+    const commentEditor = document.createElement("details");
+    commentEditor.className = "feedback-comment-editor";
+    const commentSummary = document.createElement("summary");
+    commentSummary.textContent = "Preview or edit the GitHub comment (optional)";
+    commentEditor.append(commentSummary, label, textarea);
+    function refreshOwnerComment() {
+      if (activeOutcome !== "count") return;
+      textarea.value = ownerCountComment(activeCode, remainingInput.value,
+        totalField.input.value, usedField.input.value);
+      feedbackStatus.textContent = "";
+    }
+    for (const input of [remainingInput, totalField.input, usedField.input]) {
+      input.addEventListener("input", refreshOwnerComment);
+    }
     const ownerConfirm = document.createElement("label");
     ownerConfirm.className = "feedback-dialog-consent";
     const ownerCheckbox = document.createElement("input");
@@ -161,6 +275,7 @@
       document.createTextNode(" I confirm these figures come from my own Muse invite screen."));
     ownerConfirm.hidden = true;
     let activeOutcome = "other";
+    let activeCode = "";
     const note = document.createElement("p");
     note.className = "feedback-dialog-note";
     note.textContent = "Posting a comment on a closed Issue triggers a review/reopen workflow. A report never verifies Muse redemption automatically.";
@@ -184,7 +299,7 @@
     close.type = "button";
     close.textContent = "Close";
     controls.append(copy, open, close);
-    surface.append(heading, help, label, textarea, ownerConfirm, note, feedbackStatus, controls);
+    surface.append(heading, help, countFields, ownerConfirm, commentEditor, note, feedbackStatus, controls);
     dialog.append(surface);
     document.body.append(dialog);
     let trigger = null;
@@ -192,27 +307,34 @@
     copy.addEventListener("click", async () => {
       let text = textarea.value.trim();
       if (activeOutcome === "count") {
+        const structured = ownerCountComment(activeCode, remainingInput.value,
+          totalField.input.value, usedField.input.value);
+        const numbers = prepareOwnerCountComment(structured);
+        if (numbers.error) {
+          feedbackStatus.textContent = numbers.error;
+          if (!remainingInput.value.trim() &&
+              (!totalField.input.value.trim() || !usedField.input.value.trim())) {
+            remainingInput.focus();
+          } else {
+            optionalCounts.open = true;
+            (totalField.input.value.trim() ? usedField.input : totalField.input).focus();
+          }
+          return;
+        }
         if (!ownerCheckbox.checked) {
-          feedbackStatus.textContent = "Confirm that these numbers came from your own Muse account.";
+          feedbackStatus.textContent = "Check the confirmation box before copying your report.";
           ownerCheckbox.focus();
           return;
         }
-        const countFields = {};
-        for (const line of text.split(/\r?\n/)) {
-          const hit = /^(Remaining invites|Total invites|Used invites):\s*(.*)$/.exec(line.trim());
-          if (hit) countFields[hit[1]] = hit[2].trim();
-        }
-        const values = Object.values(countFields);
-        const numbers = values.filter(value => /^\d{1,4}$/.test(value));
-        if (!numbers.length || values.some(value =>
-          value && !/^\d{1,4}$/.test(value) && !/^\[(?:optional|enter actual number or leave blank)\]$/.test(value))) {
-          feedbackStatus.textContent = "Enter a real remaining count, or a consistent total and used count.";
+        // Edited preview is allowed, but must still be a valid owner-count report.
+        const prepared = prepareOwnerCountComment(text);
+        if (prepared.error) {
+          feedbackStatus.textContent = prepared.error;
+          commentEditor.open = true;
           textarea.focus();
           return;
         }
-        text = text.replace(/\[enter actual number or leave blank\]|\[optional\]/g,"").replace(
-          /Owner confirmation:.*$/m,
-          "Owner confirmation: I confirm these figures came from my own Muse invite screen.");
+        text = prepared.text;
         textarea.value = text;
       }
       if (!text) {
@@ -220,15 +342,32 @@
         textarea.focus();
         return;
       }
+      let copied = false;
       try {
-        if (!navigator.clipboard || !window.isSecureContext) throw Error("Clipboard API unavailable");
-        await navigator.clipboard.writeText(text);
-        feedbackStatus.textContent = "Copied. Open the linked Issue, paste and submit the comment.";
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          copied = true;
+        }
       } catch {
+        // iOS Safari and embedded browsers can reject the async Clipboard API.
+      }
+      if (!copied) {
+        commentEditor.open = true;
+        // Legacy selection-copy works on some Safari versions where writeText fails.
+        // Never report success unless the browser confirms the fallback succeeded.
         textarea.focus();
         textarea.select();
-        feedbackStatus.textContent = "Clipboard access was blocked. Copy the selected text manually, then open the Issue.";
+        textarea.setSelectionRange(0, textarea.value.length);
+        try {
+          copied = typeof document.execCommand === "function" &&
+            document.execCommand("copy") === true;
+        } catch {
+          copied = false;
+        }
       }
+      feedbackStatus.textContent = copied ?
+        "Copied. Open the linked Issue, paste and submit the comment." :
+        "Automatic copy was blocked. Long-press the selected comment and choose Copy, then open the Issue.";
     });
     close.addEventListener("click", () => dialog.close());
     dialog.addEventListener("close", () => {
@@ -242,27 +381,43 @@
       open(code, outcome, issueNumber, opener) {
         if (!CODE_PATTERN.test(code) || !Object.hasOwn(FEEDBACK_CHOICES, outcome) ||
             !Number.isSafeInteger(issueNumber) || issueNumber <= 0) return false;
-        heading.textContent = outcome === "count" ?
-          "Update owner count for " + code : "Report code " + code;
+        const isCount = outcome === "count";
+        heading.textContent = isCount ?
+          "Update invites · " + code : "Report code " + code;
         activeOutcome = outcome;
+        activeCode = code;
         ownerCheckbox.checked = false;
-        ownerConfirm.hidden = outcome !== "count";
-        help.textContent = outcome === "count" ?
-          "Only the listed GitHub owner can propose a count update. Enter numbers shown in your own Muse account, confirm ownership, then copy and comment on the ORIGINAL Issue. GitHub identity is checked before any Draft PR." :
+        ownerConfirm.hidden = !isCount;
+        countFields.hidden = !isCount;
+        remainingInput.value = "";
+        totalField.input.value = "";
+        usedField.input.value = "";
+        optionalCounts.open = false;
+        commentEditor.open = !isCount;
+        copy.textContent = isCount ? "Copy report" : "Copy comment";
+        label.textContent = isCount ? "Prepared GitHub comment (editable)" : "Your comment (editable)";
+        help.textContent = isCount ?
+          "Enter the figures you see in Muse. We will prepare the GitHub comment for you." :
           "Review and copy your prepared comment, then open the existing GitHub Issue and paste it. GitHub cannot prefill comments in an existing Issue.";
+        note.textContent = isCount ?
+          "Copying does not submit your update. After copying, open GitHub, paste and post the comment. Only the listed GitHub owner can request an update." :
+          "Posting a comment on a closed Issue triggers a review/reopen workflow. A report never verifies Muse redemption automatically.";
         const date = new Date();
         // Local date is only a convenient editable starting point.
         const localDate = [date.getFullYear(),
           String(date.getMonth() + 1).padStart(2, "0"),
           String(date.getDate()).padStart(2, "0")].join("-");
-        textarea.value = feedbackComment(code, outcome).replace("[add date]", localDate);
+        textarea.value = isCount ? ownerCountComment(code) :
+          feedbackComment(code, outcome).replace("[add date]", localDate);
         open.href = quickFeedbackUrl(code, outcome, issueNumber);
         open.textContent = "Open Issue #" + issueNumber;
-        feedbackStatus.textContent = "No comment has been submitted. Copy the text before opening GitHub.";
+        feedbackStatus.textContent = isCount ? "" :
+          "No comment has been submitted. Copy the text before opening GitHub.";
         trigger = opener || document.activeElement;
         if (dialog.open) dialog.close();
         dialog.showModal();
-        textarea.focus();
+        if (isCount) remainingInput.focus();
+        else textarea.focus();
         return true;
       }
     };
@@ -387,5 +542,5 @@
 
   return { STORAGE_KEY, COPIED_STORAGE_KEY, MAX_SAVED, tokenPotential, parseSaved, parseCopied,
     rememberCopiedCode, activityDate, compareCodes, quickFeedbackUrl,
-    feedbackComment, issueNumberFor, openFeedbackDialog, enableTooltips };
+    feedbackComment, ownerCountComment, prepareOwnerCountComment, issueNumberFor, openFeedbackDialog, enableTooltips };
 });
