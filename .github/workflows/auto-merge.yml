@@ -42,27 +42,15 @@ jobs:
         with:
           ref: main
           persist-credentials: false
-      # This App must be independent of github-actions[bot], which authors invite PRs.
-      # Missing credentials leave the safe existing policy intact (no fake approval).
-      - name: Mint independent ePlus Bot review identity
-        id: eplus-bot-review
-        if: ${{ vars.EPLUS_REVIEW_BOT_CLIENT_ID != '' }}
-        uses: actions/create-github-app-token@v3
-        with:
-          client-id: ${{ vars.EPLUS_REVIEW_BOT_CLIENT_ID }}
-          private-key: ${{ secrets.EPLUS_REVIEW_BOT_PRIVATE_KEY }}
-          permission-pull-requests: write
-      - name: Merge only a reviewed, green, current-head PR
+      # "ePlus Bot" is just the display label for this trusted workflow.
+      # No external GitHub App, PAT, secret or simulated APPROVE review.
+      - name: ePlus Bot - validate and merge eligible PRs
         uses: actions/github-script@v8
-        env:
-          EPLUS_BOT_REVIEW_TOKEN: ${{ steps.eplus-bot-review.outputs.token }}
-          EPLUS_BOT_APP_SLUG: ${{ steps.eplus-bot-review.outputs.app-slug }}
         with:
           github-token: ${{ github.token }}
           script: |
             const { autoMergeDecision, verifyNewGithubInvitePR,
-              ciHasPassed, getMaintainerAuthorization, qualifiesForDefaultAutoMerge,
-              botApprovalDecision } = await import(
+              ciHasPassed, getMaintainerAuthorization, qualifiesForDefaultAutoMerge } = await import(
               process.env.GITHUB_WORKSPACE + "/scripts/auto-merge.mjs"
             );
             const { readCatalog } = await import(
@@ -246,66 +234,11 @@ jobs:
                 core.info("PR #" + number + " lacks current-head passing CI.");
                 continue;
               }
-              const botToken=process.env.EPLUS_BOT_REVIEW_TOKEN||"";
-              const botSlug=process.env.EPLUS_BOT_APP_SLUG||"";
-              const botLogin=botSlug ? botSlug+"[bot]" : "";
-              const proposedReview=botApprovalDecision({
-                pr,comments,reviews,files,newInviteEligible,
-                runs:validations.data.workflow_runs,behindBy:0,botLogin,repo:fullName
-              });
-              if (proposedReview.eligible) {
-                const current=(await github.rest.pulls.get({
-                  owner,repo,pull_number:number
-                })).data;
-                if(current.head.sha!==pr.head.sha ||
-                    current.state!=="open" || current.draft ||
-                    current.mergeable!==true) {
-                  core.info("PR #" + number + " changed since bot approval checks.");
-                  continue;
-                }
-                if (sourceIssueNo!==null) {
-                  const recheck=(await github.rest.issues.get({
-                    owner,repo,issue_number:sourceIssueNo
-                  })).data;
-                  if (recheck.state!=="open" ||
-                      recheck.updated_at!==sourceIssueUpdatedAt) {
-                    core.info("PR #" + number + ": source Issue changed; retry next run.");
-                    continue;
-                  }
-                }
-                // The App identity must differ from the PR author. Never use
-                // GITHUB_TOKEN to fabricate a second reviewer or bypass rules.
-                const response=await fetch("https://api.github.com/repos/"+
-                  fullName+"/pulls/"+number+"/reviews",{
-                  method:"POST",
-                  headers:{
-                    Authorization:"Bearer "+botToken,
-                    Accept:"application/vnd.github+json",
-                    "X-GitHub-Api-Version":"2022-11-28",
-                    "Content-Type":"application/json"
-                  },
-                  body:JSON.stringify({event:"APPROVE",body:
-                    "ePlus Bot reviewed the exact validated head "+pr.head.sha+
-                    " via "+proposedReview.method+
-                    ". This is not a guarantee that a Muse code redeems successfully."})
-                });
-                if(!response.ok) {
-                  core.warning("ePlus Bot review for PR #"+number+
-                    " rejected by GitHub (HTTP "+response.status+").");
-                } else {
-                  core.info("ePlus Bot APPROVED PR #"+number+
-                    " at "+pr.head.sha+" ("+proposedReview.method+").");
-                }
-                // GitHub re-evaluates protection after the App review, and the
-                // resulting pull_request_review event triggers this gate again.
-                continue;
-              }
-              if (!botToken && (newInviteEligible || safeDocs || authorization.authorized)) {
-                core.warning("PR #"+number+
-                  ": independent ePlus Bot is not configured; set "+
-                  "EPLUS_REVIEW_BOT_CLIENT_ID and EPLUS_REVIEW_BOT_PRIVATE_KEY "+
-                  "for automatic approval.");
-              }
+              // This trusted workflow itself authorizes verified new GitHub
+              // invite records. GitHub does not allow a PR author bot to
+              // APPROVE its own PR; no fake review or external bot is needed.
+              core.info("ePlus Bot: evaluating verified Ready PR #" + number +
+                " without impersonating a GitHub reviewer.");
               const decision = autoMergeDecision({
                 pr,comments,reviews,files,newInviteEligible,
                 runs:validations.data.workflow_runs,repo:fullName
@@ -322,7 +255,9 @@ jobs:
               if (latest.head.sha !== decision.sha ||
                   latest.base.sha !== pr.base.sha ||
                   latest.state !== "open" || latest.draft ||
-                  latest.mergeable !== true || latest.mergeable_state !== "clean") {
+                  latest.mergeable !== true ||
+                  (latest.mergeable_state !== "clean" &&
+                   !(newInviteEligible && latest.mergeable_state === "unstable"))) {
                 core.info("PR #" + number + " changed during approval; skipping.");
                 continue;
               }
@@ -337,7 +272,7 @@ jobs:
                   continue;
                 }
               }
-              core.info("Merging authorized PR #" + number +
+              core.info("ePlus Bot: merging eligible PR #" + number +
                 " at " + decision.sha + " (authorization: " + decision.method + ").");
               let merged;
               try {
@@ -361,7 +296,7 @@ jobs:
               await github.rest.actions.createWorkflowDispatch({
                 owner,repo,workflow_id:"pages.yml",ref:"main"
               });
-              core.info("Merged PR #" + number +
+              core.info("ePlus Bot: merged PR #" + number +
                 " and dispatched trusted production deployment.");
               // Main moved. Never merge another PR in the same run without
               // fresh mergeability and CI evaluation.

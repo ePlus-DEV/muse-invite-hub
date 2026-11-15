@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import {
   AUTO_MERGE_MAINTAINER, AUTO_MERGE_BLOCK_LABEL,
   getMaintainerAuthorization, ciHasPassed, autoMergeDecision,
-  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR, botApprovalDecision
+  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR
 } from "./auto-merge.mjs";
 
 const HEAD="a".repeat(40);
@@ -317,60 +317,32 @@ test("unverified auto-publish still obeys all global stop conditions",()=>{
   }).eligible,false);
 });
 
-
-test("ePlus GitHub App reviews verified new code only after current-head CI and branch sync",()=>{
-  const d=botProposal();
-  const app="eplus-reviewer[bot]";
-  const allowed=botApprovalDecision({
-    pr:{...d.pr,mergeable_state:"unstable"},newInviteEligible:verifyNewGithubInvitePR(d),
-    files:d.files,runs:[run()],botLogin:app,behindBy:0
-  });
-  assert.deepEqual(allowed,{eligible:true,sha:HEAD,method:"verified-new-github-invite"});
-  for(const changes of [
-    {behindBy:1},
-    {runs:[run(HEAD,"failure")]},
-    {botLogin:"github-actions[bot]"},
-    {botLogin:""},
-    {pr:{...d.pr,mergeable_state:"dirty"}},
-    {pr:{...d.pr,mergeable:false}},
-    {pr:{...d.pr,draft:true}},
-    {pr:{...d.pr,labels:[{name:"do-not-merge"}]}},
-    {reviews:[review("CHANGES_REQUESTED","security-reviewer")]},
-    {comments:[cmd("/automerge off")]}
-  ]) {
-    assert.equal(botApprovalDecision({
-      pr:{...d.pr,mergeable_state:"unstable"},
-      newInviteEligible:true,files:d.files,runs:[run()],botLogin:app,behindBy:0,...changes
-    }).eligible,false,JSON.stringify(changes));
-  }
-  assert.equal(botApprovalDecision({
-    pr:{...d.pr,mergeable_state:"unstable"},newInviteEligible:true,files:d.files,
-    runs:[run()],botLogin:app,behindBy:0,
-    reviews:[review("APPROVED",app,HEAD)]
-  }).eligible,false,"do not create duplicate bot reviews for the same commit");
-});
-
-test("ePlus bot never approves arbitrary code PRs without human authorization",()=>{
-  const app="eplus-reviewer[bot]";
-  const codePr=pr({user:{login:"developer"},changed_files:1,mergeable_state:"unstable"});
-  const file=[mdFile("scripts/auto-merge.mjs")];
-  assert.equal(botApprovalDecision({
-    pr:codePr,files:file,runs:[run()],botLogin:app
+test("ePlus Bot is a workflow name, not a separate App or a forged approval",()=>{
+  const verified=botProposal();
+  assert.deepEqual(autoMergeDecision({
+    pr:{...verified.pr,mergeable_state:"unstable"},
+    files:verified.files,newInviteEligible:verifyNewGithubInvitePR(verified),
+    runs:[run()]
+  }),{eligible:true,sha:HEAD,method:"verified-new-github-invite"});
+  const unverified={...verified.pr,mergeable_state:"unstable"};
+  assert.equal(autoMergeDecision({
+    pr:unverified,files:verified.files,runs:[run()]
+  }).eligible,false,"unstable status never bypasses independent Issue verification");
+  const arbitrary=pr({mergeable_state:"unstable",user:{login:"hoangsvit"},changed_files:1});
+  assert.equal(autoMergeDecision({
+    pr:arbitrary,files:[mdFile("README.md")],runs:[run()]
+  }).eligible,false,"docs must still be clean, even if otherwise default-safe");
+  assert.equal(autoMergeDecision({
+    pr:{...verified.pr,mergeable_state:"dirty"},
+    files:verified.files,newInviteEligible:true,runs:[run()]
   }).eligible,false);
-  assert.equal(botApprovalDecision({
-    pr:codePr,files:file,runs:[run()],botLogin:app,
-    comments:[cmd("/automerge "+HEAD)]
-  }).eligible,true,"maintainer authorization of exact SHA permits independent App review");
-  assert.equal(botApprovalDecision({
-    pr:codePr,files:file,runs:[run()],botLogin:app,
-    comments:[cmd("/automerge "+NEXT)]
+  assert.equal(autoMergeDecision({
+    pr:{...verified.pr,mergeable_state:"unstable"},files:verified.files,
+    newInviteEligible:true,runs:[run()],
+    comments:[cmd("/automerge off")]
   }).eligible,false);
-  const docs=maintainerDocs({mergeable_state:"unstable"});
-  assert.equal(botApprovalDecision({
-    pr:docs,files:[mdFile("README.md")],runs:[run()],botLogin:app
-  }).method,"default-safe-docs");
-  assert.equal(botApprovalDecision({
-    pr:pr({user:{login:app},mergeable_state:"unstable"}),files:[mdFile("README.md")],
-    runs:[run()],botLogin:app,newInviteEligible:true
-  }).eligible,false,"App cannot self-approve an App-authored PR");
+  assert.equal(autoMergeDecision({
+    pr:{...verified.pr,mergeable_state:"unstable"},files:verified.files,
+    newInviteEligible:true,runs:[run(HEAD,"failure")]
+  }).eligible,false);
 });
