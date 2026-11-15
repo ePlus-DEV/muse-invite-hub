@@ -468,6 +468,8 @@ test("real eplus-bot Issue PR workflow never attempts to update legacy bot comme
 test("Issue #167 promotional text with explicit Code line still produces a safe new invite proposal",()=>{
   const pasted="Check out Muse, your personal AI agent. Redeem my code in Settings within 48 hours of joining and we'll both get 1 billion Muse tokens.\n\nCode: 8IJ5BD";
   const fullBody=share.replace("### Invite code\n\nPNSMZZ","### Invite code\n\n"+pasted)
+    .replace("### Public confirmation or context (optional)",
+      "### Code source\n\nGitHub (my own code)\n\n### Public confirmation or context (optional)")
     .replace("### Invite limit (optional; self-reported)\n\n30",
       "### Invite limit (optional; self-reported)\n\n_No response_");
   const incoming=issue(167,"8IJ5BD",fullBody,"devampatel1208-del");
