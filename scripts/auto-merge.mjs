@@ -178,3 +178,51 @@ export function autoMergeDecision({pr,comments=[],reviews=[],runs=[],files=[],ne
     ? "verified-new-github-invite" : safeDefault && !authorization.authorized
       ? "default-safe-docs" : authorization.method};
 }
+
+
+// Separate GitHub App reviewer: never let the same PR-author bot approve itself.
+// The App's review satisfies repository review rules only for already-verified,
+// current-head new GitHub invite data, safe maintainer docs, or an explicitly
+// authorized current-head maintainer change. It never reviews unrelated code
+// simply because CI passed.
+export function botApprovalDecision({
+  pr, comments=[], reviews=[], runs=[], files=[], newInviteEligible=false,
+  behindBy=0, botLogin="", repo="ePlus-DEV/muse-invite-hub"
+}) {
+  if (!/^[A-Za-z0-9-]+\[bot\]$/.test(botLogin) ||
+      botLogin === "github-actions[bot]" ||
+      botLogin.toLowerCase() === login(pr?.user)) {
+    return {eligible:false,reason:"Independent ePlus GitHub App reviewer is required."};
+  }
+  if (!pr || pr.state !== "open" || pr.draft || pr.mergeable !== true ||
+      !["clean","unstable"].includes(pr.mergeable_state) ||
+      pr.base?.ref !== "main" || pr.head?.repo?.full_name !== repo ||
+      !/^[0-9a-f]{40}$/.test(pr.head?.sha||"")) {
+    return {eligible:false,reason:"PR is not a cleanly applicable Ready PR targeting main."};
+  }
+  if (behindBy !== 0 || !Number.isSafeInteger(behindBy)) {
+    return {eligible:false,reason:"PR head must include the current main commit before review."};
+  }
+  if ((pr.labels||[]).some(x=>String(x?.name||"").toLowerCase() === AUTO_MERGE_BLOCK_LABEL)) {
+    return {eligible:false,reason:"The do-not-merge label is present."};
+  }
+  const authorization=getMaintainerAuthorization({headSha:pr.head.sha,comments,reviews});
+  if (authorization.reason === "A reviewer still requests changes." ||
+      authorization.reason === "Auto-merge was cancelled by @hoangsvit.") {
+    return {eligible:false,reason:authorization.reason};
+  }
+  const safeDefault=qualifiesForDefaultAutoMerge(pr,files);
+  if (!newInviteEligible && !safeDefault && !authorization.authorized) {
+    return {eligible:false,reason:"Only verified new invites, safe docs or maintainer-authorized PRs may receive bot approval."};
+  }
+  if (!ciHasPassed({headSha:pr.head.sha,runs})) {
+    return {eligible:false,reason:"Current PR head lacks successful trusted validation."};
+  }
+  if (reviews.some(x=>login(x.user)===botLogin.toLowerCase() &&
+      x.state==="APPROVED" && x.commit_id===pr.head.sha)) {
+    return {eligible:false,reason:"ePlus Bot already approved this exact PR head."};
+  }
+  return {eligible:true,sha:pr.head.sha,method:newInviteEligible && !authorization.authorized
+    ? "verified-new-github-invite" : safeDefault && !authorization.authorized
+      ? "default-safe-docs" : "maintainer-authorized"};
+}

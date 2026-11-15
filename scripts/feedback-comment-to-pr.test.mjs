@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { planCommentProposal } from "./feedback-comment-to-pr.mjs";
+import { withCanonicalIssueRefs } from "./code-issue-map.mjs";
 
 const item={id:"eplus-owner-dpnihh",code:"DPNIHH",status:"unverified",
   addedAt:"2026-11-11",submittedBy:"hoangsvit",featured:true,ownerConfirmed:true,
@@ -113,7 +114,7 @@ test("trusted Issue action never posts an unverified result directly to the cata
   assert.match(code,/auto\/comment-/);
   assert.match(code,/A maintainer must approve it before any website status changes/);
   assert.match(flow,/issue_comment:/);
-  assert.match(flow,/types: \[created\]/);
+  assert.match(flow,/types: \[created, edited\]/);
   assert.match(flow,/run: node scripts\/reopen-code-feedback\.mjs/);
   assert.match(flow,/run: node scripts\/feedback-comment-to-pr\.mjs/);
 });
@@ -133,4 +134,28 @@ test("feedback on second code of a shared original Issue produces the correct Dr
   assert.equal(result.data.find(entry=>entry.code==="ALFA12").status,"unverified");
   assert.equal(result.branch,"auto/comment-120-1025-feedback");
   assert.equal(planCommentProposal(root,member("Code: UNKNOWN\nResult: Muse accepted my code"),[first,second]).outcome,"ignored");
+});
+
+test("Issue #14 owner comment is mapped and reviewed, never silently ignored",()=>{
+  const seed={...item,submittedById:11882322};
+  delete seed.feedbackIssueNumber;
+  const owner={login:"hoangsvit",id:11882322,type:"User"};
+  const comment=member("Code: DPNIHH\nUpdate type: Owner count\n"+
+    "Remaining invites: 23\nTotal invites: 30\nUsed invites: 7\n"+
+    "Owner confirmation: ok",{id:6889445306,user:owner,created_at:"2026-11-15T04:56:55Z"});
+  const liveIssue={...issue,state:"open"};
+  assert.equal(planCommentProposal(liveIssue,comment,[seed]).outcome,"ignored");
+  const mapped=withCanonicalIssueRefs([seed],{DPNIHH:14});
+  const invalid=planCommentProposal(liveIssue,comment,mapped);
+  assert.equal(invalid.outcome,"needs-review");
+  assert.match(invalid.reason,/Owner confirmation is required/);
+  const confirmed={...comment,body:comment.body.replace(
+    "Owner confirmation: ok",
+    "Owner confirmation: I confirm these figures came from my own Muse invite screen.")};
+  const proposal=planCommentProposal(liveIssue,confirmed,mapped);
+  assert.equal(proposal.outcome,"proposal");
+  assert.equal(proposal.branch,"auto/comment-14-6889445306-count");
+  assert.equal(proposal.data[0].reportedUses,7);
+  assert.equal(proposal.data[0].reportedCapacity,30);
+  assert.equal(proposal.data[0].feedbackIssueNumber,14);
 });
