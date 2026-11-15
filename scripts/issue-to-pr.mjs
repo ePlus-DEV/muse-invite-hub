@@ -448,7 +448,9 @@ async function api(method,path,token,payload,allow404=false) {
 }
 async function comment(issue,token,body) {
   const messages=await api("GET","issues/"+issue.number+"/comments?per_page=100",token);
-  const previous=messages.find(entry=>entry.user?.login==="github-actions[bot]"&&
+  // Only edit comments owned by the current authenticated eplus-bot.
+  // It cannot PATCH legacy github-actions[bot] comments (GitHub HTTP 403).
+  const previous=messages.find(entry=>entry.user?.login==="eplus-bot"&&
     entry.body?.includes(MARKER));
   const text=MARKER+"\n"+body;
   if(previous){

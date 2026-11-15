@@ -51,8 +51,17 @@ jobs:
           node --check scripts/issue-to-pr.mjs
           node --test scripts/issue-to-pr.test.mjs
           node scripts/validate.mjs
-      - name: Propose review-only Draft PR
+      - name: Verify existing ePlus Bot credential
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.EPLUS_BOT_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::Missing EPLUS_BOT_TOKEN repository/organization Actions secret"; exit 1; }
+          test "$(gh api user --jq .login)" = "eplus-bot" || {
+            echo "::error::EPLUS_BOT_TOKEN must authenticate as eplus-bot"
+            exit 1
+          }
+      - name: Create or update Issue proposal as eplus-bot
+        env:
+          GH_TOKEN: ${{ secrets.EPLUS_BOT_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
         run: node scripts/issue-to-pr.mjs
