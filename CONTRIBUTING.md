@@ -28,6 +28,15 @@ There are **three different routes**. Passing CI does **not** prove that a code 
 | **Documentation-only PR authored by @hoangsvit** | **Automatic** after green CI if Ready, only `README.md`, `CONTRIBUTING.md` or Markdown under `docs/` (1–15 changed files, no deletion/rename/mixed code). |
 | **Social-source, existing-code, feedback, quota, code, UI, workflow or other PRs** | **Manual review:** keep generated community proposals in Draft until reviewed; `@hoangsvit` may authorize merge of the current Ready PR head. |
 
+### Independent ePlus Bot review (optional, one-time setup)
+The trusted `Conditional PR auto-merge` workflow can use a **separate ePlus GitHub App identity** to submit the required GitHub **APPROVE** review. It is not the same identity as `github-actions[bot]`, which authors community invite PRs. For safety it approves **only** (a) independently verified new GitHub-owned invite records with both real consent checks and passing current-head CI, (b) safe maintainer-authored docs-only changes, or (c) a Ready PR explicitly approved by @hoangsvit for the exact head SHA. It **never automatically authorizes arbitrary application code, workflows, third-party sources, quotas, or feedback**.
+
+**Configure once:** Create or reuse a GitHub App named ePlus Bot, grant **Pull requests: Read and write** and install it only for `ePlus-DEV/muse-invite-hub`. In the repository go to **Settings → Secrets and variables → Actions** and set:
+- Repository **variable** `EPLUS_REVIEW_BOT_CLIENT_ID`: GitHub App Client ID.
+- Repository **secret** `EPLUS_REVIEW_BOT_PRIVATE_KEY`: that App's private key (keep it secret; never commit it or paste it into an Issue).
+
+When the variable is missing, ePlus Bot review is skipped and GitHub's normal protection rules stay in force. If the App is not installed or lacks permission, the workflow reports a failed review instead of pretending approval succeeded. Bot approval may not satisfy a human Code Owner requirement; GitHub's branch protection always decides whether to accept the review. For verified new-code bot PRs, stale branches are updated from current `main` without force-pushing, followed by a fresh CI dispatch; approval is for the **new exact commit** only.
+
 For the manual route, after reviewing the source and diff, @hoangsvit may approve the current HEAD in GitHub (where possible) **or** comment `/automerge FULL_40_CHARACTER_HEAD_SHA` on the PR. A new commit invalidates that authorization. The trusted workflow checks current-head validation, GitHub mergeability and the up-to-date `main` branch, then uses squash merge and explicitly dispatches the trusted Pages deployment.
 
 **All three routes can be blocked:** `do-not-merge` label, `/automerge off` by @hoangsvit, Draft status, an unresolved `CHANGES_REQUESTED` review, failed or in-progress CI, merge conflict, or a branch behind `main`. Do not use auto-merge to bypass branch protection. GitHub's built-in repository-level **Allow auto-merge** setting is separate and currently disabled; this workflow implements the conditional policy without a personal access token.
