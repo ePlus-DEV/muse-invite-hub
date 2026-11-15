@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { planIssueChange } from "./issue-to-pr.mjs";
 import { feedbackCodeForIssue } from "./reopen-code-feedback.mjs";
-import { REPO } from "./code-issue-map.mjs";
+import { REPO, withCanonicalIssueRefs } from "./code-issue-map.mjs";
 import { listedPlatform } from "./source-platform.mjs";
 import { readCatalog, fetchGitHubCatalog, changedRecord } from "./catalog.mjs";
 
@@ -109,6 +109,28 @@ async function api(method,path,token,body,allow404=false) {
   return response.status===204?null:response.json();
 }
 
+// A recognized but rejected report must not disappear behind a green workflow.
+async function notifyReviewRequired(issueNumber,commentId,reason,token) {
+  const marker="<!-- muse-comment-needs-review:"+commentId+" -->";
+  for(let page=1;page<=10;page++){
+    const comments=await api("GET","issues/"+issueNumber+"/comments?per_page=100&page="+page,token);
+    if(comments.some(row=>row.user?.login==="github-actions[bot]" &&
+        row.body?.includes(marker)))return;
+    if(comments.length<100)break;
+    if(page===10)throw Error("Too many comments to deduplicate feedback notices.");
+  }
+  const instructions=reason==="Owner confirmation is required for quota updates."
+    ? "Edit your original comment and enter the exact confirmation line: " +
+      "\`Owner confirmation: I confirm these figures came from my own Muse invite screen.\` " +
+      "Only do this if you actually checked the numbers in your own Muse account."
+    : "Please edit your original comment to correct the report or ask a maintainer to review it.";
+  await api("POST","issues/"+issueNumber+"/comments",token,{
+    body:marker+"\n⚠️ **No Draft PR created for comment #"+commentId+"**: "+
+      String(reason||"Requires maintainer review.").slice(0,250)+"\n\n"+
+      instructions+"\n\nNo public catalog data was changed."
+  });
+}
+
 export async function proposeCommentDraft({
   repository=process.env.GITHUB_REPOSITORY,
   token=process.env.GH_TOKEN,
@@ -118,7 +140,8 @@ export async function proposeCommentDraft({
 }={}) {
   if(repository!==REPO || !token || !Number.isSafeInteger(issueNumber)||issueNumber<=0||
     !Number.isSafeInteger(commentId)||commentId<=0) throw Error("Trusted repository, token and comment IDs required.");
-  const entries=catalog??readCatalog();
+  const roots=JSON.parse(readFileSync(new URL("../data/code-issues.json",import.meta.url),"utf8"));
+  const entries=withCanonicalIssueRefs(catalog??readCatalog(),roots);
   const [issue,comment]=await Promise.all([
     api("GET","issues/"+issueNumber,token),
     api("GET","issues/comments/"+commentId,token)
@@ -128,6 +151,9 @@ export async function proposeCommentDraft({
   }
   const planned=planCommentProposal(issue,comment,entries);
   if(planned.outcome!=="proposal") {
+    if(planned.outcome==="needs-review") {
+      await notifyReviewRequired(issueNumber,commentId,planned.reason,token);
+    }
     console.log(JSON.stringify(planned));
     return planned;
   }
@@ -139,10 +165,15 @@ export async function proposeCommentDraft({
   // Reject overlapping unreviewed changes to the SAME entry from other PRs.
   const ref=await api("GET","git/ref/heads/main",token);
   const mainSha=ref.object.sha;
-  const mainCatalog=await fetchGitHubCatalog(
-    (path,allow404=false)=>api("GET",path,token,undefined,allow404),mainSha);
+  const mainCatalog=withCanonicalIssueRefs(await fetchGitHubCatalog(
+    (path,allow404=false)=>api("GET",path,token,undefined,allow404),mainSha),roots);
   const current=planCommentProposal(issue,comment,mainCatalog);
-  if(current.outcome!=="proposal")return current;
+  if(current.outcome!=="proposal") {
+    if(current.outcome==="needs-review") {
+      await notifyReviewRequired(issueNumber,commentId,current.reason,token);
+    }
+    return current;
+  }
   // Independent branches from main only; never stack on an unmerged PR.
   for(const pr of own) {
     if(!pr.head.ref.startsWith("auto/"))continue;

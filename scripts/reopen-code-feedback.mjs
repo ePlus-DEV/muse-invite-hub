@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
-import { issueCodes, issueMarker, originalIssueNumber, REPO } from "./code-issue-map.mjs";
+import { issueCodes, issueMarker, originalIssueNumber, withCanonicalIssueRefs, REPO } from "./code-issue-map.mjs";
 import { readCatalog } from "./catalog.mjs";
 
 const ACK_MARKER = "<!-- muse-code-feedback-reopened -->";
@@ -67,11 +67,7 @@ export async function reopenOnFeedback({
   }
   const rawEntries = catalog ?? readCatalog();
   const roots = catalog ? {} : JSON.parse(readFileSync(new URL("../data/code-issues.json", import.meta.url), "utf8"));
-  const entries = rawEntries.map(item => ({
-    ...item,
-    ...(Number.isSafeInteger(roots[item.code]) && roots[item.code] > 0
-      ? {feedbackIssueNumber:roots[item.code]} : {})
-  }));
+  const entries = withCanonicalIssueRefs(rawEntries, roots);
   const issue = await github("GET", "issues/" + issueNumber, token);
   const comment = await github("GET", "issues/comments/" + commentId, token);
   if (comment.issue_url?.split("/").at(-1) !== String(issueNumber) ||
