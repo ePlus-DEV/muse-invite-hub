@@ -189,3 +189,25 @@ test("canonical mapping is shared with comment PR handling for legacy owner reco
   assert.throws(()=>withCanonicalIssueRefs(mapped,{DPNIHH:44}),/Conflicting canonical/);
   assert.throws(()=>withCanonicalIssueRefs(original,{DPNIHH:-1}),/Invalid canonical/);
 });
+
+
+test("accept a pasted Muse referral message only when one explicit Code line exists",()=>{
+  const pasted="Check out Muse, your personal AI agent. Redeem my code in Settings within 48 hours of joining and we'll both get 1 billion Muse tokens.\n\nCode: 8IJ5BD";
+  assert.deepEqual(parseInviteCodes(pasted),["8IJ5BD"]);
+  assert.deepEqual(parseInviteCodes("Code: 8ij5bd"),["8IJ5BD"]);
+  assert.deepEqual(parseInviteCodes("Invite code: 8IJ5BD"),["8IJ5BD"]);
+  const full={number:167,title:"8IJ5BD",state:"open",body:[
+    "### Invite code","",pasted,"","### Code source","","GitHub (my own code)","",
+    "### Contributor checklist","","- [x] I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
+    "- [x] This code is not a password, 2FA code, session token or private credential."
+  ].join("\n")};
+  assert.deepEqual(issueCodes(full),["8IJ5BD"]);
+  for(const invalid of [
+    "Check out Muse — redeem ABC123", // no explicit label
+    "Code: ABC123\nCode: XYZ789", // ambiguous two labels
+    "Use my code: ABC123", // not a standalone label
+    "Code: 12\nRedeem now", // invalid code length
+    "Code: ABC123, XYZ789", // unclear multiple codes
+    "Code: ABC123\nCode: ABC123" // duplicates must not collapse
+  ]) assert.throws(()=>parseInviteCodes(invalid),/Invite code must contain/);
+});
