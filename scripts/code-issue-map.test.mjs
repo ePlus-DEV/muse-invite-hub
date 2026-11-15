@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   issueMarker, issueCode, issueCodes, parseInviteCodes, originalIssueNumber, canonicalThreadBody,
-  syncCodeIssueMap, validIssueMap, resolveExistingIssue
+  syncCodeIssueMap, validIssueMap, resolveExistingIssue, withCanonicalIssueRefs
 } from "./code-issue-map.mjs";
 import { feedbackCodeForIssue, shouldReopen } from "./reopen-code-feedback.mjs";
 
@@ -177,4 +177,15 @@ test("multi-code form maps both independent records back to its single canonical
   assert.equal(feedbackCodeForIssue(form,items,"Code: BRAVO2\nResult: worked"),"BRAVO2");
   assert.equal(feedbackCodeForIssue(form,[items[1]]),"BRAVO2");
   assert.throws(()=>parseInviteCodes("ALFA12, ALFA12"),/distinct/);
+});
+
+test("canonical mapping is shared with comment PR handling for legacy owner records",()=>{
+  const original=[{id:"eplus-owner-dpnihh",code:"DPNIHH"}];
+  const mapped=withCanonicalIssueRefs(original,{DPNIHH:14});
+  assert.equal(original[0].feedbackIssueNumber,undefined);
+  assert.equal(mapped[0].feedbackIssueNumber,14);
+  assert.equal(originalIssueNumber(mapped[0]),14);
+  assert.deepEqual(withCanonicalIssueRefs(mapped,{DPNIHH:14}),mapped);
+  assert.throws(()=>withCanonicalIssueRefs(mapped,{DPNIHH:44}),/Conflicting canonical/);
+  assert.throws(()=>withCanonicalIssueRefs(original,{DPNIHH:-1}),/Invalid canonical/);
 });
