@@ -451,3 +451,14 @@ test("multiple code submissions reject duplicates, malformed tokens and shared q
   assert.equal(existing.outcome,"needs-review");
   assert.match(existing.reason,/already/);
 });
+
+
+test("real eplus-bot Issue PR workflow never attempts to update legacy bot comments",()=>{
+  const source=readFileSync(new URL("./issue-to-pr.mjs",import.meta.url),"utf8");
+  assert.match(source,/entry\.user\?\.login==="eplus-bot"/);
+  assert.doesNotMatch(source,/messages\.find\(entry=>\["github-actions\[bot\]","eplus-bot"\]/);
+  const workflow=readFileSync(new URL("../.github/workflows/issue-to-pr.yml",import.meta.url),"utf8");
+  assert.match(workflow,/GH_TOKEN: \$\{\{ secrets\.EPLUS_BOT_TOKEN \}\}/);
+  assert.match(workflow,/test "\$\(gh api user --jq \.login\)" = "eplus-bot"/);
+  assert.doesNotMatch(workflow,/GH_TOKEN: \$\{\{ github\.token \}\}/);
+});
