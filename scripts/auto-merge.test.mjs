@@ -1,4 +1,4 @@
-import { planIssueChange, isAutoPublishableNewGithubInvite, AUTO_PUBLISH_NEW_INVITE_MARKER } from "./issue-to-pr.mjs";
+import { planIssueChange, isAutoPublishableNewGithubInvite, isAutoPublishableNewSocialInvite, AUTO_PUBLISH_NEW_INVITE_MARKER, AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER } from "./issue-to-pr.mjs";
 import { changedRecord, changedRecords } from "./catalog.mjs";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   AUTO_MERGE_MAINTAINER, AUTO_MERGE_BLOCK_LABEL,
   getMaintainerAuthorization, ciHasPassed, autoMergeDecision,
-  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR, needsEplusBotReview
+  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR, verifyNewSocialInvitePR, needsEplusBotReview
 } from "./auto-merge.mjs";
 
 const HEAD="a".repeat(40);
@@ -416,4 +416,34 @@ test("actual eplus-bot credential and exact-head review are wired safely",()=>{
   assert.match(manual,/\.status == "completed" and \.conclusion == "success"/);
   assert.match(manual,/secrets\.EPLUS_BOT_TOKEN/);
   assert.doesNotMatch(manual,/actions\/checkout/);
+});
+
+
+test("strict social new-code PR verifier keeps attribution unverified but permits publication",()=>{
+  const issue=newCodeIssue("BM69LI","X (Twitter) (public code I found)");
+  issue.body=issue.body.replace("### Public confirmation or context (optional)",
+    "### Social post or profile URL (required for Threads, X or Facebook)\n\n"+
+    "https://x.com/xiyaodao/status/2121891507309314522\n\n"+
+    "### Public confirmation or context (optional)");
+  const data=botProposal(issue);
+  data.pr.body=AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER;
+  data.pr.user={login:"eplus-bot"};
+  assert.equal(isAutoPublishableNewSocialInvite(issue,planIssueChange(issue,existingCatalog)),true);
+  assert.equal(verifyNewSocialInvitePR(data),true);
+  assert.equal(verifyNewGithubInvitePR(data),false);
+  assert.equal(needsEplusBotReview({...data,newInviteEligible:true,runs:[run()]}).required,false);
+  assert.equal(autoMergeDecision({
+    pr:data.pr,files:data.files,newInviteEligible:verifyNewSocialInvitePR(data),runs:[run()]
+  }).eligible,true);
+  const tampered={...data,fileContents:{...data.fileContents,
+    [data.files[0].filename]:data.fileContents[data.files[0].filename].replace(
+      '"status": "unverified"','"status": "reported-working"')}};
+  assert.equal(verifyNewSocialInvitePR(tampered),false);
+  const spoof={...data,pr:{...data.pr,body:AUTO_PUBLISH_NEW_INVITE_MARKER}};
+  assert.equal(verifyNewSocialInvitePR(spoof),false);
+  const foreign={...data,issue:{...issue,
+    body:issue.body.replace("x.com/xiyaodao/status/2121891507309314522","x.com/other/status/2121891507309314522")}};
+  assert.equal(verifyNewSocialInvitePR(foreign),false);
+  assert.equal(autoMergeDecision({pr:data.pr,files:data.files,
+    newInviteEligible:true,runs:[run(HEAD,"failure")]}).eligible,false);
 });

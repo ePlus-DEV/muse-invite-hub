@@ -1,10 +1,10 @@
 name: Conditional PR auto-merge
 
 # Never execute untrusted PR scripts with the write-scoped workflow token.
-# Newly submitted GitHub-owned public invite codes auto-publish as unverified
+# Newly submitted GitHub-owned and public-post-reported codes auto-publish as unverified
 # after trusted record/Issue comparison and green CI. Documentation-only
 # maintainer PRs also use safe default auto-merge.
-# Social-source, updates, and all other PRs still require human approval.
+# Existing-code, attribution changes, quotas and other PRs still require human approval.
 on:
   pull_request_target:
     types: [ready_for_review, reopened, synchronize, labeled, unlabeled]
@@ -51,7 +51,7 @@ jobs:
         with:
           github-token: ${{ github.token }}
           script: |
-            const { autoMergeDecision, verifyNewGithubInvitePR,
+            const { autoMergeDecision, verifyNewGithubInvitePR, verifyNewSocialInvitePR,
               ciHasPassed, getMaintainerAuthorization, qualifiesForDefaultAutoMerge,
               needsEplusBotReview } = await import(
               process.env.GITHUB_WORKSPACE + "/scripts/auto-merge.mjs"
@@ -59,7 +59,8 @@ jobs:
             const { readCatalog } = await import(
               process.env.GITHUB_WORKSPACE + "/scripts/catalog.mjs"
             );
-            const { AUTO_PUBLISH_NEW_INVITE_MARKER } = await import(
+            const { AUTO_PUBLISH_NEW_INVITE_MARKER,
+              AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER } = await import(
               process.env.GITHUB_WORKSPACE + "/scripts/issue-to-pr.mjs"
             );
             const { owner, repo } = context.repo;
@@ -123,7 +124,8 @@ jobs:
               const inviteMatch = /^auto\/issue-([1-9][0-9]*)-invite$/.exec(pr.head.ref);
               if (inviteMatch &&
                   ["github-actions[bot]","eplus-bot"].includes(pr.user?.login) &&
-                  String(pr.body || "").includes(AUTO_PUBLISH_NEW_INVITE_MARKER) &&
+                  (String(pr.body || "").includes(AUTO_PUBLISH_NEW_INVITE_MARKER) ||
+                   String(pr.body || "").includes(AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER)) &&
                   files.length >= 1 && files.length <= 10 &&
                   files.every(f => f.status === "added" &&
                     /^data\/invite-records\/community-issue-[a-z0-9-]+\.json$/.test(f.filename))) {
@@ -147,10 +149,12 @@ jobs:
                       result.content.replace(/\s/g,""),"base64"
                     ).toString("utf8");
                   }
-                  newInviteEligible = verifyNewGithubInvitePR({
+                  const trustInputs={
                     pr,issue,catalog:readCatalog(process.env.GITHUB_WORKSPACE),
                     files,fileContents,repo:fullName
-                  });
+                  };
+                  newInviteEligible = verifyNewGithubInvitePR(trustInputs) ||
+                    verifyNewSocialInvitePR(trustInputs);
                   if (newInviteEligible) {
                     sourceIssueNo=issue_number;
                     sourceIssueUpdatedAt=issue.updated_at;
@@ -297,8 +301,8 @@ jobs:
                       headers:{...headers,"Content-Type":"application/json"},
                       body:JSON.stringify({
                         event:"APPROVE",commit_id:decision.sha,
-                        body:"Approved by @eplus-bot for verified new GitHub "+
-                          "invite records after trusted current-head CI. "+
+                        body:"Approved by @eplus-bot for validated new invite "+
+                          "records after trusted current-head CI. "+
                           "Code redemption remains unverified."
                       })
                     });

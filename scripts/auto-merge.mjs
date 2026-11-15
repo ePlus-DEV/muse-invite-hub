@@ -1,6 +1,6 @@
 import {
-  planIssueChange, isAutoPublishableNewGithubInvite,
-  AUTO_PUBLISH_NEW_INVITE_MARKER
+  planIssueChange, isAutoPublishableNewGithubInvite, isAutoPublishableNewSocialInvite,
+  AUTO_PUBLISH_NEW_INVITE_MARKER, AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER
 } from "./issue-to-pr.mjs";
 import { changedRecord, changedRecords } from "./catalog.mjs";
 
@@ -100,9 +100,9 @@ export function getMaintainerAuthorization({headSha,comments=[],reviews=[]}) {
 // Independently verify that the bot PR is an exact deterministic projection
 // of a *current* public Issue on trusted main. Never trust the PR title,
 // checklist summary, patch text, or bot marker alone.
-export function verifyNewGithubInvitePR({
+function verifyTrustedInvitePR({
   pr,issue,catalog,files=[],fileContents={},repo="ePlus-DEV/muse-invite-hub"
-}) {
+}, eligible, marker) {
   if (!pr || !issue || !Array.isArray(catalog) ||
       !Array.isArray(files) || !fileContents ||
       typeof fileContents !== "object" || Array.isArray(fileContents)) return false;
@@ -111,11 +111,11 @@ export function verifyNewGithubInvitePR({
       pr.base?.ref !== "main" ||
       !Number.isSafeInteger(issue.number) || issue.number < 1 ||
       pr.head?.ref !== "auto/issue-"+issue.number+"-invite" ||
-      !String(pr.body || "").includes(AUTO_PUBLISH_NEW_INVITE_MARKER)) return false;
+      !String(pr.body || "").includes(marker)) return false;
 
   try {
     const proposal=planIssueChange(issue,catalog);
-    if (!isAutoPublishableNewGithubInvite(issue,proposal)) return false;
+    if (!eligible(issue,proposal)) return false;
     const codes=proposal.codes || [proposal.code];
     if (pr.title !== "data: review "+codes.join(", ")+" invite (issue #"+issue.number+")") return false;
     const expected=codes.length === 1
@@ -135,6 +135,14 @@ export function verifyNewGithubInvitePR({
     // require maintainer review instead of automatic publication.
     return false;
   }
+}
+
+export function verifyNewGithubInvitePR(args) {
+  return verifyTrustedInvitePR(args,isAutoPublishableNewGithubInvite,AUTO_PUBLISH_NEW_INVITE_MARKER);
+}
+
+export function verifyNewSocialInvitePR(args) {
+  return verifyTrustedInvitePR(args,isAutoPublishableNewSocialInvite,AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER);
 }
 
 export function ciHasPassed({headSha,runs=[]}) {
