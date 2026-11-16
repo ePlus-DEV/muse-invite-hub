@@ -28,6 +28,9 @@ jobs:
           node --check telegram/bot.mjs
           node --check telegram/github.mjs
           node --check telegram/server.mjs
+          node --check telegram/notifications.mjs
+          node --check telegram/notify-oci.mjs
+          node --test telegram/notifications.test.mjs
           node --test telegram/telegram.test.mjs
       - name: Prepare QEMU
         uses: docker/setup-qemu-action@v4

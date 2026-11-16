@@ -48,6 +48,11 @@ jobs:
           node --check telegram/server.mjs
           node --check telegram/worker.mjs
           node --check telegram/register-webhook.mjs
+          node --check telegram/notifications.mjs
+          node --check telegram/notify-oci.mjs
+          node --check telegram/notify-worker.mjs
+          node --check scripts/notify-telegram-publish.mjs
+          node --test telegram/notifications.test.mjs
           node --test telegram/telegram.test.mjs
           node --test telegram/worker.test.mjs
       - name: Validate optional OCI Compose and ARM64 image build
