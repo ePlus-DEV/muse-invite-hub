@@ -226,6 +226,29 @@ test("OCI Refresh re-fetches published codes without posting or changing prefere
   }});
 });
 
+test("OCI bot navigates pages, detail and Back without public writes",async()=>{
+  const items=Array.from({length:8},(_,i)=>({
+    code:"PAGE"+String(i).padStart(2,"0"),status:"unverified",
+    remaining:i,usageReportedAt:"2026-11-15",addedAt:"2026-11-14",platform:"Threads"
+  }));
+  await withApp(async({post,sent,calls})=>{
+    assert.equal((await post(message(510,"/codes"))).status,200);
+    assert.equal(sent.filter(x=>x.name==="sendMessage").length,1);
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:PAGE00");
+    assert.equal((await post(callback(511,"t:page:1"))).status,200);
+    assert.match(sent.at(-1).payload.text,/Page 2/);
+    assert.equal((await post(callback(512,"t:detail:PAGE05"))).status,200);
+    assert.match(sent.at(-1).payload.text,/Platform: Threads/);
+    assert.equal((await post(callback(513,"t:back-list"))).status,200);
+    assert.match(sent.at(-1).payload.text,/Page 2/);
+    assert.equal((await post(callback(514,"t:home"))).status,200);
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
+    assert.equal(calls.submit.length,0);
+    assert.equal(calls.report.length,0);
+  },{browseCodes:async({offset=0,limit=6,query=""})=>
+    items.filter(x=>!query||x.code.includes(query)).slice(offset,offset+limit)});
+});
+
 test("OCI bot defaults to English and retains an explicit Japanese override",async()=>{
   await withApp(async({post,sent,dir})=>{
     const vi={...message(600,"/start")};
