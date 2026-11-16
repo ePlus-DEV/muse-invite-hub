@@ -30,15 +30,67 @@ test("map page and homepage retain the same five documented launch markets", () 
     assert.ok(home.includes('datetime="' + date + '"'));
     assert.ok(page.includes('datetime="' + date + '"'));
   }
-  assert.ok(page.includes('datetime="2026-11-14"'));
+  assert.ok(page.includes('datetime="2026-11-16"'));
   assert.match(page, /Countries without a confirmed announcement are not necessarily blocked/);
   assert.match(page, /Availability ≠ eligibility/);
   assert.ok(!/guaranteed access|live availability|globally available/i.test(page));
 });
 
+test("recheck date and primary-source list stay synchronized across HTML and documentation", () => {
+  const guide=read("docs/PROJECT_GUIDE.md");
+  const readme=read("README.md");
+  assert.match(home,/5 confirmed markets · 1 press-reported · Updated 16 Nov 2026/);
+  assert.match(home,/As of <time datetime="2026-11-16">16 Nov 2026<\/time>/);
+  assert.match(page,/Last reviewed <time datetime="2026-11-16">16 Nov 2026<\/time>/);
+  assert.match(page,/Updated 16 Nov 2026/);
+  assert.match(readme,/as rechecked 16 November 2026/);
+  assert.match(guide,/As rechecked 16 November 2026/);
+  assert.equal((guide.match(/^# Project guide — Muse Invite Hub$/gm)||[]).length,1);
+  assert.ok(guide.includes("`^[A-Z0-9]{6}import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { buildPreview, isSafeSiteFile } from "./preview-core.mjs";
+import { generateSitemap, renderDetailPage } from "./site-pages.mjs";
+
+const read = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
+const home = read("index.html");
+const page = read("countries/index.html");
+const js = read("assets/countries.js");
+const css = read("assets/countries.css");
+const expected = ["US", "CA", "JP", "SG", "MX"];
+
+test("map page and homepage retain the same five documented launch markets", () => {
+  const homeCodes = [...home.matchAll(/<li data-country="([A-Z]{2})">/g)].map(x => x[1]);
+  const pageCodes = [...page.matchAll(/<article class="country-card(?: is-selected)?" data-code="([A-Z]{2})"/g)].map(x => x[1]);
+  assert.deepEqual(homeCodes, expected);
+  assert.deepEqual(pageCodes, expected);
+  const sources = [...home.matchAll(/href="(https:\/\/about\.fb\.com\/[^"]+)"/g)].map(x => x[1]);
+  assert.equal(sources.length, expected.length);
+  for (const url of sources) assert.equal(page.split('href="' + url + '"').length - 1, 1);
+  for (const code of expected) {
+    const flag = code.toLowerCase();
+    assert.ok(page.includes('../assets/flags/' + flag + '.svg'));
+    assert.ok(page.includes('data-select="' + code + '"'));
+  }
+  for (const date of ["2026-09-08", "2026-09-29", "2026-10-23", "2026-10-27", "2026-11-05"]) {
+    assert.ok(home.includes('datetime="' + date + '"'));
+    assert.ok(page.includes('datetime="' + date + '"'));
+  }
+  assert.ok(page.includes('datetime="2026-11-16"'));
+  assert.match(page, /Countries without a confirmed announcement are not necessarily blocked/);
+  assert.match(page, /Availability ≠ eligibility/);
+  assert.ok(!/guaranteed access|live availability|globally available/i.test(page));
+});
+
+"),"guide must preserve intact six-character code rule");
+  assert.match(guide,/UK timing remains press-reported and not an official announcement/);
+});
+
 test("press-reported UK is clearly separate from officially confirmed rollout", () => {
   const source = "https://www.thetimes.com/business/technology/article/mark-zuckerbergs-muse-ai-assistant-uk-launch-c5srqnkb8";
-  assert.match(home, /5 confirmed markets · 1 press-reported · Updated 14 Nov 2026/);
+  assert.match(home, /5 confirmed markets · 1 press-reported · Updated 16 Nov 2026/);
   assert.match(home, /availability-expected-label/);
   assert.match(home, /No official launch date or availability/);
   assert.ok(home.includes(source));
