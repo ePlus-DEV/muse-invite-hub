@@ -10,6 +10,17 @@ export const BOT_COMMANDS = [
   {command:"report",description:"Report a code you tried"},
   {command:"count",description:"GitHub owner-only count guidance"},
   {command:"privacy",description:"Read privacy and public posting rules"},
+  {command:"get",description:"View and copy a published invite"},
+  {command:"search",description:"Search codes or contributors"},
+  {command:"new",description:"Recently published codes"},
+  {command:"my",description:"Your Telegram submissions"},
+  {command:"watch",description:"Follow a code's publication"},
+  {command:"unwatch",description:"Stop following a code"},
+  {command:"watchlist",description:"Manage followed codes"},
+  {command:"subscribe",description:"Enable new-code alerts"},
+  {command:"unsubscribe",description:"Disable new-code alerts"},
+  {command:"settings",description:"Private chat preferences"},
+  {command:"delete_data",description:"Clear private bot profile"},
   {command:"cancel",description:"Cancel a confirmation"}
 ];
 

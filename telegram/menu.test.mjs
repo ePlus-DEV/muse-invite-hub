@@ -40,6 +40,8 @@ test("fixed 3-by-3 reply keyboard exposes nine usable entries",()=>{
   assert.equal(MENU.flat().length,new Set(MENU.flat()).size);
   assert.equal(REPLY_KEYBOARD.is_persistent,true);
   assert.equal(parseCommand("🎟 Nhận mã").type,"browse");
+  assert.equal(parseCommand("/subscribe").type,"subscribe");
+  assert.equal(parseCommand("/watchlist").type,"watchlist");
   assert.equal(parseCommand("➕ Đóng góp").type,"prompt-submit");
   assert.equal(parseCommand("🔔 Thông báo").type,"notifications");
   assert.equal(parseCommand("/codes").type,"browse");
