@@ -207,18 +207,18 @@ test("OCI bot auto-detects Vietnamese and retains an explicit Japanese override"
     vi.message.from.language_code="vi-VN";
     assert.equal((await post(vi)).status,200);
     assert.match(sent.at(-1).payload.text,/Chào mừng/);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🎟 Nhận mã");
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 Tôi cần mã");
     assert.equal((await post(message(601,"/status DPNIHH"))).status,200);
     assert.match(sent.at(-1).payload.text,/đã được công bố/);
     assert.equal((await post(message(602,"/language ja"))).status,200);
     assert.match(sent.at(-1).payload.text,/日本語/);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🎟 コード取得");
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 コードが欲しい");
     assert.equal((await post(message(603,"/privacy"))).status,200);
     assert.match(sent.at(-1).payload.text,/Telegramの身元/);
     const vietnameseTelegram={...message(604,"/start")};
     vietnameseTelegram.message.from.language_code="vi";
     assert.equal((await post(vietnameseTelegram)).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🎟 コード取得",
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 コードが欲しい",
       "manual Japanese setting must override Telegram Vietnamese language_code");
     const stored=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"));
     assert.equal(stored["42"].language,"ja");
@@ -226,7 +226,7 @@ test("OCI bot auto-detects Vietnamese and retains an explicit Japanese override"
     assert.equal((await post(message(605,"/language"))).status,200);
     assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,3);
     assert.equal((await post(callback(606,"t:lang:en"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🎟 Get codes");
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
   });
 });
 
