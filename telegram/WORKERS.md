@@ -247,12 +247,19 @@ and Japanese):
 
 - **🔄 Refresh** (also `/refresh`): a dedicated fourth row below the original
   nine role-menu actions, available on onboarding and both roles. Fetches the
-  latest five published community codes again, newest first. Each displayed
-  code card also has **🔄 Refresh** to reload just that code. Refresh is
-  read-only: it never opens GitHub Issues, submits feedback, redeems codes,
-  opts in to alerts or changes a role/language. It dismisses an unfinished
-  text-entry prompt to avoid accidental submissions. It does **not** verify
-  Muse redemption or guarantee that self-reported invite counts are live.
+  latest published community codes again, newest first. Refresh is read-only:
+  it never opens GitHub Issues, submits feedback, redeems codes, opts in to
+  alerts or changes a role/language. It dismisses an unfinished text-entry
+  prompt to avoid accidental submissions.
+- **Paged Browse/Search:** one compact Telegram message displays up to five
+  published codes with buttons to open each code. **Previous / Next** pages
+  retain the user's last search and sort in the private chat profile, and
+  **Back to codes / Main menu** provide explicit navigation. Refresh starts
+  at the newest published page. Opening a code displays the available
+  catalog status, platform, contributor (when supplied), added date and
+  last dated remaining-count report, with Copy, Watch, Report, Refresh
+  and navigation buttons. The public code detail link opens the website.
+  None of these data is live Muse redemption verification.
 
 This is **not a permission or ownership role**. Users can change their
 preferred menu with **🔄 Switch role**, `/role`, or the corresponding button
