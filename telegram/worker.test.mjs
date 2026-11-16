@@ -138,3 +138,30 @@ test("worker sources keep secrets out of the repository and reuse the review-onl
   assert.doesNotMatch(wrangler, /TELEGRAM_BOT_TOKEN\s*=\s*"/);
   assert.doesNotMatch(wrangler, /GITHUB_ISSUES_TOKEN\s*=\s*"/);
 });
+
+test("Cloudflare Worker selects language from Telegram and honors manual override",async()=>{
+  const env=makeEnv();
+  const {deps,sent}=makeDeps();
+  const vi={...message(600,"/start")};
+  vi.message.from.language_code="vi-VN";
+  assert.equal((await handleWebhookRequest(webhook(vi),env,deps)).status,200);
+  assert.match(sent.at(-1).payload.text,/Chào mừng/);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🎟 Nhận mã");
+  assert.equal((await handleWebhookRequest(webhook(message(601,"/status DPNIHH")),env,deps)).status,200);
+  assert.match(sent.at(-1).payload.text,/đã được công bố/);
+  assert.equal((await handleWebhookRequest(webhook(callback(602,"t:lang:ja")),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🎟 コード取得");
+  const pref=JSON.parse(await env.BOT_STATE.get("profile:42"));
+  assert.equal(pref.language,"ja");
+  assert.equal(pref.languageManual,true);
+  const viClient={...message(603,"/start")};
+  viClient.message.from.language_code="vi";
+  assert.equal((await handleWebhookRequest(webhook(viClient),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🎟 コード取得");
+  assert.equal((await handleWebhookRequest(webhook(message(604,"/language en")),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🎟 Get codes");
+  assert.equal((await handleWebhookRequest(webhook(message(605,"/delete_data")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(callback(606,"t:erase:confirm")),env,deps)).status,200);
+  const initial=JSON.parse(await env.BOT_STATE.get("profile:42")||"null");
+  assert.equal(initial,null);
+});
