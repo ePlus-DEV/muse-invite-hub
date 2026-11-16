@@ -1,7 +1,7 @@
 import { CODE_PATTERN, formatCodeStatus } from "./bot.mjs";
 import { codeButtons, codeDescription } from "./menu.mjs";
 import { mutateProfile } from "./profiles.mjs";
-import { LOCALES, LOCALE_NAMES, tr } from "./i18n.mjs";
+import { LOCALES, LOCALE_NAMES, menuText, tr } from "./i18n.mjs";
 
 const SITE="https://muse.eplus.dev";
 export async function resolveInput(action,profiles) {
@@ -35,11 +35,45 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
   };
   const languageButtons=()=>LOCALES.map(code=>
     [{text:(language===code?"✅ ":"")+LOCALE_NAMES[code],data:"t:lang:"+code}]);
-  async function list(query="",newest=false) {
-    const entries=await services.browseCodes({query,newest,limit:5});
-    if(!entries.length)return send(chatId,msg(query?"emptySearch":"emptyCodes"));
-    await send(chatId,msg(query?"searchHeading":newest?"newestHeading":"browseHeading"));
-    for(const entry of entries)await send(chatId,codeDescription(entry,language),codeButtons(entry.code,language));
+  async function list(query="",newest=false,page=0) {
+    // One concise message per page instead of five separate code cards.
+    const needle=String(query||"").trim().slice(0,80);
+    let current=Number.isSafeInteger(page)?Math.max(0,Math.min(99,page)):0;
+    let found=await services.browseCodes({query:needle,newest,limit:6,offset:current*5});
+    if(!Array.isArray(found))throw Error("Invalid catalog page");
+    if(current>0&&!found.length) {
+      current=0;
+      found=await services.browseCodes({query:needle,newest,limit:6,offset:0});
+    }
+    await mutateProfile(profiles,chatId,p=>{
+      p.browse={query:needle,newest,page:current};
+      p.pending=null; // Stop old submit/report prompts before navigating.
+      return p;
+    });
+    const buttons=[];
+    if(!found.length) {
+      return send(chatId,msg(needle?"emptySearch":"emptyCodes"),[
+        [{text:msg("backMenu"),data:"t:home"}]
+      ]);
+    }
+    const visible=found.slice(0,5);
+    for(const entry of visible)buttons.push([
+      {text:"🎟 "+entry.code,data:"t:detail:"+entry.code}
+    ]);
+    const nav=[];
+    if(current>0)nav.push({text:msg("previous"),data:"t:page:"+(current-1)});
+    if(found.length>5&&current<99)nav.push({text:msg("next"),data:"t:page:"+(current+1)});
+    if(nav.length)buttons.push(nav);
+    buttons.push([
+      {text:menuText(language,"refresh"),data:"t:refresh"},
+      {text:msg("backMenu"),data:"t:home"}
+    ]);
+    const heading=msg(needle?"searchHeading":newest?"newestHeading":"browseHeading");
+    const rows=visible.map(e=>"• "+e.code+" — "+
+      (Number.isSafeInteger(e.remaining)&&e.usageReportedAt
+        ? msg("cardRemaining",{count:e.remaining,date:e.usageReportedAt})
+        : msg("cardUnknown")));
+    return send(chatId,[heading,msg("pageTitle",{page:current+1}),msg("chooseCode"),...rows].join("\n"),buttons);
   }
   switch(type) {
     case "help":
@@ -70,23 +104,38 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
       return true;
     case "browse": await list();return true;
     case "newest": await list("",true);return true;
-    case "refresh":
-      // A refresh is read-only, but ends any unfinished text-entry prompt to
-      // prevent a subsequent code from accidentally starting a submission.
+    case "refresh": await list("",true);return true;
+    case "page": {
+      const context=profile.browse||{query:"",newest:true,page:0};
+      await list(context.query,context.newest,action.page);
+      return true;
+    }
+    case "back-list": {
+      const context=profile.browse||{query:"",newest:true,page:0};
+      await list(context.query,context.newest,context.page);
+      return true;
+    }
+    case "home":
       if(profile.pending)await mutateProfile(profiles,chatId,p=>{p.pending=null;return p;});
-      await list("",true); // Always fetch the current published catalog.
+      await sendMenu(chatId,profile.role
+        ? msg(profile.role==="seeker"?"roleSeekerWelcome":"roleContributorWelcome")
+        : msg("roleIntro"),language,profile.role);
       return true;
     case "prompt-search": await prompt("search","promptSearch");return true;
     case "prompt-submit": await prompt("submit","promptSubmit");return true;
     case "prompt-report": await prompt("report","promptReport");return true;
     case "prompt-status": await prompt("status","statusPrompt");return true;
     case "search": await list(action.query);return true;
+    case "detail":
     case "refresh-code":
     case "get": {
       const entries=await services.browseCodes({query:code,limit:50});
       const entry=entries.find(x=>x.code===code);
       if(entry)await send(chatId,codeDescription(entry,language),codeButtons(code,language));
-      else await send(chatId,formatCodeStatus(code,await services.getCodeStatus(code,githubToken),language));
+      else await send(chatId,formatCodeStatus(code,await services.getCodeStatus(code,githubToken),language),[
+        [{text:msg("backList"),data:"t:back-list"},
+         {text:msg("backMenu"),data:"t:home"}]
+      ]);
       return true;
     }
     case "report-choose":
