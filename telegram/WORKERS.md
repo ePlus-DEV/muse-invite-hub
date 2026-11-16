@@ -224,3 +224,34 @@ Vietnamese and Japanese. It does **not** require a new bot, a new KV
 namespace, token rotation, or a different webhook. Slash-command names
 such as `/submit` and callback payload values remain language-neutral;
 GitHub Issues and moderation flows are not translated or weakened.
+
+## Choose your purpose on first start
+
+On the first `/start`, the bot no longer presents every contribution and
+consumer action at once. It asks what the user needs, with a three-row
+**intent** selector (translated into Vietnamese, English and Japanese):
+
+- **🙋 I need a code:** A 3×3 reader menu for Browse codes, New codes, Search,
+  Need a code, opt-in Alerts, Watchlist, Report, Settings and Switch role.
+  The **Need a code** action lets the user browse immediately, start searching
+  or explicitly enable alerts when **new** codes are published. It does not
+  reserve a code, guarantee redemption, create a GitHub Issue or silently
+  enroll anyone into subscriptions.
+- **🤝 I have a code to share:** A 3×3 contributor menu for Submit a public
+  code, My submissions from this Telegram chat, Check review/publication status,
+  New codes, Browse, Report, Alerts, Settings and Switch role. Public GitHub
+  submissions still require an explicit confirmation and human review.
+
+This is **not a permission or ownership role**. Users can change their
+preferred menu with **🔄 Switch role**, `/role`, or the corresponding button
+under Settings at any time; existing private opt-in subscriptions, watchlists,
+and submission history survive changes. `/start` shows the last chosen menu;
+a newly created profile gets the choice prompt. Legacy commands like
+`/submit CODE` and `/get CODE` still work for everyone without forcing
+an onboarding choice.
+
+The preference is stored only in the existing private chat profile in the
+Worker's `BOT_STATE` KV (or OCI private profile file), together with
+language. `/delete_data` clears this preference; the welcome choice is
+shown again. Inline callbacks are language-independent to keep older buttons
+working after a locale switch.

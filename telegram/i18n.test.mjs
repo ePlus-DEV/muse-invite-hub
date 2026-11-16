@@ -102,3 +102,48 @@ test("publication notifications match each recipient's saved language",async()=>
   assert.ok(sent.find(x=>x.id===2).body.includes("新しい"));
   assert.ok(sent.find(x=>x.id===3).body.includes("New Muse"));
 });
+
+test("onboarding and role-specific menus are translated in all supported languages",async()=>{
+  const { ENTRY_MENU_KEYS, ROLE_MENU_KEYS, menuText }=await import("./i18n.mjs");
+  const { replyKeyboard,menuChoice }=await import("./menu.mjs");
+  assert.deepEqual(ENTRY_MENU_KEYS.map(x=>x.length),[1,1,1]);
+  assert.deepEqual(ROLE_MENU_KEYS.seeker.map(x=>x.length),[3,3,3]);
+  assert.deepEqual(ROLE_MENU_KEYS.contributor.map(x=>x.length),[3,3,3]);
+  for(const locale of LOCALES){
+    const entry=replyKeyboard(locale,null);
+    assert.deepEqual(entry.keyboard.map(x=>x.length),[1,1,1]);
+    assert.equal(menuChoice(menuText(locale,"roleSeeker")),"set-role-seeker");
+    assert.equal(menuChoice(menuText(locale,"roleContributor")),"set-role-contributor");
+    assert.equal(menuChoice(menuText(locale,"roleSwitch")),"choose-role");
+    assert.equal(menuChoice(menuText(locale,"need")),"need-code");
+    assert.equal(menuChoice(menuText(locale,"status")),"prompt-status");
+    const consumer=replyKeyboard(locale,"seeker").keyboard.flat();
+    const contributor=replyKeyboard(locale,"contributor").keyboard.flat();
+    assert.equal(consumer.length,9);
+    assert.equal(contributor.length,9);
+    assert.ok(consumer.includes(menuText(locale,"need")));
+    assert.ok(consumer.includes(menuText(locale,"browse")));
+    assert.ok(contributor.includes(menuText(locale,"submit")));
+    assert.ok(contributor.includes(menuText(locale,"mine")));
+    assert.ok(contributor.includes(menuText(locale,"status")));
+    assert.ok(consumer.includes(menuText(locale,"roleSwitch")));
+    assert.ok(contributor.includes(menuText(locale,"roleSwitch")));
+    assert.ok(!consumer.includes(menuText(locale,"submit")));
+    assert.ok(!contributor.includes(menuText(locale,"need")));
+    assert.ok(tr(locale,"roleIntro").length>30);
+    assert.ok(tr(locale,"needDetails").length>30);
+  }
+  assert.equal(parseCommand("/role").type,"choose-role");
+  assert.equal(parseCommand("/need").type,"need-code");
+  assert.equal(parseCommand("/request").type,"need-code");
+  const mk=(data)=>parseUpdate({update_id:333,callback_query:{
+    id:"role",from:{id:42},message:{chat:{id:42,type:"private"}},data
+  }});
+  assert.equal(mk("t:role:seeker").type,"set-role-seeker");
+  assert.equal(mk("t:role:contributor").type,"set-role-contributor");
+  assert.equal(mk("t:roles").type,"choose-role");
+  assert.equal(mk("t:need").type,"need-code");
+  assert.equal(mk("t:need:browse").type,"browse");
+  assert.equal(mk("t:need:alerts").type,"subscribe");
+  assert.equal(mk("t:need:search").type,"prompt-search");
+});
