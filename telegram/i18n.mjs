@@ -131,7 +131,8 @@ const STRINGS = {
     "notifyWatched": "📌 A watched invite code has been published.",
     "notifyNew": "🆕 New Muse Invite Hub community codes.",
     "notifyMore": "+{count} more codes: https://muse.eplus.dev/#codes",
-    "notifyDisclaimer": "Community listings are NOT Muse-verified and redemption is not guaranteed."
+    "notifyDisclaimer": "Community listings are NOT Muse-verified and redemption is not guaranteed.",
+    "remainingLabel": "Remaining invites:"
   },
   "vi": {
     "placeholder": "Chọn chức năng hoặc nhập mã...",
@@ -227,7 +228,8 @@ const STRINGS = {
     "notifyWatched": "📌 Mã bạn theo dõi đã được công bố.",
     "notifyNew": "🆕 Có mã mời Muse Invite Hub mới.",
     "notifyMore": "Còn {count} mã khác: https://muse.eplus.dev/#codes",
-    "notifyDisclaimer": "Mã do cộng đồng chia sẻ, Muse CHƯA xác minh và không đảm bảo đổi được."
+    "notifyDisclaimer": "Mã do cộng đồng chia sẻ, Muse CHƯA xác minh và không đảm bảo đổi được.",
+    "remainingLabel": "Số lượt mời còn lại:"
   },
   "ja": {
     "placeholder": "操作を選択するかコードを入力...",
@@ -323,7 +325,8 @@ const STRINGS = {
     "notifyWatched": "📌 フォロー中のコードが公開されました。",
     "notifyNew": "🆕 Muse Invite Hubに新しいコミュニティコードが追加されました。",
     "notifyMore": "さらに{count}件：https://muse.eplus.dev/#codes",
-    "notifyDisclaimer": "コミュニティ掲載であり、Museの認証や利用成功は保証されません。"
+    "notifyDisclaimer": "コミュニティ掲載であり、Museの認証や利用成功は保証されません。",
+    "remainingLabel": "残りの招待数："
   }
 };
 export function normalizeLocale(value) {

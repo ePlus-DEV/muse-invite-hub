@@ -43,5 +43,5 @@ export function codeDescription(entry,language="en") {
     ? tr(language,"cardUnknown")
     : tr(language,"cardRemaining",{count:entry.remaining,date:entry.usageReportedAt});
   return "🎟 "+code+"\n"+tr(language,status)+" · "+tr(language,"cardHeader")+
-    "\n"+tr(language,"watchedCount")+" "+count+"\n"+tr(language,"cardDisclaimer");
+    "\n"+tr(language,"remainingLabel")+" "+count+"\n"+tr(language,"cardDisclaimer");
 }

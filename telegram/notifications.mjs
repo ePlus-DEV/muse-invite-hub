@@ -1,6 +1,7 @@
 /* Trusted post-Pages notifications. Chat IDs exist only in private server/KV storage.
  * A signed Pages event never establishes Muse validity or code ownership.
  */
+import { tr } from "./i18n.mjs";
 export const NOTIFY_PATH="/telegram/notify";
 const CODE=/^[A-Z0-9]{6}$/;
 const SHA=/^[a-f0-9]{40}$/;
@@ -51,13 +52,13 @@ function notice(profile,newCodes) {
   const relevant=newCodes.filter(code=>profile.subscribed===true||
     personal.includes(code)||watched.includes(code));
   if(!relevant.length)return null;
-  const headline=personal.length?"✅ Your Telegram contribution is now published.":
-    watched.length?"📌 A watched invite was published.":"🆕 New Muse Invite Hub community codes.";
+  const language=profile.language||"en";
+  const headline=tr(language,personal.length?"notifyPersonal":watched.length?"notifyWatched":"notifyNew");
   const list=relevant.slice(0,25).map(code=>
     "• "+code+" — https://muse.eplus.dev/codes/"+code+"/").join("\n");
-  const overflow=relevant.length>25?"\n+"+(relevant.length-25)+" more: https://muse.eplus.dev/#codes":"";
+  const overflow=relevant.length>25?"\n"+tr(language,"notifyMore",{count:relevant.length-25}):"";
   return {codes:relevant,text:headline+"\n"+list+overflow+
-    "\nThese listings are community-reported, NOT Muse-verified or guaranteed to redeem."};
+    "\n"+tr(language,"notifyDisclaimer")};
 }
 /* state: getBaseline, setBaseline, listProfiles(cursor,limit), wasSent, markSent.
  * send: sends an ordinary private Telegram message and throws on failure.
@@ -86,6 +87,7 @@ export async function publishNotifications({event,state,catalog,send,logger=()=>
     }
     if(!due.length)continue;
     const relevant=notice({
+      language:profile.language,
       subscribed:profile.subscribed,
       watching:(profile.watching||[]).filter(x=>due.includes(x)),
       submitted:(profile.submitted||[]).filter(x=>due.includes(x.code))
