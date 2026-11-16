@@ -46,8 +46,10 @@ jobs:
           node --check telegram/bot.mjs
           node --check telegram/github.mjs
           node --check telegram/server.mjs
+          node --check telegram/worker.mjs
           node --check telegram/register-webhook.mjs
           node --test telegram/telegram.test.mjs
+          node --test telegram/worker.test.mjs
       - name: Validate optional OCI Compose and ARM64 image build
         env:
           BOT_DOMAIN: bot.example.com
