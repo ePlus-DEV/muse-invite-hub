@@ -516,9 +516,9 @@ test("new public-post social code is auto-listable as unverified with user respo
 test("new Issue code parser rejects non-six-character and hyphenated invites",()=>{
   for(const code of ["ABCDE","ABCDEFG","ABC-12","AB_C12"]){
     const invalid=share.replace("PNSMZZ",code);
-    assert.throws(()=>planIssueChange(issue(600,"[Invite]",invalid),old),/6-character/);
+    assert.throws(()=>planIssueChange(issue(600,"[Invite]",invalid),[]),/6-character/);
   }
   const normalized=share.replace("PNSMZZ","ab12c3");
-  const p=planIssueChange(issue(601,"[Invite]",normalized),old);
+  const p=planIssueChange(issue(601,"[Invite]",normalized),[]);
   assert.equal(p.code,"AB12C3");
 });
