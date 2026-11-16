@@ -1,14 +1,17 @@
 /* Minimal opt-in private Telegram preferences. Never expose chat IDs in GitHub Issues. */
+import { normalizeLocale, LOCALES } from "./i18n.mjs";
 const CODE=/^[A-Z0-9]{6}$/;
 const INTENTS=new Set(["search","submit","report"]);
 export function emptyProfile() {
-  return {subscribed:false,watching:[],submitted:[],pending:null};
+  return {subscribed:false,watching:[],submitted:[],pending:null,language:null,languageManual:false};
 }
 export function cleanProfile(value) {
   const base=emptyProfile();
   if(!value||typeof value!=="object")return base;
   return {
     subscribed:value.subscribed===true,
+    language:LOCALES.includes(value.language)?value.language:null,
+    languageManual:value.languageManual===true&&LOCALES.includes(value.language),
     watching:Array.isArray(value.watching)
       ? [...new Set(value.watching.filter(v=>typeof v==="string"&&CODE.test(v)))].slice(0,50):[],
     submitted:Array.isArray(value.submitted)
@@ -33,4 +36,17 @@ export async function mutateProfile(profiles,chatId,fn) {
   const next=fn(profile)||profile;
   await profiles.set(chatId,next);
   return cleanProfile(next);
+}
+
+/* Telegram language_code auto-selection does not overwrite explicit preferences. */
+export async function syncTelegramLocale(profiles,chatId,telegramLanguage) {
+  const profile=await profiles.get(chatId);
+  if(profile.languageManual)return profile.language;
+  if(typeof telegramLanguage!=="string"||!telegramLanguage.trim())return profile.language||"en";
+  const chosen=normalizeLocale(telegramLanguage);
+  if(profile.language!==chosen){
+    profile.language=chosen;
+    await profiles.set(chatId,profile);
+  }
+  return chosen;
 }
