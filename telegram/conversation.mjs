@@ -19,6 +19,7 @@ export async function resolveInput(action,profiles) {
   }
   await mutateProfile(profiles,action.chatId,p=>{p.pending=null;return p;});
   if(profile.pending.type==="submit")return {...action,type:"confirm-submit",code};
+  if(profile.pending.type==="status")return {...action,type:"status",code};
   if(profile.pending.type==="report")return {...action,type:"report-choose",code};
   return {...action,type:"usage-menu"};
 }
@@ -42,13 +43,37 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
   }
   switch(type) {
     case "help":
-      await sendMenu(chatId,msg("help"),language);
+      await sendMenu(chatId,profile.role
+        ? msg(profile.role==="seeker"?"roleSeekerWelcome":"roleContributorWelcome")
+        : msg("roleIntro"),language,profile.role);
+      return true;
+    case "choose-role":
+      await sendMenu(chatId,msg("roleChoiceTitle"),language,null);
+      return true;
+    case "set-role-seeker":
+    case "set-role-contributor": {
+      const role=type==="set-role-seeker"?"seeker":"contributor";
+      await mutateProfile(profiles,chatId,p=>{
+        p.role=role;
+        p.pending=null; // Switching menus must not accidentally complete an earlier submission.
+        return p;
+      });
+      await sendMenu(chatId,msg(role==="seeker"?"roleSeekerWelcome":"roleContributorWelcome"),language,role);
+      return true;
+    }
+    case "need-code":
+      await send(chatId,msg("needTitle")+"\n\n"+msg("needDetails"),[
+        [{text:msg("needBrowse"),data:"t:need:browse"}],
+        [{text:msg("needNotify"),data:"t:need:alerts"}],
+        [{text:msg("needSearch"),data:"t:need:search"}]
+      ]);
       return true;
     case "browse": await list();return true;
     case "newest": await list("",true);return true;
     case "prompt-search": await prompt("search","promptSearch");return true;
     case "prompt-submit": await prompt("submit","promptSubmit");return true;
     case "prompt-report": await prompt("report","promptReport");return true;
+    case "prompt-status": await prompt("status","statusPrompt");return true;
     case "search": await list(action.query);return true;
     case "get": {
       const entries=await services.browseCodes({query:code,limit:50});
@@ -65,7 +90,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
       ]);
       return true;
     case "usage-menu":
-      await sendMenu(chatId,msg("usageMenu"),language);
+      await sendMenu(chatId,msg(profile.role?"usageMenu":"roleIntro"),language,profile.role);
       return true;
     case "invalid-input":
       await send(chatId,msg("invalidInput"));
@@ -82,10 +107,13 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
       await send(chatId,msg(type==="settings"?"settingsTitle":"notificationsTitle")+
         "\n"+msg("alertsLabel")+" "+msg(profile.subscribed?"alertsOn":"alertsOff")+
         "\n"+msg("watchedCount")+" "+profile.watching.length+
+        "\n"+msg("roleCurrent")+" "+msg(profile.role==="seeker"?"roleSeekerName":
+          profile.role==="contributor"?"roleContributorName":"roleUnsetName")+
         "\n"+msg("alertsNote"),[
           [{text:msg(profile.subscribed?"disableAlerts":"enableAlerts"),data:"t:sub:"+(profile.subscribed?"off":"on")}],
           [{text:msg("watchedButton"),data:"t:watchlist"},
            {text:msg("languageButton")+" · "+LOCALE_NAMES[language],data:"t:langs"}],
+          [{text:msg("roleChange"),data:"t:roles"}],
           [{text:msg("deleteData"),data:"t:erase:ask"}]
         ]);
       return true;
@@ -98,7 +126,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
       await mutateProfile(profiles,chatId,p=>{
         p.language=action.language;p.languageManual=true;return p;
       });
-      await sendMenu(chatId,tr(action.language,"languageChanged"),action.language);
+      await sendMenu(chatId,tr(action.language,"languageChanged"),action.language,profile.role);
       return true;
     }
     case "subscribe":
@@ -138,7 +166,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
       return true;
     case "delete-confirm":
       await profiles.delete(chatId);
-      await sendMenu(chatId,msg("deleted"),language);
+      await sendMenu(chatId,msg("deleted"),language,null);
       return true;
     default:return false;
   }
