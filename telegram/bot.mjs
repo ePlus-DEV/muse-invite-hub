@@ -102,6 +102,37 @@ export function parseCommand(text) {
   return {type:"help"};
 }
 
+// A Mini App launched from a private-chat keyboard returns a service message.
+// Treat all app data as untrusted input: only read-only actions or an explicit
+// Telegram-side confirmation are permitted. It must never submit to GitHub.
+export function parseWebAppData(raw) {
+  if(typeof raw!=="string"||raw.length>256)return {type:"help"};
+  let value;
+  try { value=JSON.parse(raw); } catch { return {type:"help"}; }
+  if(!value||typeof value!=="object"||Array.isArray(value)||value.v!==1 ||
+     typeof value.action!=="string")return {type:"help"};
+  const code=value.code;
+  switch(value.action){
+    case "submit":
+      return CODE_PATTERN.test(code||"")?{type:"confirm-submit",code}:{type:"usage-submit"};
+    case "report":
+      return CODE_PATTERN.test(code||"")&&["worked","failed"].includes(value.result)
+        ? {type:"confirm-report",code,result:value.result}:{type:"usage-report"};
+    case "get":
+      return CODE_PATTERN.test(code||"")?{type:"get",code}:{type:"usage-code"};
+    case "watch":
+      return CODE_PATTERN.test(code||"")?{type:"watch",code}:{type:"usage-code"};
+    case "my": return {type:"my-codes"};
+    case "settings": return {type:"settings"};
+    case "notifications": return {type:"notifications"};
+    case "watchlist": return {type:"watchlist"};
+    case "language":
+      return ["en","vi","ja"].includes(value.language)
+        ?{type:"set-language",language:value.language}:{type:"choose-language"};
+    default: return {type:"help"};
+  }
+}
+
 export function parseUpdate(update) {
   if (!Number.isSafeInteger(update?.update_id)||update.update_id<0) return null;
   if (update.message && !update.message.from?.is_bot) {
@@ -109,7 +140,8 @@ export function parseUpdate(update) {
     const chat=message.chat;
     if (!Number.isSafeInteger(chat?.id)) return null;
     if (chat.type!=="private") return {type:"private-only",chatId:chat.id,updateId:update.update_id};
-    return {...parseCommand(message.text),chatId:chat.id,updateId:update.update_id,
+    return {...(message.web_app_data?parseWebAppData(message.web_app_data.data):parseCommand(message.text)),
+      chatId:chat.id,updateId:update.update_id,
       ...(typeof message.from?.language_code==="string"?{telegramLanguage:message.from.language_code}:{})};
   }
   const callback=update.callback_query;

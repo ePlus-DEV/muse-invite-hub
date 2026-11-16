@@ -34,14 +34,20 @@ function fixture() {
   return {run,profiles,messages,data,calls};
 }
 
-test("persistent keyboard retains all nine core actions plus a distinct Refresh row",()=>{
-  assert.equal(MENU.length,4);
-  assert.deepEqual(MENU.map(row=>row.length),[3,3,3,1]);
+test("persistent keyboard keeps all bot actions and launches the visual Mini App",()=>{
+  assert.equal(MENU.length,5);
+  assert.deepEqual(MENU.map(row=>row.length),[3,3,3,1,1]);
   assert.equal(MENU.flat().length,new Set(MENU.flat()).size);
   assert.equal(REPLY_KEYBOARD.is_persistent,true);
   assert.equal(REPLY_KEYBOARD.keyboard[0][0],"🎟 Get codes");
   assert.equal(MENU[0][0],"🎟 Get codes");
   assert.equal(MENU[3][0],"🔄 Refresh");
+  assert.equal(MENU[4][0],"✨ Open visual app");
+  assert.deepEqual(REPLY_KEYBOARD.keyboard[4][0],{
+    text:"✨ Open visual app",
+    web_app:{url:"https://muse.eplus.dev/telegram-app/?lang=en"}
+  });
+  assert.equal(parseCommand("✨ Open visual app").type,"open-app");
   assert.equal(parseCommand("🔄 Refresh").type,"refresh");
   assert.equal(parseCommand("🔄 Làm mới").type,"refresh");
   assert.equal(parseCommand("🔄 更新").type,"refresh");

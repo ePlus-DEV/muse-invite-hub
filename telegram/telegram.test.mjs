@@ -126,6 +126,31 @@ test("submit and report are explicitly confirmed, then sent to GitHub once",asyn
     await new Promise(resolve=>restarted.close(resolve));
   });
 });
+test("OCI Mini App messages cannot bypass public GitHub consent",async()=>{
+  await withApp(async({post,sent,calls,dir})=>{
+    const fromApp=(id,payload)=>({update_id:id,message:{
+      from:{id:42,is_bot:false},chat:{id:42,type:"private"},
+      web_app_data:{data:JSON.stringify({v:1,...payload})}
+    }});
+    assert.equal((await post(fromApp(350,{action:"submit",code:"APP123"}))).status,200);
+    assert.equal(calls.submit.length,0);
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,
+      "t:submit:APP123");
+    assert.equal((await post(fromApp(351,{action:"report",code:"DPNIHH",result:"failed"}))).status,200);
+    assert.equal(calls.report.length,0);
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,
+      "t:report:DPNIHH:failed");
+    assert.equal((await post(fromApp(352,{action:"language",language:"ja"}))).status,200);
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard.at(-1)[0].web_app.url,
+      "https://muse.eplus.dev/telegram-app/?lang=ja");
+    const data=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"));
+    assert.equal(data["42"].languageManual,true);
+    assert.equal(data["42"].language,"ja");
+    assert.equal(calls.submit.length,0);
+    assert.equal(calls.report.length,0);
+  });
+});
+
 test("code status and privacy are informational in the Node webhook",async()=>{
   await withApp(async({post,sent,calls})=>{
     assert.equal((await post(message(30,"/status DPNIHH"))).status,200);
@@ -286,14 +311,15 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
     assert.equal((await post(vi)).status,200);
     assert.match(sent.at(-1).payload.text,/Bạn đến đây để làm gì/);
     const welcome=sent.at(-1).payload.reply_markup.keyboard;
-    assert.deepEqual(welcome.map(x=>x.length),[1,1,1,1]);
+    assert.deepEqual(welcome.map(x=>x.length),[1,1,1,1,1]);
+    assert.equal(welcome[4][0].web_app.url,"https://muse.eplus.dev/telegram-app/?lang=vi");
     assert.equal(welcome[3][0],"🔄 Làm mới");
     assert.equal(welcome[0][0],"🙋 Tôi cần mã");
     assert.equal(welcome[1][0],"🤝 Tôi muốn chia sẻ mã");
 
     assert.equal((await post(callback(701,"t:role:seeker"))).status,200);
     const seeker=sent.at(-1).payload.reply_markup.keyboard.flat();
-    assert.equal(seeker.length,10);
+    assert.equal(seeker.length,11);
     assert.ok(seeker.includes("🔄 Làm mới"));
     assert.ok(seeker.includes("🎟 Nhận mã"));
     assert.ok(seeker.includes("🙋 Cần mã"));

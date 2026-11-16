@@ -140,7 +140,10 @@ Containers use restart: unless-stopped to recover after VM reboot. Use docker co
 
 ## Not included yet
 
-This first deployment adds a functional private-chat Bot. It does **not** implement a Telegram Mini App, Telegram-GitHub account linking, automatic review PRs for bot comments, or automatic owner verification. Those should follow separately once the VM, webhook, review workflow and secrets have been tested in production.
+The private-chat bot now has an optional visual Telegram Mini App at
+`/telegram-app/`. Telegram-GitHub account linking, automated owner
+verification and automatic review PRs for Telegram bot comments are
+**not** implemented. New bot contributions still go to human review.
 
 ## Interactive private-chat menu
 
@@ -194,6 +197,22 @@ and Japanese):
   code, My submissions from this Telegram chat, Check review/publication status,
   New codes, Browse, Report, Alerts, Settings and Switch role. Public GitHub
   submissions still require an explicit confirmation and human review.
+
+- **✨ Open visual app:** an additional native Telegram `web_app`
+  keyboard button opens the HTTPS Mini App at
+  `https://muse.eplus.dev/telegram-app/`. The visual UI includes a
+  welcome screen, navigation, searchable/paginated cards, detail and source,
+  refresh, sharing, report entry and EN/VI/JA language selection.
+  It uses only the **published** catalog from GitHub Pages; it does not
+  store Telegram identities or public-write credentials.
+  **Contribute**, **Report**, **Watch** and private preferences return to the
+  same private chat via a `web_app_data` service message. Contribution and
+  reporting **still require Telegram-side confirmation** before any public
+  GitHub Issue or comment can be created. A standalone browser can browse
+  and copy, but cannot submit to the bot.
+  The website's GitHub Pages deployment and the bot's Worker/OCI deployment
+  must both be updated before this launcher works. The Mini App does not
+  replace existing native bot commands or menus.
 
 - **🔄 Refresh** (also `/refresh`): a dedicated fourth row below the original
   nine role-menu actions, available on onboarding and both roles. Fetches the
