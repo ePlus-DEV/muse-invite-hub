@@ -38,6 +38,27 @@ export async function listRecentCodes() {
     .map(entry=>entry.code);
 }
 
+export async function getCodeStatus(code,token) {
+  if(!CODE_PATTERN.test(code))throw Error("Invalid public invite code");
+  const entry=(await publishedCatalog()).find(item=>item.code===code);
+  if(entry) {
+    const dated=typeof entry.usageReportedAt==="string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(entry.usageReportedAt);
+    const explicit=Number.isSafeInteger(entry.reportedRemaining)&&entry.reportedRemaining>=0
+      ? entry.reportedRemaining : null;
+    const calculated=Number.isSafeInteger(entry.reportedCapacity)&&
+      Number.isSafeInteger(entry.reportedUses)&&entry.reportedCapacity>=entry.reportedUses&&
+      entry.reportedUses>=0 ? entry.reportedCapacity-entry.reportedUses : null;
+    return {kind:"listed",status:entry.status,
+      reportedRemaining:dated?(explicit??calculated):null,
+      usageReportedAt:dated?entry.usageReportedAt:null,
+      url:SITE+"/codes/"+encodeURIComponent(code)+"/"};
+  }
+  const issue=await findExistingTelegramSubmission(code,token);
+  if(issue)return {kind:issue.state==="open"?"pending":"closed",url:issue.html_url};
+  return {kind:"unknown",url:SITE+"/#codes"};
+}
+
 async function findExistingTelegramSubmission(code,token) {
   // GitHub's /issues collection includes PRs; skip those. Fail closed rather
   // than creating a duplicate when the repo grows beyond our scan budget.
