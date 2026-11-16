@@ -141,4 +141,3 @@ Containers use restart: unless-stopped to recover after VM reboot. Use docker co
 ## Not included yet
 
 This first deployment adds a functional private-chat Bot. It does **not** implement a Telegram Mini App, Telegram-GitHub account linking, automatic review PRs for bot comments, or automatic owner verification. Those should follow separately once the VM, webhook, review workflow and secrets have been tested in production.
-
