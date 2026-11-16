@@ -147,3 +147,62 @@ This first deployment adds a functional private-chat Bot. It does **not** implem
 After deploying this version and reopening the bot, `/start` shows a persistent 3×3 Reply Keyboard: Find codes, New codes, Search, Contribute, My codes, Report, Notifications, Watchlist and Settings. Each published code uses Telegram's native `copy_text` button, details link, watch and genuine-report actions. Prompts for a code last 10 minutes. The bot keeps a **private** profile per Telegram chat (opt-in alerts, watched codes and Issue links created by this chat); these do **not** prove ownership. The `/delete_data` command clears this private profile, but cannot erase public Issues/comments already submitted after consent.
 
 The menu and opt-in preferences are implemented in both the OCI and Workers runtimes. Actual background publication delivery is a separate feature; toggling subscriptions **does not** send alerts until that delivery service is configured. **Do not** describe listed codes as verified live or Telegram users as code owners.
+
+## Telegram bot languages
+
+The Telegram bot supports **Tiếng Việt, English and 日本語** consistently
+across the persistent 3×3 keyboard, invite cards, copy/report/watch buttons,
+search and submission confirmations, status/privacy/help, preferences, and
+opt-in publication notifications. Each private chat automatically uses
+`from.language_code` (such as `vi-VN`, `ja`, `en-US`), with English
+as the fallback for unsupported Telegram locales.
+
+Open **⚙️ Cài đặt / Settings / 設定 → 🌐 Ngôn ngữ / Language / 言語**
+or send `/language`; choose your language. Alternatively send
+`/language vi`, `/language en`, or `/language ja`.
+The choice is stored privately alongside the existing bot profile and
+**overrides Telegram's automatic language selection** until changed.
+Changing the language immediately redraws the persistent keyboard, and
+existing callbacks continue to work regardless of language. A previous
+English or Vietnamese keyboard label is still accepted after switching.
+`/delete_data` deletes the saved preference with other private settings;
+the next `/start` auto-detects Telegram language again.
+
+After deploying a new version, re-run
+`telegram/register-webhook.mjs` **in your existing private runtime** to
+update the Telegram slash-command picker descriptions for English,
+Vietnamese and Japanese. It does **not** require a new bot, a new KV
+namespace, token rotation, or a different webhook. Slash-command names
+such as `/submit` and callback payload values remain language-neutral;
+GitHub Issues and moderation flows are not translated or weakened.
+
+## Choose your purpose on first start
+
+On the first `/start`, the bot no longer presents every contribution and
+consumer action at once. It asks what the user needs, with a three-row
+**intent** selector (translated into Vietnamese, English and Japanese):
+
+- **🙋 I need a code:** A 3×3 reader menu for Browse codes, New codes, Search,
+  Need a code, opt-in Alerts, Watchlist, Report, Settings and Switch role.
+  The **Need a code** action lets the user browse immediately, start searching
+  or explicitly enable alerts when **new** codes are published. It does not
+  reserve a code, guarantee redemption, create a GitHub Issue or silently
+  enroll anyone into subscriptions.
+- **🤝 I have a code to share:** A 3×3 contributor menu for Submit a public
+  code, My submissions from this Telegram chat, Check review/publication status,
+  New codes, Browse, Report, Alerts, Settings and Switch role. Public GitHub
+  submissions still require an explicit confirmation and human review.
+
+This is **not a permission or ownership role**. Users can change their
+preferred menu with **🔄 Switch role**, `/role`, or the corresponding button
+under Settings at any time; existing private opt-in subscriptions, watchlists,
+and submission history survive changes. `/start` shows the last chosen menu;
+a newly created profile gets the choice prompt. Legacy commands like
+`/submit CODE` and `/get CODE` still work for everyone without forcing
+an onboarding choice.
+
+The preference is stored only in the existing private chat profile in the
+Worker's `BOT_STATE` KV (or OCI private profile file), together with
+language. `/delete_data` clears this preference; the welcome choice is
+shown again. Inline callbacks are language-independent to keep older buttons
+working after a locale switch.

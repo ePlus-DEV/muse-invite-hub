@@ -138,3 +138,56 @@ test("worker sources keep secrets out of the repository and reuse the review-onl
   assert.doesNotMatch(wrangler, /TELEGRAM_BOT_TOKEN\s*=\s*"/);
   assert.doesNotMatch(wrangler, /GITHUB_ISSUES_TOKEN\s*=\s*"/);
 });
+
+test("Cloudflare Worker selects language from Telegram and honors manual override",async()=>{
+  const env=makeEnv();
+  const {deps,sent}=makeDeps();
+  const vi={...message(600,"/start")};
+  vi.message.from.language_code="vi-VN";
+  assert.equal((await handleWebhookRequest(webhook(vi),env,deps)).status,200);
+  assert.match(sent.at(-1).payload.text,/Chào mừng/);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 Tôi cần mã");
+  assert.equal((await handleWebhookRequest(webhook(message(601,"/status DPNIHH")),env,deps)).status,200);
+  assert.match(sent.at(-1).payload.text,/đã được công bố/);
+  assert.equal((await handleWebhookRequest(webhook(callback(602,"t:lang:ja")),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 コードが欲しい");
+  const pref=JSON.parse(await env.BOT_STATE.get("profile:42"));
+  assert.equal(pref.language,"ja");
+  assert.equal(pref.languageManual,true);
+  const viClient={...message(603,"/start")};
+  viClient.message.from.language_code="vi";
+  assert.equal((await handleWebhookRequest(webhook(viClient),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 コードが欲しい");
+  assert.equal((await handleWebhookRequest(webhook(message(604,"/language en")),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
+  assert.equal((await handleWebhookRequest(webhook(message(605,"/delete_data")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(callback(606,"t:erase:confirm")),env,deps)).status,200);
+  const initial=JSON.parse(await env.BOT_STATE.get("profile:42")||"null");
+  assert.equal(initial,null);
+});
+
+test("Worker onboarding lets seekers request community codes and switch to contributing safely",async()=>{
+  const env=makeEnv();
+  const {deps,sent,calls}=makeDeps();
+  const vi={...message(700,"/start")};
+  vi.message.from.language_code="vi";
+  assert.equal((await handleWebhookRequest(webhook(vi),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 Tôi cần mã");
+  assert.equal((await handleWebhookRequest(webhook(callback(701,"t:role:seeker")),env,deps)).status,200);
+  assert.ok(sent.at(-1).payload.reply_markup.keyboard.flat().includes("🙋 Cần mã"));
+  assert.equal((await handleWebhookRequest(webhook(message(702,"🙋 Cần mã")),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,3);
+  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).subscribed,false);
+  assert.equal(calls.submit.length,0);
+  assert.equal((await handleWebhookRequest(webhook(callback(703,"t:need:alerts")),env,deps)).status,200);
+  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).subscribed,true);
+  assert.equal((await handleWebhookRequest(webhook(message(704,"🔄 Đổi vai trò")),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[1][0],"🤝 Tôi muốn chia sẻ mã");
+  assert.equal((await handleWebhookRequest(webhook(callback(705,"t:role:contributor")),env,deps)).status,200);
+  assert.ok(sent.at(-1).payload.reply_markup.keyboard.flat().includes("➕ Đóng góp"));
+  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).role,"contributor");
+  assert.equal((await handleWebhookRequest(webhook(message(706,"📍 Trạng thái mã")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(message(707,"DPNIHH")),env,deps)).status,200);
+  assert.match(sent.at(-1).payload.text,/đã được công bố/);
+  assert.equal(calls.submit.length,0);
+});

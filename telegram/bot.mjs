@@ -1,5 +1,6 @@
 /* Telegram update parser. No GitHub credentials or public identity attribution. */
 import { menuChoice } from "./menu.mjs";
+import { normalizeLocale, tr } from "./i18n.mjs";
 export const CODE_PATTERN = /^[A-Z0-9]{6}$/;
 
 export const BOT_COMMANDS = [
@@ -20,36 +21,33 @@ export const BOT_COMMANDS = [
   {command:"subscribe",description:"Enable new-code alerts"},
   {command:"unsubscribe",description:"Disable new-code alerts"},
   {command:"settings",description:"Private chat preferences"},
+  {command:"language",description:"Change bot language"},
+  {command:"role",description:"Choose how to use this bot"},
+  {command:"need",description:"Find an invite code or request new-code alerts"},
   {command:"delete_data",description:"Clear private bot profile"},
   {command:"cancel",description:"Cancel a confirmation"}
 ];
 
-export function formatCodeStatus(code,entry) {
+export function formatCodeStatus(code,entry,language="en") {
   const url=entry.url||"https://muse.eplus.dev/#codes";
   if(entry.kind==="listed") {
     const status={
-      unverified:"Unverified",
-      "reported-working":"Community-reported working (not Muse-verified)",
-      "reported-not-working":"Community-reported not working (not Muse-verified)"
-    }[entry.status]||"Community listing (not Muse-verified)";
-    const remaining=Number.isSafeInteger(entry.reportedRemaining)&&entry.reportedRemaining>=0 &&
-      /^\d{4}-\d{2}-\d{2}$/.test(entry.usageReportedAt||"")
-      ? "Reported remaining: "+entry.reportedRemaining+" (as of "+entry.usageReportedAt+"; not live)."
-      : "Remaining invites: not reported with a date (not live).";
-    return "Code "+code+" is published.\nStatus: "+status+".\n"+remaining+
-      "\nA listing never guarantees redemption.\n"+url;
+      unverified:"statusUnverified",
+      "reported-working":"statusWorking",
+      "reported-not-working":"statusFailed"
+    }[entry.status]||"statusOther";
+    const dated=Number.isSafeInteger(entry.reportedRemaining)&&entry.reportedRemaining>=0&&
+      /^\d{4}-\d{2}-\d{2}$/.test(entry.usageReportedAt||"");
+    const remaining=dated
+      ? tr(language,"reportedRemaining",{count:entry.reportedRemaining,date:entry.usageReportedAt})
+      : tr(language,"remainingUnknown");
+    return tr(language,"codePublished",{code})+"\n"+tr(language,"statusLabel")+" "+
+      tr(language,status)+".\n"+remaining+"\n"+tr(language,"listedDisclaimer")+"\n"+url;
   }
-  if(entry.kind==="pending")return "Code "+code+
-    " has an open GitHub submission/discussion Issue but is not published yet. "+
-    "A maintainer must review it; acceptance is not guaranteed.\n"+url;
-  if(entry.kind==="closed")return "Code "+code+
-    " appeared in a closed GitHub Issue but is not currently published. "+
-    "Closure does not prove acceptance or rejection.\n"+url;
-  return "Code "+code+
-    " is not in the published directory or existing contribution Issues. "+
-    "To suggest it, send /submit "+code+".\n"+url;
+  const key=entry.kind==="pending"?"codePending":
+    entry.kind==="closed"?"codeClosed":"codeUnknown";
+  return tr(language,key,{code})+"\n"+url;
 }
-
 
 export function parseCommand(text) {
   if (typeof text !== "string" || text.length > 300) return {type:"help"};
@@ -57,11 +55,19 @@ export function parseCommand(text) {
   if(selected)return {type:selected};
   const parts=text.trim().split(/\s+/);
   const command=(parts[0]||"").toLowerCase().replace(/@[a-z0-9_]+$/i,"");
-  if (command==="/start"||command==="/help") return {type:"help"};
+  if (command==="/start"||command==="/help"||command==="/menu") return {type:"help"};
+  if (command==="/role"||command==="/roles")return {type:"choose-role"};
+  if (command==="/need"||command==="/request")return {type:"need-code"};
   if (command==="/codes") return {type:"browse"};
   if (command==="/new") return {type:"newest"};
   if (command==="/my") return {type:"my-codes"};
   if (command==="/settings") return {type:"settings"};
+  if (command==="/language"||command==="/lang") {
+    if(parts.length===1)return {type:"choose-language"};
+    const requested=parts[1]?.toLowerCase()||"";
+    return parts.length===2&&["en","vi","ja"].includes(requested)
+      ? {type:"set-language",language:requested}:{type:"choose-language"};
+  }
   if (command==="/watchlist") return {type:"watchlist"};
   if (command==="/subscribe") return {type:"subscribe"};
   if (command==="/unsubscribe") return {type:"unsubscribe"};
@@ -101,7 +107,8 @@ export function parseUpdate(update) {
     const chat=message.chat;
     if (!Number.isSafeInteger(chat?.id)) return null;
     if (chat.type!=="private") return {type:"private-only",chatId:chat.id,updateId:update.update_id};
-    return {...parseCommand(message.text),chatId:chat.id,updateId:update.update_id};
+    return {...parseCommand(message.text),chatId:chat.id,updateId:update.update_id,
+      ...(typeof message.from?.language_code==="string"?{telegramLanguage:message.from.language_code}:{})};
   }
   const callback=update.callback_query;
   if (!callback || typeof callback.id!=="string" ||
@@ -113,15 +120,24 @@ export function parseUpdate(update) {
   const matchPick=/^t:pick:([A-Z0-9]{6}):(worked|failed)$/.exec(data);
   const matchWatch=/^t:watch:([A-Z0-9]{6})$/.exec(data);
   const matchSubscription=/^t:sub:(on|off)$/.exec(data);
+  const matchLanguage=/^t:lang:(en|vi|ja)$/.exec(data);
+  const matchRole=/^t:role:(seeker|contributor)$/.exec(data);
   const matchReport=/^t:report:([A-Z0-9]{6}):(worked|failed)$/.exec(data);
   return {
     type:matchSubmit?"submit":matchReport?"report":matchPick?"confirm-report":
       matchWatch?"watch":matchSubscription?(matchSubscription[1]==="on"?"subscribe":"unsubscribe"):
+      matchLanguage?"set-language":data==="t:langs"?"choose-language":
+      matchRole?(matchRole[1]==="seeker"?"set-role-seeker":"set-role-contributor"):
+      data==="t:roles"?"choose-role":data==="t:need"?"need-code":
+      data==="t:need:browse"?"browse":data==="t:need:alerts"?"subscribe":
+      data==="t:need:search"?"prompt-search":
       data==="t:watchlist"?"watchlist":data==="t:erase:ask"?"delete-data":
       data==="t:erase:confirm"?"delete-confirm":"cancel",
+    ...(matchLanguage?{language:matchLanguage[1]}:{}),
     code:matchSubmit?.[1]||matchReport?.[1]||matchPick?.[1]||matchWatch?.[1],
     result:matchReport?.[2]||matchPick?.[2],
     chatId:callback.from.id,
+    ...(typeof callback.from?.language_code==="string"?{telegramLanguage:callback.from.language_code}:{}),
     callbackId:callback.id,
     messageId:Number.isSafeInteger(callback.message?.message_id)&&callback.message.message_id>0
       ? callback.message.message_id : null,

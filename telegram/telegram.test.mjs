@@ -31,7 +31,7 @@ test("Telegram commands accept only public code patterns and known report outcom
   assert.equal(parseCommand("/status DPNIHH EXTRA").type,"usage-status");
   assert.equal(parseCommand("/privacy").type,"privacy");
   assert.equal(parseCommand("/cancel").type,"cancel");
-  assert.equal(BOT_COMMANDS.length,19);
+  assert.equal(BOT_COMMANDS.length,22);
   assert.equal(new Set(BOT_COMMANDS.map(x=>x.command)).size,BOT_COMMANDS.length);
   assert.equal(parseCommand("/start@MuseBot").type,"help");
   assert.equal(parseCommand("x".repeat(400)).type,"help");
@@ -199,4 +199,80 @@ test("deployment sources never embed real credentials or auto-publish third-part
   assert.match(workflow,/workflow_dispatch:/);
   assert.match(workflow,/platforms: linux\/arm64/);
   assert.doesNotMatch(workflow,/push:\s*\n\s*branches:/);
+});
+
+test("OCI bot auto-detects Vietnamese and retains an explicit Japanese override",async()=>{
+  await withApp(async({post,sent,dir})=>{
+    const vi={...message(600,"/start")};
+    vi.message.from.language_code="vi-VN";
+    assert.equal((await post(vi)).status,200);
+    assert.match(sent.at(-1).payload.text,/Chào mừng/);
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 Tôi cần mã");
+    assert.equal((await post(message(601,"/status DPNIHH"))).status,200);
+    assert.match(sent.at(-1).payload.text,/đã được công bố/);
+    assert.equal((await post(message(602,"/language ja"))).status,200);
+    assert.match(sent.at(-1).payload.text,/日本語/);
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 コードが欲しい");
+    assert.equal((await post(message(603,"/privacy"))).status,200);
+    assert.match(sent.at(-1).payload.text,/Telegramの身元/);
+    const vietnameseTelegram={...message(604,"/start")};
+    vietnameseTelegram.message.from.language_code="vi";
+    assert.equal((await post(vietnameseTelegram)).status,200);
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 コードが欲しい",
+      "manual Japanese setting must override Telegram Vietnamese language_code");
+    const stored=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"));
+    assert.equal(stored["42"].language,"ja");
+    assert.equal(stored["42"].languageManual,true);
+    assert.equal((await post(message(605,"/language"))).status,200);
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,3);
+    assert.equal((await post(callback(606,"t:lang:en"))).status,200);
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
+  });
+});
+
+test("OCI onboarding differentiates invite seekers and contributors without publishing or auto-subscribing",async()=>{
+  await withApp(async({post,sent,calls,dir})=>{
+    const vi={...message(700,"/start")};
+    vi.message.from.language_code="vi-VN";
+    assert.equal((await post(vi)).status,200);
+    assert.match(sent.at(-1).payload.text,/Bạn đến đây để làm gì/);
+    const welcome=sent.at(-1).payload.reply_markup.keyboard;
+    assert.deepEqual(welcome.map(x=>x.length),[1,1,1]);
+    assert.equal(welcome[0][0],"🙋 Tôi cần mã");
+    assert.equal(welcome[1][0],"🤝 Tôi muốn chia sẻ mã");
+
+    assert.equal((await post(callback(701,"t:role:seeker"))).status,200);
+    const seeker=sent.at(-1).payload.reply_markup.keyboard.flat();
+    assert.equal(seeker.length,9);
+    assert.ok(seeker.includes("🎟 Nhận mã"));
+    assert.ok(seeker.includes("🙋 Cần mã"));
+    assert.ok(seeker.includes("🔄 Đổi vai trò"));
+
+    assert.equal((await post(message(702,"🙋 Cần mã"))).status,200);
+    const offer=sent.at(-1).payload;
+    assert.match(offer.text,/không đảm bảo mã còn lượt sử dụng/i);
+    assert.equal(offer.reply_markup.inline_keyboard.length,3);
+    const profilePath=join(dir,"private-profiles.json");
+    const profile=()=>JSON.parse(readFileSync(profilePath,"utf8"))["42"];
+    assert.equal(profile().role,"seeker");
+    assert.equal(profile().subscribed,false,"needing a code must never silently opt into alerts");
+    assert.equal(calls.submit.length,0,"seeker actions must not create public Issues");
+    assert.equal((await post(callback(703,"t:need:alerts"))).status,200);
+    assert.equal(profile().subscribed,true,"explicit opt-in action registers alerts");
+
+    assert.equal((await post(message(704,"🔄 Đổi vai trò"))).status,200);
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[1][0],"🤝 Tôi muốn chia sẻ mã");
+    assert.equal((await post(callback(705,"t:role:contributor"))).status,200);
+    const contributor=sent.at(-1).payload.reply_markup.keyboard.flat();
+    assert.ok(contributor.includes("➕ Đóng góp"));
+    assert.ok(contributor.includes("📍 Trạng thái mã"));
+    assert.ok(contributor.includes("📋 Mã của tôi"));
+    assert.equal(profile().role,"contributor");
+    assert.equal(profile().subscribed,true,"switching role must preserve consent and watchlists");
+    assert.equal((await post(message(706,"📍 Trạng thái mã"))).status,200);
+    assert.match(sent.at(-1).payload.text,/Nhập mã 6 ký tự/);
+    assert.equal((await post(message(707,"DPNIHH"))).status,200);
+    assert.match(sent.at(-1).payload.text,/đã được công bố/);
+    assert.equal(calls.submit.length,0,"role is a menu preference, not proof of ownership");
+  });
 });
