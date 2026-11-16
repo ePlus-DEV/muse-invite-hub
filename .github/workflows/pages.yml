@@ -190,3 +190,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           DEPLOYED_SHA="$(git rev-parse HEAD)" node scripts/close-accepted-issues.mjs
+      - name: Close verified owner count comment Issues only after live publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DEPLOYED_SHA="$(git rev-parse HEAD)" node scripts/close-published-comment-counts.mjs
