@@ -6,7 +6,8 @@ import assert from "node:assert/strict";
 import {
   AUTO_MERGE_MAINTAINER, AUTO_MERGE_BLOCK_LABEL,
   getMaintainerAuthorization, ciHasPassed, autoMergeDecision,
-  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR, verifyNewSocialInvitePR, needsEplusBotReview
+  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR, verifyNewSocialInvitePR, needsEplusBotReview,
+  isTransientMergeError, confirmedMergeAfterError, shouldDispatchPagesRecovery
 } from "./auto-merge.mjs";
 
 const HEAD="a".repeat(40);
@@ -446,4 +447,29 @@ test("strict social new-code PR verifier keeps attribution unverified but permit
   assert.equal(verifyNewSocialInvitePR(foreign),false);
   assert.equal(autoMergeDecision({pr:data.pr,files:data.files,
     newInviteEligible:true,runs:[run(HEAD,"failure")]}).eligible,false);
+});
+
+test("transient GitHub merge 502 requires confirmed server-side merge before dispatch",()=>{
+  for (const status of [500,502,503,504]) assert.equal(isTransientMergeError(status),true);
+  for (const status of [403,405,409,422,null]) assert.equal(isTransientMergeError(status),false);
+  const merged={merged:true,head:{sha:HEAD},base:{ref:"main"},merge_commit_sha:NEXT};
+  assert.equal(confirmedMergeAfterError(merged,HEAD),true);
+  assert.equal(confirmedMergeAfterError({...merged,merged:false},HEAD),false);
+  assert.equal(confirmedMergeAfterError({...merged,head:{sha:NEXT}},HEAD),false);
+  assert.equal(confirmedMergeAfterError({...merged,base:{ref:"staging"}},HEAD),false);
+  assert.equal(confirmedMergeAfterError({...merged,merge_commit_sha:null},HEAD),false);
+});
+
+test("scheduled Pages recovery dispatches only when main lacks a recent or successful deploy",()=>{
+  const now=Date.parse("2026-11-16T18:00:00Z");
+  const old="2026-11-16T17:45:00Z", recent="2026-11-16T17:59:00Z";
+  const result=(conclusion,status="completed",created_at=old)=>({conclusion,status,created_at});
+  assert.equal(shouldDispatchPagesRecovery([],now),true);
+  assert.equal(shouldDispatchPagesRecovery([result("failure")],now),true);
+  assert.equal(shouldDispatchPagesRecovery([result("skipped")],now),true);
+  assert.equal(shouldDispatchPagesRecovery([result("failure","completed",recent)],now),false);
+  assert.equal(shouldDispatchPagesRecovery([result(null,"queued")],now),false);
+  assert.equal(shouldDispatchPagesRecovery([result(null,"in_progress")],now),false);
+  assert.equal(shouldDispatchPagesRecovery([result("success"),result("failure")],now),false);
+  assert.equal(shouldDispatchPagesRecovery(null,now),false);
 });
