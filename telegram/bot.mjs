@@ -122,22 +122,28 @@ export function parseUpdate(update) {
   const matchPick=/^t:pick:([A-Z0-9]{6}):(worked|failed)$/.exec(data);
   const matchWatch=/^t:watch:([A-Z0-9]{6})$/.exec(data);
   const matchRefreshCode=/^t:refresh-code:([A-Z0-9]{6})$/.exec(data);
+  const matchDetail=/^t:detail:([A-Z0-9]{6})$/.exec(data);
+  const matchPage=/^t:page:(0|[1-9][0-9]?)$/.exec(data);
   const matchSubscription=/^t:sub:(on|off)$/.exec(data);
   const matchLanguage=/^t:lang:(en|vi|ja)$/.exec(data);
   const matchRole=/^t:role:(seeker|contributor)$/.exec(data);
   const matchReport=/^t:report:([A-Z0-9]{6}):(worked|failed)$/.exec(data);
   return {
     type:matchSubmit?"submit":matchReport?"report":matchPick?"confirm-report":
-      matchWatch?"watch":matchRefreshCode?"refresh-code":matchSubscription?(matchSubscription[1]==="on"?"subscribe":"unsubscribe"):
+      matchWatch?"watch":matchRefreshCode?"refresh-code":
+      matchDetail?"detail":matchPage?"page":matchSubscription?(matchSubscription[1]==="on"?"subscribe":"unsubscribe"):
       matchLanguage?"set-language":data==="t:langs"?"choose-language":
       matchRole?(matchRole[1]==="seeker"?"set-role-seeker":"set-role-contributor"):
       data==="t:roles"?"choose-role":data==="t:need"?"need-code":
       data==="t:need:browse"?"browse":data==="t:need:alerts"?"subscribe":
       data==="t:need:search"?"prompt-search":
+      data==="t:home"?"home":data==="t:back-list"?"back-list":
+      data==="t:refresh"?"refresh":data==="t:browse"?"browse":
       data==="t:watchlist"?"watchlist":data==="t:erase:ask"?"delete-data":
       data==="t:erase:confirm"?"delete-confirm":"cancel",
     ...(matchLanguage?{language:matchLanguage[1]}:{}),
-    code:matchSubmit?.[1]||matchReport?.[1]||matchPick?.[1]||matchWatch?.[1]||matchRefreshCode?.[1],
+    code:matchSubmit?.[1]||matchReport?.[1]||matchPick?.[1]||matchWatch?.[1]||matchRefreshCode?.[1]||matchDetail?.[1],
+    ...(matchPage?{page:Number(matchPage[1])}:{}),
     result:matchReport?.[2]||matchPick?.[2],
     chatId:callback.from.id,
     ...(typeof callback.from?.language_code==="string"?{telegramLanguage:callback.from.language_code}:{}),

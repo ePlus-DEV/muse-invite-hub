@@ -24,7 +24,9 @@ export async function handleLegacy({action,profiles,send,complete,services,githu
     case "status": {
       const entry=await services.getCodeStatus(code,githubToken);
       return send(chatId,formatCodeStatus(code,entry,language),[
-        [{text:msg("openDirectory"),url:SITE+"/#codes"}]
+        [{text:msg("openDirectory"),url:SITE+"/#codes"}],
+        [{text:msg("backList"),data:"t:back-list"},
+         {text:msg("backMenu"),data:"t:home"}]
       ]);
     }
     case "usage-code":return send(chatId,msg("usageCode"));
@@ -38,14 +40,16 @@ export async function handleLegacy({action,profiles,send,complete,services,githu
     case "confirm-submit":
       return send(chatId,msg("confirmSubmit",{code}),[
         [{text:msg("confirmSubmission"),data:"t:submit:"+code}],
-        [{text:msg("cancel"),data:"t:cancel"}]
+        [{text:msg("cancel"),data:"t:cancel"},
+         {text:msg("backMenu"),data:"t:home"}]
       ]);
     case "confirm-report":
       return send(chatId,msg("confirmReport",{
         code,outcome:msg(result==="worked"?"worked":"failed")
       }),[
         [{text:msg("confirmReport"),data:"t:report:"+code+":"+result}],
-        [{text:msg("cancel"),data:"t:cancel"}]
+        [{text:msg("cancel"),data:"t:cancel"},
+         {text:msg("backMenu"),data:"t:home"}]
       ]);
     case "cancel":return complete(msg("cancelled"));
     case "submit": {

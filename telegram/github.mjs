@@ -38,7 +38,7 @@ export async function listRecentCodes() {
     .map(entry=>entry.code);
 }
 
-export async function browseCodes({query="",newest=false,limit=5}={}) {
+export async function browseCodes({query="",newest=false,limit=5,offset=0}={}) {
   const catalog=await publishedCatalog();
   const needle=String(query).trim().toLowerCase().slice(0,80);
   return catalog.filter(row=>!needle||
@@ -48,7 +48,9 @@ export async function browseCodes({query="",newest=false,limit=5}={}) {
       ? String(b.addedAt||"").localeCompare(String(a.addedAt||""))
       : Number(b.featured===true)-Number(a.featured===true)||
         String(b.addedAt||"").localeCompare(String(a.addedAt||"")))
-    .slice(0,Math.min(10,Math.max(1,limit)))
+    .slice(Math.min(500,Math.max(0,Number.isSafeInteger(offset)?offset:0)),
+      Math.min(500,Math.max(0,Number.isSafeInteger(offset)?offset:0))+
+      Math.min(50,Math.max(1,Number.isSafeInteger(limit)?limit:5)))
     .map(row=>{
       const dated=/^\d{4}-\d{2}-\d{2}$/.test(row.usageReportedAt||"");
       const remaining=Number.isSafeInteger(row.reportedRemaining)&&row.reportedRemaining>=0
@@ -56,8 +58,20 @@ export async function browseCodes({query="",newest=false,limit=5}={}) {
         : Number.isSafeInteger(row.reportedCapacity)&&Number.isSafeInteger(row.reportedUses)&&
           row.reportedCapacity>=row.reportedUses&&row.reportedUses>=0
           ? row.reportedCapacity-row.reportedUses : null;
+      // Public, already validated catalog metadata only. Never assume live availability.
+      let platform="GitHub";
+      if(typeof row.sourceUrl==="string"){
+        try {
+          const host=new URL(row.sourceUrl).hostname.toLowerCase();
+          if(["threads.com","www.threads.com","threads.net","www.threads.net"].includes(host))platform="Threads";
+          else if(["x.com","www.x.com","twitter.com","www.twitter.com"].includes(host))platform="X";
+          else if(["facebook.com","www.facebook.com","m.facebook.com"].includes(host))platform="Facebook";
+        } catch { /* Ignore malformed catalog provenance. */ }
+      }
       return {code:row.code,status:row.status,remaining:dated?remaining:null,
-        usageReportedAt:dated?row.usageReportedAt:null};
+        usageReportedAt:dated?row.usageReportedAt:null,platform,
+        submittedBy:typeof row.submittedBy==="string"?row.submittedBy.slice(0,80):null,
+        addedAt:/^\d{4}-\d{2}-\d{2}$/.test(row.addedAt||"")?row.addedAt:null};
     });
 }
 

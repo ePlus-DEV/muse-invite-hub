@@ -3,7 +3,7 @@ import { LOCALES } from "./i18n.mjs";
 const CODE=/^[A-Z0-9]{6}$/;
 const INTENTS=new Set(["search","submit","report","status"]);
 export function emptyProfile() {
-  return {subscribed:false,watching:[],submitted:[],pending:null,language:null,languageManual:false,role:null};
+  return {subscribed:false,watching:[],submitted:[],pending:null,language:null,languageManual:false,role:null,browse:null};
 }
 export function cleanProfile(value) {
   const base=emptyProfile();
@@ -13,6 +13,12 @@ export function cleanProfile(value) {
     role:value.role==="seeker"||value.role==="contributor"?value.role:null,
     language:LOCALES.includes(value.language)?value.language:null,
     languageManual:value.languageManual===true&&LOCALES.includes(value.language),
+    // Only a small navigation context is retained; never store invite catalog data.
+    browse:value.browse&&typeof value.browse==="object"&&!Array.isArray(value.browse)&&
+      Number.isSafeInteger(value.browse.page)&&value.browse.page>=0&&value.browse.page<=99
+      ? {query:typeof value.browse.query==="string"
+          ? value.browse.query.trim().slice(0,80):"",
+        newest:value.browse.newest===true,page:value.browse.page}:null,
     watching:Array.isArray(value.watching)
       ? [...new Set(value.watching.filter(v=>typeof v==="string"&&CODE.test(v)))].slice(0,50):[],
     submitted:Array.isArray(value.submitted)
