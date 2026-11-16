@@ -5,6 +5,8 @@ import { BOT_COMMANDS } from "./bot.mjs";
 import { normalizeLocale } from "./i18n.mjs";
 const DESCRIPTION={
   "vi": {
+    "role": "Chọn nhu cầu sử dụng bot",
+    "need": "Tìm mã mời và theo dõi mã mới",
     "start": "Bắt đầu và mở menu",
     "codes": "Xem mã mới công bố",
     "status": "Kiểm tra trạng thái mã",
@@ -27,6 +29,8 @@ const DESCRIPTION={
     "cancel": "Hủy thao tác"
   },
   "ja": {
+    "role": "利用目的を選択",
+    "need": "招待コードを探して新着通知を設定",
     "start": "開始・メニューを表示",
     "codes": "最近公開されたコード",
     "status": "コードの状態を確認",

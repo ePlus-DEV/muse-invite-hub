@@ -22,6 +22,8 @@ export const BOT_COMMANDS = [
   {command:"unsubscribe",description:"Disable new-code alerts"},
   {command:"settings",description:"Private chat preferences"},
   {command:"language",description:"Change bot language"},
+  {command:"role",description:"Choose how to use this bot"},
+  {command:"need",description:"Find an invite code or request new-code alerts"},
   {command:"delete_data",description:"Clear private bot profile"},
   {command:"cancel",description:"Cancel a confirmation"}
 ];
@@ -53,7 +55,9 @@ export function parseCommand(text) {
   if(selected)return {type:selected};
   const parts=text.trim().split(/\s+/);
   const command=(parts[0]||"").toLowerCase().replace(/@[a-z0-9_]+$/i,"");
-  if (command==="/start"||command==="/help") return {type:"help"};
+  if (command==="/start"||command==="/help"||command==="/menu") return {type:"help"};
+  if (command==="/role"||command==="/roles")return {type:"choose-role"};
+  if (command==="/need"||command==="/request")return {type:"need-code"};
   if (command==="/codes") return {type:"browse"};
   if (command==="/new") return {type:"newest"};
   if (command==="/my") return {type:"my-codes"};
@@ -117,11 +121,16 @@ export function parseUpdate(update) {
   const matchWatch=/^t:watch:([A-Z0-9]{6})$/.exec(data);
   const matchSubscription=/^t:sub:(on|off)$/.exec(data);
   const matchLanguage=/^t:lang:(en|vi|ja)$/.exec(data);
+  const matchRole=/^t:role:(seeker|contributor)$/.exec(data);
   const matchReport=/^t:report:([A-Z0-9]{6}):(worked|failed)$/.exec(data);
   return {
     type:matchSubmit?"submit":matchReport?"report":matchPick?"confirm-report":
       matchWatch?"watch":matchSubscription?(matchSubscription[1]==="on"?"subscribe":"unsubscribe"):
       matchLanguage?"set-language":data==="t:langs"?"choose-language":
+      matchRole?(matchRole[1]==="seeker"?"set-role-seeker":"set-role-contributor"):
+      data==="t:roles"?"choose-role":data==="t:need"?"need-code":
+      data==="t:need:browse"?"browse":data==="t:need:alerts"?"subscribe":
+      data==="t:need:search"?"prompt-search":
       data==="t:watchlist"?"watchlist":data==="t:erase:ask"?"delete-data":
       data==="t:erase:confirm"?"delete-confirm":"cancel",
     ...(matchLanguage?{language:matchLanguage[1]}:{}),
