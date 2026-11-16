@@ -94,9 +94,23 @@ export function inviteNeedsConfirmationReview(issue) {
   if (!Object.hasOwn(readIssueFields(issue.body), "Invite code")) return false;
   return !hasRequiredInviteConfirmations(issue.body);
 }
+// Optional form fields are sometimes filled with explicit "unknown" prose.
+// Treat only known no-data statements as absent; malformed numeric claims
+// must still fail rather than silently publishing guessed quotas.
+function plainOptionalText(value) {
+  return String(value ?? "").trim().replace(/^_+|_+$/g, "").trim();
+}
+function explicitlyUnreported(value) {
+  return /^(?:n\/?a|none|unknown|not (?:currently )?(?:known|available|reported|verified from the muse invite screen))\.?$/i
+    .test(plainOptionalText(value));
+}
+function explicitlyNoSocialSource(value) {
+  return /^(?:n\/?a|none|not applicable|no social (?:source|post|url)(?:[;,]\s*this is my own (?:referral )?code)?)[.!]?$/i
+    .test(plainOptionalText(value));
+}
 function optionalInteger(value, name, max = 1000) {
   const str = String(value ?? "").trim();
-  if (!str) return null;
+  if (!str || explicitlyUnreported(str)) return null;
   if (!/^(?:0|[1-9][0-9]{0,3})$/.test(str)) throw Error(name + " must be a non-negative integer.");
   const n = Number(str);
   if (n > max) throw Error(name + " is outside the supported range.");
@@ -270,7 +284,11 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
       return {outcome:"needs-review",kind,code,
         reason:"Legacy social-source Issues require platform selection and maintainer review."};
     }
-    if (!socialSubmission && urlField) {
+    // The social URL input is not applicable for "GitHub (my own code)".
+    // A contributor may explicitly say that they have no social source.
+    // Never treat an actual pasted link, handle or unrecognized claim as
+    // an absence statement: those still need manual source review.
+    if (!socialSubmission && urlField && !explicitlyNoSocialSource(urlField)) {
       return {outcome:"needs-review",kind,code,
         reason:"Choose the matching social code source when supplying a social URL."};
     }
