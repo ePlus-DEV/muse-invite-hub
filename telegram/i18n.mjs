@@ -91,7 +91,7 @@ const STRINGS = {
     "deleted": "Your private bot data was deleted. Public GitHub posts remain.",
     "privateOnly": "Please use this bot in a private chat to protect your reports.",
     "usageCode": "Use /get CODE, /watch CODE or /unwatch CODE (exactly 6 letters/digits).",
-    "usageStatus": "Use /status CODE with exactly six letters or digits, e.g. /status DPNIHH.",
+    "usageStatus": "Use /status CODE with exactly 6 letters or digits, e.g. /status DPNIHH.",
     "privacy": "Only share PUBLIC Muse invite codes and real usage feedback. After your confirmation, a PUBLIC GitHub Issue/comment contains the code and report, but not your Telegram identity. Maintainers review Telegram submissions. Never send passwords, OTPs, private links or personal data. Your Telegram identity does not prove code ownership.",
     "count": "Owner-only quota updates require a verified GitHub account. Telegram identity does not prove ownership. Open your listing and choose Update count.",
     "usageSubmit": "Use /submit CODE with exactly six letters or digits (for example /submit DPNIHH). Share public invite codes only, never credentials.",
