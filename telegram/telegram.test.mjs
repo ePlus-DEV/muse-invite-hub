@@ -15,6 +15,12 @@ test("Telegram commands accept only public code patterns and known report outcom
   assert.deepEqual(parseCommand("/report dpnihh worked"),
     {type:"confirm-report",code:"DPNIHH",result:"worked"});
   assert.equal(parseCommand("/report DPNIHH maybe").type,"usage-report");
+  for(const invalid of ["ABCDE","ABCDEFG","ABC-12","ABC_12"]){
+    assert.equal(parseCommand("/submit "+invalid).type,"usage-submit");
+    assert.equal(parseCommand("/report "+invalid+" worked").type,"usage-report");
+    assert.equal(parseUpdate({update_id:999,callback_query:{id:"cb",from:{id:42},
+      message:{chat:{id:42,type:"private"}},data:"t:submit:"+invalid}}).type,"cancel");
+  }
   assert.equal(parseCommand("/submit ../secret").type,"usage-submit");
   assert.equal(parseCommand("/count").type,"count");
   assert.equal(parseCommand("/codes").type,"codes");

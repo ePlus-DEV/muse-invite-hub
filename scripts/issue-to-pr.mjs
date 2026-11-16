@@ -8,7 +8,7 @@ import { isShareCodeIssue, parseInviteCodes } from "./code-issue-map.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
 const MARKER = "<!-- muse-issue-draft-pr -->";
-const CODE_PATTERN = /^[A-Z0-9-]{4,32}$/;
+const CODE_PATTERN = /^[A-Z0-9]{6}$/;
 const USER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 const GITHUB_OWN = "GitHub (my own code)";
 export const AUTO_PUBLISH_NEW_INVITE_MARKER = "<!-- muse-auto-publish-new-github-v1 -->";

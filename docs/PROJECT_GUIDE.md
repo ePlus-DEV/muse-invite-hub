@@ -36,6 +36,46 @@ The published catalog is [data/invites.json](../data/invites.json). Codes are un
 - The UI derives the source platform and handle from those public URLs. Automated Issue submissions require original post links; profiles, ambiguous sources and Facebook share-shortlinks need manual review. A GitHub reporter is not automatically the owner of a social account with the same handle.
 - Codes carry community statuses such as unverified, reported-working and reported-not-working. These are not official Muse validation. Threads demo codes 18I70N and XZ4PV6 were user-supplied; their profile links alone do not independently prove the code was posted or works.
 
+Muse's invite entry UI has six character slots. All new catalog/Issue/Telegram invite codes must be exactly six ASCII letters or digits, stored uppercase (`^[A-Z0-9]{6}# Project guide — Muse Invite Hub
+
+This is the technical reference for maintainers. For a short project overview see the [README](../README.md); for Issue Forms, contribution rules and pull requests see [CONTRIBUTING.md](../CONTRIBUTING.md). Security and coding-agent policies live in [SECURITY.md](../SECURITY.md) and [AGENTS.md](../AGENTS.md).
+
+## Run locally
+
+Muse Invite Hub is a static HTML, CSS, JavaScript and JSON website, requiring no backend or npm installation. From the repository root:
+
+~~~sh
+node scripts/serve.mjs
+~~~
+
+Open http://localhost:8000/. Use HTTP rather than a local file URL because the homepage fetches the JSON catalog. The server uses Node.js built-ins only; to serve an extracted preview bundle instead, use `node scripts/serve.mjs /path/to/preview 8000`. Source checkouts render the homepage directly; code detail pages are generated in the Pages build.
+
+Use **Node.js 24** for CI-compatible checks:
+
+~~~sh
+node scripts/validate.mjs
+node scripts/audit-links.mjs
+node --test scripts/serve.test.mjs
+node --test scripts/validate.test.mjs scripts/audit-links.test.mjs scripts/preview.test.mjs scripts/preview-fallback.test.mjs scripts/site-pages.test.mjs scripts/seo-aeo.test.mjs
+node --check assets/app.js
+node --check assets/detail.js
+node --check scripts/issue-to-pr.mjs
+node --test scripts/issue-to-pr.test.mjs scripts/auto-merge.test.mjs scripts/close-accepted-issues.test.mjs scripts/close-published-comment-counts.test.mjs
+~~~
+
+For a complete generated site before merging, download the muse-invite-hub-pr-preview-N artifact from the PR Validate workflow, extract it and serve that folder over HTTP. Detail pages will be at /codes/CODE/. Test mobile/desktop, search, filtering, sort, copy, empty and network-error states, and feedback links.
+
+## Catalog provenance and availability
+
+The published catalog is [data/invites.json](../data/invites.json). Codes are unique across every source platform.
+
+- GitHub entries use the submittedBy field. This identifies a GitHub account only.
+- Public Threads, X (Twitter) and Facebook entries use validated HTTPS sourceUrl links instead of GitHub owner fields. Example original-post formats: https://www.threads.com/@handle/post/ID, https://x.com/handle/status/123456789 and https://www.facebook.com/handle/posts/ID.
+- The UI derives the source platform and handle from those public URLs. Automated Issue submissions require original post links; profiles, ambiguous sources and Facebook share-shortlinks need manual review. A GitHub reporter is not automatically the owner of a social account with the same handle.
+- Codes carry community statuses such as unverified, reported-working and reported-not-working. These are not official Muse validation. Threads demo codes 18I70N and XZ4PV6 were user-supplied; their profile links alone do not independently prove the code was posted or works.
+
+, no hyphens); text submissions can normalize lowercase to uppercase. This validates only format, not redemption or quota.
+
 Usage figures are **dated self-reported snapshots**, not live balances. When capacity and used count are known, remaining = capacity - used. A remaining-only report is also allowed without guessing a total. The original 11 November 2026 [Issue #14](https://github.com/ePlus-DEV/muse-invite-hub/issues/14) submission reported **3 of 30 remaining**. A newer owner-confirmed comment on 15 November 2026 was reviewed in [PR #157](https://github.com/ePlus-DEV/muse-invite-hub/pull/157), updating the published snapshot to **23 remaining out of 30** (**7 used**). These are historical self-reports, not Muse live availability or independently validated redemption.
 
 ## Issue automation, conditional merge and acceptance

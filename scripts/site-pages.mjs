@@ -14,7 +14,7 @@ export function escapeHtml(value) {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 }
 export function codePath(code) {
-  if (typeof code !== "string" || !/^[A-Z0-9-]{4,32}$/.test(code)) {
+  if (typeof code !== "string" || !/^[A-Z0-9]{6}$/.test(code)) {
     throw Error("Invalid public invite code path");
   }
   return "/codes/" + encodeURIComponent(code) + "/";
@@ -22,7 +22,7 @@ export function codePath(code) {
 export function canIndexDetail(item) {
   // Index every valid, published invite detail page without implying redemption.
   // Only validated catalog entries reach the production detail generator.
-  return typeof item?.code === "string" && /^[A-Z0-9-]{4,32}$/.test(item.code);
+  return typeof item?.code === "string" && /^[A-Z0-9]{6}$/.test(item.code);
 }
 function dateText(value) {
   if (!value) return "Not reported";
@@ -220,7 +220,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '\n</body>\n</html>\n';
 }
 export function renderDetailPage(item, options) {
-  if (!item || !/^[A-Z0-9-]{4,32}$/.test(item.code || "")) throw Error("Invalid detail entry");
+  if (!item || !/^[A-Z0-9]{6}$/.test(item.code || "")) throw Error("Invalid detail entry");
   return detailHtml(item, options);
 }
 export function generateSitemap(items, origin = SITE_ORIGIN) {

@@ -20,7 +20,7 @@ export function commentCountCandidate(pr) {
       !BOT_LOGINS.has(pr.user?.login)) return null;
   const issueNumber=Number(match[1]), commentId=Number(match[2]);
   if (!Number.isSafeInteger(issueNumber) || !Number.isSafeInteger(commentId)) return null;
-  const code = /^Code: \*\*([A-Z0-9-]{4,32})\*\*$/m.exec(pr.body || "")?.[1];
+  const code = /^Code: \*\*([A-Z0-9]{6})\*\*$/m.exec(pr.body || "")?.[1];
   if (!code || pr.title !== "data: review "+code+" count from comment #"+commentId ||
       !(pr.body || "").includes("Original Issue: #"+issueNumber+"\n") ||
       !(pr.body || "").includes("Source comment: https://github.com/"+REPO+

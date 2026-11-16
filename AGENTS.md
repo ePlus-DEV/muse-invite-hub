@@ -5,6 +5,13 @@ Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. The local HTTP s
 ## Rules
 
 - Never invent invite codes, redemptions, reward amounts, account eligibility or live validity.
+- The Muse redemption UI has six character slots: **all new codes must be exactly six ASCII letters or digits** (`^[A-Z0-9]{6}# AGENTS.md — Muse Invite Hub
+
+Static website: HTML, CSS, JavaScript, JSON and GitHub Actions. The local HTTP server is pure Node.js 24 with no npm dependencies or Python; production needs no backend.
+
+## Rules
+
+ in stored records). Normalize lowercase to uppercase on text submission, reject 5-/7-character codes, hyphens, whitespace inside one code and punctuation; keep multi-code separators supported. Enforce this consistently in catalog validation, GitHub Issue/comment handlers, detail rendering, client-side saved/copied code logic, Telegram, and tests. Syntax alone never proves Muse redemption or remaining availability.
 - Homepage token potential is a qualified estimate, not a verified pool, redeemed balance or claimed reward. Use the historical 1B-token-per-eligible-new-user redemption announcement linked on the page, count only dated nonnegative reported remaining invite uses, do not infer unreported code capacity, never double-count the referrer reward, and update it dynamically from the production catalog. Keep the disclaimer visible.
 - The site owner confirms ownership of the featured `DPNIHH` code. Label it **Verified Owner** prominently via `ownerConfirmed: true` on both card and detail. Keep **Code owner** verification separate from **Muse redemption** status; do not show bare `Unverified` text that suggests owner verification is missing. This is an ownership assertion, not independently verified Muse redemption. Keep `status: unverified` until an actual Muse redemption result is available.
 - Keep at most one `featured: true` code. Pin it ahead of community codes regardless of sort selection.

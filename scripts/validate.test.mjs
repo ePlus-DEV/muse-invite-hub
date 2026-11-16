@@ -11,6 +11,16 @@ test("empty catalog is valid before first contribution", () => {
 test("valid community entry is accepted", () => {
   assert.deepEqual(validateCatalog([sample()]), []);
 });
+test("catalog only accepts exactly six uppercase ASCII letters or digits",()=>{
+  for(const code of ["ABC123","123456","QWERTY","0A1B2C"]){
+    assert.deepEqual(validateCatalog([{...sample(),code}]),[]);
+  }
+  for(const code of ["ABCDE","ABCDEFG","ABC-12","ABC_12","abc123","ABC 12","A1B2C!"]){
+    assert.ok(validateCatalog([{...sample(),code}]).some(e=>e.includes("exactly 6")),
+      "Expected invalid code: "+code);
+  }
+});
+
 test("duplicate codes and IDs are rejected", () => {
   const errors = validateCatalog([sample(), { ...sample() }]);
   assert.ok(errors.some(e => e.includes("duplicate id")));

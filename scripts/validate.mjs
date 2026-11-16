@@ -39,8 +39,8 @@ export function validateCatalog(data) {
       errors.push(at + ": duplicate id " + item.id + ".");
     } else ids.add(item.id);
 
-    if (typeof item.code !== "string" || !/^[A-Z0-9-]{4,32}$/.test(item.code)) {
-      errors.push(at + ": code must be 4–32 uppercase letters, digits or hyphens.");
+    if (typeof item.code !== "string" || !/^[A-Z0-9]{6}$/.test(item.code)) {
+      errors.push(at + ": code must be exactly 6 uppercase letters or digits (A–Z, 0–9).");
     } else if (codes.has(item.code.toUpperCase())) {
       errors.push(at + ": duplicate code " + item.code + ".");
     } else codes.add(item.code.toUpperCase());

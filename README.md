@@ -10,7 +10,7 @@
 
 ## Features
 
-- **One directory:** browse, search, filter and sort invite codes shared on GitHub, Threads, X (Twitter) and Facebook.
+- **One directory:** browse, search, filter and sort invite codes shared on GitHub, Threads, X (Twitter) and Facebook. New submissions follow Muse's 6-character alphanumeric invite format (A–Z, 0–9; no hyphens), but matching the format does not guarantee redemption.
 - **[Country availability map](https://muse.eplus.dev/countries/):** interactive, accessible world map showing five Meta-announced Muse launch markets as of 12 November 2026, with primary sources. Highlighted countries do not guarantee individual account eligibility. Boundaries: Natural Earth (public domain).
 - **Saved codes:** bookmark codes on the homepage or detail page and filter by saved items. Bookmarks are stored only in this browser (no accounts or server synchronization).
 - **Copied codes:** successfully copied codes get a separate violet highlight and **Copy again** label on both directory cards and detail pages, persisting only in this browser. Copying is not proof that Muse accepted the code.

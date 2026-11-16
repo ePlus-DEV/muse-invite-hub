@@ -10,7 +10,7 @@ import { REPO, withCanonicalIssueRefs } from "./code-issue-map.mjs";
 import { listedPlatform } from "./source-platform.mjs";
 import { readCatalog, fetchGitHubCatalog, changedRecord } from "./catalog.mjs";
 
-const CODE = /^[A-Z0-9-]{4,32}$/;
+const CODE = /^[A-Z0-9]{6}$/;
 const API = "https://api.github.com/repos/" + REPO + "/";
 const MAX_COMMENT = 3500;
 const outcomes = new Map([
