@@ -10,7 +10,10 @@
  * Secrets arrive only as Worker secrets (env), never from repository files.
  */
 import { parseUpdate, keyboard, formatCodeStatus } from "./bot.mjs";
-import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus } from "./github.mjs";
+import { REPLY_KEYBOARD } from "./menu.mjs";
+import { resolveInput, handleInteractive } from "./conversation.mjs";
+import { makeKvProfiles, mutateProfile } from "./profiles.mjs";
+import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus, browseCodes } from "./github.mjs";
 
 const SITE = "https://muse.eplus.dev";
 const MAX_BODY = 32 * 1024;
@@ -56,7 +59,7 @@ export function createKvState(kv) {
   };
 }
 
-export function createBotHandler({ token, githubToken, telegramApi, services = { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus } }) {
+export function createBotHandler({ token, githubToken, telegramApi, services = { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus, browseCodes } }) {
   const call = telegramApi || (async (method, payload) => {
     const response = await fetch("https://api.telegram.org/bot" + token + "/" + method, {
       method: "POST",
@@ -73,13 +76,21 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
     if (buttons) payload.reply_markup = keyboard(buttons);
     return call("sendMessage", payload);
   }
-  return async function handle(update, state) {
-    const action = parseUpdate(update);
+  async function sendMenu(chatId,text) {
+    return call("sendMessage",{
+      chat_id:chatId,text,disable_web_page_preview:true,reply_markup:REPLY_KEYBOARD
+    });
+  }
+  return async function handle(update, state, profiles) {
+    let action = parseUpdate(update);
     if (!action) return;
-    const { chatId, type, code, result, updateId } = action;
+    const chatId=action.chatId;
     if (action.callbackId) {
       await call("answerCallbackQuery", { callback_query_id: action.callbackId });
     }
+    action=await resolveInput(action,profiles);
+    if(await handleInteractive({action,profiles,send,sendMenu,services,githubToken}))return;
+    const {type,code,result,updateId}=action;
     async function complete(message) {
       await send(chatId,message);
       if(action.callbackId&&action.messageId) {
@@ -120,6 +131,8 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
         const entry=await services.getCodeStatus(code,githubToken);
         return send(chatId,formatCodeStatus(code,entry),[[{text:"Browse directory",url:SITE+"/#codes"}]]);
       }
+      case "usage-code":
+        return send(chatId,"Use /get CODE, /watch CODE or /unwatch CODE (exactly 6 letters/digits).");
       case "usage-status":
         return send(chatId,"Use /status CODE with exactly 6 letters or digits, e.g. /status DPNIHH.");
       case "privacy":
@@ -156,6 +169,13 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
       case "submit": {
         if (!(await state.allowWrite(chatId))) return complete("Too many submissions. Try again later.");
         const outcome = await services.submitNewCode(code, updateId, githubToken);
+        if(outcome.kind==="submitted"&&
+            /^https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/[1-9]\d*$/.test(outcome.url||"")){
+          await mutateProfile(profiles,chatId,p=>{
+            if(!p.submitted.some(x=>x.code===code))p.submitted.push({code,url:outcome.url});
+            p.submitted=p.submitted.slice(-50);return p;
+          });
+        }
         const message = {
           listed: "This code is already in the published directory.",
           pending: "A Telegram contribution Issue already exists; no duplicate was created.",
@@ -221,10 +241,11 @@ export async function handleWebhookRequest(request, env, deps = {}) {
     return respond(400, "");
   }
   const state = createKvState(env.BOT_STATE);
+  const profiles=makeKvProfiles(env.BOT_STATE);
   const handle = createBotHandler({ token, githubToken, telegramApi: deps.telegramApi, services: deps.services });
   try {
     if (await state.has(update.update_id)) return respond(200, "ok");
-    await handle(update, state);
+    await handle(update, state, profiles);
     await state.add(update.update_id);
     return respond(200, "ok");
   } catch (error) {

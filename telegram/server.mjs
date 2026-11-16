@@ -4,10 +4,28 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "
 import { fileURLToPath } from "node:url";
 import { resolve, join } from "node:path";
 import { parseUpdate, keyboard, formatCodeStatus } from "./bot.mjs";
-import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus } from "./github.mjs";
+import { REPLY_KEYBOARD } from "./menu.mjs";
+import { resolveInput, handleInteractive } from "./conversation.mjs";
+import { cleanProfile, mutateProfile } from "./profiles.mjs";
+import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus, browseCodes } from "./github.mjs";
 
 const SITE="https://muse.eplus.dev";
 const MAX_BODY=32*1024;
+function fileProfiles(dataDir) {
+  const filename=join(dataDir,"private-profiles.json");
+  const profiles=existsSync(filename)?JSON.parse(readFileSync(filename,"utf8")):{};
+  if(!profiles||typeof profiles!=="object"||Array.isArray(profiles))throw Error("Corrupt private Telegram profiles");
+  function save() {
+    const tmp=filename+".tmp";
+    writeFileSync(tmp,JSON.stringify(profiles),{mode:0o600});
+    renameSync(tmp,filename);
+  }
+  return {
+    async get(id){return cleanProfile(profiles[String(id)]);},
+    async set(id,value){profiles[String(id)]=cleanProfile(value);save();},
+    async delete(id){delete profiles[String(id)];save();}
+  };
+}
 
 function constantTimeEqual(actual,expected) {
   if(typeof actual!=="string"||typeof expected!=="string")return false;
@@ -16,7 +34,7 @@ function constantTimeEqual(actual,expected) {
 }
 export function createTelegramApp({
   token,secret,githubToken,dataDir="/data",
-  telegramApi,services={listRecentCodes,submitNewCode,submitFeedback,getCodeStatus}
+  telegramApi,services={listRecentCodes,submitNewCode,submitFeedback,getCodeStatus,browseCodes}
 }) {
   if(typeof token!=="string"||token.length<20||
     !/^[A-Za-z0-9_-]{16,256}$/.test(secret||"")||
@@ -30,6 +48,7 @@ export function createTelegramApp({
     processed=disk.slice(-1000);
   }
   const handled=new Set(processed);
+  const profiles=fileProfiles(dataDir);
   const strikes=new Map();
   let queue=Promise.resolve();
   const call=telegramApi || (async (method,payload)=>{
@@ -48,6 +67,11 @@ export function createTelegramApp({
     if(buttons)payload.reply_markup=keyboard(buttons);
     return call("sendMessage",payload);
   }
+  async function sendMenu(chatId,text) {
+    return call("sendMessage",{
+      chat_id:chatId,text,disable_web_page_preview:true,reply_markup:REPLY_KEYBOARD
+    });
+  }
   function allowWrite(chatId) {
     const now=Date.now();
     const recent=(strikes.get(chatId)||[]).filter(value=>now-value<3600000);
@@ -57,12 +81,15 @@ export function createTelegramApp({
     return true;
   }
   async function handle(update){
-    const action=parseUpdate(update);
+    let action=parseUpdate(update);
     if(!action)return;
-    const {chatId,type,code,result,updateId}=action;
+    const chatId=action.chatId;
     if(action.callbackId){
       await call("answerCallbackQuery",{callback_query_id:action.callbackId});
     }
+    action=await resolveInput(action,profiles);
+    if(await handleInteractive({action,profiles,send,sendMenu,services,githubToken}))return;
+    const {type,code,result,updateId}=action;
     async function complete(message) {
       await send(chatId,message);
       if(action.callbackId&&action.messageId) {
@@ -104,6 +131,8 @@ export function createTelegramApp({
         const entry=await services.getCodeStatus(code,githubToken);
         return send(chatId,formatCodeStatus(code,entry),[[{text:"Browse directory",url:SITE+"/#codes"}]]);
       }
+      case "usage-code":
+        return send(chatId,"Use /get CODE, /watch CODE or /unwatch CODE (exactly 6 letters/digits).");
       case "usage-status":
         return send(chatId,"Use /status CODE with exactly 6 letters or digits, e.g. /status DPNIHH.");
       case "privacy":
@@ -140,6 +169,13 @@ export function createTelegramApp({
       case "submit":{
         if(!allowWrite(chatId))return complete("Too many submissions. Try again later.");
         const outcome=await services.submitNewCode(code,updateId,githubToken);
+        if(outcome.kind==="submitted"&&
+            /^https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/[1-9]\d*$/.test(outcome.url||"")){
+          await mutateProfile(profiles,chatId,p=>{
+            if(!p.submitted.some(x=>x.code===code))p.submitted.push({code,url:outcome.url});
+            p.submitted=p.submitted.slice(-50);return p;
+          });
+        }
         const message={
           listed:"This code is already in the published directory.",
           pending:"A Telegram contribution Issue already exists; no duplicate was created.",
