@@ -24,14 +24,14 @@ test("Telegram commands accept only public code patterns and known report outcom
   }
   assert.equal(parseCommand("/submit ../secret").type,"usage-submit");
   assert.equal(parseCommand("/count").type,"count");
-  assert.equal(parseCommand("/codes").type,"codes");
+  assert.equal(parseCommand("/codes").type,"browse");
   assert.deepEqual(parseCommand("/status dpnihh"),{type:"status",code:"DPNIHH"});
   assert.deepEqual(parseCommand("/code dpnihh"),{type:"status",code:"DPNIHH"});
   assert.equal(parseCommand("/status DPNIH").type,"usage-status");
   assert.equal(parseCommand("/status DPNIHH EXTRA").type,"usage-status");
   assert.equal(parseCommand("/privacy").type,"privacy");
   assert.equal(parseCommand("/cancel").type,"cancel");
-  assert.equal(BOT_COMMANDS.length,8);
+  assert.equal(BOT_COMMANDS.length,19);
   assert.equal(new Set(BOT_COMMANDS.map(x=>x.command)).size,BOT_COMMANDS.length);
   assert.equal(parseCommand("/start@MuseBot").type,"help");
   assert.equal(parseCommand("x".repeat(400)).type,"help");

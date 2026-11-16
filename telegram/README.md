@@ -141,3 +141,9 @@ Containers use restart: unless-stopped to recover after VM reboot. Use docker co
 ## Not included yet
 
 This first deployment adds a functional private-chat Bot. It does **not** implement a Telegram Mini App, Telegram-GitHub account linking, automatic review PRs for bot comments, or automatic owner verification. Those should follow separately once the VM, webhook, review workflow and secrets have been tested in production.
+
+## Interactive private-chat menu
+
+After deploying this version and reopening the bot, `/start` shows a persistent 3×3 Reply Keyboard: Find codes, New codes, Search, Contribute, My codes, Report, Notifications, Watchlist and Settings. Each published code uses Telegram's native `copy_text` button, details link, watch and genuine-report actions. Prompts for a code last 10 minutes. The bot keeps a **private** profile per Telegram chat (opt-in alerts, watched codes and Issue links created by this chat); these do **not** prove ownership. The `/delete_data` command clears this private profile, but cannot erase public Issues/comments already submitted after consent.
+
+The menu and opt-in preferences are implemented in both the OCI and Workers runtimes. Actual background publication delivery is a separate feature; toggling subscriptions **does not** send alerts until that delivery service is configured. **Do not** describe listed codes as verified live or Telegram users as code owners.

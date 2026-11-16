@@ -38,6 +38,29 @@ export async function listRecentCodes() {
     .map(entry=>entry.code);
 }
 
+export async function browseCodes({query="",newest=false,limit=5}={}) {
+  const catalog=await publishedCatalog();
+  const needle=String(query).trim().toLowerCase().slice(0,80);
+  return catalog.filter(row=>!needle||
+    row.code.toLowerCase().includes(needle)||
+    String(row.submittedBy||"").toLowerCase().includes(needle))
+    .sort((a,b)=>newest
+      ? String(b.addedAt||"").localeCompare(String(a.addedAt||""))
+      : Number(b.featured===true)-Number(a.featured===true)||
+        String(b.addedAt||"").localeCompare(String(a.addedAt||"")))
+    .slice(0,Math.min(10,Math.max(1,limit)))
+    .map(row=>{
+      const dated=/^\d{4}-\d{2}-\d{2}$/.test(row.usageReportedAt||"");
+      const remaining=Number.isSafeInteger(row.reportedRemaining)&&row.reportedRemaining>=0
+        ? row.reportedRemaining
+        : Number.isSafeInteger(row.reportedCapacity)&&Number.isSafeInteger(row.reportedUses)&&
+          row.reportedCapacity>=row.reportedUses&&row.reportedUses>=0
+          ? row.reportedCapacity-row.reportedUses : null;
+      return {code:row.code,status:row.status,remaining:dated?remaining:null,
+        usageReportedAt:dated?row.usageReportedAt:null};
+    });
+}
+
 export async function getCodeStatus(code,token) {
   if(!CODE_PATTERN.test(code))throw Error("Invalid public invite code");
   const entry=(await publishedCatalog()).find(item=>item.code===code);
