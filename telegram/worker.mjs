@@ -214,6 +214,10 @@ export async function handleWebhookRequest(request, env, deps = {}) {
   if (url.pathname === "/healthz" && request.method === "GET") {
     return respond(200, '{"status":"ok"}', "application/json");
   }
+  if (url.pathname === "/version" && request.method === "GET") {
+    const revision = /^[a-f0-9]{40}$/.test(env?.BUILD_SHA || "") ? env.BUILD_SHA : "unknown";
+    return respond(200, JSON.stringify({revision}), "application/json");
+  }
   if(url.pathname==="/telegram/notify"&&request.method==="POST"){
     const {notificationResponse}=await import("./notifications.mjs");
     const {makeWorkerNotifyState}=await import("./notify-worker.mjs");
