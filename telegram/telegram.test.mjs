@@ -126,6 +126,31 @@ test("submit and report are explicitly confirmed, then sent to GitHub once",asyn
     await new Promise(resolve=>restarted.close(resolve));
   });
 });
+test("OCI Mini App messages cannot bypass public GitHub consent",async()=>{
+  await withApp(async({post,sent,calls,dir})=>{
+    const fromApp=(id,payload)=>({update_id:id,message:{
+      from:{id:42,is_bot:false},chat:{id:42,type:"private"},
+      web_app_data:{data:JSON.stringify({v:1,...payload})}
+    }});
+    assert.equal((await post(fromApp(350,{action:"submit",code:"APP123"}))).status,200);
+    assert.equal(calls.submit.length,0);
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,
+      "t:submit:APP123");
+    assert.equal((await post(fromApp(351,{action:"report",code:"DPNIHH",result:"failed"}))).status,200);
+    assert.equal(calls.report.length,0);
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,
+      "t:report:DPNIHH:failed");
+    assert.equal((await post(fromApp(352,{action:"language",language:"ja"}))).status,200);
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard.at(-1)[0].web_app.url,
+      "https://muse.eplus.dev/telegram-app/?lang=ja");
+    const data=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"));
+    assert.equal(data["42"].languageManual,true);
+    assert.equal(data["42"].language,"ja");
+    assert.equal(calls.submit.length,0);
+    assert.equal(calls.report.length,0);
+  });
+});
+
 test("code status and privacy are informational in the Node webhook",async()=>{
   await withApp(async({post,sent,calls})=>{
     assert.equal((await post(message(30,"/status DPNIHH"))).status,200);
