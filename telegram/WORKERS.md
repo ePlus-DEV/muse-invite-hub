@@ -22,6 +22,50 @@ to configure the existing Worker, preserve its private `BOT_STATE` KV namespace
 and verify the actual live source revision. No Cloudflare API token needs to
 be stored in GitHub with this method.
 
+## Cloudflare Preview build failure on PR #198 (diagnosed)
+
+The test build log confirms `node prepare-deploy.mjs` **completed successfully**.
+The failing command was **`npx wrangler preview`**, automatically selected
+because PR #198 is on a branch other than the configured production branch.
+This is a **Preview** deployment, not the production Worker deployment. A
+Preview requires a `previews` configuration and its own separate `BOT_STATE`
+KV namespace. Never bind a Preview to the production bot's KV, Telegram token
+or GitHub Issues write token just to make a PR check green.
+
+**Chosen rollout: production builds only for the Telegram bot.**
+
+1. In Cloudflare Workers & Pages, select the actual
+   `muse-invite-hub-telegram` **Worker**, not a Pages project.
+2. Under **Settings → Builds → Branch control**, keep **Production branch =
+   `main`** and turn **Enable Preview Builds = off**. This prevents automatic
+   preview deploys on PR branches and removes the need to provision a preview KV.
+3. In **Settings → Builds → Build watch paths**, set **Include = `telegram/*`**,
+   Exclude empty. This rule is evaluated against paths relative to the Git
+   repository root and matches nested Telegram files as well.
+4. In build settings, keep Root = `telegram`, Build =
+   `node prepare-deploy.mjs`, and **production Deploy =
+   `npx wrangler deploy --config wrangler.deploy.toml`**. The PR log's
+   `npx wrangler preview` is the **separate preview command**, not evidence
+   that your production deploy command is misconfigured.
+5. Keep `MUSE_BOT_STATE_KV_ID` set to the existing production `BOT_STATE`
+   namespace ID. Merge a reviewed, CI-green `telegram/` change to `main`,
+   then check Cloudflare **Production** Builds and `/version` on the actual
+   webhook Worker. A PR-only build cannot prove production deployment.
+
+A non-production branch showing a skipped/no Cloudflare Preview check after
+disabling previews is **expected**. Production auto-deploy is verified only
+after a merge to `main`. Keep Github Pages deployment independent.
+
+If Preview deployments are wanted in a later phase, create an isolated
+Preview-only KV namespace and Preview-safe configuration **first**, then
+enable preview builds and configure the Preview command explicitly. Do not
+copy real Telegram webhook credentials or runtime writes into Preview.
+
+Official references:
+- https://developers.cloudflare.com/workers/ci-cd/builds/build-branches/
+- https://developers.cloudflare.com/workers/ci-cd/builds/configuration/
+- https://developers.cloudflare.com/workers/ci-cd/builds/build-watch-paths/
+
 ## Smoke test: build only when `telegram/` changes (2026-11-16)
 
 This documentation-only commit intentionally changes **only**
