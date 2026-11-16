@@ -141,6 +141,7 @@ test("reopen only genuine user feedback on the canonical code issue",()=>{
   assert.equal(shouldReopen(oldIssue,regularComment,[contributor]),true);
   assert.equal(shouldReopen({...oldIssue,state:"open"},regularComment,[contributor]),false);
   assert.equal(shouldReopen(oldIssue,{...regularComment,user:{login:"github-actions[bot]",type:"Bot"}},[contributor]),false);
+  assert.equal(shouldReopen(oldIssue,{...regularComment,user:{login:"eplus-bot",type:"User"}},[contributor]),false);
   assert.equal(shouldReopen(oldIssue,{...regularComment,body:" "},[contributor]),false);
   assert.equal(shouldReopen({...oldIssue,number:5},regularComment,[contributor]),false);
   assert.equal(shouldReopen({...oldIssue,pull_request:{}},regularComment,[contributor]),false);

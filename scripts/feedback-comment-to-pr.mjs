@@ -32,6 +32,7 @@ export function planCommentProposal(issue, comment, catalog) {
   if (!Array.isArray(catalog) || typeof comment?.body !== "string" ||
       comment.body.length > MAX_COMMENT || !comment.user?.login ||
       comment.user?.type === "Bot" || comment.user?.login.endsWith("[bot]") ||
+      comment.user?.login === "eplus-bot" ||
       !Number.isSafeInteger(comment.id) || comment.id <= 0) return {outcome:"ignored"};
   const code = feedbackCodeForIssue(issue,catalog,comment.body);
   if (!code) return {outcome:"ignored"};

@@ -33,7 +33,7 @@ export function shouldReopen(issue, comment, catalog) {
   if (!comment || !Number.isSafeInteger(comment.id) ||
       !comment.body?.trim() || !comment.user?.login ||
       comment.user.type === "Bot" ||
-      comment.user.login.endsWith("[bot]")) return false;
+      comment.user.login.endsWith("[bot]") || comment.user.login === "eplus-bot") return false;
   return issue?.state === "closed" && Boolean(feedbackCodeForIssue(issue, catalog));
 }
 
