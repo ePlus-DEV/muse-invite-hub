@@ -141,6 +141,31 @@ test("Worker paging and code details are navigable without GitHub writes",async(
   assert.equal(await env.BOT_STATE.get("rl:42"),null);
 });
 
+test("Worker Mini App submit/report require a second Telegram confirmation",async()=>{
+  const env=makeEnv();
+  const {deps,sent,calls}=makeDeps();
+  const fromApp=(id,payload)=>({
+    update_id:id,message:{from:{id:42,is_bot:false},
+      chat:{id:42,type:"private"},
+      web_app_data:{data:JSON.stringify({v:1,...payload})}}
+  });
+  assert.equal((await handleWebhookRequest(webhook(fromApp(330,{
+    action:"submit",code:"APP123"})),env,deps)).status,200);
+  assert.equal(calls.submit.length,0);
+  assert.match(sent.at(-1).payload.text,/PUBLIC GitHub Issue/);
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:submit:APP123");
+  assert.equal((await handleWebhookRequest(webhook(fromApp(331,{
+    action:"report",code:"DPNIHH",result:"worked"})),env,deps)).status,200);
+  assert.equal(calls.report.length,0);
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,
+    "t:report:DPNIHH:worked");
+  assert.equal((await handleWebhookRequest(webhook(fromApp(332,{
+    action:"language",language:"vi"})),env,deps)).status,200);
+  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).language,"vi");
+  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).languageManual,true);
+  assert.equal(await env.BOT_STATE.get("rl:42"),null);
+});
+
 test("worker status and privacy are read-only",async()=>{
   const env=makeEnv();
   const {deps,sent,calls}=makeDeps();
