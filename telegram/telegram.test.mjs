@@ -201,15 +201,15 @@ test("deployment sources never embed real credentials or auto-publish third-part
   assert.doesNotMatch(workflow,/push:\s*\n\s*branches:/);
 });
 
-test("OCI bot auto-detects Vietnamese and retains an explicit Japanese override",async()=>{
+test("OCI bot defaults to English and retains an explicit Japanese override",async()=>{
   await withApp(async({post,sent,dir})=>{
     const vi={...message(600,"/start")};
     vi.message.from.language_code="vi-VN";
     assert.equal((await post(vi)).status,200);
-    assert.match(sent.at(-1).payload.text,/Chào mừng/);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 Tôi cần mã");
+    assert.match(sent.at(-1).payload.text,/Welcome/);
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
     assert.equal((await post(message(601,"/status DPNIHH"))).status,200);
-    assert.match(sent.at(-1).payload.text,/đã được công bố/);
+    assert.match(sent.at(-1).payload.text,/published/);
     assert.equal((await post(message(602,"/language ja"))).status,200);
     assert.match(sent.at(-1).payload.text,/日本語/);
     assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 コードが欲しい");
@@ -232,6 +232,7 @@ test("OCI bot auto-detects Vietnamese and retains an explicit Japanese override"
 
 test("OCI onboarding differentiates invite seekers and contributors without publishing or auto-subscribing",async()=>{
   await withApp(async({post,sent,calls,dir})=>{
+    assert.equal((await post(message(699,"/language vi"))).status,200);
     const vi={...message(700,"/start")};
     vi.message.from.language_code="vi-VN";
     assert.equal((await post(vi)).status,200);

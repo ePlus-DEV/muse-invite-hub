@@ -1,5 +1,5 @@
 /* Minimal opt-in private Telegram preferences. Never expose chat IDs in GitHub Issues. */
-import { normalizeLocale, LOCALES } from "./i18n.mjs";
+import { LOCALES } from "./i18n.mjs";
 const CODE=/^[A-Z0-9]{6}$/;
 const INTENTS=new Set(["search","submit","report","status"]);
 export function emptyProfile() {
@@ -39,15 +39,16 @@ export async function mutateProfile(profiles,chatId,fn) {
   return cleanProfile(next);
 }
 
-/* Telegram language_code auto-selection does not overwrite explicit preferences. */
-export async function syncTelegramLocale(profiles,chatId,telegramLanguage) {
+/* English is the bot default, independent of Telegram's interface language.
+ * Migrate old automatically detected language preferences, but preserve any
+ * language manually chosen via /language or the Settings menu.
+ */
+export async function syncTelegramLocale(profiles,chatId,_telegramLanguage) {
   const profile=await profiles.get(chatId);
   if(profile.languageManual)return profile.language;
-  if(typeof telegramLanguage!=="string"||!telegramLanguage.trim())return profile.language||"en";
-  const chosen=normalizeLocale(telegramLanguage);
-  if(profile.language!==chosen){
-    profile.language=chosen;
+  if(profile.language!=="en"){
+    profile.language="en";
     await profiles.set(chatId,profile);
   }
-  return chosen;
+  return "en";
 }

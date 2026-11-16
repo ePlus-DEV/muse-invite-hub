@@ -1,7 +1,7 @@
 /* Localized Telegram keyboards; callback values remain stable across languages. */
 import { LOCALES, MENU_KEYS, ENTRY_MENU_KEYS, ROLE_MENU_KEYS, menuText, tr } from "./i18n.mjs";
-export const MENU = MENU_KEYS.map(row=>row.map(key=>menuText("vi",key)));
-export function replyKeyboard(language="vi",role="legacy") {
+export const MENU = MENU_KEYS.map(row=>row.map(key=>menuText("en",key)));
+export function replyKeyboard(language="en",role="legacy") {
   const layout=role===null?ENTRY_MENU_KEYS:ROLE_MENU_KEYS[role]||MENU_KEYS;
   return {
     keyboard:layout.map(row=>row.map(key=>menuText(language,key))),
@@ -11,7 +11,7 @@ export function replyKeyboard(language="vi",role="legacy") {
     input_field_placeholder:tr(language,"placeholder")
   };
 }
-export const REPLY_KEYBOARD=replyKeyboard("vi");
+export const REPLY_KEYBOARD=replyKeyboard("en");
 const actions=new Map();
 for(const lang of LOCALES){
   for(const row of [...MENU_KEYS,...ENTRY_MENU_KEYS,

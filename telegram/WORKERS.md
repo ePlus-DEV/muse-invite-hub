@@ -202,20 +202,22 @@ After the interactive menu is merged, set `TELEGRAM_NOTIFY_SECRET` with `npx wra
 The Telegram bot supports **Tiếng Việt, English and 日本語** consistently
 across the persistent 3×3 keyboard, invite cards, copy/report/watch buttons,
 search and submission confirmations, status/privacy/help, preferences, and
-opt-in publication notifications. Each private chat automatically uses
-`from.language_code` (such as `vi-VN`, `ja`, `en-US`), with English
-as the fallback for unsupported Telegram locales.
+opt-in publication notifications. **English is the default** for every
+new chat, independent of Telegram's `from.language_code` (including
+Vietnamese and Japanese Telegram interfaces).
 
 Open **⚙️ Cài đặt / Settings / 設定 → 🌐 Ngôn ngữ / Language / 言語**
 or send `/language`; choose your language. Alternatively send
 `/language vi`, `/language en`, or `/language ja`.
 The choice is stored privately alongside the existing bot profile and
-**overrides Telegram's automatic language selection** until changed.
+**remains in effect** until changed, regardless of Telegram's interface language.
+Older profiles with automatically detected language (without a manual choice)
+also switch to English on their next interaction.
 Changing the language immediately redraws the persistent keyboard, and
 existing callbacks continue to work regardless of language. A previous
 English or Vietnamese keyboard label is still accepted after switching.
 `/delete_data` deletes the saved preference with other private settings;
-the next `/start` auto-detects Telegram language again.
+the next `/start` uses the default English again.
 
 After deploying a new version, re-run
 `telegram/register-webhook.mjs` **in your existing private runtime** to

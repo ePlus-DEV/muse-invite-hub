@@ -39,6 +39,8 @@ test("fixed 3-by-3 reply keyboard exposes nine usable entries",()=>{
   assert.deepEqual(MENU.map(row=>row.length),[3,3,3]);
   assert.equal(MENU.flat().length,new Set(MENU.flat()).size);
   assert.equal(REPLY_KEYBOARD.is_persistent,true);
+  assert.equal(REPLY_KEYBOARD.keyboard[0][0],"🎟 Get codes");
+  assert.equal(MENU[0][0],"🎟 Get codes");
   assert.equal(parseCommand("🎟 Nhận mã").type,"browse");
   assert.equal(parseCommand("/subscribe").type,"subscribe");
   assert.equal(parseCommand("/watchlist").type,"watchlist");
