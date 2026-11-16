@@ -30,10 +30,10 @@ function copyTrusted(path) {
     copyFileSync(full, to);
   }
 }
-for (const file of ["index.html", "404.html", ".nojekyll", "CNAME", "robots.txt", "sitemap.xml", "llms.txt", "assets", "data", "countries", "telegram-app"]) {
+for (const file of ["index.html", "404.html", ".nojekyll", "CNAME", "robots.txt", "sitemap.xml", "llms.txt", "assets", "data", "countries"]) {
   if (existsSync(file)) copyTrusted(file);
 }
-for (const required of ["index.html", "404.html", "llms.txt", "assets/app.js", "assets/site-ui.js", "assets/styles.css", "assets/countries.js", "assets/countries.css", "data/world-countries.json", "countries/index.html", "data/invites.json", "telegram-app/index.html", "telegram-app/app.js", "telegram-app/styles.css"]) {
+for (const required of ["index.html", "404.html", "llms.txt", "assets/app.js", "assets/site-ui.js", "assets/styles.css", "assets/countries.js", "assets/countries.css", "data/world-countries.json", "countries/index.html", "data/invites.json"]) {
   if (!existsSync(join(output, required))) throw Error("Production output missing " + required);
 }
 const code = readCatalog();

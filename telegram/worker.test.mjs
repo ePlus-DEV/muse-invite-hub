@@ -103,13 +103,14 @@ test("Worker Refresh fetches current catalog and has no public write side effect
   assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
   assert.equal((await handleWebhookRequest(webhook(message(302,"🔄 Refresh")),env,deps)).status,200);
   assert.equal(reads,1);
-  assert.match(sent.at(-1).payload.text,/Reported 1 remaining/);
+  assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/1 /);
   assert.equal((await handleWebhookRequest(webhook(message(303,"/refresh")),env,deps)).status,200);
   assert.equal(reads,2);
-  assert.match(sent.at(-1).payload.text,/Reported 2 remaining/);
+  assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/2 /);
   assert.equal((await handleWebhookRequest(webhook(callback(304,"t:refresh-code:DPNIHH")),env,deps)).status,200);
   assert.equal(reads,3);
-  assert.match(sent.filter(x=>x.name==="sendMessage").at(-1).payload.text,/Reported 3 remaining/);
+  assert.equal(sent.at(-1).name,"editMessageText");
+  assert.match(sent.at(-1).payload.text,/Reported 3 remaining/);
   assert.equal(calls.submit.length,0);
   assert.equal(calls.report.length,0);
   assert.equal(await env.BOT_STATE.get("rl:42"),null,"Refreshing must not use public-write quota");
@@ -127,6 +128,8 @@ test("Worker paging and code details are navigable without GitHub writes",async(
   assert.equal(sent.filter(x=>x.name==="sendMessage").length,1);
   assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:PAGE00");
   assert.equal((await handleWebhookRequest(webhook(callback(311,"t:page:1")),env,deps)).status,200);
+  assert.equal(sent.at(-1).name,"editMessageText",
+    "Pagination must edit the existing bot message rather than send duplicates");
   assert.match(sent.at(-1).payload.text,/Page 2/);
   assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:PAGE05");
   assert.equal((await handleWebhookRequest(webhook(callback(312,"t:detail:PAGE05")),env,deps)).status,200);
@@ -138,31 +141,6 @@ test("Worker paging and code details are navigable without GitHub writes",async(
   assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
   assert.equal(calls.submit.length,0);
   assert.equal(calls.report.length,0);
-  assert.equal(await env.BOT_STATE.get("rl:42"),null);
-});
-
-test("Worker Mini App submit/report require a second Telegram confirmation",async()=>{
-  const env=makeEnv();
-  const {deps,sent,calls}=makeDeps();
-  const fromApp=(id,payload)=>({
-    update_id:id,message:{from:{id:42,is_bot:false},
-      chat:{id:42,type:"private"},
-      web_app_data:{data:JSON.stringify({v:1,...payload})}}
-  });
-  assert.equal((await handleWebhookRequest(webhook(fromApp(330,{
-    action:"submit",code:"APP123"})),env,deps)).status,200);
-  assert.equal(calls.submit.length,0);
-  assert.match(sent.at(-1).payload.text,/PUBLIC GitHub Issue/);
-  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:submit:APP123");
-  assert.equal((await handleWebhookRequest(webhook(fromApp(331,{
-    action:"report",code:"DPNIHH",result:"worked"})),env,deps)).status,200);
-  assert.equal(calls.report.length,0);
-  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,
-    "t:report:DPNIHH:worked");
-  assert.equal((await handleWebhookRequest(webhook(fromApp(332,{
-    action:"language",language:"vi"})),env,deps)).status,200);
-  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).language,"vi");
-  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).languageManual,true);
   assert.equal(await env.BOT_STATE.get("rl:42"),null);
 });
 

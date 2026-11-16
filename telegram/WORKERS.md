@@ -245,22 +245,6 @@ and Japanese):
   New codes, Browse, Report, Alerts, Settings and Switch role. Public GitHub
   submissions still require an explicit confirmation and human review.
 
-- **✨ Open visual app:** an additional native Telegram `web_app`
-  keyboard button opens the HTTPS Mini App at
-  `https://muse.eplus.dev/telegram-app/`. The visual UI includes a
-  welcome screen, navigation, searchable/paginated cards, detail and source,
-  refresh, sharing, report entry and EN/VI/JA language selection.
-  It uses only the **published** catalog from GitHub Pages; it does not
-  store Telegram identities or public-write credentials.
-  **Contribute**, **Report**, **Watch** and private preferences return to the
-  same private chat via a `web_app_data` service message. Contribution and
-  reporting **still require Telegram-side confirmation** before any public
-  GitHub Issue or comment can be created. A standalone browser can browse
-  and copy, but cannot submit to the bot.
-  The website's GitHub Pages deployment and the bot's Worker/OCI deployment
-  must both be updated before this launcher works. The Mini App does not
-  replace existing native bot commands or menus.
-
 - **🔄 Refresh** (also `/refresh`): a dedicated fourth row below the original
   nine role-menu actions, available on onboarding and both roles. Fetches the
   latest published community codes again, newest first. Refresh is read-only:

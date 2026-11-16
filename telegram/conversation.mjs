@@ -24,11 +24,21 @@ export async function resolveInput(action,profiles) {
   return {...action,type:"usage-menu"};
 }
 
-export async function handleInteractive({action,profiles,send,sendMenu,services,githubToken}) {
+export async function handleInteractive({action,profiles,send,sendMenu,edit,services,githubToken}) {
   const {type,chatId,code}=action;
   const profile=await profiles.get(chatId);
   const language=profile.language||"en";
   const msg=(key,params)=>tr(language,key,params);
+  // Edit the existing Telegram panel for read-only inline navigation.
+  // Old/expired/non-editable messages fall back to a new chat message.
+  // No GitHub writes are performed by the navigation path.
+  const panel=async(text,buttons)=>{
+    if(action.callbackId&&action.messageId&&typeof edit==="function"){
+      try {return await edit(chatId,action.messageId,text,buttons);}
+      catch { /* Telegram can refuse edits of stale or unchanged messages. */ }
+    }
+    return send(chatId,text,buttons);
+  };
   const prompt=async(kind,key)=>{
     await mutateProfile(profiles,chatId,p=>{p.pending={type:kind,until:Date.now()+10*60*1000};return p;});
     return send(chatId,msg(key));
@@ -52,13 +62,16 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
     });
     const buttons=[];
     if(!found.length) {
-      return send(chatId,msg(needle?"emptySearch":"emptyCodes"),[
+      return panel(msg(needle?"emptySearch":"emptyCodes"),[
         [{text:msg("backMenu"),data:"t:home"}]
       ]);
     }
     const visible=found.slice(0,5);
     for(const entry of visible)buttons.push([
-      {text:"🎟 "+entry.code,data:"t:detail:"+entry.code}
+      {text:"🎟 "+entry.code+" · "+
+        (Number.isSafeInteger(entry.remaining)&&entry.usageReportedAt
+          ? String(entry.remaining)+" ("+msg("remainingLabel")+")"
+          : msg("cardUnknown")),data:"t:detail:"+entry.code}
     ]);
     const nav=[];
     if(current>0)nav.push({text:msg("previous"),data:"t:page:"+(current-1)});
@@ -69,11 +82,9 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
       {text:msg("backMenu"),data:"t:home"}
     ]);
     const heading=msg(needle?"searchHeading":newest?"newestHeading":"browseHeading");
-    const rows=visible.map(e=>"• "+e.code+" — "+
-      (Number.isSafeInteger(e.remaining)&&e.usageReportedAt
-        ? msg("cardRemaining",{count:e.remaining,date:e.usageReportedAt})
-        : msg("cardUnknown")));
-    return send(chatId,[heading,msg("pageTitle",{page:current+1}),msg("chooseCode"),...rows].join("\n"),buttons);
+    // Do not repeat the five codes in both the message and inline buttons.
+    return panel(["🎟 "+heading,"📄 "+msg("pageTitle",{page:current+1}),
+      msg("chooseCode")].join("\n"),buttons);
   }
   switch(type) {
     case "help":
@@ -101,13 +112,6 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
         [{text:msg("needNotify"),data:"t:need:alerts"}],
         [{text:msg("needSearch"),data:"t:need:search"}],
         [{text:msg("backMenu"),data:"t:home"}]
-      ]);
-      return true;
-    case "open-app":
-      // Normally Telegram launches the web_app keyboard directly. Keep an
-      // HTTPS fallback if a user types or forwards the launcher label.
-      await send(chatId,"✨ "+menuText(language,"openApp"),[
-        [{text:menuText(language,"openApp"),url:"https://muse.eplus.dev/telegram-app/?lang="+language}]
       ]);
       return true;
     case "browse": await list();return true;
@@ -139,8 +143,8 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
     case "get": {
       const entries=await services.browseCodes({query:code,limit:50});
       const entry=entries.find(x=>x.code===code);
-      if(entry)await send(chatId,codeDescription(entry,language),codeButtons(code,language));
-      else await send(chatId,formatCodeStatus(code,await services.getCodeStatus(code,githubToken),language),[
+      if(entry)await panel(codeDescription(entry,language),codeButtons(code,language));
+      else await panel(formatCodeStatus(code,await services.getCodeStatus(code,githubToken),language),[
         [{text:msg("backList"),data:"t:back-list"},
          {text:msg("backMenu"),data:"t:home"}]
       ]);

@@ -88,6 +88,12 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
     if (buttons) payload.reply_markup = keyboard(buttons);
     return call("sendMessage", payload);
   }
+  async function edit(chatId,messageId,text,buttons) {
+    return call("editMessageText",{
+      chat_id:chatId,message_id:messageId,text,disable_web_page_preview:true,
+      reply_markup:keyboard(buttons||[])
+    });
+  }
   async function sendMenu(chatId,text,language="en",role="legacy") {
     return call("sendMessage",{
       chat_id:chatId,text,disable_web_page_preview:true,reply_markup:replyKeyboard(language,role)
@@ -112,7 +118,7 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
         } catch { /* An expired callback acknowledgment must not block the GitHub operation. */ }
       }
       action=await resolveInput(action,profiles);
-      if(await handleInteractive({action,profiles,send,sendMenu,services,githubToken}))return;
+      if(await handleInteractive({action,profiles,send,sendMenu,edit,services,githubToken}))return;
       async function complete(message) {
         await send(chatId,message);
         if(action.callbackId&&action.messageId) {
