@@ -43,7 +43,7 @@ export function classifyIssue(issue) {
   // Check specific forms before the generic Invite form. Never classify
   // a discussion or a count report as a fresh invite submission.
   if (/^\[Code discussion\]/i.test(title) ||
-      /^\[Code\]\s+[A-Z0-9-]{4,32}\b/i.test(title) ||
+      /^\[Code\]\s+[A-Z0-9]{6}\b/i.test(title) ||
       body.includes("<!-- muse-code-feedback-root:") ||
       body.includes("<!-- muse-code-feedback-thread:")) {
     return "type: discussion";

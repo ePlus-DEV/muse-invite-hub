@@ -64,7 +64,7 @@ async function verifyLive(record) {
       if (meta.detail_pages > 0) {
         if (meta.detail_pages !== list.length) throw Error("Missing rendered detail pages");
         const featured = list.find(item => item.featured === true) || list[0];
-        if (!featured || !/^[A-Z0-9-]{4,32}$/.test(featured.code)) {
+        if (!featured || !/^[A-Z0-9]{6}$/.test(featured.code)) {
           throw Error("No valid detail sample for live checks");
         }
         const prefix = "codes/" + featured.code + "/";

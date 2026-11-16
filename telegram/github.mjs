@@ -47,8 +47,8 @@ async function findExistingTelegramSubmission(code,token) {
       if(issue.pull_request)return false;
       const title=String(issue.title||"");
       const body=String(issue.body||"");
-      const original=/^### Invite code\s*\r?\n\s*([A-Z0-9-]{4,32})\s*(?:\r?\n|$)/m.exec(body)?.[1];
-      const canonical=/<!-- (?:muse-code-feedback-thread:\s*|muse-code-feedback-root:)([A-Z0-9-]{4,32})\s*-->/.exec(body)?.[1];
+      const original=/^### Invite code\s*\r?\n\s*([A-Z0-9]{6})\s*(?:\r?\n|$)/m.exec(body)?.[1];
+      const canonical=/<!-- (?:muse-code-feedback-thread:\s*|muse-code-feedback-root:)([A-Z0-9]{6})\s*-->/.exec(body)?.[1];
       return (title==="[Telegram submission] "+code&&body.includes("<!-- muse-telegram-submission:"+code+" -->"))||
         (title.startsWith("[Invite]")&&original===code)||
         (title.startsWith("[Code discussion]")&&canonical===code)||

@@ -63,7 +63,7 @@ test("detail responsive layout groups feedback actions and stacks long metadata 
   const js = readFileSync(new URL("../assets/site-ui.js", import.meta.url), "utf8");
   const githubOwner = renderDetailPage({...owner(),feedbackIssueNumber:14});
   const social = renderDetailPage({
-    id:"social-code",code:"SOCIAL1",status:"unverified",addedAt:"2026-11-12",
+    id:"social-code",code:"SOCIA1",status:"unverified",addedAt:"2026-11-12",
     sourceUrl:"https://x.com/testperson/status/123456789",feedbackIssueNumber:74
   });
   assert.match(css, /\.detail-layout\{display:grid;grid-template-columns:minmax\(0,1\.55fr\) minmax\(340px,0\.95fr\)/);

@@ -31,7 +31,7 @@ test("copy history is separate from bookmarks, sanitized and capped", () => {
   assert.deepEqual(features.rememberCopiedCode(storage,"DPNIHH"),["DPNIHH","CODE12"]);
   assert.deepEqual(JSON.parse(storage.getItem(features.STORAGE_KEY)),["SAVE11"]);
   assert.deepEqual(features.rememberCopiedCode(storage,"NEWS99"),["NEWS99","DPNIHH","CODE12"]);
-  const list=Array.from({length:210},(_,i)=>"CODE"+String(i).padStart(3,"0"));
+  const list=Array.from({length:210},(_,i)=>"CD"+String(i).padStart(4,"0"));
   storage.setItem(features.COPIED_STORAGE_KEY,JSON.stringify(list));
   const recorded=features.rememberCopiedCode(storage,"DPNIHH");
   assert.equal(recorded.length,features.MAX_SAVED);

@@ -1,5 +1,5 @@
 /* Telegram update parser. No GitHub credentials or public identity attribution. */
-export const CODE_PATTERN = /^[A-Z0-9-]{4,32}$/;
+export const CODE_PATTERN = /^[A-Z0-9]{6}$/;
 
 export function parseCommand(text) {
   if (typeof text !== "string" || text.length > 300) return {type:"help"};
@@ -37,8 +37,8 @@ export function parseUpdate(update) {
       callback.message?.chat?.type!=="private" ||
       callback.message.chat.id!==callback.from.id) return null;
   const data=callback.data||"";
-  const matchSubmit=/^t:submit:([A-Z0-9-]{4,32})$/.exec(data);
-  const matchReport=/^t:report:([A-Z0-9-]{4,32}):(worked|failed)$/.exec(data);
+  const matchSubmit=/^t:submit:([A-Z0-9]{6})$/.exec(data);
+  const matchReport=/^t:report:([A-Z0-9]{6}):(worked|failed)$/.exec(data);
   return {
     type:matchSubmit?"submit":matchReport?"report":"cancel",
     code:matchSubmit?.[1]||matchReport?.[1],

@@ -9,7 +9,7 @@ const REPO = "ePlus-DEV/muse-invite-hub";
 const ORIGIN = "https://muse.eplus.dev";
 const MARKER = "<!-- muse-accepted-contribution -->";
 const SHA = /^[a-f0-9]{40}$/;
-const CODE = /^[A-Z0-9-]{4,32}$/;
+const CODE = /^[A-Z0-9]{6}$/;
 
 export function acceptedCandidate(pr) {
   const match = /^auto\/issue-([1-9][0-9]*)-(invite|count|feedback)$/.exec(pr?.head?.ref || "");
@@ -18,8 +18,8 @@ export function acceptedCandidate(pr) {
       !["github-actions[bot]","eplus-bot"].includes(pr.user?.login)) return null;
   const issueNumber = Number(match[1]), kind = match[2];
   if (!Number.isSafeInteger(issueNumber)) return null;
-  const single=/\bCode: \*\*([A-Z0-9-]{4,32})\*\*\. Change:/.exec(pr.body || "")?.[1];
-  const group=/\bCodes: \*\*([A-Z0-9-]{4,32}(?:, [A-Z0-9-]{4,32}){1,9})\*\*\. Change:/.exec(pr.body || "")?.[1];
+  const single=/\bCode: \*\*([A-Z0-9]{6})\*\*\. Change:/.exec(pr.body || "")?.[1];
+  const group=/\bCodes: \*\*([A-Z0-9]{6}(?:, [A-Z0-9]{6}){1,9})\*\*\. Change:/.exec(pr.body || "")?.[1];
   if (!single && !group || (group && kind!=="invite")) return null;
   let codes;
   try {

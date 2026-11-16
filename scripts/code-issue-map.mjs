@@ -1,7 +1,7 @@
 /* Canonical issue thread per published invite code; trusted main only. */
 export const REPO = "ePlus-DEV/muse-invite-hub";
 export const MARKER = "muse-code-feedback-thread";
-const CODE = /^[A-Z0-9-]{4,32}$/;
+const CODE = /^[A-Z0-9]{6}$/;
 
 // Issue Forms accept one or more public invite codes. Never silently drop
 // malformed or duplicate tokens: each code must be reviewed individually.
@@ -21,10 +21,10 @@ export function parseInviteCodes(value) {
   const labelled=input.split(/\r?\n/).filter(line =>
     /^\s*(?:Invite\s+code|Code)\s*:/i.test(line));
   if (labelled.length === 1) {
-    const exact=/^\s*(?:Invite\s+code|Code)\s*:\s*([A-Z0-9-]{4,32})\s*$/i.exec(labelled[0]);
+    const exact=/^\s*(?:Invite\s+code|Code)\s*:\s*([A-Z0-9]{6})\s*$/i.exec(labelled[0]);
     if (exact) return [exact[1].toUpperCase()];
   }
-  throw Error("Invite code must contain 1–10 distinct 4–32 character codes (letters, digits or hyphens), separated by whitespace, commas or semicolons; or a single standalone 'Code: ABC123' line in a pasted referral message.");
+  throw Error("Invite code must contain 1–10 distinct 6-character codes (letters A–Z or digits 0–9; no hyphens), separated by whitespace, commas or semicolons; or a single standalone 'Code: ABC123' line in a pasted referral message.");
 }
 
 
@@ -71,8 +71,8 @@ export function originalIssueNumber(item) {
 export function issueCodes(issue) {
   if (issue?.pull_request) return [];
   const body = String(issue?.body || "");
-  const marker = new RegExp("<!-- " + MARKER + ": ([A-Z0-9-]{4,32}) -->").exec(body) ||
-    /<!-- muse-code-feedback-root:([A-Z0-9-]{4,32}) -->/.exec(body);
+  const marker = new RegExp("<!-- " + MARKER + ": ([A-Z0-9]{6}) -->").exec(body) ||
+    /<!-- muse-code-feedback-root:([A-Z0-9]{6}) -->/.exec(body);
   if (marker) return [marker[1]];
   if (!/^\[(?:Invite|Count update|Code feedback)\]/.test(String(issue?.title || "")) &&
       !isShareCodeIssue(issue)) return [];
@@ -119,7 +119,7 @@ export function resolveExistingIssue(item, issues) {
       /^\[(?:Invite|Count update|Code feedback)\]/.test(String(issue.title || "")) ||
       isShareCodeIssue(issue) ||
       String(issue.body || "").includes(issueMarker(code)) ||
-      /<!-- muse-code-feedback-root:[A-Z0-9-]{4,32} -->/.test(String(issue.body || ""))));
+      /<!-- muse-code-feedback-root:[A-Z0-9]{6} -->/.test(String(issue.body || ""))));
   const source = candidates.find(x => x.number === issueNo);
   if (item.feedbackIssueNumber && !source) {
     throw Error("Explicit code Issue mapping not found or code mismatch for " + code);

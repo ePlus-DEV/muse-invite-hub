@@ -23,9 +23,9 @@ test("saved codes parse safely and remain scoped to the browser", () => {
   assert.deepEqual(features.parseSaved("{broken"), []);
   assert.deepEqual(features.parseSaved('{"DPNIHH":true}'), []);
   assert.deepEqual(features.parseSaved(JSON.stringify([
-    "DPNIHH", "DPNIHH", "CODE123", "__proto__", "../evil", 42, null
-  ])), ["DPNIHH", "CODE123"]);
-  const oversized = Array.from({length: 250}, (_, i) => "CODE" + String(i).padStart(3, "0"));
+    "DPNIHH", "DPNIHH", "CODE12", "__proto__", "../evil", 42, null
+  ])), ["DPNIHH", "CODE12"]);
+  const oversized = Array.from({length: 250}, (_, i) => "CD" + String(i).padStart(4, "0"));
   assert.equal(features.parseSaved(JSON.stringify(oversized)).length, features.MAX_SAVED);
   assert.match(app, /window\.localStorage\.setItem\(features\.STORAGE_KEY/);
   assert.match(app, /window\.addEventListener\("storage"/);
@@ -305,12 +305,12 @@ test("guided mobile owner count fields generate the canonical GitHub report", ()
 
 test("homepage token potential totals only dated reported remaining uses", () => {
   const sample = [
-    {code:"WITH1", usageReportedAt:"2026-11-14", reportedCapacity:30, reportedUses:5},
-    {code:"WITH2", usageReportedAt:"2026-11-15", reportedRemaining:10},
-    {code:"ZERO1", usageReportedAt:"2026-11-15", reportedRemaining:0},
-    {code:"UNKNOWN"}, // Never assume 20 or 30 remaining by default.
+    {code:"WITH11", usageReportedAt:"2026-11-14", reportedCapacity:30, reportedUses:5},
+    {code:"WITH12", usageReportedAt:"2026-11-15", reportedRemaining:10},
+    {code:"ZERO11", usageReportedAt:"2026-11-15", reportedRemaining:0},
+    {code:"UNKNWN"}, // Never assume 20 or 30 remaining by default.
     {code:"STALE1", reportedRemaining:20}, // A missing report date is unknown.
-    {code:"INVALID", usageReportedAt:"2026-11-15", reportedCapacity:30, reportedUses:99}
+    {code:"INVALD", usageReportedAt:"2026-11-15", reportedCapacity:30, reportedUses:99}
   ];
   const potential = features.tokenPotential(sample);
   assert.deepEqual(potential,{
@@ -343,4 +343,16 @@ test("four homepage statistics retain readable mobile 2x2 spacing", () => {
   assert.match(style,/\.overview-stat span\{font-size:11px;line-height:1.35\}/);
   assert.match(style,/\.overview-note,\.overview-source\{font-size:11px;line-height:1.55;margin-inline:5px;text-align:left\}/);
   assert.doesNotMatch(style,/\.overview-stat\{gap:5px;min-height:64px/);
+});
+
+
+test("browser feedback and local bookmarks reject bad-length or hyphenated Muse codes",()=>{
+  assert.deepEqual(features.parseSaved(JSON.stringify([
+    "ABCDE","ABCDEFG","ABC-12","ABC_12","ABC123"
+  ])),["ABC123"]);
+  for(const bad of ["ABCDE","ABCDEFG","ABC-12"]){
+    assert.throws(()=>features.quickFeedbackUrl(bad,"worked",14),/Invalid public invite code/);
+    assert.equal(features.issueNumberFor({[bad]:14},bad),null);
+  }
+  assert.equal(features.issueNumberFor({ABC123:14},"ABC123"),14);
 });

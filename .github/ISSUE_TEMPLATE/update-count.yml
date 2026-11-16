@@ -14,7 +14,7 @@ body:
     id: invite_code
     attributes:
       label: Invite code
-      description: "The public code whose count you want to update."
+      description: "The listed 6-character code (A–Z or 0–9 only; no hyphens) whose count you want to update."
       placeholder: "DPNIHH"
     validations:
       required: true

@@ -10,7 +10,8 @@ body:
     id: invite_code
     attributes:
       label: Invite code
-      placeholder: "Code from this directory"
+      description: "Exactly 6 letters (A–Z) or digits (0–9), without hyphens. Case is normalized."
+      placeholder: "DPNIHH"
     validations:
       required: true
   - type: dropdown

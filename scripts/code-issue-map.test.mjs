@@ -212,3 +212,15 @@ test("accept a pasted Muse referral message only when one explicit Code line exi
     "Code: ABC123\nCode: ABC123" // duplicates must not collapse
   ]) assert.throws(()=>parseInviteCodes(invalid),/Invite code must contain/);
 });
+
+
+test("Muse invite field uses exactly six letters or digits, with uppercase normalization",()=>{
+  assert.deepEqual(parseInviteCodes("ab12c3"),["AB12C3"]);
+  assert.deepEqual(parseInviteCodes("ab12c3, DE45F6"),["AB12C3","DE45F6"]);
+  assert.deepEqual(parseInviteCodes("Code: ab12c3"),["AB12C3"]);
+  for(const invalid of ["ABCDE","ABCDEFG","ABC-12","AB_123","ABC 12","Code: ABC-12","Code: ABCDE","Code: ABCDEFG"]){
+    assert.throws(()=>parseInviteCodes(invalid),/6-character/);
+  }
+  assert.throws(()=>issueMarker("ABC-12"),/Invalid invite code/);
+  assert.deepEqual(issueCodes({...oldIssue,body:"### Invite code\n\nABC-12"}),[]);
+});

@@ -10,7 +10,7 @@
   // Copy history is independent from Saved Codes and never indicates redemption.
   const COPIED_STORAGE_KEY = "muse-invite-hub:copied-codes:v1";
   const REPO = "https://github.com/ePlus-DEV/muse-invite-hub";
-  const CODE_PATTERN = /^[A-Z0-9-]{4,32}$/;
+  const CODE_PATTERN = /^[A-Z0-9]{6}$/;
   const MAX_SAVED = 200;
 
   // One billion tokens per qualifying new-user redemption per Muse's
