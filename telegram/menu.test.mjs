@@ -65,6 +65,8 @@ test("Telegram copy-text button is native and code actions are private callbacks
   assert.equal(payload.inline_keyboard[0][0].url,undefined);
   assert.equal(payload.inline_keyboard[1][0].callback_data,"t:watch:DPNIHH");
   assert.equal(payload.inline_keyboard[2][0].callback_data,"t:refresh-code:DPNIHH");
+  assert.equal(payload.inline_keyboard[3][0].callback_data,"t:back-list");
+  assert.equal(payload.inline_keyboard[3][1].callback_data,"t:home");
   const callback=(data)=>parseUpdate({update_id:10,callback_query:{
     id:"id",from:{id:42},message:{chat:{type:"private",id:42}},data
   }});
@@ -72,6 +74,13 @@ test("Telegram copy-text button is native and code actions are private callbacks
   assert.equal(callback("t:pick:DPNIHH:worked").type,"confirm-report");
   assert.equal(callback("t:sub:on").type,"subscribe");
   assert.equal(callback("t:erase:confirm").type,"delete-confirm");
+  assert.equal(callback("t:detail:DPNIHH").type,"detail");
+  assert.equal(callback("t:detail:DPNIHH").code,"DPNIHH");
+  assert.equal(callback("t:page:1").type,"page");
+  assert.equal(callback("t:page:1").page,1);
+  assert.equal(callback("t:page:100").type,"cancel");
+  assert.equal(callback("t:back-list").type,"back-list");
+  assert.equal(callback("t:home").type,"home");
   assert.deepEqual(
     {type:callback("t:refresh-code:DPNIHH").type,code:callback("t:refresh-code:DPNIHH").code},
     {type:"refresh-code",code:"DPNIHH"});
@@ -136,10 +145,63 @@ test("Refresh fetches the latest catalog again without creating pending submissi
   assert.equal((await f.run("/refresh")).action.type,"refresh");
   assert.equal(reads,2);
   assert.match(f.messages.at(-1).text,/Reported 2 remaining/);
-  assert.equal(f.messages.at(-1).buttons[2][0].data,"t:refresh-code:DPNIHH");
+  assert.equal(f.messages.at(-1).buttons[1][0].data,"t:refresh");
   assert.equal(await handleInteractive({action:{type:"refresh-code",chatId:42,code:"DPNIHH"},...f.calls}),true);
   assert.equal(reads,3);
   assert.match(f.messages.at(-1).text,/Reported 3 remaining/);
+});
+
+test("paged list -> code detail -> back to same page -> home without public writes",async()=>{
+  const f=fixture();
+  const rows=Array.from({length:12},(_,i)=>({
+    code:"CODE"+String(i).padStart(2,"0"),status:"unverified",
+    remaining:12-i,usageReportedAt:"2026-11-15",
+    platform:i===5?"Threads":"GitHub",
+    addedAt:"2026-11-11",
+    submittedBy:i===5?null:"example-user"
+  }));
+  const requests=[];
+  f.calls.services.browseCodes=async({offset=0,limit=5,query=""})=>{
+    requests.push({offset,limit,query});
+    return rows.filter(x=>!query||x.code.includes(query)).slice(offset,offset+limit);
+  };
+  await f.run("/codes");
+  assert.equal(f.messages.length,1,"Pagination must avoid sending five separate code messages");
+  assert.equal(f.messages.at(-1).buttons[0][0].data,"t:detail:CODE00");
+  assert.equal(f.messages.at(-1).buttons[5][0].data,"t:page:1");
+  assert.equal(f.messages.at(-1).buttons[6][1].data,"t:home");
+  assert.equal((await f.profiles.get(42)).browse.page,0);
+  assert.equal(await handleInteractive({action:{type:"page",page:1,chatId:42},...f.calls}),true);
+  assert.equal(requests.at(-1).offset,5);
+  assert.equal(f.messages.at(-1).buttons[0][0].data,"t:detail:CODE05");
+  assert.equal(f.messages.at(-1).buttons[5][0].data,"t:page:0");
+  assert.equal(f.messages.at(-1).buttons[5][1].data,"t:page:2");
+  assert.equal(await handleInteractive({action:{type:"detail",code:"CODE05",chatId:42},...f.calls}),true);
+  assert.match(f.messages.at(-1).text,/Platform: Threads/);
+  assert.match(f.messages.at(-1).text,/Added: 2026-11-11/);
+  assert.equal(f.messages.at(-1).buttons[3][0].data,"t:back-list");
+  assert.equal(await handleInteractive({action:{type:"back-list",chatId:42},...f.calls}),true);
+  assert.equal(requests.at(-1).offset,5);
+  assert.equal(f.messages.at(-1).buttons[0][0].data,"t:detail:CODE05");
+  assert.equal(await handleInteractive({action:{type:"page",page:2,chatId:42},...f.calls}),true);
+  assert.equal(f.messages.at(-1).buttons.length,4,"Last page has two codes, Prev and Home/Refresh");
+  assert.equal(await handleInteractive({action:{type:"home",chatId:42},...f.calls}),true);
+  assert.equal(f.messages.at(-1).menu.is_persistent,true);
+  assert.equal((await f.profiles.get(42)).browse.page,2);
+});
+
+test("search pagination retains private query and handles catalog shrinking",async()=>{
+  const f=fixture();
+  let rows=Array.from({length:7},(_,i)=>({code:"TEST"+String(i).padStart(2,"0"),status:"unverified",remaining:null}));
+  f.calls.services.browseCodes=async({query="",offset=0,limit=6})=>rows.filter(e=>e.code.includes(query)).slice(offset,offset+limit);
+  await f.run("/search TEST");
+  assert.equal((await f.profiles.get(42)).browse.query,"TEST");
+  assert.equal(await handleInteractive({action:{type:"page",page:1,chatId:42},...f.calls}),true);
+  assert.match(f.messages.at(-1).text,/Page 2/);
+  rows=rows.slice(0,2);
+  assert.equal(await handleInteractive({action:{type:"back-list",chatId:42},...f.calls}),true);
+  assert.match(f.messages.at(-1).text,/Page 1/);
+  assert.equal((await f.profiles.get(42)).browse.page,0);
 });
 
 test("private chat history tracks Issue links but never asserts ownership",async()=>{
