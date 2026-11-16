@@ -108,7 +108,7 @@ test("menu supports browse, get, watch, notification preference, deletion",async
   await f.run("/start");
   assert.equal(f.messages.at(-1).menu.is_persistent,true);
   await f.run("🎟 Nhận mã");
-  assert.match(f.messages.at(-1).text,/DPNIHH/);
+  assert.equal(f.messages.at(-1).buttons[0][0].data,"t:detail:DPNIHH");
   await f.run("/get DPNIHH");
   assert.equal(f.messages.at(-1).buttons[0][0].copy_text.text,"DPNIHH");
   await f.run("/watch DPNIHH");
