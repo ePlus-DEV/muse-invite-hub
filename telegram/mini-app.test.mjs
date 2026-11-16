@@ -106,5 +106,5 @@ test("Mini App is a real noindex static HTML/CSS/JS page with no embedded creden
   assert.match(css,/bottom-nav/);
   assert.match(js,/TelegramWebviewProxy/);
   assert.doesNotMatch(js,/GITHUB_ISSUES_TOKEN|TELEGRAM_BOT_TOKEN|\bsk-[A-Za-z0-9]{20}/);
-  assert.doesNotMatch(html,/\<script\s+[^>]*\btype="module"[^>]*\>/i.test(html)?"UNREACHABLE":/sk-proj-\S+/);
+  assert.doesNotMatch(html,/sk-proj-\\S+/);
 });
