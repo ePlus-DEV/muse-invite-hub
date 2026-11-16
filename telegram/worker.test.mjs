@@ -190,16 +190,16 @@ test("worker sources keep secrets out of the repository and reuse the review-onl
   assert.doesNotMatch(wrangler, /GITHUB_ISSUES_TOKEN\s*=\s*"/);
 });
 
-test("Cloudflare Worker selects language from Telegram and honors manual override",async()=>{
+test("Cloudflare Worker defaults to English and preserves manually chosen languages",async()=>{
   const env=makeEnv();
   const {deps,sent}=makeDeps();
   const vi={...message(600,"/start")};
   vi.message.from.language_code="vi-VN";
   assert.equal((await handleWebhookRequest(webhook(vi),env,deps)).status,200);
-  assert.match(sent.at(-1).payload.text,/Chào mừng/);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 Tôi cần mã");
+  assert.match(sent.at(-1).payload.text,/Welcome/);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
   assert.equal((await handleWebhookRequest(webhook(message(601,"/status DPNIHH")),env,deps)).status,200);
-  assert.match(sent.at(-1).payload.text,/đã được công bố/);
+  assert.match(sent.at(-1).payload.text,/published/);
   assert.equal((await handleWebhookRequest(webhook(callback(602,"t:lang:ja")),env,deps)).status,200);
   assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 コードが欲しい");
   const pref=JSON.parse(await env.BOT_STATE.get("profile:42"));
@@ -215,11 +215,18 @@ test("Cloudflare Worker selects language from Telegram and honors manual overrid
   assert.equal((await handleWebhookRequest(webhook(callback(606,"t:erase:confirm")),env,deps)).status,200);
   const initial=JSON.parse(await env.BOT_STATE.get("profile:42")||"null");
   assert.equal(initial,null);
+  const freshVietnameseClient={...message(607,"/start")};
+  freshVietnameseClient.message.from.language_code="vi-VN";
+  assert.equal((await handleWebhookRequest(webhook(freshVietnameseClient),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code",
+    "Deleting preferences resets to English even if Telegram is Vietnamese");
 });
 
 test("Worker onboarding lets seekers request community codes and switch to contributing safely",async()=>{
   const env=makeEnv();
   const {deps,sent,calls}=makeDeps();
+  // Vietnamese remains available, but only after the user explicitly selects it.
+  assert.equal((await handleWebhookRequest(webhook(message(699,"/language vi")),env,deps)).status,200);
   const vi={...message(700,"/start")};
   vi.message.from.language_code="vi";
   assert.equal((await handleWebhookRequest(webhook(vi),env,deps)).status,200);
