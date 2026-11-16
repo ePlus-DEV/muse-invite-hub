@@ -286,14 +286,15 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
     assert.equal((await post(vi)).status,200);
     assert.match(sent.at(-1).payload.text,/Bạn đến đây để làm gì/);
     const welcome=sent.at(-1).payload.reply_markup.keyboard;
-    assert.deepEqual(welcome.map(x=>x.length),[1,1,1,1]);
+    assert.deepEqual(welcome.map(x=>x.length),[1,1,1,1,1]);
+    assert.equal(welcome[4][0].web_app.url,"https://muse.eplus.dev/telegram-app/?lang=vi");
     assert.equal(welcome[3][0],"🔄 Làm mới");
     assert.equal(welcome[0][0],"🙋 Tôi cần mã");
     assert.equal(welcome[1][0],"🤝 Tôi muốn chia sẻ mã");
 
     assert.equal((await post(callback(701,"t:role:seeker"))).status,200);
     const seeker=sent.at(-1).payload.reply_markup.keyboard.flat();
-    assert.equal(seeker.length,10);
+    assert.equal(seeker.length,11);
     assert.ok(seeker.includes("🔄 Làm mới"));
     assert.ok(seeker.includes("🎟 Nhận mã"));
     assert.ok(seeker.includes("🙋 Cần mã"));
