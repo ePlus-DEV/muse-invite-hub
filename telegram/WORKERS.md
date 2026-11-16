@@ -196,3 +196,31 @@ KV state (processed update IDs, rate limits) is unaffected by redeploys.
 ## Signed publication notifications
 
 After the interactive menu is merged, set `TELEGRAM_NOTIFY_SECRET` with `npx wrangler secret put TELEGRAM_NOTIFY_SECRET`. Reuse the **same private value** in the GitHub Actions repository secret and configure the repository Actions variable `TELEGRAM_NOTIFY_URL` with the HTTPS Worker `/telegram/notify` URL. This is not the public GitHub Pages host. Do not put secrets in wrangler.toml or URLs. No new KV namespace is needed: existing `BOT_STATE` holds private `profile:` preferences, notification baseline and per-recipient delivery markers. No cron is required. The first verified deployment initializes the catalog baseline without messaging subscribers about old codes; subsequent deployments send only newly published codes. Workers KV is eventually consistent, so failed/retried requests can rarely repeat a message. Senders can opt out through the bot.
+
+## Telegram bot languages
+
+The Telegram bot supports **Tiếng Việt, English and 日本語** consistently
+across the persistent 3×3 keyboard, invite cards, copy/report/watch buttons,
+search and submission confirmations, status/privacy/help, preferences, and
+opt-in publication notifications. Each private chat automatically uses
+`from.language_code` (such as `vi-VN`, `ja`, `en-US`), with English
+as the fallback for unsupported Telegram locales.
+
+Open **⚙️ Cài đặt / Settings / 設定 → 🌐 Ngôn ngữ / Language / 言語**
+or send `/language`; choose your language. Alternatively send
+`/language vi`, `/language en`, or `/language ja`.
+The choice is stored privately alongside the existing bot profile and
+**overrides Telegram's automatic language selection** until changed.
+Changing the language immediately redraws the persistent keyboard, and
+existing callbacks continue to work regardless of language. A previous
+English or Vietnamese keyboard label is still accepted after switching.
+`/delete_data` deletes the saved preference with other private settings;
+the next `/start` auto-detects Telegram language again.
+
+After deploying a new version, re-run
+`telegram/register-webhook.mjs` **in your existing private runtime** to
+update the Telegram slash-command picker descriptions for English,
+Vietnamese and Japanese. It does **not** require a new bot, a new KV
+namespace, token rotation, or a different webhook. Slash-command names
+such as `/submit` and callback payload values remain language-neutral;
+GitHub Issues and moderation flows are not translated or weakened.
