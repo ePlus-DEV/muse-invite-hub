@@ -3,8 +3,8 @@ import { timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve, join } from "node:path";
-import { parseUpdate, keyboard } from "./bot.mjs";
-import { listRecentCodes, submitNewCode, submitFeedback } from "./github.mjs";
+import { parseUpdate, keyboard, formatCodeStatus } from "./bot.mjs";
+import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus } from "./github.mjs";
 
 const SITE="https://muse.eplus.dev";
 const MAX_BODY=32*1024;
@@ -16,7 +16,7 @@ function constantTimeEqual(actual,expected) {
 }
 export function createTelegramApp({
   token,secret,githubToken,dataDir="/data",
-  telegramApi,services={listRecentCodes,submitNewCode,submitFeedback}
+  telegramApi,services={listRecentCodes,submitNewCode,submitFeedback,getCodeStatus}
 }) {
   if(typeof token!=="string"||token.length<20||
     !/^[A-Za-z0-9_-]{16,256}$/.test(secret||"")||
@@ -63,6 +63,15 @@ export function createTelegramApp({
     if(action.callbackId){
       await call("answerCallbackQuery",{callback_query_id:action.callbackId});
     }
+    async function complete(message) {
+      await send(chatId,message);
+      if(action.callbackId&&action.messageId) {
+        // Best-effort UI cleanup. GitHub idempotency prevents duplicate writes.
+        try { await call("editMessageReplyMarkup",{
+          chat_id:chatId,message_id:action.messageId,reply_markup:{inline_keyboard:[]}
+        }); } catch { /* UI error must never retry a successful GitHub write. */ }
+      }
+    }
     switch(type){
       case "private-only":
         return send(chatId,"Please open this bot in a private chat to protect your reports.");
@@ -71,10 +80,13 @@ export function createTelegramApp({
           "✦ Muse Invite Hub — community invite directory",
           "",
           "/codes — browse recent public invite codes",
+          "/status CODE — published status or pending review",
           "/submit CODE — suggest a new public invite code",
           "/report CODE worked — report a successful try",
           "/report CODE failed — report an unsuccessful try",
           "/count CODE — owner-only count update guidance",
+          "/privacy — what becomes public",
+          "/cancel — cancel an action",
           "",
           "Reports require confirmation and are reviewed on GitHub.",
           "Never share passwords, one-time login codes or private links."
@@ -88,12 +100,24 @@ export function createTelegramApp({
             [{text:"Browse and copy codes",url:SITE+"/#codes"}]
           ]);
       }
+      case "status": {
+        const entry=await services.getCodeStatus(code,githubToken);
+        return send(chatId,formatCodeStatus(code,entry),[[{text:"Browse directory",url:SITE+"/#codes"}]]);
+      }
+      case "usage-status":
+        return send(chatId,"Use /status CODE with exactly 6 letters or digits, e.g. /status DPNIHH.");
+      case "privacy":
+        return send(chatId,"Only send public Muse invite codes and genuine redemption feedback. "+
+          "After confirmation, a PUBLIC GitHub Issue/comment contains the code and report, "+
+          "but not your Telegram username or account ID. Moderators review all Telegram submissions. "+
+          "Do not send passwords, one-time codes, private links or personal data. "+
+          "Your Telegram identity does not prove code ownership.");
       case "count":
         return send(chatId,"Owner-only quota changes require a verified GitHub account. "+
           "Telegram identity is not proof of ownership. Open your listing and choose Update count.",
           [[{text:"Open directory",url:SITE+"/#codes"}]]);
       case "usage-submit":
-        return send(chatId,"Use /submit CODE (4–32 letters/digits/hyphens), for example /submit DPNIHH. "+
+        return send(chatId,"Use /submit CODE with exactly 6 letters or digits, for example /submit DPNIHH. "+
           "Only share a public invite, not private credentials.");
       case "usage-report":
         return send(chatId,"Use /report CODE worked or /report CODE failed. "+
@@ -112,19 +136,19 @@ export function createTelegramApp({
           [{text:"Confirm public report",data:"t:report:"+code+":"+result}],
           [{text:"Cancel",data:"t:cancel"}]
         ]);
-      case "cancel":return send(chatId,"Cancelled. No information was submitted.");
+      case "cancel":return complete("Cancelled. No information was submitted.");
       case "submit":{
-        if(!allowWrite(chatId))return send(chatId,"Too many submissions. Try again later.");
+        if(!allowWrite(chatId))return complete("Too many submissions. Try again later.");
         const outcome=await services.submitNewCode(code,updateId,githubToken);
         const message={
           listed:"This code is already in the published directory.",
           pending:"A Telegram contribution Issue already exists; no duplicate was created.",
           submitted:"Submitted a public GitHub Issue for human review. This does not publish or verify the code."
         }[outcome.kind]||"Please review this code's status.";
-        return send(chatId,message+"\n"+outcome.url);
+        return complete(message+"\n"+outcome.url);
       }
       case "report":{
-        if(!allowWrite(chatId))return send(chatId,"Too many reports. Try again later.");
+        if(!allowWrite(chatId))return complete("Too many reports. Try again later.");
         const outcome=await services.submitFeedback(code,result,updateId,githubToken);
         const message={
           unknown:"This code is not currently in the published catalog.",
@@ -132,7 +156,7 @@ export function createTelegramApp({
           "already-reported":"This Telegram report was already received; no duplicate was posted.",
           reported:"Added feedback to the code's existing GitHub Issue for human review. No Muse status changed."
         }[outcome.kind]||"Please review this code's status.";
-        return send(chatId,message+"\n"+outcome.url);
+        return complete(message+"\n"+outcome.url);
       }
     }
   }
