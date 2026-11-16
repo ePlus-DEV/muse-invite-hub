@@ -285,7 +285,8 @@ test("Worker onboarding lets seekers request community codes and switch to contr
   assert.equal((await handleWebhookRequest(webhook(callback(701,"t:role:seeker")),env,deps)).status,200);
   assert.ok(sent.at(-1).payload.reply_markup.keyboard.flat().includes("🙋 Cần mã"));
   assert.equal((await handleWebhookRequest(webhook(message(702,"🙋 Cần mã")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,3);
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,4);
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[3][0].callback_data,"t:home");
   assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).subscribed,false);
   assert.equal(calls.submit.length,0);
   assert.equal((await handleWebhookRequest(webhook(callback(703,"t:need:alerts")),env,deps)).status,200);
