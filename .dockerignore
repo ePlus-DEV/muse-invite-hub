@@ -1,11 +1,4 @@
 **
 !telegram/
 !telegram/Dockerfile
-!telegram/bot.mjs
-!telegram/github.mjs
-!telegram/server.mjs
-!telegram/menu.mjs
-!telegram/profiles.mjs
-!telegram/conversation.mjs
-
-!telegram/register-webhook.mjs
+!telegram/*.mjs
