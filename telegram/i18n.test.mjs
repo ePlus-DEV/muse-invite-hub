@@ -11,8 +11,9 @@ test("all Telegram copy is translated consistently with matching placeholders",(
   assert.deepEqual(LOCALES,["en","vi","ja"]);
   assert.deepEqual(translationCoverage().map(x=>x.missing),[[],[],[]]);
   for(const code of LOCALES){
-    assert.equal(replyKeyboard(code).keyboard.length,3);
-    assert.deepEqual(replyKeyboard(code).keyboard.map(x=>x.length),[3,3,3]);
+    assert.equal(replyKeyboard(code).keyboard.length,4);
+    assert.deepEqual(replyKeyboard(code).keyboard.map(x=>x.length),[3,3,3,1]);
+    assert.equal(replyKeyboard(code).keyboard[3][0],menuText(code,"refresh"));
     for(const row of MENU_KEYS)for(const key of row){
       const label=menuText(code,key);
       assert.equal(typeof label,"string");
@@ -32,7 +33,7 @@ test("all Telegram copy is translated consistently with matching placeholders",(
     assert.ok(status.includes("2026-11-15"));
     assert.ok(status.includes("2"));
     const commandSet=commandsFor(code);
-    assert.equal(commandSet.length,22);
+    assert.equal(commandSet.length,23);
     assert.equal(commandSet.find(x=>x.command==="language").command,"language");
     assert.ok(commandSet.every(x=>x.description.length>=3&&x.description.length<=256));
   }
@@ -113,12 +114,14 @@ test("publication notifications match each recipient's saved language",async()=>
 test("onboarding and role-specific menus are translated in all supported languages",async()=>{
   const { ENTRY_MENU_KEYS, ROLE_MENU_KEYS, menuText }=await import("./i18n.mjs");
   const { replyKeyboard,menuChoice }=await import("./menu.mjs");
-  assert.deepEqual(ENTRY_MENU_KEYS.map(x=>x.length),[1,1,1]);
-  assert.deepEqual(ROLE_MENU_KEYS.seeker.map(x=>x.length),[3,3,3]);
-  assert.deepEqual(ROLE_MENU_KEYS.contributor.map(x=>x.length),[3,3,3]);
+  assert.deepEqual(ENTRY_MENU_KEYS.map(x=>x.length),[1,1,1,1]);
+  assert.deepEqual(ROLE_MENU_KEYS.seeker.map(x=>x.length),[3,3,3,1]);
+  assert.deepEqual(ROLE_MENU_KEYS.contributor.map(x=>x.length),[3,3,3,1]);
   for(const locale of LOCALES){
     const entry=replyKeyboard(locale,null);
-    assert.deepEqual(entry.keyboard.map(x=>x.length),[1,1,1]);
+    assert.deepEqual(entry.keyboard.map(x=>x.length),[1,1,1,1]);
+    assert.equal(entry.keyboard[3][0],menuText(locale,"refresh"));
+    assert.equal(menuChoice(menuText(locale,"refresh")),"refresh");
     assert.equal(menuChoice(menuText(locale,"roleSeeker")),"set-role-seeker");
     assert.equal(menuChoice(menuText(locale,"roleContributor")),"set-role-contributor");
     assert.equal(menuChoice(menuText(locale,"roleSwitch")),"choose-role");
@@ -126,8 +129,10 @@ test("onboarding and role-specific menus are translated in all supported languag
     assert.equal(menuChoice(menuText(locale,"status")),"prompt-status");
     const consumer=replyKeyboard(locale,"seeker").keyboard.flat();
     const contributor=replyKeyboard(locale,"contributor").keyboard.flat();
-    assert.equal(consumer.length,9);
-    assert.equal(contributor.length,9);
+    assert.equal(consumer.length,10);
+    assert.equal(contributor.length,10);
+    assert.equal(consumer.at(-1),menuText(locale,"refresh"));
+    assert.equal(contributor.at(-1),menuText(locale,"refresh"));
     assert.ok(consumer.includes(menuText(locale,"need")));
     assert.ok(consumer.includes(menuText(locale,"browse")));
     assert.ok(contributor.includes(menuText(locale,"submit")));
