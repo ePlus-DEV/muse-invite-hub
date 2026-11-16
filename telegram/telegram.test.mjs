@@ -211,10 +211,10 @@ test("OCI Refresh re-fetches published codes without posting or changing prefere
     assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
     assert.equal((await post(message(502,"🔄 Refresh"))).status,200);
     assert.equal(reads,1);
-    assert.match(sent.at(-1).payload.text,/Reported 1 remaining/);
+    assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/1 /);
     assert.equal((await post(message(503,"/refresh"))).status,200);
     assert.equal(reads,2);
-    assert.match(sent.at(-1).payload.text,/Reported 2 remaining/);
+    assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/2 /);
     assert.equal((await post(callback(504,"t:refresh-code:DPNIHH"))).status,200);
     assert.equal(reads,3);
     assert.match(sent.filter(x=>x.name==="sendMessage").at(-1).payload.text,/Reported 3 remaining/);
@@ -236,6 +236,8 @@ test("OCI bot navigates pages, detail and Back without public writes",async()=>{
     assert.equal(sent.filter(x=>x.name==="sendMessage").length,1);
     assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:PAGE00");
     assert.equal((await post(callback(511,"t:page:1"))).status,200);
+    assert.equal(sent.at(-1).name,"editMessageText",
+      "Pagination must edit the existing bot message rather than send duplicates");
     assert.match(sent.at(-1).payload.text,/Page 2/);
     assert.equal((await post(callback(512,"t:detail:PAGE05"))).status,200);
     assert.match(sent.at(-1).payload.text,/Platform: Threads/);
