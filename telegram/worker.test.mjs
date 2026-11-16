@@ -53,6 +53,10 @@ test("worker checks method, path, JSON and constant-time shared secret", async (
   const env = makeEnv();
   const { deps } = makeDeps();
   assert.equal((await handleWebhookRequest(new Request("https://bot.example.com/healthz"), env, deps)).status, 200);
+  const versionEnv={...env,BUILD_SHA:"a".repeat(40)};
+  const version=await handleWebhookRequest(new Request("https://bot.example.com/version"),versionEnv,deps);
+  assert.equal(version.status,200);
+  assert.deepEqual(await version.json(),{revision:"a".repeat(40)});
   assert.equal((await handleWebhookRequest(new Request("https://bot.example.com/telegram/webhook"), env, deps)).status, 404);
   assert.equal((await handleWebhookRequest(webhook(message(1, "/start"), { "X-Telegram-Bot-Api-Secret-Token": "totally-wrong-secret" }), env, deps)).status, 403);
   assert.equal((await handleWebhookRequest(webhook(message(1, "/start"), { "Content-Type": "text/plain" }), env, deps)).status, 415);

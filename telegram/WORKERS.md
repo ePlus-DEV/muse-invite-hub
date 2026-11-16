@@ -11,7 +11,19 @@ Workers free tier is more than enough for webhook traffic.
 Merging this code does **not** deploy anything. Deployment is a manual,
 maintainer-run sequence:
 
-## 1. Prerequisites
+## Automatic Cloudflare deployment from GitHub
+
+The site is published by GitHub Pages, but that workflow does **not** deploy
+the separate Telegram Worker. Cloudflare Workers Builds can deploy the Worker
+on every push to `main` after one-time GitHub integration. Follow the
+[Cloudflare Workers Builds guide](../docs/TELEGRAM_CLOUDFLARE_AUTODEPLOY.md)
+to configure the existing Worker, preserve its private `BOT_STATE` KV namespace
+and verify the actual live source revision. No Cloudflare API token needs to
+be stored in GitHub with this method.
+
+## Manual Wrangler deployment (alternative)
+
+### 1. Prerequisites
 
 - A Cloudflare account and Wrangler: `npx wrangler login` (or an API token
   with Workers Scripts + Workers KV edit permissions).
@@ -20,16 +32,16 @@ maintainer-run sequence:
 - A **fine-grained** GitHub token scoped ONLY to `ePlus-DEV/muse-invite-hub`
   with **Issues: Read and write** (same credential as the OCI deployment).
 
-## 2. Create the KV namespace
+### 2. Create the KV namespace (first installation only)
 
 ```bash
 cd telegram
 npx wrangler kv namespace create BOT_STATE
 ```
 
-Copy the returned namespace id into `wrangler.toml` (`REPLACE_WITH_KV_NAMESPACE_ID`).
+Use the **existing** namespace ID as `MUSE_BOT_STATE_KV_ID` and run `node prepare-deploy.mjs`, then deploy with `npx wrangler deploy --config wrangler.deploy.toml`. Never commit the generated configuration.
 
-## 3. Set the three secrets (never commit them)
+### 3. Set the three secrets (never commit them)
 
 ```bash
 npx wrangler secret put TELEGRAM_BOT_TOKEN
@@ -37,16 +49,17 @@ npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
 npx wrangler secret put GITHUB_ISSUES_TOKEN
 ```
 
-## 4. Deploy and verify
+### 4. Deploy and verify
 
 ```bash
-npx wrangler deploy
+node prepare-deploy.mjs
+npx wrangler deploy --config wrangler.deploy.toml
 curl --fail https://muse-invite-hub-telegram.<your-subdomain>.workers.dev/healthz
 ```
 
 Expected health response: `{"status":"ok"}`.
 
-## 5. Register the Telegram webhook
+### 5. Register the Telegram webhook
 
 Reuse `register-webhook.mjs` with the Workers hostname as `BOT_DOMAIN`:
 
@@ -61,9 +74,9 @@ secret-token header, `max_connections=1` and `allowed_updates` for
 message/callback_query, then registers the private-chat command menu via `setMyCommands`. A custom domain (e.g. `bot.muse.eplus.dev`) can be
 attached later as a Workers custom domain; re-run this step after changing it.
 
-## 6. Test in a private chat
+### 6. Test in a private chat
 
-- `/start` — help
+- `/start` — welcome and persistent nine-button menu
 - `/codes` — latest published codes
 - `/status DPNIHH` — published or pending Issue status and dated **not-live** invite counts
 - `/privacy` — public GitHub reporting/privacy rules
@@ -84,7 +97,8 @@ After a reviewed change to `telegram/` merges to main:
 ```bash
 git pull --ff-only
 cd telegram
-npx wrangler deploy
+node prepare-deploy.mjs
+npx wrangler deploy --config wrangler.deploy.toml
 ```
 
 KV state (processed update IDs, rate limits) is unaffected by redeploys.

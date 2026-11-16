@@ -68,3 +68,5 @@ Open http://localhost:8000/. Generated code-detail pages, Node.js 24 tests, prev
 [Country map](https://muse.eplus.dev/countries/) · [Contribution flow](docs/CONTRIBUTION_FLOW.md) · [Project guide](docs/PROJECT_GUIDE.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Agent rules](AGENTS.md) · [License](LICENSE)
 
 © 2026 ePlus.DEV
+
+Cloudflare Workers deployment is separate from GitHub Pages. See [Telegram automatic deployment](docs/TELEGRAM_CLOUDFLARE_AUTODEPLOY.md) to connect the existing bot Worker to GitHub `main`, preserve KV state, and verify its deployed `/version`.
