@@ -85,11 +85,11 @@ test("owner count requires an explicit confirmation and numeric input",()=>{
 });
 
 test("social-source owner update cannot be automatically proposed by GitHub commenter",()=>{
-  const social={id:"social",code:"SOCIAL1",status:"unverified",addedAt:"2026-11-11",
+  const social={id:"social",code:"SOCIA1",status:"unverified",addedAt:"2026-11-11",
     sourceUrl:"https://www.threads.com/@person/post/abcde",feedbackIssueNumber:70};
-  const root={number:70,state:"closed",title:"[Code discussion] SOCIAL1",
-    body:"<!-- muse-code-feedback-root:SOCIAL1 -->"};
-  const p=planCommentProposal(root,member(ownerCount.replaceAll("DPNIHH","SOCIAL1"),
+  const root={number:70,state:"closed",title:"[Code discussion] SOCIA1",
+    body:"<!-- muse-code-feedback-root:SOCIA1 -->"};
+  const p=planCommentProposal(root,member(ownerCount.replaceAll("DPNIHH","SOCIA1"),
     {user:{login:"person",type:"User",id:123}}),[social]);
   assert.equal(p.outcome,"needs-review");
   assert.match(p.reason,/Social attribution/);
