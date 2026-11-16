@@ -49,6 +49,8 @@ The Telegram bot is an **optional**, separate Node.js 24 webhook service for an 
 - [Manual ARM64 image workflow](.github/workflows/telegram-oci-image.yml) — build and publish to GHCR from trusted `main`; it never provisions or deploys the VM.
 - Telegram supports `/submit CODE`, `/report CODE worked|failed`, `/status CODE` for published/pending review, `/codes`, `/privacy` and `/cancel`. BotFather lists these commands in private chats. `/submit` and `/report` use the **existing GitHub Issue/comment discussion queue**, require user confirmation and **remain human-reviewed**. They do not establish GitHub code ownership and cannot bypass the website's separate GitHub-owned new-code auto-publish safeguards.
 
+Optional publication notifications are supported through a separately configured, HMAC-signed Pages-to-bot endpoint. Only users who opt in through Telegram receive new-code alerts; private Telegram chat IDs never appear in public Issues. The first verified Pages event initializes a baseline without sending historical codes. The bot runtime and repository Actions variable/secret must be configured manually; no hourly polling.
+
 This repository does not provision a Telegram bot account, Oracle VM, domain name or runtime secrets.
 
 ## Development

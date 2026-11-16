@@ -214,6 +214,25 @@ export async function handleWebhookRequest(request, env, deps = {}) {
   if (url.pathname === "/healthz" && request.method === "GET") {
     return respond(200, '{"status":"ok"}', "application/json");
   }
+  if(url.pathname==="/telegram/notify"&&request.method==="POST"){
+    const {notificationResponse}=await import("./notifications.mjs");
+    const {makeWorkerNotifyState}=await import("./notify-worker.mjs");
+    if(!env.BOT_STATE||!env.TELEGRAM_BOT_TOKEN)return respond(503,"notifications not configured");
+    return notificationResponse(request,{
+      secret:env.TELEGRAM_NOTIFY_SECRET,
+      state:makeWorkerNotifyState(env.BOT_STATE),
+      catalog:async()=> (await import("./github.mjs")).publishedCatalog(),
+      send:async(chatId,text)=>{
+        const result=await fetch("https://api.telegram.org/bot"+env.TELEGRAM_BOT_TOKEN+"/sendMessage",{
+          method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({chat_id:chatId,text,disable_web_page_preview:true}),
+          signal:AbortSignal.timeout(10000)
+        });
+        if(!result.ok||(await result.json()).ok!==true)throw Error("Telegram notify send failed");
+      },
+      logger:msg=>console.error(msg)
+    });
+  }
   if (url.pathname !== "/telegram/webhook" || request.method !== "POST") {
     return respond(404, "");
   }

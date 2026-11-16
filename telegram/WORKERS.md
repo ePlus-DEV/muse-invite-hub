@@ -88,3 +88,7 @@ npx wrangler deploy
 ```
 
 KV state (processed update IDs, rate limits) is unaffected by redeploys.
+
+## Signed publication notifications
+
+After the interactive menu is merged, set `TELEGRAM_NOTIFY_SECRET` with `npx wrangler secret put TELEGRAM_NOTIFY_SECRET`. Reuse the **same private value** in the GitHub Actions repository secret and configure the repository Actions variable `TELEGRAM_NOTIFY_URL` with the HTTPS Worker `/telegram/notify` URL. This is not the public GitHub Pages host. Do not put secrets in wrangler.toml or URLs. No new KV namespace is needed: existing `BOT_STATE` holds private `profile:` preferences, notification baseline and per-recipient delivery markers. No cron is required. The first verified deployment initializes the catalog baseline without messaging subscribers about old codes; subsequent deployments send only newly published codes. Workers KV is eventually consistent, so failed/retried requests can rarely repeat a message. Senders can opt out through the bot.

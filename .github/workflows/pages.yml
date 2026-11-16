@@ -195,3 +195,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           DEPLOYED_SHA="$(git rev-parse HEAD)" node scripts/close-published-comment-counts.mjs
+      - name: Notify opted-in Telegram users after verified production publication
+        if: ${{ vars.TELEGRAM_NOTIFY_URL != '' }}
+        env:
+          TELEGRAM_NOTIFY_URL: ${{ vars.TELEGRAM_NOTIFY_URL }}
+          TELEGRAM_NOTIFY_SECRET: ${{ secrets.TELEGRAM_NOTIFY_SECRET }}
+        run: |
+          DEPLOYED_SHA="$(git rev-parse HEAD)" node scripts/notify-telegram-publish.mjs

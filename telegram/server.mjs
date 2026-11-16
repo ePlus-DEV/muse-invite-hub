@@ -213,6 +213,34 @@ export function createTelegramApp({
       res.writeHead(200,{"Content-Type":"application/json"});
       return res.end('{"status":"ok"}');
     }
+    if(req.url==="/telegram/notify"&&req.method==="POST"){
+      const notifySecret=process.env.TELEGRAM_NOTIFY_SECRET;
+      if(!notifySecret){res.writeHead(503);return res.end("notifications not configured");}
+      let body;
+      try{
+        const chunks=[];let bytes=0;
+        for await(const chunk of req){
+          bytes+=chunk.length;
+          if(bytes>4096){res.writeHead(413);return res.end();}
+          chunks.push(chunk);
+        }
+        body=Buffer.concat(chunks).toString("utf8");
+      }catch{res.writeHead(400);return res.end();}
+      const {notificationResponse}=await import("./notifications.mjs");
+      const {makeNodeNotifyState}=await import("./notify-oci.mjs");
+      const notifyState=makeNodeNotifyState(dataDir);
+      const request=new Request("https://telegram.internal/telegram/notify",{
+        method:"POST",headers:req.headers,body
+      });
+      const response=await notificationResponse(request,{
+        secret:notifySecret,state:notifyState,
+        catalog:async()=> (await import("./github.mjs")).publishedCatalog(),
+        send:(chatId,text)=>call("sendMessage",{chat_id:chatId,text,disable_web_page_preview:true}),
+        logger:msg=>console.error(msg)
+      });
+      res.writeHead(response.status,{"Content-Type":response.headers.get("content-type")||"text/plain","Cache-Control":"no-store"});
+      return res.end(await response.text());
+    }
     if(req.url!=="/telegram/webhook"||req.method!=="POST"){
       res.writeHead(404);return res.end();
     }
