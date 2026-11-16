@@ -141,10 +141,10 @@ test("Refresh fetches the latest catalog again without creating pending submissi
   assert.equal((await f.profiles.get(42)).pending,null,
     "Refresh cancels stale text entry so a later code is not submitted accidentally");
   assert.equal(reads,1);
-  assert.match(f.messages.at(-1).text,/Reported 1 remaining/);
+  assert.match(f.messages.at(-1).buttons[0][0].text,/1 /);
   assert.equal((await f.run("/refresh")).action.type,"refresh");
   assert.equal(reads,2);
-  assert.match(f.messages.at(-1).text,/Reported 2 remaining/);
+  assert.match(f.messages.at(-1).buttons[0][0].text,/2 /);
   assert.equal(f.messages.at(-1).buttons[1][0].data,"t:refresh");
   assert.equal(await handleInteractive({action:{type:"refresh-code",chatId:42,code:"DPNIHH"},...f.calls}),true);
   assert.equal(reads,3);
@@ -168,6 +168,8 @@ test("paged list -> code detail -> back to same page -> home without public writ
   await f.run("/codes");
   assert.equal(f.messages.length,1,"Pagination must avoid sending five separate code messages");
   assert.equal(f.messages.at(-1).buttons[0][0].data,"t:detail:CODE00");
+  assert.equal((f.messages.at(-1).text.match(/CODE00/g)||[]).length,0,
+    "Invite codes appear in selectable buttons rather than twice in text and buttons");
   assert.equal(f.messages.at(-1).buttons[5][0].data,"t:page:1");
   assert.equal(f.messages.at(-1).buttons[6][1].data,"t:home");
   assert.equal((await f.profiles.get(42)).browse.page,0);
