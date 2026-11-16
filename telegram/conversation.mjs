@@ -1,6 +1,7 @@
 import { CODE_PATTERN, formatCodeStatus } from "./bot.mjs";
-import { REPLY_KEYBOARD, codeButtons, codeDescription } from "./menu.mjs";
+import { codeButtons, codeDescription } from "./menu.mjs";
 import { mutateProfile } from "./profiles.mjs";
+import { LOCALES, LOCALE_NAMES, tr } from "./i18n.mjs";
 
 const SITE="https://muse.eplus.dev";
 export async function resolveInput(action,profiles) {
@@ -24,119 +25,120 @@ export async function resolveInput(action,profiles) {
 
 export async function handleInteractive({action,profiles,send,sendMenu,services,githubToken}) {
   const {type,chatId,code}=action;
-  const prompt=async(kind,text)=>{
+  const profile=await profiles.get(chatId);
+  const language=profile.language||"en";
+  const msg=(key,params)=>tr(language,key,params);
+  const prompt=async(kind,key)=>{
     await mutateProfile(profiles,chatId,p=>{p.pending={type:kind,until:Date.now()+10*60*1000};return p;});
-    return send(chatId,text);
+    return send(chatId,msg(key));
   };
+  const languageButtons=()=>LOCALES.map(code=>
+    [{text:(language===code?"✅ ":"")+LOCALE_NAMES[code],data:"t:lang:"+code}]);
   async function list(query="",newest=false) {
     const entries=await services.browseCodes({query,newest,limit:5});
-    if(!entries.length)return send(chatId,
-      query?"No published invite matches your search. Try another code or use /submit CODE.":
-        "No published codes are available. Visit "+SITE+"/#codes");
-    await send(chatId,(query?"Search results":newest?"Recently published codes":"Published community codes")+
-      " (not live or Muse-verified):");
-    for(const entry of entries)await send(chatId,codeDescription(entry),codeButtons(entry.code));
+    if(!entries.length)return send(chatId,msg(query?"emptySearch":"emptyCodes"));
+    await send(chatId,msg(query?"searchHeading":newest?"newestHeading":"browseHeading"));
+    for(const entry of entries)await send(chatId,codeDescription(entry,language),codeButtons(entry.code,language));
   }
   switch(type) {
     case "help":
-      await sendMenu(chatId,[
-        "✦ Muse Invite Hub — Chào mừng!",
-        "🎟 Find and copy community invite codes.",
-        "➕ Contribute a public code and track its review.",
-        "✅ Report only a code you really tried.",
-        "🔔 Opt in to publication alerts.",
-        "",
-        "Use the nine buttons below, or /submit CODE, /get CODE, /search TEXT, /watch CODE.",
-        "Published codes are not guaranteed to redeem. Never share secrets."
-      ].join("\n"));
+      await sendMenu(chatId,msg("help"),language);
       return true;
     case "browse": await list();return true;
     case "newest": await list("",true);return true;
-    case "prompt-search": await prompt("search","🔎 Enter a code or contributor name to search (within 10 minutes).");return true;
-    case "prompt-submit": await prompt("submit","➕ Enter the SIX-character PUBLIC Muse invite code. You will review a confirmation before anything is posted to GitHub.");return true;
-    case "prompt-report": await prompt("report","✅ Enter the SIX-character published code you tried. Then select Worked or Failed and confirm.");return true;
+    case "prompt-search": await prompt("search","promptSearch");return true;
+    case "prompt-submit": await prompt("submit","promptSubmit");return true;
+    case "prompt-report": await prompt("report","promptReport");return true;
     case "search": await list(action.query);return true;
     case "get": {
       const entries=await services.browseCodes({query:code,limit:50});
       const entry=entries.find(x=>x.code===code);
-      if(entry)await send(chatId,codeDescription(entry),codeButtons(code));
-      else await send(chatId,formatCodeStatus(code,await services.getCodeStatus(code,githubToken)));
+      if(entry)await send(chatId,codeDescription(entry,language),codeButtons(code,language));
+      else await send(chatId,formatCodeStatus(code,await services.getCodeStatus(code,githubToken),language));
       return true;
     }
     case "report-choose":
-      await send(chatId,"Code "+code+" — choose what actually happened. You must confirm before a public GitHub comment is created.",[
-        [{text:"✅ Worked",data:"t:pick:"+code+":worked"},
-         {text:"❌ Failed",data:"t:pick:"+code+":failed"}],
-        [{text:"Cancel",data:"t:cancel"}]
+      await send(chatId,msg("reportChoose",{code}),[
+        [{text:msg("worked"),data:"t:pick:"+code+":worked"},
+         {text:msg("failed"),data:"t:pick:"+code+":failed"}],
+        [{text:msg("cancel"),data:"t:cancel"}]
       ]);
       return true;
     case "usage-menu":
-      await sendMenu(chatId,"Choose one of the nine menu buttons below. Use /help to see the guide.");
+      await sendMenu(chatId,msg("usageMenu"),language);
       return true;
     case "invalid-input":
-      await send(chatId,"A Muse invite code must contain exactly 6 letters or digits (A–Z, 0–9). Send another code or /cancel.");
+      await send(chatId,msg("invalidInput"));
       return true;
     case "my-codes": {
-      const p=await profiles.get(chatId);
-      const rows=p.submitted;
-      if(!rows.length)await send(chatId,"No Telegram submissions are saved for this chat. Use ➕ Đóng góp to share a public code.");
-      else await send(chatId,"Your submissions from this chat (not proof of code ownership):\n"+
-        rows.map(x=>"• "+x.code+" — "+x.url).join("\n")+
-        "\nUse /status CODE to check published or pending review.");
+      const rows=profile.submitted;
+      if(!rows.length)await send(chatId,msg("mineEmpty"));
+      else await send(chatId,msg("mineTitle")+"\n"+
+        rows.map(x=>"• "+x.code+" — "+x.url).join("\n")+"\n"+msg("mineFooter"));
       return true;
     }
     case "notifications":
     case "settings": {
-      const p=await profiles.get(chatId);
-      await send(chatId,(type==="settings"?"⚙️ Settings":"🔔 Publication notifications")+
-        "\nNew-code alerts: "+(p.subscribed?"ON":"OFF")+
-        "\nWatched codes: "+p.watching.length+
-        "\nAlerts require the notification delivery service to be deployed. You control this preference.",[
-          [{text:p.subscribed?"🔕 Disable new-code alerts":"🔔 Enable new-code alerts",data:"t:sub:"+(p.subscribed?"off":"on")}],
-          [{text:"📌 Watched codes",data:"t:watchlist"},
-           {text:"🗑 Delete my bot data",data:"t:erase:ask"}]
+      await send(chatId,msg(type==="settings"?"settingsTitle":"notificationsTitle")+
+        "\n"+msg("alertsLabel")+" "+msg(profile.subscribed?"alertsOn":"alertsOff")+
+        "\n"+msg("watchedCount")+" "+profile.watching.length+
+        "\n"+msg("alertsNote"),[
+          [{text:msg(profile.subscribed?"disableAlerts":"enableAlerts"),data:"t:sub:"+(profile.subscribed?"off":"on")}],
+          [{text:msg("watchedButton"),data:"t:watchlist"},
+           {text:msg("languageButton")+" · "+LOCALE_NAMES[language],data:"t:langs"}],
+          [{text:msg("deleteData"),data:"t:erase:ask"}]
         ]);
+      return true;
+    }
+    case "choose-language":
+      await send(chatId,msg("languageTitle"),languageButtons());
+      return true;
+    case "set-language": {
+      if(!LOCALES.includes(action.language))return true;
+      await mutateProfile(profiles,chatId,p=>{
+        p.language=action.language;p.languageManual=true;return p;
+      });
+      await sendMenu(chatId,tr(action.language,"languageChanged"),action.language);
       return true;
     }
     case "subscribe":
     case "unsubscribe": {
       const p=await mutateProfile(profiles,chatId,p=>{p.subscribed=type==="subscribe";return p;});
-      await send(chatId,p.subscribed?"New-code alerts enabled. Use /unsubscribe to stop.":"New-code alerts disabled. Use /subscribe to enable.");
+      await send(chatId,msg(p.subscribed?"subscribed":"unsubscribed"));
       return true;
     }
     case "watchlist": {
-      const p=await profiles.get(chatId);
-      await send(chatId,p.watching.length?"📌 Watched codes:\n"+p.watching.map(x=>"• "+x).join("\n")+
-        "\nUse /unwatch CODE to remove one.":"Your watchlist is empty. Use /watch CODE or 📌 Watch under any listed code.");
+      await send(chatId,profile.watching.length
+        ? msg("watchlistTitle")+"\n"+profile.watching.map(x=>"• "+x).join("\n")+"\n"+msg("watchlistFooter")
+        : msg("watchlistEmpty"));
       return true;
     }
     case "watch": {
       const entry=await services.getCodeStatus(code,githubToken);
       if(!["listed","pending"].includes(entry.kind)){
-        await send(chatId,"Only published or currently pending codes can be watched.\n"+entry.url);
+        await send(chatId,msg("watchDenied")+"\n"+entry.url);
         return true;
       }
       const p=await mutateProfile(profiles,chatId,p=>{
         if(!p.watching.includes(code))p.watching=[...p.watching,code].slice(-50);
         return p;
       });
-      await send(chatId,"📌 Watching "+code+" ("+p.watching.length+" tracked). Use /unwatch "+code+" to stop. Publishing is not Muse verification.");
+      await send(chatId,msg("watching",{code,count:p.watching.length}));
       return true;
     }
     case "unwatch": {
       await mutateProfile(profiles,chatId,p=>{p.watching=p.watching.filter(x=>x!==code);return p;});
-      await send(chatId,"Stopped watching "+code+".");
+      await send(chatId,msg("unwatched",{code}));
       return true;
     }
     case "delete-data":
-      await send(chatId,"Delete your private bot preferences, watchlist and this chat's submission history? "+
-        "This will NOT delete public GitHub Issues or comments already created.",[
-        [{text:"🗑 Confirm delete",data:"t:erase:confirm"},{text:"Cancel",data:"t:cancel"}]
+      await send(chatId,msg("deletePrompt"),[
+        [{text:msg("confirmDelete"),data:"t:erase:confirm"},{text:msg("cancel"),data:"t:cancel"}]
       ]);
       return true;
     case "delete-confirm":
       await profiles.delete(chatId);
-      await sendMenu(chatId,"Your private bot preferences and submission history were deleted. Public GitHub posts remain.");
+      await sendMenu(chatId,msg("deleted"),language);
       return true;
     default:return false;
   }
