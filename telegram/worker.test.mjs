@@ -109,7 +109,8 @@ test("Worker Refresh fetches current catalog and has no public write side effect
   assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/2 /);
   assert.equal((await handleWebhookRequest(webhook(callback(304,"t:refresh-code:DPNIHH")),env,deps)).status,200);
   assert.equal(reads,3);
-  assert.match(sent.filter(x=>x.name==="sendMessage").at(-1).payload.text,/Reported 3 remaining/);
+  assert.equal(sent.at(-1).name,"editMessageText");
+  assert.match(sent.at(-1).payload.text,/Reported 3 remaining/);
   assert.equal(calls.submit.length,0);
   assert.equal(calls.report.length,0);
   assert.equal(await env.BOT_STATE.get("rl:42"),null,"Refreshing must not use public-write quota");
