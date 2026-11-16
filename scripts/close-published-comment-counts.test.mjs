@@ -28,7 +28,7 @@ const pr={
 const html='<title>DPNIHH Muse Invite Code | Muse Invite Hub</title>'+
   '<link rel="canonical" href="https://muse.eplus.dev/codes/DPNIHH/">';
 
-function mock({pull=pr,source=comment,issueState="open",newHuman=false,
+function mock({pull=pr,source=comment,sources={},issueState="open",newHuman=false,
   live=true,liveRecord=record,mergedRecord=record,comparison="ahead",filePath,
   posted=false,failNotify=false}={}) {
   const events=[];
@@ -53,9 +53,10 @@ function mock({pull=pr,source=comment,issueState="open",newHuman=false,
     const path=url.pathname.replace("/repos/"+repo+"/","");
     events.push(method+" "+path);
     let data;
-    if(method==="GET" && path==="pulls")data=url.searchParams.get("page")==="1"?[pull]:[];
+    if(method==="GET" && path==="pulls")data=url.searchParams.get("page")==="1"?(Array.isArray(pull)?pull:[pull]):[];
     else if(method==="GET" && path==="issues/14")data=issue;
-    else if(method==="GET" && path==="issues/comments/"+commentId)data=source;
+    else if(method==="GET" && path.startsWith("issues/comments/"))
+      data=sources[Number(path.split("/").at(-1))]||source;
     else if(method==="GET" && path==="issues/14/comments")data=comments;
     else if(method==="GET" && path==="pulls/157/files")data=[{
       filename:filePath||"data/invite-records/eplus-owner-dpnihh.json",status:"modified"
@@ -152,6 +153,22 @@ test("stale, missing, mismatched or unpublished data cannot close canonical Issu
   }
   const m=mock();
   assert.equal((await run(m,{...record,feedbackIssueNumber:19})).closed,0);
+});
+
+test("a stale older merged PR cannot hide the newest reviewed owner-count update",async()=>{
+  const previousId=commentId-1;
+  const oldSource={...comment,id:previousId,
+    body:comment.body.replace("Remaining invites: 23","Remaining invites: 3")
+      .replace("Used invites: 7","Used invites: 27")};
+  const oldPr={...pr,number:100,
+    title:"data: review DPNIHH count from comment #"+previousId,
+    body:pr.body.replaceAll(String(commentId),String(previousId)),
+    head:{...pr.head,ref:"auto/comment-14-"+previousId+"-count"}};
+  // GitHub sorts by updated time; the older PR can be listed first.
+  const m=mock({pull:[oldPr,pr],sources:{[previousId]:oldSource}});
+  const result=await run(m);
+  assert.deepEqual(result,{notified:1,closed:1,pending:1,skipped:0});
+  assert.equal(m.issue.state,"closed");
 });
 
 test("failure to post acceptance comment prevents closure",async()=>{
