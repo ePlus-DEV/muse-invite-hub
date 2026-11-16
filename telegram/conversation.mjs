@@ -99,7 +99,8 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
       await send(chatId,msg("needTitle")+"\n\n"+msg("needDetails"),[
         [{text:msg("needBrowse"),data:"t:need:browse"}],
         [{text:msg("needNotify"),data:"t:need:alerts"}],
-        [{text:msg("needSearch"),data:"t:need:search"}]
+        [{text:msg("needSearch"),data:"t:need:search"}],
+        [{text:msg("backMenu"),data:"t:home"}]
       ]);
       return true;
     case "browse": await list();return true;
@@ -142,7 +143,8 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
       await send(chatId,msg("reportChoose",{code}),[
         [{text:msg("worked"),data:"t:pick:"+code+":worked"},
          {text:msg("failed"),data:"t:pick:"+code+":failed"}],
-        [{text:msg("cancel"),data:"t:cancel"}]
+        [{text:msg("cancel"),data:"t:cancel"},
+         {text:msg("backList"),data:"t:back-list"}]
       ]);
       return true;
     case "usage-menu":
