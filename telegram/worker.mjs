@@ -9,10 +9,11 @@
  * - github.mjs keeps its own idempotency markers as a second layer.
  * Secrets arrive only as Worker secrets (env), never from repository files.
  */
-import { parseUpdate, keyboard, formatCodeStatus } from "./bot.mjs";
-import { REPLY_KEYBOARD } from "./menu.mjs";
+import { parseUpdate, keyboard } from "./bot.mjs";
+import { replyKeyboard } from "./menu.mjs";
+import { handleLegacy } from "./legacy.mjs";
 import { resolveInput, handleInteractive } from "./conversation.mjs";
-import { makeKvProfiles, mutateProfile } from "./profiles.mjs";
+import { makeKvProfiles, syncTelegramLocale } from "./profiles.mjs";
 import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus, browseCodes } from "./github.mjs";
 
 const SITE = "https://muse.eplus.dev";
@@ -76,9 +77,9 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
     if (buttons) payload.reply_markup = keyboard(buttons);
     return call("sendMessage", payload);
   }
-  async function sendMenu(chatId,text) {
+  async function sendMenu(chatId,text,language="en") {
     return call("sendMessage",{
-      chat_id:chatId,text,disable_web_page_preview:true,reply_markup:REPLY_KEYBOARD
+      chat_id:chatId,text,disable_web_page_preview:true,reply_markup:replyKeyboard(language)
     });
   }
   return async function handle(update, state, profiles) {
@@ -88,9 +89,10 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
     if (action.callbackId) {
       await call("answerCallbackQuery", { callback_query_id: action.callbackId });
     }
+    if(action.type!=="private-only")
+      await syncTelegramLocale(profiles,chatId,action.telegramLanguage);
     action=await resolveInput(action,profiles);
     if(await handleInteractive({action,profiles,send,sendMenu,services,githubToken}))return;
-    const {type,code,result,updateId}=action;
     async function complete(message) {
       await send(chatId,message);
       if(action.callbackId&&action.messageId) {
@@ -99,102 +101,10 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
         }); } catch { /* UI cleanup failure must not repost GitHub feedback. */ }
       }
     }
-    switch (type) {
-      case "private-only":
-        return send(chatId, "Please open this bot in a private chat to protect your reports.");
-      case "help":
-        return send(chatId, [
-          "✦ Muse Invite Hub — community invite directory",
-          "",
-          "/codes — browse recent public invite codes",
-          "/status CODE — published status or pending review",
-          "/submit CODE — suggest a new public invite code",
-          "/report CODE worked — report a successful try",
-          "/report CODE failed — report an unsuccessful try",
-          "/count CODE — owner-only count update guidance",
-          "/privacy — what becomes public",
-          "/cancel — cancel an action",
-          "",
-          "Reports require confirmation and are reviewed on GitHub.",
-          "Never share passwords, one-time login codes or private links."
-        ].join("\n"), [[{ text: "Browse all codes", url: SITE + "/#codes" }]]);
-      case "codes": {
-        const latest = await services.listRecentCodes();
-        return send(chatId, latest.length
-          ? "Recent published codes (not guaranteed to work):\n\n" +
-            latest.map(x => "• " + x).join("\n")
-          : "No published codes found. Please check the website.", [
-            [{ text: "Browse and copy codes", url: SITE + "/#codes" }]
-          ]);
-      }
-      case "status": {
-        const entry=await services.getCodeStatus(code,githubToken);
-        return send(chatId,formatCodeStatus(code,entry),[[{text:"Browse directory",url:SITE+"/#codes"}]]);
-      }
-      case "usage-code":
-        return send(chatId,"Use /get CODE, /watch CODE or /unwatch CODE (exactly 6 letters/digits).");
-      case "usage-status":
-        return send(chatId,"Use /status CODE with exactly 6 letters or digits, e.g. /status DPNIHH.");
-      case "privacy":
-        return send(chatId,"Only send public Muse invite codes and genuine redemption feedback. "+
-          "After confirmation, a PUBLIC GitHub Issue/comment contains the code and report, "+
-          "but not your Telegram username or account ID. Moderators review all Telegram submissions. "+
-          "Do not send passwords, one-time codes, private links or personal data. "+
-          "Your Telegram identity does not prove code ownership.");
-      case "count":
-        return send(chatId, "Owner-only quota changes require a verified GitHub account. " +
-          "Telegram identity is not proof of ownership. Open your listing and choose Update count.",
-          [[{ text: "Open directory", url: SITE + "/#codes" }]]);
-      case "usage-submit":
-        return send(chatId, "Use /submit CODE with exactly 6 letters or digits, for example /submit DPNIHH. " +
-          "Only share a public invite, not private credentials.");
-      case "usage-report":
-        return send(chatId, "Use /report CODE worked or /report CODE failed. " +
-          "This is a community report, not Muse verification.");
-      case "confirm-submit":
-        return send(chatId, "Share public invite code " + code + "?\n" +
-          "This will create a PUBLIC GitHub Issue for maintainer review. " +
-          "No Telegram username or account ID is published. This does not verify ownership or redeem the code.", [
-          [{ text: "Confirm public submission", data: "t:submit:" + code }],
-          [{ text: "Cancel", data: "t:cancel" }]
-        ]);
-      case "confirm-report":
-        return send(chatId, "Report " + code + " as " + result + "?\n" +
-          "This posts an anonymous PUBLIC comment to the code's existing GitHub Issue. " +
-          "A maintainer will review it; status is not automatically changed.", [
-          [{ text: "Confirm public report", data: "t:report:" + code + ":" + result }],
-          [{ text: "Cancel", data: "t:cancel" }]
-        ]);
-      case "cancel": return complete("Cancelled. No information was submitted.");
-      case "submit": {
-        if (!(await state.allowWrite(chatId))) return complete("Too many submissions. Try again later.");
-        const outcome = await services.submitNewCode(code, updateId, githubToken);
-        if(outcome.kind==="submitted"&&
-            /^https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/[1-9]\d*$/.test(outcome.url||"")){
-          await mutateProfile(profiles,chatId,p=>{
-            if(!p.submitted.some(x=>x.code===code))p.submitted.push({code,url:outcome.url});
-            p.submitted=p.submitted.slice(-50);return p;
-          });
-        }
-        const message = {
-          listed: "This code is already in the published directory.",
-          pending: "A Telegram contribution Issue already exists; no duplicate was created.",
-          submitted: "Submitted a public GitHub Issue for human review. This does not publish or verify the code."
-        }[outcome.kind] || "Please review this code's status.";
-        return complete(message + "\n" + outcome.url);
-      }
-      case "report": {
-        if (!(await state.allowWrite(chatId))) return complete("Too many reports. Try again later.");
-        const outcome = await services.submitFeedback(code, result, updateId, githubToken);
-        const message = {
-          unknown: "This code is not currently in the published catalog.",
-          unmapped: "A canonical GitHub Issue is not yet available; use the website to report.",
-          "already-reported": "This Telegram report was already received; no duplicate was posted.",
-          reported: "Added feedback to the code's existing GitHub Issue for human review. No Muse status changed."
-        }[outcome.kind] || "Please review this code's status.";
-        return complete(message + "\n" + outcome.url);
-      }
-    }
+    return handleLegacy({
+      action,profiles,send,complete,services,githubToken,
+      allowWrite:id=>state.allowWrite(id)
+    });
   };
 }
 
