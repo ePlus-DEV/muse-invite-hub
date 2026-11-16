@@ -302,7 +302,8 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
     assert.equal((await post(message(702,"🙋 Cần mã"))).status,200);
     const offer=sent.at(-1).payload;
     assert.match(offer.text,/không đảm bảo mã còn lượt sử dụng/i);
-    assert.equal(offer.reply_markup.inline_keyboard.length,3);
+    assert.equal(offer.reply_markup.inline_keyboard.length,4);
+    assert.equal(offer.reply_markup.inline_keyboard[3][0].callback_data,"t:home");
     const profilePath=join(dir,"private-profiles.json");
     const profile=()=>JSON.parse(readFileSync(profilePath,"utf8"))["42"];
     assert.equal(profile().role,"seeker");
