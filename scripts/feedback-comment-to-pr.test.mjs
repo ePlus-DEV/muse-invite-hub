@@ -36,6 +36,7 @@ test("informal comments, mismatched codes, bots, issue hijacks and unrelated Iss
   for(const comment of [
     member("Looks nice"),member(worked.replace("DPNIHH","OTHER1")),
     member(worked,{user:{login:"github-actions[bot]",type:"Bot"}}),
+    member(worked,{user:{login:"eplus-bot",type:"User",id:100}}),
     member(worked,{id:0}),member(""),
   ]) assert.equal(planCommentProposal(issue,comment,[item]).outcome,"ignored");
   assert.equal(planCommentProposal({...issue,number:16},member(worked),[item]).outcome,"ignored");
