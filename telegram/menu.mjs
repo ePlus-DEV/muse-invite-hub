@@ -23,7 +23,7 @@ for(const lang of LOCALES){
         notifications:"notifications",watchlist:"watchlist",settings:"settings",
         need:"need-code",status:"prompt-status",roleSwitch:"choose-role",
         roleSeeker:"set-role-seeker",roleContributor:"set-role-contributor",
-        languageButton:"choose-language"
+        languageButton:"choose-language",refresh:"refresh"
       }[key];
       actions.set(menuText(lang,key),type);
     }
@@ -36,7 +36,8 @@ export function codeButtons(code,language="en") {
      {text:tr(language,"details"),url:"https://muse.eplus.dev/codes/"+code+"/"}],
     [{text:tr(language,"watch"),data:"t:watch:"+code},
      {text:tr(language,"worked"),data:"t:pick:"+code+":worked"},
-     {text:tr(language,"failed"),data:"t:pick:"+code+":failed"}]
+     {text:tr(language,"failed"),data:"t:pick:"+code+":failed"}],
+    [{text:menuText(language,"refresh"),data:"t:refresh-code:"+code}]
   ];
 }
 export function codeDescription(entry,language="en") {
