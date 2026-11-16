@@ -37,7 +37,9 @@ export function codeButtons(code,language="en") {
     [{text:tr(language,"watch"),data:"t:watch:"+code},
      {text:tr(language,"worked"),data:"t:pick:"+code+":worked"},
      {text:tr(language,"failed"),data:"t:pick:"+code+":failed"}],
-    [{text:menuText(language,"refresh"),data:"t:refresh-code:"+code}]
+    [{text:menuText(language,"refresh"),data:"t:refresh-code:"+code}],
+    [{text:tr(language,"backList"),data:"t:back-list"},
+     {text:tr(language,"backMenu"),data:"t:home"}]
   ];
 }
 export function codeDescription(entry,language="en") {
@@ -48,6 +50,13 @@ export function codeDescription(entry,language="en") {
   const count=entry.remaining===null||entry.remaining===undefined
     ? tr(language,"cardUnknown")
     : tr(language,"cardRemaining",{count:entry.remaining,date:entry.usageReportedAt});
-  return "🎟 "+code+"\n"+tr(language,status)+" · "+tr(language,"cardHeader")+
-    "\n"+tr(language,"remainingLabel")+" "+count+"\n"+tr(language,"cardDisclaimer");
+  const extra=[
+    tr(language,"platformLabel")+" "+(entry.platform||"GitHub"),
+    ...(entry.submittedBy?[tr(language,"contributorLabel")+" "+entry.submittedBy]:[]),
+    ...(entry.addedAt?[tr(language,"addedLabel")+" "+entry.addedAt]:[])
+  ];
+  return "🎟 "+tr(language,"detailTitle")+" — "+code+"\n"+
+    tr(language,status)+" · "+tr(language,"cardHeader")+"\n"+
+    extra.join("\n")+"\n"+
+    tr(language,"remainingLabel")+" "+count+"\n"+tr(language,"cardDisclaimer");
 }
