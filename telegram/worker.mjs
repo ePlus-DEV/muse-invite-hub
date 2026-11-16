@@ -77,9 +77,9 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
     if (buttons) payload.reply_markup = keyboard(buttons);
     return call("sendMessage", payload);
   }
-  async function sendMenu(chatId,text,language="en") {
+  async function sendMenu(chatId,text,language="en",role="legacy") {
     return call("sendMessage",{
-      chat_id:chatId,text,disable_web_page_preview:true,reply_markup:replyKeyboard(language)
+      chat_id:chatId,text,disable_web_page_preview:true,reply_markup:replyKeyboard(language,role)
     });
   }
   return async function handle(update, state, profiles) {
