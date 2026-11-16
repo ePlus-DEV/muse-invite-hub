@@ -145,7 +145,7 @@ export async function closePublishedCommentCounts({
     for(const pr of prs){
       const candidate=commentCountCandidate(pr);
       if(!candidate || seen.has(candidate.issueNumber)) continue;
-      seen.add(candidate.issueNumber);
+      // Do not discard a newer PR when an older updated PR has a stale count.
       const {issueNumber,commentId,code,prNumber,mergeSha}=candidate;
       const item=records.find(row=>row.code===code);
       if(!item || roots[code]!==issueNumber ||
@@ -153,7 +153,7 @@ export async function closePublishedCommentCounts({
         summary.pending++; continue;
       }
       const issue=await api("GET","issues/"+issueNumber);
-      if(issue.state!=="open" || issue.pull_request) {summary.skipped++;continue;}
+      if(issue.state!=="open" || issue.pull_request) {summary.skipped++;seen.add(issueNumber);continue;}
       // The canonical thread may be a legacy count Issue without the code in its title.
       if(!String(issue.body||"").includes(code)) {summary.pending++;continue;}
       const source=await api("GET","issues/comments/"+commentId);
@@ -201,6 +201,7 @@ export async function closePublishedCommentCounts({
       }
       await api("PATCH","issues/"+issueNumber,{state:"closed",state_reason:"completed"});
       summary.closed++;
+      seen.add(issueNumber);
     }
     if(prs.length<100)break;
   }
