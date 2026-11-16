@@ -26,9 +26,12 @@ jobs:
       - name: Check Telegram syntax and behavior
         run: |
           node --check telegram/bot.mjs
+          node --check telegram/menu.mjs
+          node --check telegram/profiles.mjs
+          node --check telegram/conversation.mjs
           node --check telegram/github.mjs
           node --check telegram/server.mjs
-          node --test telegram/telegram.test.mjs
+          node --test telegram/telegram.test.mjs telegram/menu.test.mjs
       - name: Prepare QEMU
         uses: docker/setup-qemu-action@v4
       - name: Prepare Buildx
