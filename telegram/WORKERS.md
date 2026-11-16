@@ -8,8 +8,9 @@ the per-chat write rate limit live in a KV namespace, so they stay durable
 across Worker instances. No polling, cron or paid plan is required; the
 Workers free tier is more than enough for webhook traffic.
 
-Merging this code does **not** deploy anything. Deployment is a manual,
-maintainer-run sequence:
+Merging alone does **not** deploy the bot unless Cloudflare Workers Builds is
+connected to this repository. GitHub Pages and Cloudflare Workers deploy
+independently.
 
 ## Automatic Cloudflare deployment from GitHub
 
@@ -20,6 +21,51 @@ on every push to `main` after one-time GitHub integration. Follow the
 to configure the existing Worker, preserve its private `BOT_STATE` KV namespace
 and verify the actual live source revision. No Cloudflare API token needs to
 be stored in GitHub with this method.
+
+## Smoke test: build only when `telegram/` changes (2026-11-16)
+
+This documentation-only commit intentionally changes **only**
+`telegram/WORKERS.md` as a low-risk test of the existing Cloudflare
+Workers Builds Git integration. The Telegram runtime and webhook are
+unchanged. Once this commit is merged to the production `main` branch,
+a correctly configured path filter should initiate **one Cloudflare
+Workers Build** for the bot.
+
+In **Workers & Pages → existing Telegram Worker → Settings → Builds**:
+
+- **Git repository:** `ePlus-DEV/muse-invite-hub`
+- **Production branch:** `main`
+- **Root directory:** `telegram`
+- **Build watch paths → Include paths:** `telegram/*` (**repository-relative**;
+  **not** `/telegram`, `telegram/` or `*`)
+- **Build watch paths → Exclude paths:** empty
+- **Build command:** `node prepare-deploy.mjs`
+- **Deploy command:** `npx wrangler deploy --config wrangler.deploy.toml`
+- **Build variable:** `MUSE_BOT_STATE_KV_ID` = the existing private-state
+  KV namespace ID; do **not** create a replacement namespace
+- **Preview builds:** disabled for this production-only test
+
+The include filter matches nested paths, for example
+`telegram/WORKERS.md` and `telegram/worker.mjs`; unrelated changes to
+`assets/`, `data/` or `docs/` should **not** trigger this Worker build.
+Setting the root directory alone does not enable filtering.
+
+### Verify the build after merge
+
+1. Open **Cloudflare Worker → Deployments / Builds**, verify the deployment
+   corresponds to this merged `main` commit and succeeded.
+2. Fetch `https://<active-telegram-worker-host>/version` and compare its
+   `revision` with the exact merged `main` SHA. The SHA changes on merge.
+3. In the existing Telegram private chat, send `/start`; confirm the
+   persistent nine-button menu is shown. Do not click a public GitHub
+   submission unless you actually intend to contribute a code.
+4. Verify a later commit touching **only non-`telegram/`** files does not
+   start a Cloudflare Worker build (GitHub Pages can deploy separately).
+
+If no Cloudflare build starts, this smoke test **does not prove a code
+failure**: check that Git integration and path filters are configured on
+the **actual deployed Worker**, not a Pages project or another Worker.
+No Cloudflare account configuration is stored in this repository.
 
 ## Manual Wrangler deployment (alternative)
 
