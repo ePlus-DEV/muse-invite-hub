@@ -11,7 +11,13 @@ const MENU_TEXT = {
     "report": "✅ Report",
     "notifications": "🔔 Alerts",
     "watchlist": "📌 Watchlist",
-    "settings": "⚙️ Settings"
+    "settings": "⚙️ Settings",
+    "roleSeeker": "🙋 I need a code",
+    "roleContributor": "🤝 I have a code to share",
+    "roleSwitch": "🔄 Switch role",
+    "need": "🙋 Need a code",
+    "status": "📍 Check status",
+    "languageButton": "🌐 Language"
   },
   "vi": {
     "browse": "🎟 Nhận mã",
@@ -22,7 +28,13 @@ const MENU_TEXT = {
     "report": "✅ Báo cáo",
     "notifications": "🔔 Thông báo",
     "watchlist": "📌 Theo dõi",
-    "settings": "⚙️ Cài đặt"
+    "settings": "⚙️ Cài đặt",
+    "roleSeeker": "🙋 Tôi cần mã",
+    "roleContributor": "🤝 Tôi muốn chia sẻ mã",
+    "roleSwitch": "🔄 Đổi vai trò",
+    "need": "🙋 Cần mã",
+    "status": "📍 Trạng thái mã",
+    "languageButton": "🌐 Ngôn ngữ"
   },
   "ja": {
     "browse": "🎟 コード取得",
@@ -33,7 +45,13 @@ const MENU_TEXT = {
     "report": "✅ 利用報告",
     "notifications": "🔔 通知",
     "watchlist": "📌 ウォッチ",
-    "settings": "⚙️ 設定"
+    "settings": "⚙️ 設定",
+    "roleSeeker": "🙋 コードが欲しい",
+    "roleContributor": "🤝 コードを共有する",
+    "roleSwitch": "🔄 モード切替",
+    "need": "🙋 コードが必要",
+    "status": "📍 公開状況",
+    "languageButton": "🌐 言語"
   }
 };
 const STRINGS = {
@@ -132,7 +150,22 @@ const STRINGS = {
     "notifyNew": "🆕 New Muse Invite Hub community codes.",
     "notifyMore": "+{count} more codes: https://muse.eplus.dev/#codes",
     "notifyDisclaimer": "Community listings are NOT Muse-verified and redemption is not guaranteed.",
-    "remainingLabel": "Remaining invites:"
+    "remainingLabel": "Remaining invites:",
+    "roleIntro": "✦ Welcome to Muse Invite Hub!\n\nWhat would you like to do?\n🙋 Find a community-shared Muse invite code\n🤝 Share a PUBLIC code for moderator review\n\nChoose your path below. You can switch whenever you want. Selecting a path does NOT verify code ownership.",
+    "roleSeekerWelcome": "🙋 Looking for a Muse invite?\n\nBrowse recently published community codes, copy a code, search, or opt in to new-code notifications. Codes are NOT guaranteed to work.",
+    "roleContributorWelcome": "🤝 Have a PUBLIC Muse invite to share?\n\nSubmit a six-character code for human review, check its status, and manage your submissions. Your Telegram identity does NOT verify ownership.",
+    "roleChoiceTitle": "🔄 Choose how you want to use the bot. This only customizes the menu; you can change it anytime.",
+    "roleSeekerName": "Looking for codes",
+    "roleContributorName": "Sharing codes",
+    "roleUnsetName": "Not chosen",
+    "roleCurrent": "Current path:",
+    "roleChange": "🔄 Change path",
+    "needTitle": "🙋 Need a Muse invite code?",
+    "needDetails": "Browse published community codes right now or search for a specific one. If none work for you, choose notifications to opt in to alerts when NEW codes are published. No code is reserved and there is no guaranteed availability.",
+    "needBrowse": "🎟 Browse codes now",
+    "needNotify": "🔔 Notify me of new codes",
+    "needSearch": "🔎 Search codes",
+    "statusPrompt": "📍 Enter a six-character code to check whether it is published or pending review (within 10 minutes)."
   },
   "vi": {
     "placeholder": "Chọn chức năng hoặc nhập mã...",
@@ -229,7 +262,22 @@ const STRINGS = {
     "notifyNew": "🆕 Có mã mời Muse Invite Hub mới.",
     "notifyMore": "Còn {count} mã khác: https://muse.eplus.dev/#codes",
     "notifyDisclaimer": "Mã do cộng đồng chia sẻ, Muse CHƯA xác minh và không đảm bảo đổi được.",
-    "remainingLabel": "Số lượt mời còn lại:"
+    "remainingLabel": "Số lượt mời còn lại:",
+    "roleIntro": "✦ Chào mừng đến Muse Invite Hub!\n\nBạn đến đây để làm gì?\n🙋 Tìm mã mời Muse do cộng đồng chia sẻ\n🤝 Đóng góp mã CÔNG KHAI để quản trị viên xét duyệt\n\nChọn nhu cầu bên dưới. Bạn có thể đổi bất cứ lúc nào. Lựa chọn này KHÔNG chứng minh quyền sở hữu mã.",
+    "roleSeekerWelcome": "🙋 Bạn đang cần mã mời Muse?\n\nXem mã cộng đồng đã công bố, sao chép, tìm kiếm hoặc tự chọn nhận thông báo mã mới. Không đảm bảo mã còn dùng được.",
+    "roleContributorWelcome": "🤝 Bạn có mã mời Muse CÔNG KHAI muốn chia sẻ?\n\nGửi mã gồm 6 ký tự để xét duyệt thủ công, kiểm tra trạng thái và xem lịch sử đóng góp. Danh tính Telegram KHÔNG chứng minh quyền sở hữu.",
+    "roleChoiceTitle": "🔄 Hãy chọn nhu cầu sử dụng bot. Đây chỉ là cách bố trí menu, bạn có thể đổi bất cứ lúc nào.",
+    "roleSeekerName": "Tìm mã mời",
+    "roleContributorName": "Chia sẻ mã",
+    "roleUnsetName": "Chưa chọn",
+    "roleCurrent": "Nhu cầu hiện tại:",
+    "roleChange": "🔄 Đổi nhu cầu",
+    "needTitle": "🙋 Bạn đang cần mã mời Muse?",
+    "needDetails": "Bạn có thể xem ngay các mã cộng đồng đã công bố hoặc tìm một mã cụ thể. Nếu chưa dùng được mã nào, hãy chủ động bật thông báo để biết khi có mã MỚI. Bot không giữ chỗ và không đảm bảo mã còn lượt sử dụng.",
+    "needBrowse": "🎟 Xem mã ngay",
+    "needNotify": "🔔 Báo tôi khi có mã mới",
+    "needSearch": "🔎 Tìm mã",
+    "statusPrompt": "📍 Nhập mã 6 ký tự để kiểm tra đã công bố hay đang chờ xét duyệt (trong 10 phút)."
   },
   "ja": {
     "placeholder": "操作を選択するかコードを入力...",
@@ -326,7 +374,22 @@ const STRINGS = {
     "notifyNew": "🆕 Muse Invite Hubに新しいコミュニティコードが追加されました。",
     "notifyMore": "さらに{count}件：https://muse.eplus.dev/#codes",
     "notifyDisclaimer": "コミュニティ掲載であり、Museの認証や利用成功は保証されません。",
-    "remainingLabel": "残りの招待数："
+    "remainingLabel": "残りの招待数：",
+    "roleIntro": "✦ Muse Invite Hub へようこそ！\n\nどのように利用しますか？\n🙋 コミュニティのMuse招待コードを探す\n🤝 公開コードを共有し、管理者による審査を受ける\n\n利用目的を選択してください。いつでも変更できます。選択はコード所有権の証明にはなりません。",
+    "roleSeekerWelcome": "🙋 Muse招待コードをお探しですか？\n\n公開コードの閲覧・コピー・検索や新着通知の登録ができます。コードの利用成功は保証されません。",
+    "roleContributorWelcome": "🤝 公開Muse招待コードを共有しますか？\n\n英数字6文字のコードを投稿して審査状況を確認できます。Telegramの身元はコード所有権の証明にはなりません。",
+    "roleChoiceTitle": "🔄 ボットの利用目的を選んでください。メニューの表示だけが変わり、いつでも切り替えられます。",
+    "roleSeekerName": "コードを探す",
+    "roleContributorName": "コードを共有",
+    "roleUnsetName": "未選択",
+    "roleCurrent": "現在の利用目的：",
+    "roleChange": "🔄 利用目的を変更",
+    "needTitle": "🙋 Muse招待コードをお探しですか？",
+    "needDetails": "公開済みのコミュニティコードを今すぐ確認・検索できます。使えるコードが見つからない場合は、新しいコードが公開された際の通知を希望により有効にできます。コードの予約や利用可能性は保証されません。",
+    "needBrowse": "🎟 コードを見る",
+    "needNotify": "🔔 新着コードの通知",
+    "needSearch": "🔎 コードを検索",
+    "statusPrompt": "📍 英数字6文字のコードを入力してください。公開済みか審査中かを確認します（10分以内）。"
   }
 };
 export function normalizeLocale(value) {
@@ -348,6 +411,14 @@ export function menuText(locale,key) {
 export const MENU_KEYS = Object.freeze([
   ["browse","newest","search"],["submit","mine","report"],["notifications","watchlist","settings"]
 ]);
+// Entry is an intent choice, not user identity, ownership or an access-control role.
+export const ENTRY_MENU_KEYS = Object.freeze([["roleSeeker"],["roleContributor"],["languageButton"]]);
+export const ROLE_MENU_KEYS = Object.freeze({
+  seeker:[["browse","newest","search"],["need","notifications","watchlist"],
+    ["report","settings","roleSwitch"]],
+  contributor:[["submit","mine","status"],["newest","browse","report"],
+    ["notifications","settings","roleSwitch"]]
+});
 export function translationCoverage() {
   return LOCALES.map(language=>({language,
     missing:Object.keys(STRINGS.en).filter(key=>!Object.hasOwn(STRINGS[language],key))
