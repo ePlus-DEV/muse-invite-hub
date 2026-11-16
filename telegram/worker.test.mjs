@@ -110,7 +110,7 @@ test("processing failures return 503 so Telegram can retry, without recording su
   assert.equal((await handleWebhookRequest(webhook(update), env, deps)).status, 503);
   assert.equal((await handleWebhookRequest(webhook(update), env, deps)).status, 200);
   assert.equal(attempts, 2);
-  assert.match(sent.at(-1).payload.text, /Submitted a public GitHub Issue/);
+  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text, /Submitted a public GitHub Issue/);
 });
 
 test("per-chat write rate limit allows 8 writes per hour, then refuses", async () => {
@@ -120,7 +120,7 @@ test("per-chat write rate limit allows 8 writes per hour, then refuses", async (
     assert.equal((await handleWebhookRequest(webhook(callback(100 + i, "t:submit:CODE12")), env, deps)).status, 200);
   }
   assert.equal((await handleWebhookRequest(webhook(callback(200, "t:submit:CODE12")), env, deps)).status, 200);
-  assert.match(sent.at(-1).payload.text, /Too many submissions/);
+  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text, /Too many submissions/);
 });
 
 test("worker sources keep secrets out of the repository and reuse the review-only GitHub flow", () => {
