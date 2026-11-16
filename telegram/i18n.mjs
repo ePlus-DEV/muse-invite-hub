@@ -17,7 +17,8 @@ const MENU_TEXT = {
     "roleSwitch": "🔄 Switch role",
     "need": "🙋 Need a code",
     "status": "📍 Check status",
-    "languageButton": "🌐 Language"
+    "languageButton": "🌐 Language",
+    "refresh": "🔄 Refresh"
   },
   "vi": {
     "browse": "🎟 Nhận mã",
@@ -34,7 +35,8 @@ const MENU_TEXT = {
     "roleSwitch": "🔄 Đổi vai trò",
     "need": "🙋 Cần mã",
     "status": "📍 Trạng thái mã",
-    "languageButton": "🌐 Ngôn ngữ"
+    "languageButton": "🌐 Ngôn ngữ",
+    "refresh": "🔄 Làm mới"
   },
   "ja": {
     "browse": "🎟 コード取得",
@@ -51,7 +53,8 @@ const MENU_TEXT = {
     "roleSwitch": "🔄 モード切替",
     "need": "🙋 コードが必要",
     "status": "📍 公開状況",
-    "languageButton": "🌐 言語"
+    "languageButton": "🌐 言語",
+    "refresh": "🔄 更新"
   }
 };
 const STRINGS = {
@@ -421,15 +424,15 @@ export function menuText(locale,key) {
   return value;
 }
 export const MENU_KEYS = Object.freeze([
-  ["browse","newest","search"],["submit","mine","report"],["notifications","watchlist","settings"]
+  ["browse","newest","search"],["submit","mine","report"],["notifications","watchlist","settings"],["refresh"]
 ]);
 // Entry is an intent choice, not user identity, ownership or an access-control role.
-export const ENTRY_MENU_KEYS = Object.freeze([["roleSeeker"],["roleContributor"],["languageButton"]]);
+export const ENTRY_MENU_KEYS = Object.freeze([["roleSeeker"],["roleContributor"],["languageButton"],["refresh"]]);
 export const ROLE_MENU_KEYS = Object.freeze({
   seeker:[["browse","newest","search"],["need","notifications","watchlist"],
-    ["report","settings","roleSwitch"]],
+    ["report","settings","roleSwitch"],["refresh"]],
   contributor:[["submit","mine","status"],["newest","browse","report"],
-    ["notifications","settings","roleSwitch"]]
+    ["notifications","settings","roleSwitch"],["refresh"]]
 });
 export function translationCoverage() {
   return LOCALES.map(language=>({language,
