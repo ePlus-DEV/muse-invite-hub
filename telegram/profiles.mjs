@@ -1,15 +1,16 @@
 /* Minimal opt-in private Telegram preferences. Never expose chat IDs in GitHub Issues. */
 import { normalizeLocale, LOCALES } from "./i18n.mjs";
 const CODE=/^[A-Z0-9]{6}$/;
-const INTENTS=new Set(["search","submit","report"]);
+const INTENTS=new Set(["search","submit","report","status"]);
 export function emptyProfile() {
-  return {subscribed:false,watching:[],submitted:[],pending:null,language:null,languageManual:false};
+  return {subscribed:false,watching:[],submitted:[],pending:null,language:null,languageManual:false,role:null};
 }
 export function cleanProfile(value) {
   const base=emptyProfile();
   if(!value||typeof value!=="object")return base;
   return {
     subscribed:value.subscribed===true,
+    role:value.role==="seeker"||value.role==="contributor"?value.role:null,
     language:LOCALES.includes(value.language)?value.language:null,
     languageManual:value.languageManual===true&&LOCALES.includes(value.language),
     watching:Array.isArray(value.watching)

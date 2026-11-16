@@ -1,9 +1,10 @@
 /* Localized Telegram keyboards; callback values remain stable across languages. */
-import { LOCALES, MENU_KEYS, menuText, tr, normalizeLocale } from "./i18n.mjs";
+import { LOCALES, MENU_KEYS, ENTRY_MENU_KEYS, ROLE_MENU_KEYS, menuText, tr } from "./i18n.mjs";
 export const MENU = MENU_KEYS.map(row=>row.map(key=>menuText("vi",key)));
-export function replyKeyboard(language="vi") {
+export function replyKeyboard(language="vi",role="legacy") {
+  const layout=role===null?ENTRY_MENU_KEYS:ROLE_MENU_KEYS[role]||MENU_KEYS;
   return {
-    keyboard:MENU_KEYS.map(row=>row.map(key=>menuText(language,key))),
+    keyboard:layout.map(row=>row.map(key=>menuText(language,key))),
     resize_keyboard:true,
     is_persistent:true,
     one_time_keyboard:false,
@@ -13,12 +14,16 @@ export function replyKeyboard(language="vi") {
 export const REPLY_KEYBOARD=replyKeyboard("vi");
 const actions=new Map();
 for(const lang of LOCALES){
-  for(const row of MENU_KEYS){
+  for(const row of [...MENU_KEYS,...ENTRY_MENU_KEYS,
+    ...ROLE_MENU_KEYS.seeker,...ROLE_MENU_KEYS.contributor]){
     for(const key of row) {
       const type={
         browse:"browse",newest:"newest",search:"prompt-search",
         submit:"prompt-submit",mine:"my-codes",report:"prompt-report",
-        notifications:"notifications",watchlist:"watchlist",settings:"settings"
+        notifications:"notifications",watchlist:"watchlist",settings:"settings",
+        need:"need-code",status:"prompt-status",roleSwitch:"choose-role",
+        roleSeeker:"set-role-seeker",roleContributor:"set-role-contributor",
+        languageButton:"choose-language"
       }[key];
       actions.set(menuText(lang,key),type);
     }
