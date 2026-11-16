@@ -25,13 +25,14 @@ test("Telegram commands accept only public code patterns and known report outcom
   assert.equal(parseCommand("/submit ../secret").type,"usage-submit");
   assert.equal(parseCommand("/count").type,"count");
   assert.equal(parseCommand("/codes").type,"browse");
+  assert.equal(parseCommand("/refresh").type,"refresh");
   assert.deepEqual(parseCommand("/status dpnihh"),{type:"status",code:"DPNIHH"});
   assert.deepEqual(parseCommand("/code dpnihh"),{type:"status",code:"DPNIHH"});
   assert.equal(parseCommand("/status DPNIH").type,"usage-status");
   assert.equal(parseCommand("/status DPNIHH EXTRA").type,"usage-status");
   assert.equal(parseCommand("/privacy").type,"privacy");
   assert.equal(parseCommand("/cancel").type,"cancel");
-  assert.equal(BOT_COMMANDS.length,22);
+  assert.equal(BOT_COMMANDS.length,23);
   assert.equal(new Set(BOT_COMMANDS.map(x=>x.command)).size,BOT_COMMANDS.length);
   assert.equal(parseCommand("/start@MuseBot").type,"help");
   assert.equal(parseCommand("x".repeat(400)).type,"help");
@@ -201,6 +202,30 @@ test("deployment sources never embed real credentials or auto-publish third-part
   assert.doesNotMatch(workflow,/push:\s*\n\s*branches:/);
 });
 
+test("OCI Refresh re-fetches published codes without posting or changing preferences",async()=>{
+  let reads=0;
+  await withApp(async({post,sent,calls})=>{
+    assert.equal((await post(message(500,"/start"))).status,200);
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
+    assert.equal((await post(callback(501,"t:role:seeker"))).status,200);
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
+    assert.equal((await post(message(502,"🔄 Refresh"))).status,200);
+    assert.equal(reads,1);
+    assert.match(sent.at(-1).payload.text,/Reported 1 remaining/);
+    assert.equal((await post(message(503,"/refresh"))).status,200);
+    assert.equal(reads,2);
+    assert.match(sent.at(-1).payload.text,/Reported 2 remaining/);
+    assert.equal((await post(callback(504,"t:refresh-code:DPNIHH"))).status,200);
+    assert.equal(reads,3);
+    assert.match(sent.filter(x=>x.name==="sendMessage").at(-1).payload.text,/Reported 3 remaining/);
+    assert.equal(calls.submit.length,0);
+    assert.equal(calls.report.length,0);
+  },{browseCodes:async()=>{
+    reads++;
+    return [{code:"DPNIHH",status:"unverified",remaining:reads,usageReportedAt:"2026-11-15"}];
+  }});
+});
+
 test("OCI bot defaults to English and retains an explicit Japanese override",async()=>{
   await withApp(async({post,sent,dir})=>{
     const vi={...message(600,"/start")};
@@ -238,13 +263,15 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
     assert.equal((await post(vi)).status,200);
     assert.match(sent.at(-1).payload.text,/Bạn đến đây để làm gì/);
     const welcome=sent.at(-1).payload.reply_markup.keyboard;
-    assert.deepEqual(welcome.map(x=>x.length),[1,1,1]);
+    assert.deepEqual(welcome.map(x=>x.length),[1,1,1,1]);
+    assert.equal(welcome[3][0],"🔄 Làm mới");
     assert.equal(welcome[0][0],"🙋 Tôi cần mã");
     assert.equal(welcome[1][0],"🤝 Tôi muốn chia sẻ mã");
 
     assert.equal((await post(callback(701,"t:role:seeker"))).status,200);
     const seeker=sent.at(-1).payload.reply_markup.keyboard.flat();
-    assert.equal(seeker.length,9);
+    assert.equal(seeker.length,10);
+    assert.ok(seeker.includes("🔄 Làm mới"));
     assert.ok(seeker.includes("🎟 Nhận mã"));
     assert.ok(seeker.includes("🙋 Cần mã"));
     assert.ok(seeker.includes("🔄 Đổi vai trò"));

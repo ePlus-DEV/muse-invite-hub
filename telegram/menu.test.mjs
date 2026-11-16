@@ -34,13 +34,18 @@ function fixture() {
   return {run,profiles,messages,data,calls};
 }
 
-test("fixed 3-by-3 reply keyboard exposes nine usable entries",()=>{
-  assert.equal(MENU.length,3);
-  assert.deepEqual(MENU.map(row=>row.length),[3,3,3]);
+test("persistent keyboard retains all nine core actions plus a distinct Refresh row",()=>{
+  assert.equal(MENU.length,4);
+  assert.deepEqual(MENU.map(row=>row.length),[3,3,3,1]);
   assert.equal(MENU.flat().length,new Set(MENU.flat()).size);
   assert.equal(REPLY_KEYBOARD.is_persistent,true);
   assert.equal(REPLY_KEYBOARD.keyboard[0][0],"🎟 Get codes");
   assert.equal(MENU[0][0],"🎟 Get codes");
+  assert.equal(MENU[3][0],"🔄 Refresh");
+  assert.equal(parseCommand("🔄 Refresh").type,"refresh");
+  assert.equal(parseCommand("🔄 Làm mới").type,"refresh");
+  assert.equal(parseCommand("🔄 更新").type,"refresh");
+  assert.equal(parseCommand("/refresh").type,"refresh");
   assert.equal(parseCommand("🎟 Nhận mã").type,"browse");
   assert.equal(parseCommand("/subscribe").type,"subscribe");
   assert.equal(parseCommand("/watchlist").type,"watchlist");
@@ -59,6 +64,7 @@ test("Telegram copy-text button is native and code actions are private callbacks
   assert.deepEqual(payload.inline_keyboard[0][0].copy_text,{text:"DPNIHH"});
   assert.equal(payload.inline_keyboard[0][0].url,undefined);
   assert.equal(payload.inline_keyboard[1][0].callback_data,"t:watch:DPNIHH");
+  assert.equal(payload.inline_keyboard[2][0].callback_data,"t:refresh-code:DPNIHH");
   const callback=(data)=>parseUpdate({update_id:10,callback_query:{
     id:"id",from:{id:42},message:{chat:{type:"private",id:42}},data
   }});
@@ -66,6 +72,9 @@ test("Telegram copy-text button is native and code actions are private callbacks
   assert.equal(callback("t:pick:DPNIHH:worked").type,"confirm-report");
   assert.equal(callback("t:sub:on").type,"subscribe");
   assert.equal(callback("t:erase:confirm").type,"delete-confirm");
+  assert.deepEqual(
+    {type:callback("t:refresh-code:DPNIHH").type,code:callback("t:refresh-code:DPNIHH").code},
+    {type:"refresh-code",code:"DPNIHH"});
   assert.match(codeDescription({code:"DPNIHH",status:"unverified",remaining:null}),/Not reported/);
   assert.throws(()=>codeDescription({code:"BAD"}),/Invalid/);
 });
@@ -107,6 +116,30 @@ test("menu supports browse, get, watch, notification preference, deletion",async
   assert.match(f.messages.at(-1).text,/NOT delete public GitHub Issues/);
   await handleInteractive({action:{type:"delete-confirm",chatId:42},...f.calls});
   assert.deepEqual(await f.profiles.get(42),emptyProfile());
+});
+
+test("Refresh fetches the latest catalog again without creating pending submissions",async()=>{
+  const f=fixture();
+  let reads=0;
+  f.calls.services.browseCodes=async()=>{
+    reads++;
+    return [{code:"DPNIHH",status:"unverified",remaining:reads,
+      usageReportedAt:"2026-11-15"}];
+  };
+  await f.run("➕ Đóng góp");
+  assert.equal((await f.profiles.get(42)).pending.type,"submit");
+  assert.equal((await f.run("🔄 Refresh")).action.type,"refresh");
+  assert.equal((await f.profiles.get(42)).pending,null,
+    "Refresh cancels stale text entry so a later code is not submitted accidentally");
+  assert.equal(reads,1);
+  assert.match(f.messages.at(-1).text,/Reported 1 remaining/);
+  assert.equal((await f.run("/refresh")).action.type,"refresh");
+  assert.equal(reads,2);
+  assert.match(f.messages.at(-1).text,/Reported 2 remaining/);
+  assert.equal(f.messages.at(-1).buttons[2][0].data,"t:refresh-code:DPNIHH");
+  assert.equal(await handleInteractive({action:{type:"refresh-code",chatId:42,code:"DPNIHH"},...f.calls}),true);
+  assert.equal(reads,3);
+  assert.match(f.messages.at(-1).text,/Reported 3 remaining/);
 });
 
 test("private chat history tracks Issue links but never asserts ownership",async()=>{

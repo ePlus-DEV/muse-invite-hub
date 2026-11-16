@@ -90,6 +90,31 @@ test("submit and report are explicitly confirmed, then sent to GitHub once", asy
   for (const id of [10, 11, 12, 13]) assert.equal(await state.has(id), true);
 });
 
+test("Worker Refresh fetches current catalog and has no public write side effects",async()=>{
+  const env=makeEnv();
+  let reads=0;
+  const {deps,sent,calls}=makeDeps({browseCodes:async()=>{
+    reads++;
+    return [{code:"DPNIHH",status:"unverified",remaining:reads,usageReportedAt:"2026-11-15"}];
+  }});
+  assert.equal((await handleWebhookRequest(webhook(message(300,"/start")),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
+  assert.equal((await handleWebhookRequest(webhook(callback(301,"t:role:contributor")),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
+  assert.equal((await handleWebhookRequest(webhook(message(302,"🔄 Refresh")),env,deps)).status,200);
+  assert.equal(reads,1);
+  assert.match(sent.at(-1).payload.text,/Reported 1 remaining/);
+  assert.equal((await handleWebhookRequest(webhook(message(303,"/refresh")),env,deps)).status,200);
+  assert.equal(reads,2);
+  assert.match(sent.at(-1).payload.text,/Reported 2 remaining/);
+  assert.equal((await handleWebhookRequest(webhook(callback(304,"t:refresh-code:DPNIHH")),env,deps)).status,200);
+  assert.equal(reads,3);
+  assert.match(sent.filter(x=>x.name==="sendMessage").at(-1).payload.text,/Reported 3 remaining/);
+  assert.equal(calls.submit.length,0);
+  assert.equal(calls.report.length,0);
+  assert.equal(await env.BOT_STATE.get("rl:42"),null,"Refreshing must not use public-write quota");
+});
+
 test("worker status and privacy are read-only",async()=>{
   const env=makeEnv();
   const {deps,sent,calls}=makeDeps();
