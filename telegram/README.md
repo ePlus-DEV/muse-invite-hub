@@ -180,8 +180,9 @@ GitHub Issues and moderation flows are not translated or weakened.
 ## Choose your purpose on first start
 
 On the first `/start`, the bot no longer presents every contribution and
-consumer action at once. It asks what the user needs, with a three-row
-**intent** selector (translated into Vietnamese, English and Japanese):
+consumer action at once. It asks what the user needs, with an **intent**
+selector and a separate Refresh button (translated into English, Vietnamese
+and Japanese):
 
 - **🙋 I need a code:** A 3×3 reader menu for Browse codes, New codes, Search,
   Need a code, opt-in Alerts, Watchlist, Report, Settings and Switch role.
@@ -193,6 +194,15 @@ consumer action at once. It asks what the user needs, with a three-row
   code, My submissions from this Telegram chat, Check review/publication status,
   New codes, Browse, Report, Alerts, Settings and Switch role. Public GitHub
   submissions still require an explicit confirmation and human review.
+
+- **🔄 Refresh** (also `/refresh`): a dedicated fourth row below the original
+  nine role-menu actions, available on onboarding and both roles. Fetches the
+  latest five published community codes again, newest first. Each displayed
+  code card also has **🔄 Refresh** to reload just that code. Refresh is
+  read-only: it never opens GitHub Issues, submits feedback, redeems codes,
+  opts in to alerts or changes a role/language. It dismisses an unfinished
+  text-entry prompt to avoid accidental submissions. It does **not** verify
+  Muse redemption or guarantee that self-reported invite counts are live.
 
 This is **not a permission or ownership role**. Users can change their
 preferred menu with **🔄 Switch role**, `/role`, or the corresponding button
