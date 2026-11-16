@@ -30,15 +30,29 @@ test("map page and homepage retain the same five documented launch markets", () 
     assert.ok(home.includes('datetime="' + date + '"'));
     assert.ok(page.includes('datetime="' + date + '"'));
   }
-  assert.ok(page.includes('datetime="2026-11-14"'));
+  assert.ok(page.includes('datetime="2026-11-16"'));
   assert.match(page, /Countries without a confirmed announcement are not necessarily blocked/);
   assert.match(page, /Availability ≠ eligibility/);
   assert.ok(!/guaranteed access|live availability|globally available/i.test(page));
 });
 
+test("country recheck date and source list remain synchronized", () => {
+  const guide=read("docs/PROJECT_GUIDE.md");
+  const readme=read("README.md");
+  assert.ok(home.includes("5 confirmed markets · 1 press-reported · Updated 16 Nov 2026"));
+  assert.ok(home.includes('As of <time datetime="2026-11-16">16 Nov 2026</time>'));
+  assert.ok(page.includes('Last reviewed <time datetime="2026-11-16">16 Nov 2026</time>'));
+  assert.ok(page.includes("Updated 16 Nov 2026"));
+  assert.ok(readme.includes("as rechecked 16 November 2026"));
+  assert.ok(guide.includes("As rechecked 16 November 2026"));
+  assert.equal(guide.split("# Project guide — Muse Invite Hub").length-1,1);
+  assert.ok(guide.includes("`^[A-Z0-9]{6}$`"));
+  assert.ok(guide.includes("UK timing remains press-reported and not an official announcement"));
+});
+
 test("press-reported UK is clearly separate from officially confirmed rollout", () => {
   const source = "https://www.thetimes.com/business/technology/article/mark-zuckerbergs-muse-ai-assistant-uk-launch-c5srqnkb8";
-  assert.match(home, /5 confirmed markets · 1 press-reported · Updated 14 Nov 2026/);
+  assert.match(home, /5 confirmed markets · 1 press-reported · Updated 16 Nov 2026/);
   assert.match(home, /availability-expected-label/);
   assert.match(home, /No official launch date or availability/);
   assert.ok(home.includes(source));
