@@ -15,6 +15,31 @@ export const AUTO_MERGE_BLOCK_LABEL = "do-not-merge";
 export const AUTO_MERGE_DEFAULT_AUTHOR = "hoangsvit";
 export const AUTO_MERGE_MAX_DOC_FILES = 15;
 
+// A transient GitHub merge error can arrive after GitHub committed the squash.
+// Never retry the merge blindly; re-read the exact PR/head first.
+export function isTransientMergeError(status) {
+  return [500,502,503,504].includes(status);
+}
+
+export function confirmedMergeAfterError(pr, expectedHeadSha) {
+  return pr?.merged === true && pr?.base?.ref === "main" &&
+    pr?.head?.sha === expectedHeadSha &&
+    /^[a-f0-9]{40}$/.test(pr?.merge_commit_sha || "");
+}
+
+// The 15-minute trusted schedule heals missed GITHUB_TOKEN merge dispatches,
+// but must not run Pages repeatedly while a deploy is active or just failed.
+export function shouldDispatchPagesRecovery(runs, nowMs=Date.now()) {
+  if (!Array.isArray(runs) || !Number.isFinite(nowMs)) return false;
+  const active = new Set(["requested","waiting","pending","queued","in_progress"]);
+  if (runs.some(run => run?.conclusion === "success" || active.has(run?.status))) return false;
+  return !runs.some(run => {
+    const created = Date.parse(run?.created_at || "");
+    return Number.isFinite(created) && created <= nowMs &&
+      nowMs - created < 5 * 60 * 1000;
+  });
+}
+
 export function qualifiesForDefaultAutoMerge(pr, files=[]) {
   if (login(pr?.user) !== AUTO_MERGE_DEFAULT_AUTHOR) return false;
   if (!Number.isSafeInteger(pr?.changed_files) ||

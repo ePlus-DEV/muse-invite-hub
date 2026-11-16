@@ -53,7 +53,8 @@ jobs:
           script: |
             const { autoMergeDecision, verifyNewGithubInvitePR, verifyNewSocialInvitePR,
               ciHasPassed, getMaintainerAuthorization, qualifiesForDefaultAutoMerge,
-              needsEplusBotReview } = await import(
+              needsEplusBotReview, isTransientMergeError,
+              confirmedMergeAfterError, shouldDispatchPagesRecovery } = await import(
               process.env.GITHUB_WORKSPACE + "/scripts/auto-merge.mjs"
             );
             const { readCatalog } = await import(
@@ -78,6 +79,26 @@ jobs:
               return;
             }
             const event = context.eventName;
+            // GitHub's GITHUB_TOKEN-initiated merges suppress push events.
+            // On schedule, recover a Pages dispatch lost to an HTTP 502 or
+            // action failure, without resubmitting a successful deployment.
+            if (event === "schedule") {
+              try {
+                const pagesRuns = await github.rest.actions.listWorkflowRuns({
+                  owner,repo,workflow_id:"pages.yml",
+                  head_sha:checkedOutMain,per_page:30
+                });
+                if (shouldDispatchPagesRecovery(pagesRuns.data.workflow_runs)) {
+                  await github.rest.actions.createWorkflowDispatch({
+                    owner,repo,workflow_id:"pages.yml",ref:"main"
+                  });
+                  core.info("Recovery: dispatched Pages for main " + checkedOutMain +
+                    " because no successful or active deploy exists at this SHA.");
+                }
+              } catch (error) {
+                core.warning("Scheduled Pages recovery failed: " + error.message);
+              }
+            }
 
             // In issue_comment and PR events, scan only the relevant PR.
             // In workflow_run, restrict to the completed validation head.
@@ -353,11 +374,42 @@ jobs:
                   merge_method:"squash"
                 });
               } catch (error) {
-                if ([403,405,409,422].includes(error.status)) {
+                if (isTransientMergeError(error.status)) {
+                  // GitHub may return 502 even though it has already merged.
+                  // Never issue a second PUT blindly: check the exact PR/head.
+                  core.warning("PR #" + number + " merge API returned HTTP " +
+                    error.status + "; checking the committed merge state.");
+                  for (let attempt=0;attempt<3;attempt++) {
+                    try {
+                      const verified=(await github.rest.pulls.get({
+                        owner,repo,pull_number:number
+                      })).data;
+                      if (confirmedMergeAfterError(verified,decision.sha)) {
+                        merged={data:{merged:true,sha:verified.merge_commit_sha}};
+                        core.info("PR #" + number +
+                          " merged on GitHub despite the API error.");
+                        break;
+                      }
+                      if (verified.state === "closed" && !verified.merged) break;
+                    } catch (verifyError) {
+                      core.warning("Could not recheck PR #" + number +
+                        ": " + verifyError.message);
+                    }
+                    if (attempt<2) {
+                      await new Promise(resolve=>setTimeout(resolve,1200));
+                    }
+                  }
+                  if (!merged) {
+                    core.warning("Cannot confirm PR #" + number +
+                      " merge; scheduled Pages reconciliation will recover if needed.");
+                    continue;
+                  }
+                } else if ([403,405,409,422].includes(error.status)) {
                   core.warning("PR #" + number + " could not merge: " + error.message);
                   continue;
+                } else {
+                  throw error;
                 }
-                throw error;
               }
               if (!merged.data.merged) {
                 core.warning("PR #" + number + " merge was not accepted.");
@@ -365,11 +417,18 @@ jobs:
               }
               // A merge authored by GITHUB_TOKEN does not trigger the usual
               // push-triggered Pages workflow. Dispatch trusted Pages explicitly.
-              await github.rest.actions.createWorkflowDispatch({
-                owner,repo,workflow_id:"pages.yml",ref:"main"
-              });
-              core.info("ePlus Bot: merged PR #" + number +
-                " and dispatched trusted production deployment.");
+              try {
+                await github.rest.actions.createWorkflowDispatch({
+                  owner,repo,workflow_id:"pages.yml",ref:"main"
+                });
+                core.info("ePlus Bot: merged PR #" + number +
+                  " and dispatched trusted production deployment.");
+              } catch (error) {
+                // The merge is real; do not report a failed merge or lose
+                // recovery when GitHub's dispatch endpoint is unavailable.
+                core.warning("PR #" + number + " was merged, but Pages dispatch " +
+                  "failed: " + error.message + ". The scheduled reconciler will retry.");
+              }
               // Main moved. Never merge another PR in the same run without
               // fresh mergeability and CI evaluation.
               break;
