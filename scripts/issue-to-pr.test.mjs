@@ -522,3 +522,47 @@ test("new Issue code parser rejects non-six-character and hyphenated invites",()
   const p=planIssueChange(issue(601,"[Invite]",normalized),[]);
   assert.equal(p.code,"AB12C3");
 });
+
+test("Issue #208: explicit no-social explanation and unknown Muse quotas are absent data", () => {
+  const input = updatedShare("GitHub (my own code)",
+    "_No social source; this is my own referral code._")
+    .replace("18I70N", "FQH1S7")
+    .replace("### Uses so far (optional; self-reported)\n\n_No response_",
+      "### Uses so far (optional; self-reported)\n\n_Not currently verified from the Muse invite screen._")
+    .replace("### Invite limit (optional; self-reported)\n\n_No response_",
+      "### Invite limit (optional; self-reported)\n\n_Not currently verified from the Muse invite screen._")
+    .replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+      "### Remaining invites (optional; self-reported)\n\n_Not currently verified from the Muse invite screen._")
+    .replace("### Public confirmation or context (optional)\n\n_No response_",
+      "### Public confirmation or context (optional)\n\nhttps://muse.ai/join");
+  const original = issue(208, "[Invite] FQH1S7", input, "zhou04009-prog");
+  original.user.id=334235946;
+  const result=planIssueChange(original, [item]);
+  assert.equal(result.outcome, "proposal");
+  assert.equal(result.action, "add");
+  assert.equal(result.branch, "auto/issue-208-invite");
+  const entry=result.data.find(x=>x.code==="FQH1S7");
+  assert.equal(entry?.submittedBy, "zhou04009-prog");
+  assert.equal(entry?.submittedById, 334235946);
+  assert.equal(entry?.feedbackIssueNumber, 208);
+  assert.equal(entry?.status, "unverified");
+  assert.equal(entry?.sourceUrl, undefined);
+  assert.equal(entry?.reportedCapacity, undefined);
+  assert.equal(entry?.reportedUses, undefined);
+  assert.equal(entry?.reportedRemaining, undefined);
+  assert.deepEqual(validateCatalog(result.data), []);
+});
+
+test("GitHub-own social URL still cannot be smuggled as an absence statement", () => {
+  for (const description of [
+    "No social source; https://x.com/person/status/123",
+    "Found on Threads without a URL", "https://www.threads.com/@user/post/123"
+  ]) {
+    const input=updatedShare("GitHub (my own code)",description);
+    assert.equal(planIssueChange(issue(209, "[Invite]", input),[item]).outcome, "needs-review");
+  }
+  const invalidQuota=updatedShare("GitHub (my own code)").replace(
+    "### Invite limit (optional; self-reported)\n\n_No response_",
+    "### Invite limit (optional; self-reported)\n\nabout 30");
+  assert.throws(()=>planIssueChange(issue(209,"[Invite]",invalidQuota),[item]),/integer/);
+});
