@@ -70,11 +70,18 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
       return true;
     case "browse": await list();return true;
     case "newest": await list("",true);return true;
+    case "refresh":
+      // A refresh is read-only, but ends any unfinished text-entry prompt to
+      // prevent a subsequent code from accidentally starting a submission.
+      if(profile.pending)await mutateProfile(profiles,chatId,p=>{p.pending=null;return p;});
+      await list("",true); // Always fetch the current published catalog.
+      return true;
     case "prompt-search": await prompt("search","promptSearch");return true;
     case "prompt-submit": await prompt("submit","promptSubmit");return true;
     case "prompt-report": await prompt("report","promptReport");return true;
     case "prompt-status": await prompt("status","statusPrompt");return true;
     case "search": await list(action.query);return true;
+    case "refresh-code":
     case "get": {
       const entries=await services.browseCodes({query:code,limit:50});
       const entry=entries.find(x=>x.code===code);
