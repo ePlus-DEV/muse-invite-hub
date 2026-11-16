@@ -1,10 +1,13 @@
 /* Localized Telegram keyboards; callback values remain stable across languages. */
 import { LOCALES, MENU_KEYS, ENTRY_MENU_KEYS, ROLE_MENU_KEYS, menuText, tr } from "./i18n.mjs";
 export const MENU = MENU_KEYS.map(row=>row.map(key=>menuText("en",key)));
+export const MINI_APP_URL="https://muse.eplus.dev/telegram-app/";
 export function replyKeyboard(language="en",role="legacy") {
   const layout=role===null?ENTRY_MENU_KEYS:ROLE_MENU_KEYS[role]||MENU_KEYS;
   return {
-    keyboard:layout.map(row=>row.map(key=>menuText(language,key))),
+    keyboard:layout.map(row=>row.map(key=>key==="openApp"?
+      {text:menuText(language,key),web_app:{url:MINI_APP_URL+"?lang="+
+        (LOCALES.includes(language)?language:"en")}}:menuText(language,key))),
     resize_keyboard:true,
     is_persistent:true,
     one_time_keyboard:false,
@@ -23,7 +26,7 @@ for(const lang of LOCALES){
         notifications:"notifications",watchlist:"watchlist",settings:"settings",
         need:"need-code",status:"prompt-status",roleSwitch:"choose-role",
         roleSeeker:"set-role-seeker",roleContributor:"set-role-contributor",
-        languageButton:"choose-language",refresh:"refresh"
+        languageButton:"choose-language",refresh:"refresh",openApp:"open-app"
       }[key];
       actions.set(menuText(lang,key),type);
     }
