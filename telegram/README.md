@@ -1,5 +1,9 @@
 # Oracle Cloud Always Free ARM64 — Telegram Bot deployment
 
+> **Alternative hosting:** the same bot also runs on Cloudflare Workers
+> (`worker.mjs`, no VM required) — see [WORKERS.md](WORKERS.md). The review
+> and privacy rules in section 7 below apply to both runtimes.
+
 Invite codes in `/submit` and `/report` are exactly 6 letters (A–Z) or digits (0–9), without hyphens; lowercase input is normalized. A valid format does not establish that Muse accepts the code.
 
 Use this **same repository**: GitHub Pages continues to serve muse.eplus.dev and its catalog; an OCI Ampere A1 VM runs the optional Telegram Bot/API. No Workers, Render, Vercel or second repository are needed. Merging code does **not** create any cloud resources or configure a real Telegram bot.

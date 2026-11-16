@@ -1,0 +1,120 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { handleWebhookRequest, createKvState } from "./worker.mjs";
+
+const token = "123456789012345678901234567890";
+const secret = "0123456789abcdef0123456789abcdef";
+const read = (name) => readFileSync(new URL(name, import.meta.url), "utf8");
+
+class FakeKv {
+  constructor() { this.map = new Map(); }
+  async get(key) { return this.map.has(key) ? this.map.get(key) : null; }
+  async put(key, value) { this.map.set(key, value); }
+}
+
+function makeEnv(kv = new FakeKv()) {
+  return {
+    TELEGRAM_BOT_TOKEN: token,
+    TELEGRAM_WEBHOOK_SECRET: secret,
+    GITHUB_ISSUES_TOKEN: "issue-token-test",
+    BOT_STATE: kv
+  };
+}
+
+function makeDeps(services = {}) {
+  const sent = [], calls = { submit: [], report: [] };
+  const defaults = {
+    listRecentCodes: async () => ["DPNIHH", "TEST42"],
+    submitNewCode: async (...args) => { calls.submit.push(args); return { kind: "submitted", url: "https://github.com/ePlus-DEV/muse-invite-hub/issues/90" }; },
+    submitFeedback: async (...args) => { calls.report.push(args); return { kind: "reported", url: "https://github.com/ePlus-DEV/muse-invite-hub/issues/14" }; }
+  };
+  return {
+    sent, calls,
+    deps: {
+      telegramApi: async (name, payload) => sent.push({ name, payload }),
+      services: { ...defaults, ...services }
+    }
+  };
+}
+
+const webhook = (update, override = {}) => new Request("https://bot.example.com/telegram/webhook", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "X-Telegram-Bot-Api-Secret-Token": secret, ...override },
+  body: typeof update === "string" ? update : JSON.stringify(update)
+});
+const message = (id, text) => ({ update_id: id, message: { text, from: { id: 42, is_bot: false }, chat: { id: 42, type: "private" } } });
+const callback = (id, data) => ({ update_id: id, callback_query: { id: "cb-" + id, data, from: { id: 42 }, message: { chat: { id: 42, type: "private" } } } });
+
+test("worker checks method, path, JSON and constant-time shared secret", async () => {
+  const env = makeEnv();
+  const { deps } = makeDeps();
+  assert.equal((await handleWebhookRequest(new Request("https://bot.example.com/healthz"), env, deps)).status, 200);
+  assert.equal((await handleWebhookRequest(new Request("https://bot.example.com/telegram/webhook"), env, deps)).status, 404);
+  assert.equal((await handleWebhookRequest(webhook(message(1, "/start"), { "X-Telegram-Bot-Api-Secret-Token": "totally-wrong-secret" }), env, deps)).status, 403);
+  assert.equal((await handleWebhookRequest(webhook(message(1, "/start"), { "Content-Type": "text/plain" }), env, deps)).status, 415);
+  assert.equal((await handleWebhookRequest(webhook({ update_id: "bad" }), env, deps)).status, 400);
+  assert.equal((await handleWebhookRequest(webhook("x".repeat(33 * 1024)), env, deps)).status, 413);
+  assert.equal((await handleWebhookRequest(webhook(message(1, "/start")), env, deps)).status, 200);
+  const unconfigured = makeEnv();
+  delete unconfigured.GITHUB_ISSUES_TOKEN;
+  assert.equal((await handleWebhookRequest(webhook(message(2, "/start")), unconfigured, deps)).status, 500);
+});
+
+test("submit and report are explicitly confirmed, then sent to GitHub once", async () => {
+  const env = makeEnv();
+  const { deps, sent, calls } = makeDeps();
+  assert.equal((await handleWebhookRequest(webhook(message(10, "/submit TEST42")), env, deps)).status, 200);
+  assert.equal(calls.submit.length, 0, "Typing a code must not create a public Issue without consent");
+  assert.match(sent.at(-1).payload.text, /PUBLIC GitHub Issue/);
+  assert.equal((await handleWebhookRequest(webhook(callback(11, "t:submit:TEST42")), env, deps)).status, 200);
+  assert.equal(calls.submit.length, 1);
+  assert.deepEqual(calls.submit[0], ["TEST42", 11, "issue-token-test"]);
+  assert.equal((await handleWebhookRequest(webhook(callback(11, "t:submit:TEST42")), env, deps)).status, 200);
+  assert.equal(calls.submit.length, 1, "Repeated Telegram delivery is idempotent via KV dedup");
+  assert.equal((await handleWebhookRequest(webhook(message(12, "/report DPNIHH worked")), env, deps)).status, 200);
+  assert.equal(calls.report.length, 0);
+  assert.equal((await handleWebhookRequest(webhook(callback(13, "t:report:DPNIHH:worked")), env, deps)).status, 200);
+  assert.equal(calls.report.length, 1);
+  assert.deepEqual(calls.report[0], ["DPNIHH", "worked", 13, "issue-token-test"]);
+  const state = createKvState(env.BOT_STATE);
+  for (const id of [10, 11, 12, 13]) assert.equal(await state.has(id), true);
+});
+
+test("processing failures return 503 so Telegram can retry, without recording success", async () => {
+  const env = makeEnv();
+  let fail = true, attempts = 0;
+  const { deps, sent } = makeDeps({
+    submitNewCode: async () => {
+      attempts++;
+      if (fail) { fail = false; throw Error("Temporary upstream outage"); }
+      return { kind: "submitted", url: "https://github.com/ePlus-DEV/muse-invite-hub/issues/90" };
+    }
+  });
+  const update = callback(90, "t:submit:CODE12");
+  assert.equal((await handleWebhookRequest(webhook(update), env, deps)).status, 503);
+  assert.equal((await handleWebhookRequest(webhook(update), env, deps)).status, 200);
+  assert.equal(attempts, 2);
+  assert.match(sent.at(-1).payload.text, /Submitted a public GitHub Issue/);
+});
+
+test("per-chat write rate limit allows 8 writes per hour, then refuses", async () => {
+  const env = makeEnv();
+  const { deps, sent } = makeDeps();
+  for (let i = 0; i < 8; i++) {
+    assert.equal((await handleWebhookRequest(webhook(callback(100 + i, "t:submit:CODE12")), env, deps)).status, 200);
+  }
+  assert.equal((await handleWebhookRequest(webhook(callback(200, "t:submit:CODE12")), env, deps)).status, 200);
+  assert.match(sent.at(-1).payload.text, /Too many submissions/);
+});
+
+test("worker sources keep secrets out of the repository and reuse the review-only GitHub flow", () => {
+  const worker = read("worker.mjs");
+  const wrangler = read("wrangler.toml");
+  assert.match(worker, /crypto\.subtle\.digest/);
+  assert.match(worker, /BOT_STATE/);
+  assert.match(worker, /MAX_BODY = 32 \* 1024/);
+  assert.doesNotMatch(worker, /api\.telegram\.org\/bot\d+:/);
+  assert.doesNotMatch(wrangler, /TELEGRAM_BOT_TOKEN\s*=\s*"/);
+  assert.doesNotMatch(wrangler, /GITHUB_ISSUES_TOKEN\s*=\s*"/);
+});
