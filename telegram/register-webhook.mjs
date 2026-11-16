@@ -1,3 +1,5 @@
+import { BOT_COMMANDS } from "./bot.mjs";
+
 /* Run manually AFTER Caddy HTTPS is reachable:
  * docker compose exec -T telegram-bot node telegram/register-webhook.mjs
  */
@@ -22,4 +24,14 @@ const response=await fetch("https://api.telegram.org/bot"+token+"/setWebhook",{
 if(!response.ok)throw Error("Telegram webhook registration HTTP "+response.status);
 const result=await response.json();
 if(result.ok!==true)throw Error("Telegram rejected webhook registration");
-console.log("Telegram webhook registered:",endpoint);
+// Keep the Telegram command picker consistent with the private-chat bot.
+const commandsResponse=await fetch("https://api.telegram.org/bot"+token+"/setMyCommands",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({commands:BOT_COMMANDS,scope:{type:"all_private_chats"}}),
+  signal:AbortSignal.timeout(15000)
+});
+if(!commandsResponse.ok)throw Error("Telegram command registration HTTP "+commandsResponse.status);
+const commandsResult=await commandsResponse.json();
+if(commandsResult.ok!==true)throw Error("Telegram rejected bot command menu");
+console.log("Telegram webhook and private-chat commands registered:",endpoint);

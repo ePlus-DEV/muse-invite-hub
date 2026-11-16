@@ -9,6 +9,8 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for contributor instructions, [AGENTS.
 ```mermaid
 flowchart TD
     A["Visitor on muse.eplus.dev"] --> B{"Is this code already published?"}
+    TG["Telegram /submit CODE (confirm public Issue)"] --> TGI["Review-only GitHub Issue; no owner identity"]
+    TGI --> R
     B -->|"No, new code"| C["Share Code GitHub Issue Form"]
     B -->|"Yes"| D["Code directory or detail"]
     D --> E["Give feedback / Worked / Didn't work / Update count"]

@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parseCommand, parseUpdate } from "./bot.mjs";
+import { parseCommand, parseUpdate, BOT_COMMANDS, formatCodeStatus } from "./bot.mjs";
+import { getCodeStatus } from "./github.mjs";
 import { createTelegramApp } from "./server.mjs";
 
 const token="123456789012345678901234567890";
@@ -24,6 +25,14 @@ test("Telegram commands accept only public code patterns and known report outcom
   assert.equal(parseCommand("/submit ../secret").type,"usage-submit");
   assert.equal(parseCommand("/count").type,"count");
   assert.equal(parseCommand("/codes").type,"codes");
+  assert.deepEqual(parseCommand("/status dpnihh"),{type:"status",code:"DPNIHH"});
+  assert.deepEqual(parseCommand("/code dpnihh"),{type:"status",code:"DPNIHH"});
+  assert.equal(parseCommand("/status DPNIH").type,"usage-status");
+  assert.equal(parseCommand("/status DPNIHH EXTRA").type,"usage-status");
+  assert.equal(parseCommand("/privacy").type,"privacy");
+  assert.equal(parseCommand("/cancel").type,"cancel");
+  assert.equal(BOT_COMMANDS.length,8);
+  assert.equal(new Set(BOT_COMMANDS.map(x=>x.command)).size,BOT_COMMANDS.length);
   assert.equal(parseCommand("/start@MuseBot").type,"help");
   assert.equal(parseCommand("x".repeat(400)).type,"help");
   assert.equal(parseUpdate({update_id:1,message:{chat:{id:123,type:"group"},from:{is_bot:false},
@@ -43,6 +52,8 @@ async function withApp(run,services={}) {
   const sent=[],calls={submit:[],report:[]};
   const defaults={
     listRecentCodes:async()=>["DPNIHH","TEST42"],
+    getCodeStatus:async code=>({kind:"listed",status:"unverified",reportedRemaining:23,
+      usageReportedAt:"2026-11-15",url:"https://muse.eplus.dev/codes/"+code+"/"}),
     submitNewCode:async(...args)=>{calls.submit.push(args);return {kind:"submitted",url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/90"};},
     submitFeedback:async(...args)=>{calls.report.push(args);return {kind:"reported",url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/14"};}
   };
@@ -69,7 +80,7 @@ async function withApp(run,services={}) {
 const message=(id,text)=>({update_id:id,message:{text,from:{id:42,is_bot:false},
   chat:{id:42,type:"private"}}});
 const callback=(id,data)=>({update_id:id,callback_query:{id:"cb-"+id,data,
-  from:{id:42},message:{chat:{id:42,type:"private"}}}});
+  from:{id:42},message:{message_id:id+100,chat:{id:42,type:"private"}}}});
 
 test("webhook checks method, path, JSON and constant-time shared secret",async()=>{
   await withApp(async({origin,post})=>{
@@ -90,6 +101,8 @@ test("submit and report are explicitly confirmed, then sent to GitHub once",asyn
     assert.equal((await post(callback(11,"t:submit:TEST42"))).status,200);
     assert.equal(calls.submit.length,1);
     assert.deepEqual(calls.submit[0],["TEST42",11,"issue-token-test"]);
+    assert.equal(sent.at(-1).name,"editMessageReplyMarkup");
+    assert.deepEqual(sent.at(-1).payload.reply_markup,{inline_keyboard:[]});
     assert.equal((await post(callback(11,"t:submit:TEST42"))).status,200);
     assert.equal(calls.submit.length,1,"Repeated Telegram delivery is idempotent");
     assert.equal((await post(message(12,"/report DPNIHH worked"))).status,200);
@@ -112,6 +125,48 @@ test("submit and report are explicitly confirmed, then sent to GitHub once",asyn
     await new Promise(resolve=>restarted.close(resolve));
   });
 });
+test("code status and privacy are informational in the Node webhook",async()=>{
+  await withApp(async({post,sent,calls})=>{
+    assert.equal((await post(message(30,"/status DPNIHH"))).status,200);
+    assert.match(sent.at(-1).payload.text,/23 \(as of 2026-11-15; not live\)/);
+    assert.match(sent.at(-1).payload.text,/Unverified/);
+    assert.equal((await post(message(31,"/status ABCDE"))).status,200);
+    assert.match(sent.at(-1).payload.text,/exactly 6/);
+    assert.equal((await post(message(32,"/privacy"))).status,200);
+    assert.match(sent.at(-1).payload.text,/PUBLIC GitHub Issue/);
+    assert.equal(calls.submit.length,0);
+    assert.equal(calls.report.length,0);
+  });
+});
+
+test("GitHub code status distinguishes published, pending, closed and unknown",async()=>{
+  const original=globalThis.fetch;
+  const entries=[{code:"DPNIHH",status:"unverified",reportedCapacity:30,
+    reportedUses:7,usageReportedAt:"2026-11-15"}];
+  try {
+    globalThis.fetch=async url=>{
+      const u=String(url);
+      const value=u.includes("/data/invites.json")?entries:
+        u.includes("/issues?")?[
+          {title:"[Telegram submission] TEST42",
+            body:"<!-- muse-telegram-submission:TEST42 -->",state:"open",html_url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/42"},
+          {title:"[Telegram submission] CLOSED",
+            body:"<!-- muse-telegram-submission:CLOSED -->",state:"closed",html_url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/43"}
+        ]:[];
+      return new Response(JSON.stringify(value),{status:200});
+    };
+    const listed=await getCodeStatus("DPNIHH","test-token");
+    assert.equal(listed.kind,"listed");
+    assert.equal(listed.reportedRemaining,23);
+    assert.match(formatCodeStatus("DPNIHH",listed),/not live/);
+    const pending=await getCodeStatus("TEST42","test-token");
+    assert.equal(pending.kind,"pending");
+    assert.match(formatCodeStatus("TEST42",pending),/not published yet/);
+    assert.equal((await getCodeStatus("CLOSED","test-token")).kind,"closed");
+    assert.equal((await getCodeStatus("UNSEEN","test-token")).kind,"unknown");
+  } finally {globalThis.fetch=original;}
+});
+
 test("processing failures return 503 so Telegram can retry, without recording success",async()=>{
   let fail=true,attempts=0;
   await withApp(async({post,sent})=>{
@@ -119,7 +174,7 @@ test("processing failures return 503 so Telegram can retry, without recording su
     assert.equal((await post(update)).status,503);
     assert.equal((await post(update)).status,200);
     assert.equal(attempts,2);
-    assert.match(sent.at(-1).payload.text,/Submitted a public GitHub Issue/);
+    assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/Submitted a public GitHub Issue/);
   },{
     submitNewCode:async()=>{
       attempts++;

@@ -26,6 +26,8 @@ function makeDeps(services = {}) {
   const sent = [], calls = { submit: [], report: [] };
   const defaults = {
     listRecentCodes: async () => ["DPNIHH", "TEST42"],
+    getCodeStatus: async code => ({kind:"listed",status:"unverified",reportedRemaining:23,
+      usageReportedAt:"2026-11-15",url:"https://muse.eplus.dev/codes/"+code+"/"}),
     submitNewCode: async (...args) => { calls.submit.push(args); return { kind: "submitted", url: "https://github.com/ePlus-DEV/muse-invite-hub/issues/90" }; },
     submitFeedback: async (...args) => { calls.report.push(args); return { kind: "reported", url: "https://github.com/ePlus-DEV/muse-invite-hub/issues/14" }; }
   };
@@ -44,7 +46,7 @@ const webhook = (update, override = {}) => new Request("https://bot.example.com/
   body: typeof update === "string" ? update : JSON.stringify(update)
 });
 const message = (id, text) => ({ update_id: id, message: { text, from: { id: 42, is_bot: false }, chat: { id: 42, type: "private" } } });
-const callback = (id, data) => ({ update_id: id, callback_query: { id: "cb-" + id, data, from: { id: 42 }, message: { chat: { id: 42, type: "private" } } } });
+const callback = (id, data) => ({ update_id: id, callback_query: { id: "cb-" + id, data, from: { id: 42 }, message: { message_id: id+100, chat: { id: 42, type: "private" } } } });
 
 test("worker checks method, path, JSON and constant-time shared secret", async () => {
   const env = makeEnv();
@@ -70,6 +72,8 @@ test("submit and report are explicitly confirmed, then sent to GitHub once", asy
   assert.equal((await handleWebhookRequest(webhook(callback(11, "t:submit:TEST42")), env, deps)).status, 200);
   assert.equal(calls.submit.length, 1);
   assert.deepEqual(calls.submit[0], ["TEST42", 11, "issue-token-test"]);
+  assert.equal(sent.at(-1).name,"editMessageReplyMarkup");
+  assert.deepEqual(sent.at(-1).payload.reply_markup,{inline_keyboard:[]});
   assert.equal((await handleWebhookRequest(webhook(callback(11, "t:submit:TEST42")), env, deps)).status, 200);
   assert.equal(calls.submit.length, 1, "Repeated Telegram delivery is idempotent via KV dedup");
   assert.equal((await handleWebhookRequest(webhook(message(12, "/report DPNIHH worked")), env, deps)).status, 200);
@@ -79,6 +83,17 @@ test("submit and report are explicitly confirmed, then sent to GitHub once", asy
   assert.deepEqual(calls.report[0], ["DPNIHH", "worked", 13, "issue-token-test"]);
   const state = createKvState(env.BOT_STATE);
   for (const id of [10, 11, 12, 13]) assert.equal(await state.has(id), true);
+});
+
+test("worker status and privacy are read-only",async()=>{
+  const env=makeEnv();
+  const {deps,sent,calls}=makeDeps();
+  assert.equal((await handleWebhookRequest(webhook(message(30,"/status DPNIHH")),env,deps)).status,200);
+  assert.match(sent.at(-1).payload.text,/23 \(as of 2026-11-15; not live\)/);
+  assert.equal((await handleWebhookRequest(webhook(message(31,"/privacy")),env,deps)).status,200);
+  assert.match(sent.at(-1).payload.text,/PUBLIC GitHub Issue/);
+  assert.equal(calls.submit.length,0);
+  assert.equal(calls.report.length,0);
 });
 
 test("processing failures return 503 so Telegram can retry, without recording success", async () => {
@@ -95,7 +110,7 @@ test("processing failures return 503 so Telegram can retry, without recording su
   assert.equal((await handleWebhookRequest(webhook(update), env, deps)).status, 503);
   assert.equal((await handleWebhookRequest(webhook(update), env, deps)).status, 200);
   assert.equal(attempts, 2);
-  assert.match(sent.at(-1).payload.text, /Submitted a public GitHub Issue/);
+  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text, /Submitted a public GitHub Issue/);
 });
 
 test("per-chat write rate limit allows 8 writes per hour, then refuses", async () => {
@@ -105,7 +120,7 @@ test("per-chat write rate limit allows 8 writes per hour, then refuses", async (
     assert.equal((await handleWebhookRequest(webhook(callback(100 + i, "t:submit:CODE12")), env, deps)).status, 200);
   }
   assert.equal((await handleWebhookRequest(webhook(callback(200, "t:submit:CODE12")), env, deps)).status, 200);
-  assert.match(sent.at(-1).payload.text, /Too many submissions/);
+  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text, /Too many submissions/);
 });
 
 test("worker sources keep secrets out of the repository and reuse the review-only GitHub flow", () => {

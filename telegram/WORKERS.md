@@ -58,13 +58,16 @@ TELEGRAM_BOT_TOKEN=… TELEGRAM_WEBHOOK_SECRET=… \
 
 This calls `setWebhook` for `https://<BOT_DOMAIN>/telegram/webhook` with the
 secret-token header, `max_connections=1` and `allowed_updates` for
-message/callback_query. A custom domain (e.g. `bot.muse.eplus.dev`) can be
+message/callback_query, then registers the private-chat command menu via `setMyCommands`. A custom domain (e.g. `bot.muse.eplus.dev`) can be
 attached later as a Workers custom domain; re-run this step after changing it.
 
 ## 6. Test in a private chat
 
 - `/start` — help
 - `/codes` — latest published codes
+- `/status DPNIHH` — published or pending Issue status and dated **not-live** invite counts
+- `/privacy` — public GitHub reporting/privacy rules
+- `/cancel` — cancel an inline confirmation
 - `/submit DPNIHH` — confirmation prompt, then a **listed** result (no duplicate Issue)
 - `/report DPNIHH worked` — confirmation prompt. **Only confirm a genuine attempt**,
   because doing so writes a public comment.

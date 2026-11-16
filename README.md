@@ -47,7 +47,7 @@ The Telegram bot is an **optional**, separate Node.js 24 webhook service for an 
 
 - [Telegram deployment guide](telegram/README.md) — VM, Docker Compose, DNS, BotFather, HTTPS and private credentials.
 - [Manual ARM64 image workflow](.github/workflows/telegram-oci-image.yml) — build and publish to GHCR from trusted `main`; it never provisions or deploys the VM.
-- Telegram's `/submit` and `/report` requests use the **existing GitHub Issue/comment discussion queue**, require user confirmation and **remain human-reviewed**. They do not establish GitHub code ownership and cannot bypass the website's separate GitHub-owned new-code auto-publish safeguards.
+- Telegram supports `/submit CODE`, `/report CODE worked|failed`, `/status CODE` for published/pending review, `/codes`, `/privacy` and `/cancel`. BotFather lists these commands in private chats. `/submit` and `/report` use the **existing GitHub Issue/comment discussion queue**, require user confirmation and **remain human-reviewed**. They do not establish GitHub code ownership and cannot bypass the website's separate GitHub-owned new-code auto-publish safeguards.
 
 This repository does not provision a Telegram bot account, Oracle VM, domain name or runtime secrets.
 

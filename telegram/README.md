@@ -6,7 +6,7 @@
 
 Invite codes in `/submit` and `/report` are exactly 6 letters (A–Z) or digits (0–9), without hyphens; lowercase input is normalized. A valid format does not establish that Muse accepts the code.
 
-Use this **same repository**: GitHub Pages continues to serve muse.eplus.dev and its catalog; an OCI Ampere A1 VM runs the optional Telegram Bot/API. No Workers, Render, Vercel or second repository are needed. Merging code does **not** create any cloud resources or configure a real Telegram bot.
+Use this **same repository**: GitHub Pages continues to serve muse.eplus.dev and its catalog; an OCI Ampere A1 VM can run the Telegram Bot/API. Cloudflare Workers is an alternative runtime (see WORKERS.md); you need only one runtime and one webhook. Merging code does **not** create any cloud resources or configure a real Telegram bot.
 
 ## 1. Provision OCI A1 + DNS
 
@@ -100,12 +100,15 @@ cd ~/muse-invite-hub/telegram
 sudo docker compose --env-file .env exec -T telegram-bot node telegram/register-webhook.mjs
 ~~~
 
-This calls setWebhook with the HTTPS hostname and secret token header, max_connections=1 and allowed_updates for message/callback_query. No polling, cron or hourly GitHub Action is required.
+This calls setWebhook with the HTTPS hostname and secret token header, max_connections=1 and allowed_updates for message/callback_query, then registers the private-chat command menu through setMyCommands. No polling, cron or hourly GitHub Action is required.
 
 Test your bot via private chat:
 
 - /start — help
 - /codes — latest published codes
+- /status DPNIHH — published status, dated self-reported remaining count or pending Issue (**not live Muse verification**)
+- /privacy — what is shared publicly in GitHub and what remains private
+- /cancel — cancel a confirmation (or press Cancel under the prompt)
 - /submit DPNIHH — confirmation prompt, then a **listed** result (no duplicate Issue)
 - /report DPNIHH worked — confirmation prompt. **Only confirm if reporting a genuine attempt**, because doing so writes a public comment.
 - /count DPNIHH — explains that GitHub-verified ownership is required for counts.
@@ -118,7 +121,7 @@ Test your bot via private chat:
 
 **Owner count:** /count redirects to the website's verified GitHub owner flow. Telegram username or numeric ID never proves code ownership. The bot does not store Telegram identity in public GitHub Issues.
 
-Bot update IDs persist to disk across reboots; reports include deduplication markers. Temporary processing failures return HTTP 503 for Telegram retries. A minimal per-chat rate limit prevents unbounded public Issue creation.
+Bot update IDs persist to disk across reboots; reports include deduplication markers. Confirmation buttons are removed after the result is delivered, reducing accidental repeat submissions; GitHub markers remain the final safeguard. Temporary processing failures return HTTP 503 for Telegram retries. A minimal per-chat rate limit prevents unbounded public Issue creation.
 
 ## 8. Updating and recovery
 
