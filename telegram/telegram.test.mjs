@@ -174,7 +174,7 @@ test("processing failures return 503 so Telegram can retry, without recording su
     assert.equal((await post(update)).status,503);
     assert.equal((await post(update)).status,200);
     assert.equal(attempts,2);
-    assert.match(sent.at(-1).payload.text,/Submitted a public GitHub Issue/);
+    assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/Submitted a public GitHub Issue/);
   },{
     submitNewCode:async()=>{
       attempts++;
