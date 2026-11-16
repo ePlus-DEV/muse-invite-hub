@@ -103,13 +103,6 @@ export async function handleInteractive({action,profiles,send,sendMenu,services,
         [{text:msg("backMenu"),data:"t:home"}]
       ]);
       return true;
-    case "open-app":
-      // Normally Telegram launches the web_app keyboard directly. Keep an
-      // HTTPS fallback if a user types or forwards the launcher label.
-      await send(chatId,"✨ "+menuText(language,"openApp"),[
-        [{text:menuText(language,"openApp"),url:"https://muse.eplus.dev/telegram-app/?lang="+language}]
-      ]);
-      return true;
     case "browse": await list();return true;
     case "newest": await list("",true);return true;
     case "refresh": await list("",true);return true;
