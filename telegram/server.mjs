@@ -8,6 +8,7 @@ import { replyKeyboard } from "./menu.mjs";
 import { handleLegacy } from "./legacy.mjs";
 import { resolveInput, handleInteractive } from "./conversation.mjs";
 import { cleanProfile, syncTelegramLocale } from "./profiles.mjs";
+import { tr } from "./i18n.mjs";
 import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus, browseCodes } from "./github.mjs";
 
 const SITE="https://muse.eplus.dev";
@@ -51,6 +52,8 @@ export function createTelegramApp({
   const handled=new Set(processed);
   const profiles=fileProfiles(dataDir);
   const strikes=new Map();
+  const ratedUpdates=new Set();
+  const notifiedFailures=new Set();
   let queue=Promise.resolve();
   const call=telegramApi || (async (method,payload)=>{
     const response=await fetch("https://api.telegram.org/bot"+token+"/"+method,{
@@ -73,39 +76,68 @@ export function createTelegramApp({
       chat_id:chatId,text,disable_web_page_preview:true,reply_markup:replyKeyboard(language,role)
     });
   }
-  function allowWrite(chatId) {
+  function allowWrite(chatId,updateId) {
+    if(ratedUpdates.has(updateId))return true; // A retry of one Telegram update is not a new submission.
     const now=Date.now();
     const recent=(strikes.get(chatId)||[]).filter(value=>now-value<3600000);
     if(recent.length>=8){strikes.set(chatId,recent);return false;}
     recent.push(now);
     strikes.set(chatId,recent);
+    if(Number.isSafeInteger(updateId)) {
+      ratedUpdates.add(updateId);
+      if(ratedUpdates.size>1000)ratedUpdates.delete(ratedUpdates.values().next().value);
+    }
     return true;
   }
   async function handle(update){
     let action=parseUpdate(update);
     if(!action)return;
     const chatId=action.chatId;
-    if(action.callbackId){
-      await call("answerCallbackQuery",{callback_query_id:action.callbackId});
-    }
-    if(action.type!=="private-only")
-      await syncTelegramLocale(profiles,chatId,action.telegramLanguage);
-    action=await resolveInput(action,profiles);
-    if(await handleInteractive({action,profiles,send,sendMenu,services,githubToken}))return;
-    async function complete(message) {
-      await send(chatId,message);
-      if(action.callbackId&&action.messageId) {
-        // Best-effort UI cleanup. GitHub idempotency prevents duplicate writes.
-        try { await call("editMessageReplyMarkup",{
-          chat_id:chatId,message_id:action.messageId,reply_markup:{inline_keyboard:[]}
-        }); } catch { /* UI error must never retry a successful GitHub write. */ }
+    try {
+      if(action.type!=="private-only")
+        await syncTelegramLocale(profiles,chatId,action.telegramLanguage);
+      if(action.callbackId){
+        const language=(await profiles.get(chatId)).language||"en";
+        const key=action.type==="submit"?"submitProcessing":
+          action.type==="report"?"reportProcessing":null;
+        try {
+          await call("answerCallbackQuery",{
+            callback_query_id:action.callbackId,
+            ...(key?{text:tr(language,key)}:{})
+          });
+        } catch { /* Expired callback answers should not block a GitHub write. */ }
       }
+      action=await resolveInput(action,profiles);
+      if(await handleInteractive({action,profiles,send,sendMenu,services,githubToken}))return;
+      async function complete(message) {
+        await send(chatId,message);
+        if(action.callbackId&&action.messageId) {
+          // Best-effort UI cleanup. GitHub idempotency prevents duplicate writes.
+          try { await call("editMessageReplyMarkup",{
+            chat_id:chatId,message_id:action.messageId,reply_markup:{inline_keyboard:[]}
+          }); } catch { /* UI error must never retry a successful GitHub write. */ }
+        }
+      }
+      return await handleLegacy({
+        action,profiles,send,complete,services,githubToken,
+        allowWrite:async id=>allowWrite(id,action.updateId)
+      });
+    } catch(error) {
+      if(action.callbackId&&["submit","report"].includes(action.type)&&
+          !notifiedFailures.has(action.updateId)) {
+        try {
+          const language=(await profiles.get(chatId)).language||"en";
+          await send(chatId,tr(language,
+            action.type==="submit"?"submitUncertain":"reportUncertain",{code:action.code}));
+          notifiedFailures.add(action.updateId);
+          if(notifiedFailures.size>1000)
+            notifiedFailures.delete(notifiedFailures.values().next().value);
+        } catch { /* Preserve the original failure for Telegram retries. */ }
+      }
+      throw error;
     }
-    return handleLegacy({
-      action,profiles,send,complete,services,githubToken,
-      allowWrite:async id=>allowWrite(id)
-    });
   }
+
   function mark(updateId){
     if(handled.has(updateId))return;
     processed.push(updateId);

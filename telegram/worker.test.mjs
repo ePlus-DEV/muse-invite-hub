@@ -118,6 +118,57 @@ test("processing failures return 503 so Telegram can retry, without recording su
   assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text, /Submitted a public GitHub Issue/);
 });
 
+test("submit callback shows progress; two failures notify once and retries do not exhaust rate limits", async () => {
+  const env=makeEnv();
+  let attempts=0;
+  const {deps,sent}=makeDeps({
+    submitNewCode:async()=>{
+      attempts++;
+      if(attempts<=2)throw Error("Temporary GitHub failure");
+      return {kind:"submitted",url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/90"};
+    }
+  });
+  const update=callback(240,"t:submit:CODE12");
+  for(let i=0;i<2;i++){
+    assert.equal((await handleWebhookRequest(webhook(update),env,deps)).status,503);
+  }
+  const answers=sent.filter(x=>x.name==="answerCallbackQuery");
+  assert.match(answers[0].payload.text,/Sending your code/);
+  const notices=sent.filter(x=>x.name==="sendMessage"&&
+    x.payload.text.includes("Could not confirm the result for CODE12"));
+  assert.equal(notices.length,1,"Retryable errors must not flood the chat");
+  assert.equal(JSON.parse(await env.BOT_STATE.get("rl:42")).length,1,
+    "Retrying the same update must not consume extra hourly write slots");
+  assert.equal((await handleWebhookRequest(webhook(update),env,deps)).status,200);
+  assert.equal(attempts,3);
+  assert.equal(await env.BOT_STATE.get("upd:240"),"1");
+  assert.match(sent.filter(x=>x.name==="sendMessage").at(-1).payload.text,/Submitted a public GitHub Issue/);
+});
+
+test("expired Telegram callback acknowledgement still submits to GitHub", async () => {
+  const env=makeEnv();
+  const {deps,sent,calls}=makeDeps();
+  const sendApi=deps.telegramApi;
+  deps.telegramApi=async(method,payload)=>{
+    if(method==="answerCallbackQuery")throw Error("Telegram callback expired");
+    return sendApi(method,payload);
+  };
+  assert.equal((await handleWebhookRequest(webhook(callback(241,"t:submit:CODE12")),env,deps)).status,200);
+  assert.equal(calls.submit.length,1);
+  assert.match(sent.find(x=>x.name==="sendMessage").payload.text,/Submitted a public GitHub Issue/);
+});
+
+test("feedback failures explain uncertain status without posting duplicate reports", async () => {
+  const env=makeEnv();
+  const {deps,sent}=makeDeps({submitFeedback:async()=>{throw Error("GitHub temporarily unavailable");}});
+  const update=callback(242,"t:report:DPNIHH:worked");
+  assert.equal((await handleWebhookRequest(webhook(update),env,deps)).status,503);
+  assert.equal((await handleWebhookRequest(webhook(update),env,deps)).status,503);
+  assert.equal(sent.filter(x=>x.name==="sendMessage"&&
+    x.payload.text.includes("Could not confirm the feedback for DPNIHH")).length,1);
+  assert.equal(await env.BOT_STATE.get("upd:242"),null);
+});
+
 test("per-chat write rate limit allows 8 writes per hour, then refuses", async () => {
   const env = makeEnv();
   const { deps, sent } = makeDeps();
