@@ -115,6 +115,32 @@ test("Worker Refresh fetches current catalog and has no public write side effect
   assert.equal(await env.BOT_STATE.get("rl:42"),null,"Refreshing must not use public-write quota");
 });
 
+test("Worker paging and code details are navigable without GitHub writes",async()=>{
+  const env=makeEnv(),sentMessages=[];
+  const items=Array.from({length:8},(_,i)=>({
+    code:"PAGE"+String(i).padStart(2,"0"),status:"unverified",
+    remaining:i,usageReportedAt:"2026-11-15",addedAt:"2026-11-14",platform:"GitHub"
+  }));
+  const {deps,sent,calls}=makeDeps({browseCodes:async({offset=0,limit=6,query=""})=>
+    items.filter(x=>!query||x.code.includes(query)).slice(offset,offset+limit)});
+  assert.equal((await handleWebhookRequest(webhook(message(310,"/codes")),env,deps)).status,200);
+  assert.equal(sent.filter(x=>x.name==="sendMessage").length,1);
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:PAGE00");
+  assert.equal((await handleWebhookRequest(webhook(callback(311,"t:page:1")),env,deps)).status,200);
+  assert.match(sent.at(-1).payload.text,/Page 2/);
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:PAGE05");
+  assert.equal((await handleWebhookRequest(webhook(callback(312,"t:detail:PAGE05")),env,deps)).status,200);
+  assert.match(sent.at(-1).payload.text,/Platform: GitHub/);
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.at(-1)[0].callback_data,"t:back-list");
+  assert.equal((await handleWebhookRequest(webhook(callback(313,"t:back-list")),env,deps)).status,200);
+  assert.match(sent.at(-1).payload.text,/Page 2/);
+  assert.equal((await handleWebhookRequest(webhook(callback(314,"t:home")),env,deps)).status,200);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
+  assert.equal(calls.submit.length,0);
+  assert.equal(calls.report.length,0);
+  assert.equal(await env.BOT_STATE.get("rl:42"),null);
+});
+
 test("worker status and privacy are read-only",async()=>{
   const env=makeEnv();
   const {deps,sent,calls}=makeDeps();
