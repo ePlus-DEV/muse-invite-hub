@@ -1,0 +1,12 @@
+# Cloudflare Workers deployment for the Telegram bot (see WORKERS.md).
+# Secrets are NEVER stored here; set them with `wrangler secret put`.
+name = "muse-invite-hub-telegram"
+main = "worker.mjs"
+compatibility_date = "2025-11-01"
+
+# Durable update-ID deduplication + per-chat rate-limit state.
+# Create the namespace once and replace the id below:
+#   npx wrangler kv namespace create BOT_STATE
+[[kv_namespaces]]
+binding = "BOT_STATE"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
