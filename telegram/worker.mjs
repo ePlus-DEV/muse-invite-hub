@@ -9,8 +9,8 @@
  * - github.mjs keeps its own idempotency markers as a second layer.
  * Secrets arrive only as Worker secrets (env), never from repository files.
  */
-import { parseUpdate, keyboard } from "./bot.mjs";
-import { listRecentCodes, submitNewCode, submitFeedback } from "./github.mjs";
+import { parseUpdate, keyboard, formatCodeStatus } from "./bot.mjs";
+import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus } from "./github.mjs";
 
 const SITE = "https://muse.eplus.dev";
 const MAX_BODY = 32 * 1024;
@@ -56,7 +56,7 @@ export function createKvState(kv) {
   };
 }
 
-export function createBotHandler({ token, githubToken, telegramApi, services = { listRecentCodes, submitNewCode, submitFeedback } }) {
+export function createBotHandler({ token, githubToken, telegramApi, services = { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus } }) {
   const call = telegramApi || (async (method, payload) => {
     const response = await fetch("https://api.telegram.org/bot" + token + "/" + method, {
       method: "POST",
@@ -80,6 +80,14 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
     if (action.callbackId) {
       await call("answerCallbackQuery", { callback_query_id: action.callbackId });
     }
+    async function complete(message) {
+      await send(chatId,message);
+      if(action.callbackId&&action.messageId) {
+        try { await call("editMessageReplyMarkup",{
+          chat_id:chatId,message_id:action.messageId,reply_markup:{inline_keyboard:[]}
+        }); } catch { /* UI cleanup failure must not repost GitHub feedback. */ }
+      }
+    }
     switch (type) {
       case "private-only":
         return send(chatId, "Please open this bot in a private chat to protect your reports.");
@@ -88,10 +96,13 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
           "✦ Muse Invite Hub — community invite directory",
           "",
           "/codes — browse recent public invite codes",
+          "/status CODE — published status or pending review",
           "/submit CODE — suggest a new public invite code",
           "/report CODE worked — report a successful try",
           "/report CODE failed — report an unsuccessful try",
           "/count CODE — owner-only count update guidance",
+          "/privacy — what becomes public",
+          "/cancel — cancel an action",
           "",
           "Reports require confirmation and are reviewed on GitHub.",
           "Never share passwords, one-time login codes or private links."
@@ -105,6 +116,18 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
             [{ text: "Browse and copy codes", url: SITE + "/#codes" }]
           ]);
       }
+      case "status": {
+        const entry=await services.getCodeStatus(code,githubToken);
+        return send(chatId,formatCodeStatus(code,entry),[[{text:"Browse directory",url:SITE+"/#codes"}]]);
+      }
+      case "usage-status":
+        return send(chatId,"Use /status CODE with exactly 6 letters or digits, e.g. /status DPNIHH.");
+      case "privacy":
+        return send(chatId,"Only send public Muse invite codes and genuine redemption feedback. "+
+          "After confirmation, a PUBLIC GitHub Issue/comment contains the code and report, "+
+          "but not your Telegram username or account ID. Moderators review all Telegram submissions. "+
+          "Do not send passwords, one-time codes, private links or personal data. "+
+          "Your Telegram identity does not prove code ownership.");
       case "count":
         return send(chatId, "Owner-only quota changes require a verified GitHub account. " +
           "Telegram identity is not proof of ownership. Open your listing and choose Update count.",
@@ -129,19 +152,19 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
           [{ text: "Confirm public report", data: "t:report:" + code + ":" + result }],
           [{ text: "Cancel", data: "t:cancel" }]
         ]);
-      case "cancel": return send(chatId, "Cancelled. No information was submitted.");
+      case "cancel": return complete("Cancelled. No information was submitted.");
       case "submit": {
-        if (!(await state.allowWrite(chatId))) return send(chatId, "Too many submissions. Try again later.");
+        if (!(await state.allowWrite(chatId))) return complete("Too many submissions. Try again later.");
         const outcome = await services.submitNewCode(code, updateId, githubToken);
         const message = {
           listed: "This code is already in the published directory.",
           pending: "A Telegram contribution Issue already exists; no duplicate was created.",
           submitted: "Submitted a public GitHub Issue for human review. This does not publish or verify the code."
         }[outcome.kind] || "Please review this code's status.";
-        return send(chatId, message + "\n" + outcome.url);
+        return complete(message + "\n" + outcome.url);
       }
       case "report": {
-        if (!(await state.allowWrite(chatId))) return send(chatId, "Too many reports. Try again later.");
+        if (!(await state.allowWrite(chatId))) return complete("Too many reports. Try again later.");
         const outcome = await services.submitFeedback(code, result, updateId, githubToken);
         const message = {
           unknown: "This code is not currently in the published catalog.",
@@ -149,7 +172,7 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
           "already-reported": "This Telegram report was already received; no duplicate was posted.",
           reported: "Added feedback to the code's existing GitHub Issue for human review. No Muse status changed."
         }[outcome.kind] || "Please review this code's status.";
-        return send(chatId, message + "\n" + outcome.url);
+        return complete(message + "\n" + outcome.url);
       }
     }
   };
