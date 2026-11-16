@@ -4,6 +4,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "
 import { fileURLToPath } from "node:url";
 import { resolve, join } from "node:path";
 import { parseUpdate, keyboard, formatCodeStatus } from "./bot.mjs";
+import { notificationResponse, NOTIFY_PATH } from "./notifications.mjs";
+import { makeNodeNotifyState } from "./notify-oci.mjs";
 import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus } from "./github.mjs";
 
 const SITE="https://muse.eplus.dev";
@@ -15,7 +17,7 @@ function constantTimeEqual(actual,expected) {
   return one.length===two.length&&timingSafeEqual(one,two);
 }
 export function createTelegramApp({
-  token,secret,githubToken,dataDir="/data",
+  token,secret,githubToken,notifySecret=process.env.TELEGRAM_NOTIFY_SECRET,dataDir="/data",
   telegramApi,services={listRecentCodes,submitNewCode,submitFeedback,getCodeStatus}
 }) {
   if(typeof token!=="string"||token.length<20||
@@ -30,6 +32,7 @@ export function createTelegramApp({
     processed=disk.slice(-1000);
   }
   const handled=new Set(processed);
+  const notifyState=makeNodeNotifyState(dataDir);
   const strikes=new Map();
   let queue=Promise.resolve();
   const call=telegramApi || (async (method,payload)=>{
@@ -176,6 +179,30 @@ export function createTelegramApp({
     if(req.url==="/healthz"&&req.method==="GET"){
       res.writeHead(200,{"Content-Type":"application/json"});
       return res.end('{"status":"ok"}');
+    }
+    if(req.url===NOTIFY_PATH&&req.method==="POST"){
+      if(!notifySecret){res.writeHead(503);return res.end("notifications not configured");}
+      let body;
+      try{
+        const chunks=[];let bytes=0;
+        for await(const chunk of req){
+          bytes+=chunk.length;
+          if(bytes>4096){res.writeHead(413);return res.end();}
+          chunks.push(chunk);
+        }
+        body=Buffer.concat(chunks).toString("utf8");
+      }catch{res.writeHead(400);return res.end();}
+      const request=new Request("https://telegram.internal"+NOTIFY_PATH,{
+        method:"POST",headers:req.headers,body
+      });
+      const response=await notificationResponse(request,{
+        secret:notifySecret,state:notifyState,
+        catalog:async()=> (await import("./github.mjs")).publishedCatalog(),
+        send:(chatId,text)=>call("sendMessage",{chat_id:chatId,text,disable_web_page_preview:true}),
+        logger:msg=>console.error(msg)
+      });
+      res.writeHead(response.status,{"Content-Type":response.headers.get("content-type")||"text/plain","Cache-Control":"no-store"});
+      return res.end(await response.text());
     }
     if(req.url!=="/telegram/webhook"||req.method!=="POST"){
       res.writeHead(404);return res.end();
