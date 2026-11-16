@@ -14,6 +14,7 @@ import { replyKeyboard } from "./menu.mjs";
 import { handleLegacy } from "./legacy.mjs";
 import { resolveInput, handleInteractive } from "./conversation.mjs";
 import { makeKvProfiles, syncTelegramLocale } from "./profiles.mjs";
+import { tr } from "./i18n.mjs";
 import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus, browseCodes } from "./github.mjs";
 
 const SITE = "https://muse.eplus.dev";
@@ -43,7 +44,16 @@ export function createKvState(kv) {
     async add(updateId) {
       await kv.put("upd:" + updateId, "1", { expirationTtl: DEDUP_TTL_SECONDS });
     },
-    async allowWrite(chatId) {
+    async wasFailureNotified(updateId) {
+      return (await kv.get("fail-notice:" + updateId)) !== null;
+    },
+    async markFailureNotified(updateId) {
+      await kv.put("fail-notice:" + updateId, "1", { expirationTtl: DEDUP_TTL_SECONDS });
+    },
+    async allowWrite(chatId, updateId) {
+      // Telegram can retry the SAME update after an upstream 503. Count it only once.
+      const writeKey = Number.isSafeInteger(updateId) ? "write-attempt:" + updateId : null;
+      if (writeKey && (await kv.get(writeKey)) !== null) return true;
       const key = "rl:" + chatId;
       const now = Date.now();
       let recent = [];
@@ -55,6 +65,7 @@ export function createKvState(kv) {
       if (recent.length >= RATE_MAX_WRITES) return false;
       recent.push(now);
       await kv.put(key, JSON.stringify(recent), { expirationTtl: RATE_WINDOW_MS / 1000 });
+      if (writeKey) await kv.put(writeKey, "1", { expirationTtl: DEDUP_TTL_SECONDS });
       return true;
     }
   };
@@ -86,25 +97,49 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
     let action = parseUpdate(update);
     if (!action) return;
     const chatId=action.chatId;
-    if (action.callbackId) {
-      await call("answerCallbackQuery", { callback_query_id: action.callbackId });
-    }
-    if(action.type!=="private-only")
-      await syncTelegramLocale(profiles,chatId,action.telegramLanguage);
-    action=await resolveInput(action,profiles);
-    if(await handleInteractive({action,profiles,send,sendMenu,services,githubToken}))return;
-    async function complete(message) {
-      await send(chatId,message);
-      if(action.callbackId&&action.messageId) {
-        try { await call("editMessageReplyMarkup",{
-          chat_id:chatId,message_id:action.messageId,reply_markup:{inline_keyboard:[]}
-        }); } catch { /* UI cleanup failure must not repost GitHub feedback. */ }
+    try {
+      if(action.type!=="private-only")
+        await syncTelegramLocale(profiles,chatId,action.telegramLanguage);
+      if(action.callbackId) {
+        const language=(await profiles.get(chatId)).language||"en";
+        const key=action.type==="submit"?"submitProcessing":
+          action.type==="report"?"reportProcessing":null;
+        try {
+          await call("answerCallbackQuery", {
+            callback_query_id:action.callbackId,
+            ...(key?{text:tr(language,key)}:{})
+          });
+        } catch { /* An expired callback acknowledgment must not block the GitHub operation. */ }
       }
+      action=await resolveInput(action,profiles);
+      if(await handleInteractive({action,profiles,send,sendMenu,services,githubToken}))return;
+      async function complete(message) {
+        await send(chatId,message);
+        if(action.callbackId&&action.messageId) {
+          try { await call("editMessageReplyMarkup",{
+            chat_id:chatId,message_id:action.messageId,reply_markup:{inline_keyboard:[]}
+          }); } catch { /* UI cleanup failure must not repost GitHub feedback. */ }
+        }
+      }
+      return await handleLegacy({
+        action,profiles,send,complete,services,githubToken,
+        allowWrite:id=>state.allowWrite(id,action.updateId)
+      });
+    } catch(error) {
+      if(action.callbackId&&["submit","report"].includes(action.type)) {
+        try {
+          // A failure may happen AFTER GitHub accepted a write; never claim it failed.
+          // Keep the webhook retryable, but send at most one notice per update ID.
+          if(!(await state.wasFailureNotified(action.updateId))) {
+            const language=(await profiles.get(chatId)).language||"en";
+            await send(chatId,tr(language,
+              action.type==="submit"?"submitUncertain":"reportUncertain",{code:action.code}));
+            await state.markFailureNotified(action.updateId);
+          }
+        } catch { /* Preserve the original exception for Telegram's automatic retry. */ }
+      }
+      throw error;
     }
-    return handleLegacy({
-      action,profiles,send,complete,services,githubToken,
-      allowWrite:id=>state.allowWrite(id)
-    });
   };
 }
 
