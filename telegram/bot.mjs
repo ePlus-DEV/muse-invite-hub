@@ -126,6 +126,9 @@ export function parseWebAppData(raw) {
     case "settings": return {type:"settings"};
     case "notifications": return {type:"notifications"};
     case "watchlist": return {type:"watchlist"};
+    case "language":
+      return ["en","vi","ja"].includes(value.language)
+        ?{type:"set-language",language:value.language}:{type:"choose-language"};
     default: return {type:"help"};
   }
 }
