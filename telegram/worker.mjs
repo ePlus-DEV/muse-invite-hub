@@ -10,8 +10,6 @@
  * Secrets arrive only as Worker secrets (env), never from repository files.
  */
 import { parseUpdate, keyboard, formatCodeStatus } from "./bot.mjs";
-import { notificationResponse, NOTIFY_PATH } from "./notifications.mjs";
-import { makeWorkerNotifyState } from "./notify-worker.mjs";
 import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus } from "./github.mjs";
 
 const SITE = "https://muse.eplus.dev";
@@ -196,7 +194,9 @@ export async function handleWebhookRequest(request, env, deps = {}) {
   if (url.pathname === "/healthz" && request.method === "GET") {
     return respond(200, '{"status":"ok"}', "application/json");
   }
-  if(url.pathname===NOTIFY_PATH&&request.method==="POST"){
+  if(url.pathname==="/telegram/notify"&&request.method==="POST"){
+    const {notificationResponse}=await import("./notifications.mjs");
+    const {makeWorkerNotifyState}=await import("./notify-worker.mjs");
     if(!env.BOT_STATE||!env.TELEGRAM_BOT_TOKEN)return respond(503,"notifications not configured");
     return notificationResponse(request,{
       secret:env.TELEGRAM_NOTIFY_SECRET,

@@ -1,10 +1,4 @@
 **
 !telegram/
 !telegram/Dockerfile
-!telegram/bot.mjs
-!telegram/github.mjs
-!telegram/server.mjs
-!telegram/notifications.mjs
-!telegram/notify-oci.mjs
-
-!telegram/register-webhook.mjs
+!telegram/*.mjs

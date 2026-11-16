@@ -4,8 +4,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "
 import { fileURLToPath } from "node:url";
 import { resolve, join } from "node:path";
 import { parseUpdate, keyboard, formatCodeStatus } from "./bot.mjs";
-import { notificationResponse, NOTIFY_PATH } from "./notifications.mjs";
-import { makeNodeNotifyState } from "./notify-oci.mjs";
 import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus } from "./github.mjs";
 
 const SITE="https://muse.eplus.dev";
@@ -17,7 +15,7 @@ function constantTimeEqual(actual,expected) {
   return one.length===two.length&&timingSafeEqual(one,two);
 }
 export function createTelegramApp({
-  token,secret,githubToken,notifySecret=process.env.TELEGRAM_NOTIFY_SECRET,dataDir="/data",
+  token,secret,githubToken,dataDir="/data",
   telegramApi,services={listRecentCodes,submitNewCode,submitFeedback,getCodeStatus}
 }) {
   if(typeof token!=="string"||token.length<20||
@@ -32,7 +30,6 @@ export function createTelegramApp({
     processed=disk.slice(-1000);
   }
   const handled=new Set(processed);
-  const notifyState=makeNodeNotifyState(dataDir);
   const strikes=new Map();
   let queue=Promise.resolve();
   const call=telegramApi || (async (method,payload)=>{
@@ -180,7 +177,8 @@ export function createTelegramApp({
       res.writeHead(200,{"Content-Type":"application/json"});
       return res.end('{"status":"ok"}');
     }
-    if(req.url===NOTIFY_PATH&&req.method==="POST"){
+    if(req.url==="/telegram/notify"&&req.method==="POST"){
+      const notifySecret=process.env.TELEGRAM_NOTIFY_SECRET;
       if(!notifySecret){res.writeHead(503);return res.end("notifications not configured");}
       let body;
       try{
@@ -192,7 +190,10 @@ export function createTelegramApp({
         }
         body=Buffer.concat(chunks).toString("utf8");
       }catch{res.writeHead(400);return res.end();}
-      const request=new Request("https://telegram.internal"+NOTIFY_PATH,{
+      const {notificationResponse}=await import("./notifications.mjs");
+      const {makeNodeNotifyState}=await import("./notify-oci.mjs");
+      const notifyState=makeNodeNotifyState(dataDir);
+      const request=new Request("https://telegram.internal/telegram/notify",{
         method:"POST",headers:req.headers,body
       });
       const response=await notificationResponse(request,{
