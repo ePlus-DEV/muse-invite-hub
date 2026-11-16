@@ -61,7 +61,7 @@ test("Telegram language tags auto-select and unknown locale falls back to Englis
   assert.equal(callback.language,"ja");
 });
 
-test("persist a manually chosen language and never override it from Telegram language_code",async()=>{
+test("English is the default even for Vietnamese Telegram; manual preferences persist",async()=>{
   const data=new Map();
   const storage={
     async get(id){return cleanProfile(data.get(id));},
@@ -69,14 +69,21 @@ test("persist a manually chosen language and never override it from Telegram lan
     async delete(id){data.delete(id);}
   };
   assert.deepEqual(await storage.get(42),emptyProfile());
-  assert.equal(await syncTelegramLocale(storage,42,"vi-VN"),"vi");
-  assert.equal((await storage.get(42)).language,"vi");
-  assert.equal(await syncTelegramLocale(storage,42,"ja"),"ja");
-  const manual=await storage.get(42);
-  manual.language="en";manual.languageManual=true;
-  await storage.set(42,manual);
   assert.equal(await syncTelegramLocale(storage,42,"vi-VN"),"en");
+  assert.equal((await storage.get(42)).language,"en");
+  assert.equal(await syncTelegramLocale(storage,42,"ja"),"en");
+  // Existing accounts with legacy auto-detected Vietnamese (not manual) migrate to English.
+  await storage.set(42,{language:"vi",languageManual:false});
+  assert.equal(await syncTelegramLocale(storage,42,"vi"),"en");
+  assert.equal((await storage.get(42)).language,"en");
+  // A user who explicitly chooses Vietnamese retains their preference.
+  const manual=await storage.get(42);
+  manual.language="vi";manual.languageManual=true;
+  await storage.set(42,manual);
+  assert.equal(await syncTelegramLocale(storage,42,"ja"),"vi");
   assert.equal((await storage.get(42)).languageManual,true);
+  await storage.delete(42);
+  assert.equal(await syncTelegramLocale(storage,42,"vi-VN"),"en");
 });
 
 test("publication notifications match each recipient's saved language",async()=>{
