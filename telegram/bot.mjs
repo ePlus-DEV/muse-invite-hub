@@ -1,4 +1,5 @@
 /* Telegram update parser. No GitHub credentials or public identity attribution. */
+import { menuChoice } from "./menu.mjs";
 export const CODE_PATTERN = /^[A-Z0-9]{6}$/;
 
 export const BOT_COMMANDS = [
@@ -41,10 +42,25 @@ export function formatCodeStatus(code,entry) {
 
 export function parseCommand(text) {
   if (typeof text !== "string" || text.length > 300) return {type:"help"};
+  const selected=menuChoice(text.trim());
+  if(selected)return {type:selected};
   const parts=text.trim().split(/\s+/);
   const command=(parts[0]||"").toLowerCase().replace(/@[a-z0-9_]+$/i,"");
   if (command==="/start"||command==="/help") return {type:"help"};
-  if (command==="/codes") return {type:"codes"};
+  if (command==="/codes") return {type:"browse"};
+  if (command==="/new") return {type:"newest"};
+  if (command==="/my") return {type:"my-codes"};
+  if (command==="/settings") return {type:"settings"};
+  if (command==="/watchlist") return {type:"watchlist"};
+  if (command==="/subscribe") return {type:"subscribe"};
+  if (command==="/unsubscribe") return {type:"unsubscribe"};
+  if (command==="/delete_data") return {type:"delete-data"};
+  if (command==="/watch"||command==="/unwatch"||command==="/get") {
+    const code=parts[1]?.toUpperCase()||"";
+    const kind={"/watch":"watch","/unwatch":"unwatch","/get":"get"}[command];
+    return parts.length===2&&CODE_PATTERN.test(code)?{type:kind,code}:{type:"usage-code"};
+  }
+  if (command==="/search")return parts.length>1 ? {type:"search",query:parts.slice(1).join(" ").slice(0,80)} : {type:"prompt-search"};
   if (command==="/privacy") return {type:"privacy"};
   if (command==="/cancel") return {type:"cancel"};
   if (command==="/status"||command==="/code") {
@@ -63,6 +79,7 @@ export function parseCommand(text) {
       ? {type:"confirm-report",code,result}
       : {type:"usage-report"};
   }
+  if(text.trim()&&!text.trim().startsWith("/"))return {type:"text",text:text.trim()};
   return {type:"help"};
 }
 
@@ -82,11 +99,17 @@ export function parseUpdate(update) {
       callback.message.chat.id!==callback.from.id) return null;
   const data=callback.data||"";
   const matchSubmit=/^t:submit:([A-Z0-9]{6})$/.exec(data);
+  const matchPick=/^t:pick:([A-Z0-9]{6}):(worked|failed)$/.exec(data);
+  const matchWatch=/^t:watch:([A-Z0-9]{6})$/.exec(data);
+  const matchSubscription=/^t:sub:(on|off)$/.exec(data);
   const matchReport=/^t:report:([A-Z0-9]{6}):(worked|failed)$/.exec(data);
   return {
-    type:matchSubmit?"submit":matchReport?"report":"cancel",
-    code:matchSubmit?.[1]||matchReport?.[1],
-    result:matchReport?.[2],
+    type:matchSubmit?"submit":matchReport?"report":matchPick?"confirm-report":
+      matchWatch?"watch":matchSubscription?(matchSubscription[1]==="on"?"subscribe":"unsubscribe"):
+      data==="t:watchlist"?"watchlist":data==="t:erase:ask"?"delete-data":
+      data==="t:erase:confirm"?"delete-confirm":"cancel",
+    code:matchSubmit?.[1]||matchReport?.[1]||matchPick?.[1]||matchWatch?.[1],
+    result:matchReport?.[2]||matchPick?.[2],
     chatId:callback.from.id,
     callbackId:callback.id,
     messageId:Number.isSafeInteger(callback.message?.message_id)&&callback.message.message_id>0
@@ -96,6 +119,7 @@ export function parseUpdate(update) {
 }
 export function keyboard(buttons) {
   return {inline_keyboard:buttons.map(row=>row.map(button=>({
-    text:button.text,url:button.url,callback_data:button.data
+    text:button.text,url:button.url,callback_data:button.data,
+    copy_text:button.copy_text
   })).map(button=>Object.fromEntries(Object.entries(button).filter(([,value])=>value!==undefined))))};
 }
