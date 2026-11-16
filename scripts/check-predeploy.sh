@@ -20,4 +20,5 @@ node --check scripts/reopen-code-feedback.mjs
 node --check scripts/feedback-comment-to-pr.mjs
 node --check scripts/post-preview-status.mjs
 node --check scripts/close-accepted-issues.mjs
-node --test scripts/close-accepted-issues.test.mjs
+node --test scripts/close-accepted-issues.test.mjs scripts/close-published-comment-counts.test.mjs
+node --check scripts/close-published-comment-counts.mjs
