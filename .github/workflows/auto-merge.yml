@@ -60,6 +60,9 @@ jobs:
             const { readCatalog } = await import(
               process.env.GITHUB_WORKSPACE + "/scripts/catalog.mjs"
             );
+            const { automatedSourceIssueNumber } = await import(
+              process.env.GITHUB_WORKSPACE + "/scripts/close-deleted-issue-prs.mjs"
+            );
             const { AUTO_PUBLISH_NEW_INVITE_MARKER,
               AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER } = await import(
               process.env.GITHUB_WORKSPACE + "/scripts/issue-to-pr.mjs"
@@ -139,6 +142,21 @@ jobs:
                   {owner,repo,pull_number:number,per_page:100})
               ]);
               const pr = fetched.data;
+              // A deleted canonical Issue invalidates even explicitly authorized
+              // bot data PRs; never let an orphan merge before cleanup runs.
+              const originalIssue=automatedSourceIssueNumber(pr,fullName);
+              if(originalIssue !== null){
+                try{
+                  await github.rest.issues.get({owner,repo,issue_number:originalIssue});
+                }catch(error){
+                  if(error.status===410){
+                    core.info("PR #"+number+" source Issue #"+originalIssue+
+                      " was deleted; orphan cleanup will close it.");
+                    continue;
+                  }
+                  throw error;
+                }
+              }
               let newInviteEligible = false;
               let sourceIssueNo = null;
               let sourceIssueUpdatedAt = null;
@@ -353,6 +371,17 @@ jobs:
                    !(newInviteEligible && latest.mergeable_state === "unstable"))) {
                 core.info("PR #" + number + " changed during approval; skipping.");
                 continue;
+              }
+              if (originalIssue !== null) {
+                try{
+                  await github.rest.issues.get({owner,repo,issue_number:originalIssue});
+                }catch(error){
+                  if(error.status===410){
+                    core.info("Source Issue #"+originalIssue+" was deleted before merge.");
+                    continue;
+                  }
+                  throw error;
+                }
               }
               if (sourceIssueNo !== null) {
                 const issueNow=(await github.rest.issues.get({
