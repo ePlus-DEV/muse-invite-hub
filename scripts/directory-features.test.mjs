@@ -74,7 +74,11 @@ test("compact card controls have smaller desktop proportions without shrinking m
     assert.match(rule[1], /font-weight:750/);
     assert.match(rule[1], /border-radius:10px/);
   }
-  assert.match(css,/\.directory\.container\{max-width:1360px\}/);
+  assert.match(css,/\.container\{max-width:1200px;margin-inline:auto;padding-inline:30px\}/);
+  assert.match(home,/<section class="overview container" aria-label="Community statistics">/);
+  assert.match(home,/<section class="directory container" id="codes"/);
+  assert.doesNotMatch(css,/\.directory\.container\s*\{\s*max-width:/);
+  assert.doesNotMatch(css,/\.overview\.container\s*\{\s*max-width:/);
   assert.match(css,/@media\(min-width:1081px\) and \(max-width:1279px\)\{\.cards-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}\}/);
   assert.match(css,/\.card-copy,\.card-open-invite\{min-height:44px;font-size:12px\}/);
   assert.match(css,/@media\(max-width:390px\)\{\.card-copy,\.card-open-invite\{font-size:11\.5px\}\}/);
