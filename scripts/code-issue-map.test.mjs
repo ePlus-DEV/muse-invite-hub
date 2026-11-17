@@ -4,7 +4,7 @@ import {
   issueMarker, issueCode, issueCodes, parseInviteCodes, originalIssueNumber, canonicalThreadBody,
   syncCodeIssueMap, validIssueMap, resolveExistingIssue, withCanonicalIssueRefs
 } from "./code-issue-map.mjs";
-import { feedbackCodeForIssue, shouldReopen, unrelatedReferralCode } from "./reopen-code-feedback.mjs";
+import { feedbackCodeForIssue, shouldReopen, unrelatedReferralCode, referralIssueMatches, reopenOnFeedback } from "./reopen-code-feedback.mjs";
 
 const contributor = {id:"community-issue-55",code:"IY56PP"};
 const seeded = {id:"eplus-owner-dpnihh",code:"DPNIHH"};
@@ -164,6 +164,105 @@ test("a different-language referral cannot reopen an unrelated canonical Issue",
     chinese+"\n邀请码：OTHER1",
     "I tried MIN0OF and it failed."
   ]) assert.equal(unrelatedReferralCode(content,["IY56PP"]),null);
+});
+
+test("new code from Chinese comment is deduplicated against existing Issue #224",()=>{
+  const otherIssue={number:224,title:"[Invite] MIN0OF",state:"open",
+    body:"### Invite code\n\nMIN0OF\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [x] ownership"};
+  assert.deepEqual(referralIssueMatches([oldIssue,otherIssue,{...otherIssue,pull_request:{}}],"MIN0OF"),[otherIssue]);
+  const candidate={number:226,title:"[Invite candidate] MIN0OF — confirmation required",
+    body:"<!-- muse-comment-referral-candidate:MIN0OF -->"};
+  assert.deepEqual(referralIssueMatches([candidate],"MIN0OF"),[candidate]);
+  assert.deepEqual(referralIssueMatches([candidate],"OTHER1"),[]);
+  assert.throws(()=>referralIssueMatches([oldIssue],"OTHER"),/Invalid candidate lookup/);
+});
+
+test("comment intake auto-creates only unverified tracking Issues, never an invite PR",async()=>{
+  const message="快来看看你的个人 AI 智能体 Muse 。\n邀请码：MIN0OF\nhttps://muse.ai/join";
+  const base={...oldIssue,number:55,state:"closed",body:
+    "### Invite code\n\nIY56PP\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [x] authorized"};
+  const user={login:"Wang-bbb",id:350407184,type:"User"};
+  const submitted={id:6935502783,body:message,user,issue_url:
+    "https://api.github.com/repos/ePlus-DEV/muse-invite-hub/issues/55"};
+  function setup({issues=[base],published=false,ack=false,failCreate=false,reporter=user}={}){
+    const events=[];
+    const comments=ack?[{user:{login:"github-actions[bot]"},
+      body:"<!-- muse-unrelated-referral:6935502783 -->"}]:[];
+    const source={...submitted,user:reporter};
+    const list=[...issues];
+    async function request(raw,options={}){
+      const url=new URL(raw);
+      const method=options.method||"GET";
+      const path=url.pathname.replace("/repos/ePlus-DEV/muse-invite-hub/","");
+      events.push(method+" "+path);
+      let value;
+      if(method==="GET" && path==="issues/55") value=base;
+      else if(method==="GET" && path==="issues/comments/6935502783") value=source;
+      else if(method==="GET" && path==="issues/55/comments")value=comments;
+      else if(method==="GET" && path==="issues"){
+        value=url.searchParams.get("page")==="1"?list:[];
+      } else if(method==="POST" && path==="issues"){
+        if(failCreate)return {ok:false,status:500};
+        const body=JSON.parse(options.body);
+        assert.match(body.title,/^\[Invite candidate\] MIN0OF/);
+        assert.match(body.body,/muse-comment-referral-candidate:MIN0OF/);
+        assert.match(body.body,/6935502783/);
+        assert.match(body.body,/@Wang-bbb/);
+        assert.doesNotMatch(body.body,/^\s*-\s*\[x\]/mi,"Never synthesize consent");
+        value={number:225,title:body.title,body:body.body,state:"open"};
+        list.push(value);
+      } else if(method==="POST" && path==="issues/55/comments"){
+        const body=JSON.parse(options.body).body;
+        assert.match(body,/<!-- muse-unrelated-referral:6935502783 -->/);
+        assert.match(body,/Share Code form/);
+        comments.push({user:{login:"github-actions[bot]"},body});
+        value={id:999};
+      }else throw Error("Unexpected mock request "+method+" "+path+url.search);
+      return {ok:true,status:200,json:async()=>value};
+    }
+    const catalog=published?[contributor,{id:"eplus-other-min0of",code:"MIN0OF"}]:[contributor];
+    return {request,catalog,events,comments,list};
+  }
+  async function run(m) {
+    return reopenOnFeedback({repository:"ePlus-DEV/muse-invite-hub",
+      token:"test",issueNumber:55,commentId:6935502783,
+      request:m.request,catalog:m.catalog});
+  }
+
+  const fresh=setup();
+  assert.deepEqual(await run(fresh),{
+    outcome:"redirected",issueNumber:55,code:"MIN0OF",
+    candidateIssueNumber:225,published:false
+  });
+  assert.equal(fresh.events.filter(x=>x==="POST issues").length,1);
+  assert.equal(fresh.events.filter(x=>x==="POST issues/55/comments").length,1);
+  assert.ok(!fresh.events.some(x=>x.startsWith("PATCH")));
+  assert.equal((await run(fresh)).outcome,"already-notified");
+  assert.equal(fresh.events.filter(x=>x==="POST issues").length,1);
+
+  const issue224={number:224,state:"open",title:"[Invite] MIN0OF",
+    body:"### Invite code\n\nMIN0OF\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [x] ownership"};
+  const existing=setup({issues:[base,issue224]});
+  assert.equal((await run(existing)).candidateIssueNumber,224);
+  assert.equal(existing.events.filter(x=>x==="POST issues").length,0);
+  assert.match(existing.comments[0].body,/Issue #224/);
+
+  const live=setup({published:true});
+  assert.deepEqual(await run(live),{outcome:"redirected",
+    issueNumber:55,code:"MIN0OF",candidateIssueNumber:null,published:true});
+  assert.ok(!live.events.includes("POST issues"));
+
+  const duplicate=setup({issues:[issue224,{...issue224,number:226}]});
+  assert.equal((await run(duplicate)).candidateIssueNumber,null);
+  assert.ok(!duplicate.events.includes("POST issues"));
+
+  const bot=setup({reporter:{login:"eplus-bot",type:"User",id:10}});
+  assert.equal((await run(bot)).outcome,"ignored");
+  assert.ok(!bot.events.includes("POST issues"));
+
+  const broken=setup({failCreate:true});
+  await assert.rejects(run(broken),/HTTP 500/);
+  assert.ok(!broken.events.includes("POST issues/55/comments"));
 });
 
 test("original Share Code form remains canonical even if its title is edited",()=>{
