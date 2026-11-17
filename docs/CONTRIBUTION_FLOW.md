@@ -2,7 +2,7 @@
 
 This page describes the review and publication rules of Muse Invite Hub. **Eligible new GitHub-owned codes and strict single-code public social-post reports can publish automatically as `unverified`** after guarded checks. Existing-code updates and feedback still require maintainer review. Owner-count comment completion is reconciled by the trusted Pages deployment after an approved merge, while feedback-only discussions remain open. Publishing an entry does **not** verify that Muse will accept the code or that invitations remain.
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for contributor instructions, [AGENTS.md](../AGENTS.md) for mandatory rules, and [PROJECT_GUIDE.md](PROJECT_GUIDE.md) for implementation details.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for contributor instructions, the [Telegram bot user guide](TELEGRAM_BOT_GUIDE.md) for private-chat commands and attribution, [AGENTS.md](../AGENTS.md) for mandatory rules, and [PROJECT_GUIDE.md](PROJECT_GUIDE.md) for implementation details.
 
 ## 1. Choose the right entry point
 
