@@ -331,6 +331,15 @@
     copy.setAttribute("aria-label", "Copy Muse invite code " + item.code);
     copy.append(icon("fa-regular fa-copy"), document.createTextNode(" Copy code"));
     copy.addEventListener("click", () => copyCode(item.code, copy));
+    const openInvite = el("a", "card-open-invite");
+    openInvite.href = features.museInviteUrl(item.code);
+    openInvite.target = "_blank";
+    openInvite.rel = "noopener noreferrer";
+    openInvite.dataset.tooltip = "Open the code-specific Muse link. Only Muse can confirm redemption.";
+    openInvite.setAttribute("aria-label", "Open Muse invite link for code " + item.code);
+    openInvite.append(icon("fa-solid fa-arrow-up-right-from-square"), document.createTextNode(" Open invite"));
+    const primaryActions = el("div", "card-primary-actions");
+    primaryActions.append(copy, openInvite);
     const subActions = el("div", "card-subactions");
     const details = el("a", "card-detail-link", "View details");
     details.dataset.tooltip = "See the source, report date and details for this code.";
@@ -368,7 +377,7 @@
       link.append(icon(iconName), document.createTextNode(" " + text));
       quickFeedback.append(link);
     }
-    actions.append(copy, quickFeedback, subActions);
+    actions.append(primaryActions, quickFeedback, subActions);
     card.append(head, contributor, info, actions);
     updateCopiedCard(card);
     return card;
