@@ -48,7 +48,7 @@ export function createKvState(kv) {
     async markFailureNotified(updateId) {
       await kv.put("fail-notice:" + updateId, "1", { expirationTtl: DEDUP_TTL_SECONDS });
     },
-    async allowWrite(chatId, updateId, kind) {
+    async allowWrite(chatId, updateId, kind, code) {
       // A retry must not consume a second slot, even after an upstream 503.
       const writeKey = Number.isSafeInteger(updateId) ? "write-attempt:" + updateId : null;
       if (writeKey && (await kv.get(writeKey)) !== null) return true;
@@ -60,7 +60,7 @@ export function createKvState(kv) {
       try {
         const raw=await kv.get(key);
         personal=writeDecision(raw===null?null:JSON.parse(raw),
-          {kind,updateId,now,scope:"chat"});
+          {kind,updateId,code,now,scope:"chat"});
       } catch {
         return false;
       }
@@ -145,7 +145,7 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
       }
       return await handleLegacy({
         action,profiles,send,complete,services,githubToken,
-        allowWrite:id=>state.allowWrite(id,action.updateId,action.type)
+        allowWrite:(id,code)=>state.allowWrite(id,action.updateId,action.type,code)
       });
     } catch(error) {
       if(action.callbackId&&["submit","report"].includes(action.type)) {
