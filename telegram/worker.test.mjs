@@ -256,9 +256,9 @@ test("per-chat write rate limit allows 8 reports per hour, then refuses", async 
   const env = makeEnv();
   const { deps, sent } = makeDeps();
   for (let i = 0; i < 8; i++) {
-    assert.equal((await handleWebhookRequest(webhook(callback(100 + i, "t:report:DPNIHH:worked")), env, deps)).status, 200);
+    assert.equal((await handleWebhookRequest(webhook(callback(100 + i, "t:report:REP00"+i+":worked")), env, deps)).status, 200);
   }
-  assert.equal((await handleWebhookRequest(webhook(callback(200, "t:report:DPNIHH:worked")), env, deps)).status, 200);
+  assert.equal((await handleWebhookRequest(webhook(callback(200, "t:report:REP008:worked")), env, deps)).status, 200);
   assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text, /Too many reports/);
 });
 
@@ -274,6 +274,30 @@ test("a single Telegram chat can submit at most three new codes per 24 hours", a
   assert.equal(calls.submit.length,3);
   assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/Too many submissions/);
   assert.equal(JSON.parse(await env.BOT_STATE.get("rl:42")).length,3);
+});
+
+test("same user cannot spam feedback on the same code more than once per day",async()=>{
+  const env=makeEnv();
+  const {deps,calls,sent}=makeDeps();
+  assert.equal((await handleWebhookRequest(
+    webhook(callback(500,"t:report:DPNIHH:worked")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(
+    webhook(callback(501,"t:report:DPNIHH:failed")),env,deps)).status,200);
+  assert.equal(calls.report.length,1);
+  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/Too many reports/);
+  assert.equal((await handleWebhookRequest(
+    webhook(callback(502,"t:report:ANOTHR:worked")),env,deps)).status,200);
+  assert.equal(calls.report.length,2);
+});
+
+test("global hourly budget limits mass submission across independent chats",async()=>{
+  const env=makeEnv();
+  const state=createKvState(env.BOT_STATE);
+  for(let i=0;i<20;i++){
+    assert.equal(await state.allowWrite(9000+i,1000+i,"submit","GLOB00"),true);
+  }
+  assert.equal(await state.allowWrite(9021,1021,"submit","GLOB01"),false);
+  assert.equal(JSON.parse(await env.BOT_STATE.get("rl:global:submit")).length,20);
 });
 
 test("corrupt KV rate-limit state cannot silently reset anti-spam budget",async()=>{
