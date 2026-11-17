@@ -2,7 +2,7 @@
 
 **Share the spark.** An open-source directory of community-shared [Muse](https://muse.ai/) invite codes, maintained by [ePlus.DEV](https://eplus.dev).
 
-[**Explore invite codes**](https://muse.eplus.dev/) · [**Contribute**](CONTRIBUTING.md) · [**Report an issue**](https://muse.eplus.dev/#codes)
+[**Explore invite codes**](https://muse.eplus.dev/) · [**Choose how to contribute**](https://muse.eplus.dev/#contribute) · [**Contribution guide**](CONTRIBUTING.md)
 
 [![Open Issues](https://img.shields.io/github/issues/ePlus-DEV/muse-invite-hub?label=Issues%20open&style=flat-square)](https://github.com/ePlus-DEV/muse-invite-hub/issues?q=is%3Aissue%20is%3Aopen) [![Closed Issues](https://img.shields.io/github/issues-closed/ePlus-DEV/muse-invite-hub?label=Issues%20closed&style=flat-square)](https://github.com/ePlus-DEV/muse-invite-hub/issues?q=is%3Aissue%20is%3Aclosed) [![Open PRs](https://img.shields.io/github/issues-pr/ePlus-DEV/muse-invite-hub?label=PRs%20open&style=flat-square)](https://github.com/ePlus-DEV/muse-invite-hub/pulls?q=is%3Apr%20is%3Aopen) [![Closed PRs](https://img.shields.io/github/issues-pr-closed/ePlus-DEV/muse-invite-hub?label=PRs%20closed&style=flat-square)](https://github.com/ePlus-DEV/muse-invite-hub/pulls?q=is%3Apr%20is%3Aclosed)
 
@@ -35,7 +35,8 @@ Missing confirmations or malformed fields are handled on the **existing open Iss
 
 No coding required:
 
-- [**Share an invite code**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml)
+- [**Choose a contribution channel (Telegram, GitHub or feedback)**](https://muse.eplus.dev/#contribute) — the website also shows a self-hosted QR for mobile access
+- [**Share a public invite via GitHub Form**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml)
 - [**Telegram bot user guide**](docs/TELEGRAM_BOT_GUIDE.md) — commands and public attribution requirements
 - [**Report code feedback**](https://muse.eplus.dev/#codes)
 - [**Update invite count on an existing code**](https://muse.eplus.dev/#codes)
@@ -53,7 +54,7 @@ Muse Invite Hub also has an **optional Telegram companion** for browsing invite 
 - **Privacy:** A public Telegram `@username` and profile may be shared only after confirmation. Numeric chat IDs and preferences remain private. Neither public profiles nor Issue authorship establish Muse code ownership.
 - **Anti-spam:** Submissions are rate-limited and checked against existing catalog/Issues. Deleting the canonical Issue invalidates still-open bot-generated data PRs.
 
-**Bot link:** This repository does not currently provide a verified public bot `@username` or `t.me` URL. The site links to the guide rather than guessing a bot account. You can still [share a code using GitHub](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml).
+**Bot link and QR:** The contribution section at [muse.eplus.dev/#contribute](https://muse.eplus.dev/#contribute) prioritizes Telegram, while retaining GitHub and existing-code feedback. Its downloadable, self-hosted QR points to that stable website section; it **does not** open a Telegram bot. This repository does not currently provide a verified public bot `@username` or `t.me` URL. The site links to the guide rather than guessing a bot account. You can still [share a code using GitHub](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml).
 
 **For maintainers:** Bot runtime and GitHub Pages are separate. See [Cloudflare Worker](telegram/WORKERS.md), [OCI ARM64/Docker](telegram/README.md), [Cloudflare auto-deploy](docs/TELEGRAM_CLOUDFLARE_AUTODEPLOY.md), and [publication notifications](docs/TELEGRAM_NOTIFICATIONS.md). Merging website code alone does not guarantee bot deployment. Never commit credentials or private state.
 
