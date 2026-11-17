@@ -123,8 +123,8 @@ button{cursor:pointer}
 .card-open-invite:hover{background:var(--blue-soft);border-color:var(--blue);color:var(--blue-hover)}
 .card-copy{min-height:40px;padding:8px 7px;border:1px solid var(--blue);width:100%;background:var(--blue);color:#fff;border-radius:10px;font-size:12.5px;font-weight:750;display:flex;justify-content:center;align-items:center;gap:5px;white-space:nowrap}
 .card-copy:hover,.code-card-featured .card-copy:hover{background:var(--blue-hover);border-color:var(--blue-hover);color:#fff}
-.code-card-copied:not(.code-card-featured) .card-copy{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue)}
-.code-card-copied:not(.code-card-featured) .card-copy:hover{background:#d8e8ff;border-color:var(--blue);color:var(--blue-hover)}
+.code-card-copied .card-copy{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue)}
+.code-card-copied .card-copy:hover,.code-card-copied .card-copy:focus-visible{background:#d8e8ff;border-color:var(--blue);color:var(--blue-hover)}
 .card-utility-bar{display:flex;align-items:center;justify-content:space-between;gap:7px;padding-top:10px;border-top:1px solid var(--line)}
 .card-subactions{display:grid;grid-template-columns:repeat(3,36px);align-items:center;gap:4px;min-width:0}
 .card-utility-link{width:36px;min-height:36px;display:grid;place-items:center;flex:none;border:1px solid transparent;border-radius:10px;color:var(--muted);font-size:15px;text-decoration:none;transition:background .15s,color .15s,border-color .15s}
