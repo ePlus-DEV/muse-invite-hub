@@ -127,6 +127,7 @@
       titleCode.removeAttribute?.("id");
     }
     if (title.parentElement !== intro) intro.prepend(title);
+    document.querySelector(".detail-primary > .section-kicker")?.remove?.();
     const codeDisplay = hero.querySelector(".detail-code-display") || make("div","detail-code-display");
     let visibleCode = hero.querySelector("#detail-code");
     if (!visibleCode) {
@@ -221,7 +222,9 @@
         if (element.matches?.("h2,.section-kicker")) continue;
         body.append(element);
       }
-      summary.append(mark,make("span","",headingText),caret);
+      const titleText=make("span","",headingText);
+      if (kind === "detail-instructions") titleText.id = "how-to-redeem";
+      summary.append(mark,titleText,caret);
       fold.append(summary,body);
       original.replaceWith(fold);
       return fold;
