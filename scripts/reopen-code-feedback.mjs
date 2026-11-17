@@ -1,5 +1,5 @@
 /* Trusted main-only Issue comment handler. Feedback never edits public code status. */
-import { readFileSync } from "node:fs";
+import { readFileSync, appendFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { issueCodes, issueMarker, originalIssueNumber, withCanonicalIssueRefs, REPO } from "./code-issue-map.mjs";
@@ -89,19 +89,17 @@ export async function reopenOnFeedback({
   if (comment.issue_url?.split("/").at(-1) !== String(issueNumber)) {
     return {outcome:"ignored",reason:"Comment does not belong to this Issue."};
   }
-  const foreign=unrelatedReferralCode(comment.body,issueCodes(issue));
+  // Moderate only unmistakably unrelated referral promotions (single labelled
+  // code + official Muse join URL, excluding the canonical Issue's code).
+  // Delete through trusted main; never reopen the Issue, create a candidate,
+  // assign an arbitrary contributor, or publish a catalog record from a comment.
+  const human=comment?.user?.login && comment.user.type!=="Bot" &&
+    !comment.user.login.endsWith("[bot]") && comment.user.login!=="eplus-bot";
+  const foreign=human ? unrelatedReferralCode(comment.body,issueCodes(issue)) : null;
   if (foreign && feedbackCodeForIssue(issue,entries)) {
-    const marker="<!-- muse-unrelated-referral:"+commentId+" -->";
-    const comments=await github("GET","issues/"+issueNumber+"/comments?per_page=100",token);
-    if (!comments.some(row=>["github-actions[bot]","eplus-bot"].includes(row.user?.login) &&
-        String(row.body||"").includes(marker))) {
-      await github("POST","issues/"+issueNumber+"/comments",token,{body:marker+"\n"+
-        "ℹ️ **"+foreign+"** is a separate invite code, not feedback on this Issue. "+
-        "Please submit it through the [Share Code form](https://github.com/"+REPO+
-        "/issues/new?template=share-code.yml) with the required ownership/public-sharing "+
-        "confirmations. This comment has not been added to the public catalog."});
-    }
-    return {outcome:"redirected",issueNumber,code:foreign};
+    await github("DELETE","issues/comments/"+commentId,token);
+    console.log("Removed unrelated invite promotion on Issue #"+issueNumber);
+    return {outcome:"deleted",issueNumber,code:foreign};
   }
   if (!shouldReopen(issue, comment, entries)) {
     console.log("No action: not new community feedback on a closed canonical code Issue.");
@@ -124,5 +122,8 @@ export async function reopenOnFeedback({
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  await reopenOnFeedback();
+  const result=await reopenOnFeedback();
+  // The follow-up PR proposer must not fetch a comment removed by moderation.
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT,
+    "deleted="+(result.outcome==="deleted"?"true":"false")+"\n");
 }
