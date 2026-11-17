@@ -90,6 +90,17 @@ test("submit and report are explicitly confirmed, then sent to GitHub once", asy
   for (const id of [10, 11, 12, 13]) assert.equal(await state.has(id), true);
 });
 
+test("closed Telegram contribution Issues are not reported as pending",async()=>{
+  const env=makeEnv();
+  const {deps,sent}=makeDeps({
+    submitNewCode:async()=>({kind:"closed",url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/43"})
+  });
+  assert.equal((await handleWebhookRequest(webhook(message(270,"/submit CLOSED")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(callback(271,"t:submit:CLOSED")),env,deps)).status,200);
+  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/previous Issue.*closed/i);
+  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/issues\/43/);
+});
+
 test("Worker Refresh fetches current catalog and has no public write side effects",async()=>{
   const env=makeEnv();
   let reads=0;
