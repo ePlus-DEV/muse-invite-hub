@@ -28,6 +28,7 @@
   let codes = [];
   let loadFailed = false;
   let codeIssueMap = {};
+  let feedbackCounts = null;
   function feedbackIssue(code, outcome = "other") {
     const item = codes.find(entry => entry.code === code);
     const number = features.issueNumberFor(codeIssueMap, code) ??
@@ -400,6 +401,21 @@
         "Review a prepared failure report, then copy and comment on the original Issue.";
       link.setAttribute("aria-label", text + " — report Muse invite code " + item.code + " on GitHub");
       link.append(icon(iconName));
+      const summary = feedbackCounts?.[item.code];
+      const total = summary?.[outcome];
+      if (Number.isSafeInteger(total) && total >= 0) {
+        const counter = el("span", "card-feedback-count", total > 999 ? "999+" : String(total));
+        counter.setAttribute("aria-hidden", "true");
+        link.append(counter);
+        link.classList.add("has-count");
+        const description = total + " community " +
+          (total === 1 ? "report" : "reports") + " of " +
+          (outcome === "worked" ? "success" : "failure");
+        link.dataset.tooltip += " " + description +
+          " in the last published GitHub snapshot; not live or independently verified by Muse.";
+        link.setAttribute("aria-label", text + " — " + description +
+          " for Muse invite code " + item.code);
+      }
       quickFeedback.append(link);
     }
     const utilityBar = el("div", "card-utility-bar");
@@ -467,6 +483,20 @@
       } catch (error) {
         // Use the repository Issue list, never an extra feedback Issue Form.
         console.warn("Canonical issue links unavailable:", error);
+      }
+      try {
+        const feedbackResponse = await fetch("./data/feedback-counts.json",
+          {cache:"no-store",signal:controller.signal});
+        if (!feedbackResponse.ok) throw Error("Feedback totals unavailable");
+        const snapshot = await feedbackResponse.json();
+        if (snapshot?.source === "github-issue-comments" && snapshot.codes &&
+            !Array.isArray(snapshot.codes) && typeof snapshot.codes === "object" &&
+            Number.isFinite(Date.parse(snapshot.generatedAt || ""))) {
+          feedbackCounts = snapshot.codes;
+        }
+      } catch {
+        // Missing/incomplete GitHub snapshots must not be rendered as fake zero votes.
+        feedbackCounts = null;
       }
     } catch (error) {
       console.error("Could not load invite directory:", error);
