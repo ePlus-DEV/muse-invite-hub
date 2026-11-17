@@ -13,6 +13,14 @@
   const CODE_PATTERN = /^[A-Z0-9]{6}$/;
   const MAX_SAVED = 200;
 
+  // Deep links are navigation shortcuts, not proof of code redemption.
+  function museInviteUrl(code) {
+    if (typeof code !== "string" || !CODE_PATTERN.test(code)) {
+      throw Error("Invalid Muse invite code");
+    }
+    return "https://muse.ai/invite/" + encodeURIComponent(code);
+  }
+
   // One billion tokens per qualifying new-user redemption per Muse's
   // September 2026 announcement. Keep the amount in billions for safe display.
   // This is potential based on dated owner/community remaining-use reports,
@@ -541,6 +549,6 @@
   }
 
   return { STORAGE_KEY, COPIED_STORAGE_KEY, MAX_SAVED, tokenPotential, parseSaved, parseCopied,
-    rememberCopiedCode, activityDate, compareCodes, quickFeedbackUrl,
+    rememberCopiedCode, museInviteUrl, activityDate, compareCodes, quickFeedbackUrl,
     feedbackComment, ownerCountComment, prepareOwnerCountComment, issueNumberFor, openFeedbackDialog, enableTooltips };
 });

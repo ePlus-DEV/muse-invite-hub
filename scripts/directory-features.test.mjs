@@ -17,6 +17,20 @@ const owner = {
   ownerConfirmed: true, featured: true, submittedBy: "hoangsvit", addedAt: "2026-11-11"
 };
 
+test("direct Muse invitation links use validated codes and safe new-tab navigation", () => {
+  assert.equal(features.museInviteUrl("DPNIHH"), "https://muse.ai/invite/DPNIHH");
+  assert.equal(features.museInviteUrl("A1B2C3"), "https://muse.ai/invite/A1B2C3");
+  for (const invalid of ["../../evil", "abc123", "ABCDE", "ABC1234", "ABC-23",
+    "https://evil.example/invite/ABC123", null, "ABC123?redirect=evil"]) {
+    assert.throws(() => features.museInviteUrl(invalid), /Invalid Muse invite code/);
+  }
+  assert.match(app, /openInvite\.href = features\.museInviteUrl\(item\.code\)/);
+  assert.match(app, /openInvite\.target = "_blank"/);
+  assert.match(app, /openInvite\.rel = "noopener noreferrer"/);
+  assert.match(app, /primaryActions\.append\(copy, openInvite\)/);
+  assert.match(read("assets/styles.css"), /\.card-primary-actions\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+});
+
 test("saved codes parse safely and remain scoped to the browser", () => {
   assert.equal(features.STORAGE_KEY, "muse-invite-hub:saved-codes:v1");
   assert.deepEqual(features.parseSaved(null), []);

@@ -43,6 +43,8 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /"WebPage"/);
   assert.match(html, /href="\.\.\/\.\.\/assets\/styles.css"/);
   assert.match(html, /href="https:\/\/muse.ai\/join"/);
+  assert.match(html, /href="https:\/\/muse.ai\/invite\/DPNIHH"/);
+  assert.match(html, /aria-label="Open Muse invite link for code DPNIHH"/);
   assert.doesNotMatch(html, /Muse has verified this code/);
 });
 test("confirmed owner card and non-owner detail keep verification meanings separate", () => {
@@ -54,6 +56,7 @@ test("confirmed owner card and non-owner detail keep verification meanings separ
   assert.match(css, /\.status-owner-verified\{/);
   assert.match(css, /\.card-redemption\{/);
   const communityHtml = renderDetailPage(community());
+  assert.match(communityHtml, /href="https:\/\/muse.ai\/invite\/TEST42"/);
   assert.doesNotMatch(communityHtml, /Verified Owner \(ePlus\.DEV\)/);
   assert.match(communityHtml, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
 });
