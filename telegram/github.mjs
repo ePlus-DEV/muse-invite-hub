@@ -66,11 +66,13 @@ export async function browseCodes({query="",newest=false,limit=5,offset=0}={}) {
           if(["threads.com","www.threads.com","threads.net","www.threads.net"].includes(host))platform="Threads";
           else if(["x.com","www.x.com","twitter.com","www.twitter.com"].includes(host))platform="X";
           else if(["facebook.com","www.facebook.com","m.facebook.com"].includes(host))platform="Facebook";
+          else if(["t.me","www.t.me"].includes(host))platform="Telegram";
         } catch { /* Ignore malformed catalog provenance. */ }
       }
       return {code:row.code,status:row.status,remaining:dated?remaining:null,
         usageReportedAt:dated?row.usageReportedAt:null,platform,
-        submittedBy:typeof row.submittedBy==="string"?row.submittedBy.slice(0,80):null,
+        submittedBy:typeof row.submittedBy==="string"?row.submittedBy.slice(0,80):
+          platform==="Telegram"?new URL(row.sourceUrl).pathname.split("/")[1]||null:null,
         addedAt:/^\d{4}-\d{2}-\d{2}$/.test(row.addedAt||"")?row.addedAt:null};
     });
 }
