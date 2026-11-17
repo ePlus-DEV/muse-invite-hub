@@ -18,6 +18,7 @@
 - **Quick feedback:** each published invite has one canonical GitHub Issue for reports and discussion. Contributor-submitted codes reuse their original Issue; other published codes receive a unique Issue during trusted Pages deploy. Worked/Didn't work buttons open an editable comment dialog before linking to that Issue. Posting a structured report can reopen a closed thread and propose a Draft PR for maintainer review; feedback never automatically verifies Muse redemption.
 - **Code details:** copy and share individual codes, view source attribution and community-reported status.
 - **Community contributions:** submit new codes with an Issue Form; report feedback and owner-count updates on the existing code Issue using the website's editable comment dialog.
+- **Optional Telegram companion:** browse codes, contribute or report feedback from a private chat, and opt into alerts when configured. [How to use the bot](docs/TELEGRAM_BOT_GUIDE.md).
 - **Validated contributions:** eligible new GitHub-owned codes and single-code strict public-social-permalink reports can be published automatically as **unverified** after source/consent, duplicate, exact-record and green-CI checks. Ambiguous social sources and updates to existing codes require maintainer review. Accepted Issues receive a link to their published code after deployment; verified owner-count comment updates can also close their canonical Issue after publication.
 
 ## How publication works
@@ -35,23 +36,26 @@ Missing confirmations or malformed fields are handled on the **existing open Iss
 No coding required:
 
 - [**Share an invite code**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml)
+- [**Telegram bot user guide**](docs/TELEGRAM_BOT_GUIDE.md) — commands and public attribution requirements
 - [**Report code feedback**](https://muse.eplus.dev/#codes)
 - [**Update invite count on an existing code**](https://muse.eplus.dev/#codes)
 - [**Contribute code or documentation**](CONTRIBUTING.md#contribute-code-or-documentation)
 
 All Issues and comments are public. New GitHub-owned codes may publish automatically after repository checks, **without human review of validity**; never share passwords, session tokens or private account information. See the [contribution guide](CONTRIBUTING.md) for instructions.
 
-## Optional Telegram Bot (OCI ARM64)
+## Telegram bot (optional)
 
-The Telegram bot is an **optional**, separate Node.js 24 webhook service for an Oracle Cloud Ampere A1 ARM64 VM. Its Docker image can be built manually for `linux/arm64` and served behind Caddy HTTPS. GitHub Pages and the trusted `main` catalog remain the source of public website data.
+Muse Invite Hub also has an **optional Telegram companion** for browsing invite codes, checking review status, sharing public codes and reporting feedback in a private chat. See the [user-facing Telegram bot guide](docs/TELEGRAM_BOT_GUIDE.md) for commands, privacy and review rules.
 
-- [Telegram deployment guide](telegram/README.md) — VM, Docker Compose, DNS, BotFather, HTTPS and private credentials.
-- [Manual ARM64 image workflow](.github/workflows/telegram-oci-image.yml) — build and publish to GHCR from trusted `main`; it never provisions or deploys the VM.
-- Telegram supports `/submit CODE`, `/report CODE worked|failed`, `/status CODE` for published/pending review, `/codes`, `/privacy` and `/cancel`. BotFather lists these commands in private chats. `/submit` and `/report` use the **existing GitHub Issue/comment discussion queue**, require user confirmation and **remain human-reviewed**. They do not establish GitHub code ownership and cannot bypass the website's separate GitHub-owned new-code auto-publish safeguards.
+- **Contributing:** `/submit CODE` requests explicit public-sharing and username consent, then creates the same `[Invite] CODE` GitHub Issue format used by the website. Automation opens an **unverified Draft PR** for maintainer review; the code is **not automatically published**.
+- **Feedback:** `/report CODE worked|failed` posts a review-only public comment on the canonical Issue; it does not automatically change reported code validity or invite counts.
+- **Browsing and alerts:** `/codes`, `/search`, `/status CODE`, `/watch CODE` and `/subscribe`. Notifications require the separately configured, opt-in bot endpoint.
+- **Privacy:** A public Telegram `@username` and profile may be shared only after confirmation. Numeric chat IDs and preferences remain private. Neither public profiles nor Issue authorship establish Muse code ownership.
+- **Anti-spam:** Submissions are rate-limited and checked against existing catalog/Issues. Deleting the canonical Issue invalidates still-open bot-generated data PRs.
 
-Optional publication notifications are supported through a separately configured, HMAC-signed Pages-to-bot endpoint. Only users who opt in through Telegram receive new-code alerts; private Telegram chat IDs never appear in public Issues. The first verified Pages event initializes a baseline without sending historical codes. The bot runtime and repository Actions variable/secret must be configured manually; no hourly polling.
+**Bot link:** This repository does not currently provide a verified public bot `@username` or `t.me` URL. The site links to the guide rather than guessing a bot account. You can still [share a code using GitHub](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml).
 
-This repository does not provision a Telegram bot account, Oracle VM, domain name or runtime secrets.
+**For maintainers:** Bot runtime and GitHub Pages are separate. See [Cloudflare Worker](telegram/WORKERS.md), [OCI ARM64/Docker](telegram/README.md), [Cloudflare auto-deploy](docs/TELEGRAM_CLOUDFLARE_AUTODEPLOY.md), and [publication notifications](docs/TELEGRAM_NOTIFICATIONS.md). Merging website code alone does not guarantee bot deployment. Never commit credentials or private state.
 
 ## Development
 
