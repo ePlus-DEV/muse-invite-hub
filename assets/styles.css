@@ -723,6 +723,8 @@ html.is-page-loading body>.site-footer{display:none!important}
 .detail-listing.detail-mobile-fold .detail-meta dt{font-size:12px}
 .detail-listing.detail-mobile-fold .detail-meta dd{text-align:right;font-size:12px;line-height:1.55}
 .detail-layout>.detail-side>.detail-feedback{padding:22px;box-shadow:var(--shadow-sm)}
+.detail-feedback-actions .detail-quick-feedback[data-feedback-outcome="worked"]{background:var(--green-bg);border-color:var(--green-line)}
+.detail-feedback-actions .detail-quick-feedback[data-feedback-outcome="failed"]{background:var(--red-bg);border-color:var(--red-line)}
 .detail-feedback h2{font-size:19px}
 .detail-market-section{margin:0}
 @media(max-width:980px){
