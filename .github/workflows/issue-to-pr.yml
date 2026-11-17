@@ -35,7 +35,7 @@ jobs:
         startsWith(github.event.issue.title, '[Code feedback]') ||
         (contains(github.event.issue.body, '### Invite code') &&
          contains(github.event.issue.body, '### Code source') &&
-         contains(github.event.issue.body, '### Contributor checklist')))))
+         contains(github.event.issue.body, '### Contributor checklist'))))))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
