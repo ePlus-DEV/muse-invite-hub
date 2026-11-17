@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         **For a new, unlisted code only.** Search https://muse.eplus.dev/#codes first. If the code already exists, use **Give feedback** or **Update count** on its card to comment in the original Issue instead of creating a duplicate. Issues are public. Choose **your own GitHub code** or a **public code found on Threads, X (Twitter) or Facebook**.
-        For a social post, provide the original public post permalink: a profile alone cannot prove authorship and needs manual review. For Telegram contributions, use the bot so the sender can explicitly confirm their public @username; GitHub forms cannot verify Telegram identity, and these reports always require manual review. Your GitHub account is only the reporter, NOT automatically the owner of someone else's code.
+        For a social post, provide the original public post permalink: a profile alone cannot prove authorship and needs manual review. Facebook Group post links (/groups/GROUP/posts/POST_ID/) are allowed as group-level references only and always require human review; the group is not necessarily the post author. For confirmed Telegram attribution, use the bot to share your public @username. If you select Telegram here without a username or public source, the contribution is instead credited to your GitHub Issue account and requires manual review; GitHub identity does NOT verify code ownership. Telegram links or handles submitted here also require manual source review. Your GitHub account is only the reporter, NOT automatically the owner of someone else's code.
         Muse's invite field shows six slots. Submit up to 10 six-character codes in one Issue (comma, space, or newline separated). One reviewed Draft PR keeps each code in a separate record. For multiple codes, do not fill per-code quota/count fields.
         Never submit passwords, authentication codes, sessions, cookies or private account information. All accepted reports produce review-only Draft PRs, never automatic publication.
   - type: textarea
@@ -21,7 +21,7 @@ body:
     id: code_source
     attributes:
       label: Code source
-      description: "GitHub means your own code; social platforms are community reports, and Telegram needs bot attribution and manual review. Identical usernames on different platforms are different identities."
+      description: "GitHub means your own code; Telegram attribution needs a confirmed bot sender. Without a Telegram username/link, a human Issue choosing Telegram falls back to GitHub reporter attribution and manual review. Identical usernames across platforms are different identities."
       options:
         - GitHub (my own code)
         - Threads (public code I found)
@@ -34,7 +34,7 @@ body:
     id: social_url
     attributes:
       label: Social post or profile URL (required for Threads, X or Facebook)
-      description: "Paste the original public post containing the code: threads.com/@handle/post/ID, x.com/handle/status/ID or facebook.com/handle/posts/ID. Profile-only, share-shortlink or ambiguous URLs require manual review."
+      description: "Paste the original public post containing the code: threads.com/@handle/post/ID, x.com/handle/status/ID, facebook.com/handle/posts/ID or facebook.com/groups/GROUP/posts/POST_ID/. Facebook Group links reference a group, not an identifiable post author, and require human review. Profile-only, share-shortlink or ambiguous URLs require manual review."
       placeholder: "https://x.com/username/status/123456789..."
     validations:
       required: false

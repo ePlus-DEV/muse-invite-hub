@@ -7,7 +7,7 @@ import {
   AUTO_MERGE_MAINTAINER, AUTO_MERGE_BLOCK_LABEL,
   getMaintainerAuthorization, ciHasPassed, autoMergeDecision,
   qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR, verifyNewSocialInvitePR, needsEplusBotReview,
-  isTransientMergeError, confirmedMergeAfterError, shouldDispatchPagesRecovery
+  isTransientMergeError, confirmedMergeAfterError, shouldDispatchPagesRecovery, dispatchBotValidation
 } from "./auto-merge.mjs";
 
 const HEAD="a".repeat(40);
@@ -419,6 +419,58 @@ test("actual eplus-bot credential and exact-head review are wired safely",()=>{
   assert.doesNotMatch(manual,/actions\/checkout/);
 });
 
+
+test("eplus-bot CI dispatch wakes the trusted merge gate after branch synchronization",async()=>{
+  const workflow=readFileSync(new URL("../.github/workflows/auto-merge.yml",import.meta.url),"utf8");
+  assert.match(workflow,/await dispatchBotValidation\(/);
+  assert.match(workflow,/workflow_run:/);
+  assert.match(workflow,/cron: "\*\/5 \* \* \* \*"/);
+  assert.match(workflow,/workflow_id:"validate\.yml"/,
+    "retain a safe GITHUB_TOKEN fallback for validation");
+
+  const calls=[];
+  const request=async(url,opts)=>{
+    calls.push({url,opts});
+    if(url==="https://api.github.com/user")return {
+      ok:true,json:async()=>({login:"eplus-bot"})
+    };
+    return {status:204};
+  };
+  await dispatchBotValidation({
+    branch:"auto/issue-265-invite",token:"FAKE_TOKEN",request
+  });
+  assert.equal(calls.length,2);
+  assert.equal(calls[0].opts.headers.Authorization,"Bearer FAKE_TOKEN");
+  assert.equal(calls[1].url,"https://api.github.com/repos/ePlus-DEV/muse-invite-hub/actions/workflows/validate.yml/dispatches");
+  assert.equal(calls[1].opts.method,"POST");
+  assert.deepEqual(JSON.parse(calls[1].opts.body),{ref:"auto/issue-265-invite"});
+
+  for(const branch of ["main","fix/unrelated","auto/issue-265-count","auto/issue-0-invite"]){
+    await assert.rejects(dispatchBotValidation({branch,token:"FAKE_TOKEN",request}),/trusted repo/);
+  }
+  await assert.rejects(dispatchBotValidation({
+    repository:"someone/else",branch:"auto/issue-265-invite",token:"FAKE_TOKEN",request
+  }),/trusted repo/);
+  await assert.rejects(dispatchBotValidation({
+    branch:"auto/issue-265-invite",token:"",request
+  }),/trusted repo/);
+  assert.equal(calls.length,2,"invalid inputs never contact GitHub");
+
+  const wrongBot=async()=>({ok:true,json:async()=>({login:"not-the-bot"})});
+  await assert.rejects(dispatchBotValidation({
+    branch:"auto/issue-265-invite",token:"FAKE_TOKEN",request:wrongBot
+  }),/authenticated eplus-bot/);
+  let attempts=0;
+  const failure=async(url)=>{
+    attempts++;
+    if(url.endsWith("/user"))return {ok:true,json:async()=>({login:"eplus-bot"})};
+    return {status:503};
+  };
+  await assert.rejects(dispatchBotValidation({
+    branch:"auto/issue-265-invite",token:"FAKE_TOKEN",request:failure
+  }),/HTTP 503/);
+  assert.equal(attempts,2);
+});
 
 test("strict social new-code PR verifier keeps attribution unverified but permits publication",()=>{
   const issue=newCodeIssue("BM69LI","X (Twitter) (public code I found)");

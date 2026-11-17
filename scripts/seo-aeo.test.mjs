@@ -28,7 +28,7 @@ test("Q&A provides factual answers in HTML without unsupported rich-result claim
     assert.ok(html.includes(question));
   }
   assert.match(html, /Only Muse can confirm whether a code can be redeemed/);
-  assert.match(html, /Maintainers review Telegram submissions before publication/);
+  assert.match(html, /Maintainers review submissions before publication/);
   assert.doesNotMatch(html, /FAQPage|AggregateRating|guaranteed free tokens/i);
 });
 

@@ -1,7 +1,7 @@
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
-import { planIssueChange, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance, isAutoPublishableNewSocialInvite, isAutoPublishableNewGithubInvite } from "./issue-to-pr.mjs";
+import { planIssueChange, resolvedInviteComment, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance, isAutoPublishableNewSocialInvite, isAutoPublishableNewGithubInvite } from "./issue-to-pr.mjs";
 import { validateCatalog } from "./validate.mjs";
 import { changedRecords } from "./catalog.mjs";
 
@@ -106,9 +106,65 @@ test("Telegram submissions reject mismatched identity, missing consent and owner
     assert.notEqual(plan.outcome,"proposal",JSON.stringify(submitted).slice(0,160));
   }
   const published=[item,{id:"already-listed",code:"ABC123",status:"unverified",addedAt:"2026-11-11",sourceUrl:"https://t.me/alice_dev"}];
-  assert.equal(planIssueChange(original,published).outcome,"needs-review");
+  assert.equal(planIssueChange(original,published).outcome,"already-listed");
+  const sameCanonical={...published[1],id:"community-issue-231",feedbackIssueNumber:231};
+  assert.equal(planIssueChange(original,[item,sameCanonical]).outcome,"already-published");
+  const changedSame={...sameCanonical,sourceUrl:"https://t.me/different_account"};
+  assert.equal(planIssueChange(original,[item,changedSame]).outcome,"needs-review");
   const general=issue(232,"[Invite] ABC123",body.replace("<!-- muse-telegram-submission:ABC123 -->",""),"hoangsvit");
   assert.equal(planIssueChange(general,[item]).outcome,"needs-review");
+});
+
+
+test("Issue #271: human-selected Telegram without source falls back to GitHub reporter in a Draft proposal",()=>{
+  const body=[
+    "### Invite code","","B9C2XA","",
+    "### Code source","","Telegram (community code shared through bot)","",
+    "### Social post or profile URL (required for Threads, X or Facebook)","","_No response_","",
+    "### Public confirmation or context (optional)","","_No response_","",
+    "### Uses so far (optional; self-reported)","","_No response_","",
+    "### Invite limit (optional; self-reported)","","_No response_","",
+    "### Remaining invites (optional; self-reported)","","_No response_","",
+    "### Notes (optional)","","B9C2XA","",
+    "### Contributor checklist","",
+    "- [x] I am authorized to share this code publicly; I understand this Issue is public.",
+    "- [x] This code is not a password, 2FA code, session token or private credential."
+  ].join("\n");
+  const source=issue(271,"[Invite]",body,"yarzycausepain");
+  source.user.id=147738311;
+  const proposal=planIssueChange(source,[item]);
+  assert.equal(proposal.outcome,"proposal");
+  assert.equal(proposal.action,"add");
+  assert.match(proposal.notice,/falls back to GitHub Issue reporter/);
+  const record=proposal.data.find(row=>row.code==="B9C2XA");
+  assert.equal(record.submittedBy,"yarzycausepain");
+  assert.equal(record.submittedById,undefined);
+  assert.equal(record.sourceUrl,undefined);
+  assert.equal(record.status,"unverified");
+  assert.equal(record.reportedUses,undefined);
+  assert.equal(record.reportedCapacity,undefined);
+  assert.match(record.note,/not a verified code owner/);
+  assert.equal(isAutoPublishableNewGithubInvite(source,proposal),false);
+  assert.equal(isAutoPublishableNewSocialInvite(source,proposal),false);
+  assert.deepEqual(validateCatalog(proposal.data),[]);
+
+  // A bot account without authenticated Telegram provenance must never fall back.
+  assert.equal(planIssueChange({...source,user:{login:"eplus-bot"}},[item]).outcome,"needs-review");
+  // Explicit identity claims, links and owner-only quotas must not be silently reattributed.
+  const cases=[
+    body.replace("### Public confirmation or context (optional)\n\n_No response_",
+      "### Public confirmation or context (optional)\n\nhttps://t.me/alice_dev"),
+    body.replace("### Social post or profile URL (required for Threads, X or Facebook)\n\n_No response_",
+      "### Social post or profile URL (required for Threads, X or Facebook)\n\nhttps://t.me/channel/12345"),
+    body.replace("### Notes (optional)\n\nB9C2XA",
+      "### Notes (optional)\n\nShared by @alice_dev"),
+    body.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+      "### Remaining invites (optional; self-reported)\n\n12")
+  ];
+  for(const changed of cases)
+    assert.equal(planIssueChange({...source,body:changed},[item]).outcome,"needs-review");
+  const unchecked=body.replace("- [x] I am authorized","- [ ] I am authorized");
+  assert.throws(()=>planIssueChange({...source,body:unchecked},[item]),/confirmations/);
 });
 
 test("older [Telegram submission] issues retain backwards-compatible review-only parsing",()=>{
@@ -180,6 +236,7 @@ test("valid complete new owner quota is a dated, unverified report",()=>{
   const p=planIssueChange(issue(25,"[Invite] owner",body),[item]);
   const next=p.data.find(x=>x.code==="PNSMZZ");
   assert.deepEqual([next.reportedCapacity,next.reportedUses,next.usageReportedAt],[30,27,"2026-11-11"]);
+  assert.equal(next.quotaUpdateCount,undefined,"First report is not a revision");
 });
 test("existing codes are never duplicated under another account",()=>{
   const p=planIssueChange(issue(26,"[Invite]",share,"another-user"),[item,community]);
@@ -203,11 +260,13 @@ test("existing code can be updated by its GitHub owner from Issue #28 Notes",()=
   assert.equal(updated.reportedCapacity,undefined);
   assert.equal(updated.reportedUses,undefined);
   assert.equal(updated.usageReportedAt,"2026-11-11");
+  assert.equal(updated.quotaUpdateCount,1);
   assert.equal(updated.submittedBy,"pdm0809");
   assert.equal(updated.submittedById,316039127);
   assert.equal(updated.id,"jx-issue-19");
   assert.deepEqual(validateCatalog(p.data),[]);
   assert.equal(planIssueChange(ownerIssue,p.data).outcome,"duplicate");
+  assert.equal(p.data.find(x=>x.code==="ARKHZZ").quotaUpdateCount,1);
 });
 test("duplicate from a different owner requires manual review",()=>{
   const body=share.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
@@ -373,10 +432,10 @@ test("a third-party Threads reporter cannot claim quotas or edit existing source
     addedAt:"2026-11-11",sourceUrl:url};
   const original=[item,sourceOnly];
   const same=planIssueChange(issue(69,"[Invite]",updatedShare("Threads (public code I found)",url)),original);
-  assert.equal(same.outcome,"needs-review");
+  assert.equal(same.outcome,"already-listed");
   assert.deepEqual(original,[item,sourceOnly]);
   const hijackBody=updatedShare("GitHub (my own code)");
-  assert.equal(planIssueChange(issue(70,"[Invite]",hijackBody),original).outcome,"needs-review");
+  assert.equal(planIssueChange(issue(70,"[Invite]",hijackBody),original).outcome,"already-listed");
   const countBody=count().replace("DPNIHH","18I70N");
   assert.equal(planIssueChange(issue(71,"[Count update]",countBody,"baijiling2"),original).outcome,"needs-review");
 });
@@ -473,6 +532,87 @@ test("X and Facebook public post Issues propose unverified drafts without GitHub
   }
 });
 
+test("issue #240 Facebook group post produces an unverified human-review proposal", () => {
+  const url="https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/";
+  const body=updatedShare("Facebook (public code I found)",url).replace("18I70N","FT4SHN")
+    .replace("I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
+      "I am authorized to share this code publicly; I understand this Issue is public.");
+  const report=issue(240,"[Invite] FT4SHN",body,"gary2222hub");
+  assert.equal(hasRequiredInviteConfirmations(body),true);
+  const proposal=planIssueChange(report,[item]);
+  assert.equal(proposal.outcome,"proposal");
+  assert.equal(proposal.action,"add Facebook source");
+  assert.equal(proposal.branch,"auto/issue-240-invite");
+  const listing=proposal.data.find(entry=>entry.code==="FT4SHN");
+  assert.equal(listing.sourceUrl,url);
+  assert.equal(listing.feedbackIssueNumber,240);
+  assert.equal(listing.submittedBy,undefined);
+  assert.equal(listing.submittedById,undefined);
+  assert.equal(listing.status,"unverified");
+  assert.match(proposal.notice,/not the post author.s identity/i);
+  assert.deepEqual(validateCatalog(proposal.data),[]);
+  assert.equal(isAutoPublishableNewSocialInvite(report,proposal),false,
+    "group links cannot prove the post author and must stay in a review-only Draft PR");
+});
+
+test("reprocessing Issue #240 after its reviewed merge is already-listed, not rejected", () => {
+  const url="https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/";
+  const body=updatedShare("Facebook (public code I found)",url).replace("18I70N","FT4SHN")
+    .replace("I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
+      "I am authorized to share this code publicly; I understand this Issue is public.");
+  const original=issue(240,"[Invite] FT4SHN",body,"gary2222hub");
+  const published={
+    id:"community-issue-240",code:"FT4SHN",status:"unverified",
+    addedAt:"2026-11-17",feedbackIssueNumber:240,sourceUrl:url
+  };
+  const replay=planIssueChange(original,[item,published]);
+  assert.equal(replay.outcome,"already-published");
+  assert.match(replay.reason,/already in the main catalog/);
+  // A new reporter, changed source, or owner-only quota claim is not a replay.
+  const duplicate=planIssueChange(issue(241,"[Invite] FT4SHN",body,"other"),[item,published]);
+  assert.equal(duplicate.outcome,"already-listed");
+  assert.equal(duplicate.canonicalIssueNumber,240);
+  const changed=body.replace(url,"https://www.facebook.com/groups/referralcodeshare/posts/1169239249161107/");
+  assert.equal(planIssueChange({...original,body:changed},[item,published]).outcome,"needs-review");
+  const quota=body.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+    "### Remaining invites (optional; self-reported)\n\n3");
+  assert.equal(planIssueChange({...original,body:quota},[item,published]).outcome,"needs-review");
+  assert.equal(isAutoPublishableNewSocialInvite(original,replay),false);
+});
+
+test("a duplicate invite shows only actual published detail and canonical Issue links",()=>{
+  const comment=resolvedInviteComment({codes:["FT4SHN"],canonicalIssueNumbers:[240],
+    liveCodes:["FT4SHN"],canonical:false});
+  assert.match(comment,/https:\/\/muse\.eplus\.dev\/codes\/FT4SHN\//);
+  assert.match(comment,/https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/240/);
+  assert.match(comment,/Closing this duplicate/);
+  assert.match(comment,/Being listed does/);
+  const original=resolvedInviteComment({codes:["FT4SHN"],liveCodes:["FT4SHN"],canonical:true});
+  assert.match(original,/original contribution has been published/);
+  assert.doesNotMatch(original,/Original discussion/);
+});
+
+test("all-listed multi-code reports resolve as duplicates, mixed batches remain open",()=>{
+  const clean=share.replace("### Invite limit (optional; self-reported)\n\n30",
+    "### Invite limit (optional; self-reported)\n\n_No response_");
+  const make=value=>clean.replace("PNSMZZ",value);
+  const rows=[item,
+    {id:"community-issue-150-alfa12",code:"ALFA12",status:"unverified",
+      feedbackIssueNumber:150,addedAt:"2026-11-11",submittedBy:"alfa"},
+    {id:"community-issue-160-bravo2",code:"BRAVO2",status:"unverified",
+      feedbackIssueNumber:160,addedAt:"2026-11-11",submittedBy:"bravo"}];
+  const duplicate=planIssueChange(issue(170,"[Invite]",make("ALFA12, BRAVO2")),rows);
+  assert.equal(duplicate.outcome,"already-listed");
+  assert.deepEqual(duplicate.codes,["ALFA12","BRAVO2"]);
+  assert.deepEqual(duplicate.canonicalIssueNumbers,[150,160]);
+  const sameIssueRows=rows.map(row=>row.code==="ALFA12"||row.code==="BRAVO2"
+    ? {...row,feedbackIssueNumber:170} : row);
+  assert.equal(planIssueChange(issue(170,"[Invite]",make("ALFA12, BRAVO2")),
+    sameIssueRows).outcome,"already-published");
+  const mixed=planIssueChange(issue(171,"[Invite]",make("ALFA12, NEW123")),rows);
+  assert.equal(mixed.outcome,"needs-review");
+});
+
 test("reject wrong social source, profile-only links and third-party quota claims", () => {
   const link = "https://x.com/sameperson/status/1234567890";
   const xBody = updatedShare("X (Twitter) (public code I found)",link);
@@ -506,7 +646,7 @@ test("X and Facebook reports cannot hijack same-named GitHub or Threads accounts
   assert.equal(planIssueChange(issue(93,"[Count update]",
     withListingPlatform(fbCount,"Facebook"),"sameperson"),[item,...existing]).outcome,"needs-review");
   assert.equal(planIssueChange(issue(94,"[Invite]",
-    updatedShare("GitHub (my own code)").replace("18I70N","XX1234"),"sameperson"),[item,...existing]).outcome,"needs-review");
+    updatedShare("GitHub (my own code)").replace("18I70N","XX1234"),"sameperson"),[item,...existing]).outcome,"already-listed");
 });
 
 test("structured Share Code form accepts contributor-edited title and uppercase checkmarks",()=>{

@@ -47,6 +47,18 @@ test("undated, invalid, or exaggerated usage claims are rejected", () => {
   assert.ok(validateCatalog([{ ...sample(), reportedUses: -1, reportedCapacity: 30, usageReportedAt: "2026-11-11" }]).some(e => e.includes("non-negative")));
 });
 
+test("quota revision badge requires a positive real count and a dated quota", () => {
+  const published={...sample(), reportedCapacity:30,reportedUses:7,
+    usageReportedAt:"2026-11-15",quotaUpdateCount:1};
+  assert.deepEqual(validateCatalog([published]),[]);
+  for(const value of [0,-1,1.5,"2",null,10000]) {
+    assert.ok(validateCatalog([{...published,quotaUpdateCount:value}])
+      .some(error=>error.includes("quotaUpdateCount")),String(value));
+  }
+  assert.ok(validateCatalog([{...sample(),quotaUpdateCount:1}])
+    .some(error=>error.includes("quotaUpdateCount")));
+});
+
 test("remaining-only reports with a date and GitHub numeric owner ID are supported", () => {
   assert.deepEqual(validateCatalog([{...sample(),reportedRemaining:17,usageReportedAt:"2026-11-11",submittedById:316039127}]),[]);
   assert.ok(validateCatalog([{...sample(),reportedRemaining:17}]).some(e=>e.includes("usageReportedAt")));
@@ -112,6 +124,7 @@ test("X and Facebook public provenance URLs validate without claiming GitHub own
     "https://x.com/example_handle/status/1234567890123456789",
     "https://twitter.com/example_handle/status/1234567890123456789",
     "https://www.facebook.com/example.user/posts/pfbid0123456789",
+    "https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/",
     "https://www.facebook.com/example.user"
   ]) {
     const entry = {...sample(), submittedBy:undefined, sourceUrl:url};
@@ -121,6 +134,24 @@ test("X and Facebook public provenance URLs validate without claiming GitHub own
     assert.ok(validateCatalog([{...entry, featured:true, ownerConfirmed:true}]).length > 0);
   }
 });
+test("Facebook group post permalinks identify groups, not individual authors", () => {
+  const url="https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/";
+  assert.deepEqual(parsePublicSource(url),{
+    platform:"Facebook",key:"facebook",handle:"referralcodeshare",
+    url,post:true,group:true
+  });
+  for (const invalid of [
+    "https://www.facebook.com/groups/referralcodeshare/",
+    "https://www.facebook.com/groups/referralcodeshare/posts/",
+    "https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/?foo=bar",
+    "https://www.facebook.com/groups/referralcodeshare/posts/not-a-number/",
+    "https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/extra",
+    "https://www.facebook.com.evil.test/groups/referralcodeshare/posts/1169239249161106/"
+  ]) {
+    assert.equal(parsePublicSource(invalid),null,invalid);
+  }
+});
+
 test("reject malformed and impersonating X or Facebook source URLs", () => {
   for (const url of [
     "https://x.com.evil.invalid/someone/status/123456789",

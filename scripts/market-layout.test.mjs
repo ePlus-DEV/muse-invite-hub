@@ -64,7 +64,8 @@ test("detail pages reuse the exact homepage source list and flag assets with cor
   assert.match(preview, /noindex,nofollow,noarchive/);
   assert.equal((detail.match(/id="detail-availability"/g)||[]).length,1);
   assert.ok(detail.indexOf('id="detail-availability"') > detail.indexOf('id="how-to-redeem"'));
-  assert.ok(detail.indexOf('id="detail-availability"') < detail.indexOf('class="detail-side"'));
+  assert.ok(detail.indexOf('id="detail-availability"') > detail.indexOf('class="detail-side"'),
+    "Market disclosure follows listing and feedback in mobile reading order");
 });
 
 test("every homepage flag and Meta confirmation is present exactly once in the detail disclosure",()=>{

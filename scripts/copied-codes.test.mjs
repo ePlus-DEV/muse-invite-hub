@@ -50,7 +50,7 @@ test("storage disabled does not turn a successful copy into a failed copy", () =
   assert.equal(features.rememberCopiedCode(writeBlocked,"DPNIHH"),null);
 });
 
-test("homepage applies copied tint only after clipboard success and syncs storage events", () => {
+test("homepage copied state keeps the same card geometry and syncs storage events", () => {
   const app=read("assets/app.js");
   const css=read("assets/styles.css");
   assert.match(app,/function updateCopiedCard\(card\)/);
@@ -59,7 +59,12 @@ test("homepage applies copied tint only after clipboard success and syncs storag
   assert.match(app,/copiedCodes = new Set\(features\.parseCopied\(event\.key === null \? null : event\.newValue\)\)/);
   assert.match(app,/updateCopiedCard\(card\);\s*return card;/);
   assert.match(app,/Copy again/);
-  assert.match(app,/Copied on this device · Redemption not verified/);
+  assert.match(app,/const label = copied \? " Copied" : " Copy code"/);
+  assert.doesNotMatch(app,/card\.classList\.contains\("code-card-featured"\) \? " Copy again"/);
+  assert.match(app,/\(copied \? "Copy again Muse invite code " : "Copy Muse invite code "\)/);
+  assert.match(app,/button\.dataset\.tooltip = copied/);
+  assert.doesNotMatch(app,/card-copy-note/);
+  assert.match(app,/icon\(copied \? "fa-solid fa-check" : "fa-regular fa-copy"\)/);
   const copy=app.slice(app.indexOf("async function copyCode("),app.indexOf("function socialSource("));
   assert.ok(copy.indexOf("await navigator.clipboard.writeText(value)") <
     copy.indexOf("features.rememberCopiedCode(window.localStorage, value)"));
@@ -67,12 +72,16 @@ test("homepage applies copied tint only after clipboard success and syncs storag
     copy.indexOf("features.rememberCopiedCode(window.localStorage, value)"));
   assert.match(copy,/else copiedCodes\.add\(value\)/);
   assert.match(copy,/syncCopiedCards\(\)/);
-  assert.match(css,/\.code-card\.code-card-copied\{border-color:#bda7ec/);
-  assert.match(css,/\.code-card-featured\.code-card-copied \.card-copy/);
-  assert.match(css,/\.card-facts \.card-copy-note/);
+  assert.match(css,/\.card-primary-actions\{display:grid;grid-template-columns:1\.12fr 1fr/);
+  assert.match(css,/\.code-card-copied \.card-copy\{background:var\(--blue-soft\);border-color:var\(--blue-line\);color:var\(--blue\)/);
+  assert.match(css,/\.code-card-copied \.card-copy:hover,\.code-card-copied \.card-copy:focus-visible\{/);
+  assert.doesNotMatch(css,/\.code-card-copied:not\(\.code-card-featured\)/);
+  assert.doesNotMatch(css,/\.code-card\.code-card-copied\{/);
+  assert.doesNotMatch(css,/\.code-card-copied \.card-copy,/);
+  assert.doesNotMatch(css,/\.card-facts \.card-copy-note/);
 });
 
-function detailHarness({ copied=false, failCopy=false }={}) {
+function detailHarness({ copied=false, failCopy=false, legacy=false }={}) {
   const copiedValue=copied?JSON.stringify(["DPNIHH"]):null;
   const storage=memoryStore(copiedValue?{[features.COPIED_STORAGE_KEY]:copiedValue}:{});
   const listeners=new Map(),events=new Map(),scheduled=[];
@@ -94,6 +103,33 @@ function detailHarness({ copied=false, failCopy=false }={}) {
   };
   const after=[];
   const actions={after:node=>after.push(node)};
+  const legacyRemoved=[];
+  const removable = (selector, textContent="") => ({
+    textContent,
+    remove(){ legacyRemoved.push(selector); }
+  });
+  const ownerRow={querySelector:name=>name==="dt"?{textContent:"Code owner"}:null,
+    remove(){legacyRemoved.push("owner-row");}};
+  const sourceRow={querySelector:name=>name==="dt"?{textContent:"Source"}:null,
+    remove(){legacyRemoved.push("source-row");}};
+  const steps=["Copy the invitation code", "Open Muse", "Enter the code"].map((text,index)=>({
+    textContent:text,remove(){legacyRemoved.push("step-"+index);}
+  }));
+  const legacyElements=legacy?{
+    '.detail-action-row a[href="https://muse.ai/join"]':removable("open-muse"),
+    ".detail-lead":removable("lead"),
+    ".detail-caution":removable("caution"),
+    ".detail-code-heading .detail-owner":removable("heading-owner"),
+    ".detail-info-card .detail-caption":removable("repeated-quota"),
+    ".detail-primary > .section-kicker":{textContent:"MUSE INVITE · VERIFIED OWNER"},
+    ".detail-status":{textContent:"Verified Owner",title:""},
+    ".detail-note":removable("owner-note",
+      "Owner-confirmed invitation from ePlus.DEV. Muse redemption availability has not been independently checked."),
+    ".detail-meta":{querySelectorAll:()=>[ownerRow,sourceRow]},
+    ".detail-instructions":{querySelector:name=>name==="ol"?{
+      querySelectorAll:()=>steps
+    }:name==="p"?removable("extra-instructions"):null}
+  }:{};
   const document={
     getElementById:id=>({
       "detail-copy":button,"detail-code":{textContent:"DPNIHH"},
@@ -101,7 +137,8 @@ function detailHarness({ copied=false, failCopy=false }={}) {
     })[id]||null,
     querySelector:selector=>({
       ".detail-code-panel":panel,
-      ".detail-action-row":actions
+      ".detail-action-row":actions,
+      ...legacyElements
     })[selector]||null,
     querySelectorAll:()=>[],
     createElement:tag=>({tag,hidden:false,textContent:""})
@@ -127,8 +164,22 @@ function detailHarness({ copied=false, failCopy=false }={}) {
     // Leave ancillary async Issue lookup pending; copy bindings must work immediately.
     fetch:()=>new Promise(()=>{})
   });
-  return {storage,window,panel,button,label,icon,after,events,listeners,scheduled};
+  return {storage,window,panel,button,label,icon,after,events,listeners,scheduled,legacyRemoved,legacyElements,steps};
 }
+
+test("legacy main-generated PR detail preview hides duplicate actions without losing source", () => {
+  const page=detailHarness({legacy:true});
+  for(const name of ["open-muse","lead","caution","heading-owner","repeated-quota",
+    "owner-note","owner-row","step-2","extra-instructions"]) {
+    assert.ok(page.legacyRemoved.includes(name), "Expected redundant content removed: "+name);
+  }
+  assert.ok(!page.legacyRemoved.includes("source-row"),"Source attribution must be preserved");
+  assert.equal(page.legacyElements[".detail-primary > .section-kicker"].textContent,"MUSE INVITE");
+  assert.match(page.legacyElements[".detail-status"].title,/Muse redemption is not verified/);
+  assert.match(page.steps[0].textContent,/Open invite/);
+  assert.match(page.steps[1].textContent,/eligibility/);
+  assert.equal(page.label.textContent,"Copy invite code","Copy action must remain functional");
+});
 
 test("detail copied tint and Copy again survive reload and copy success", async () => {
   const browser=detailHarness({copied:true});
@@ -170,6 +221,18 @@ test("copy state synchronizes from other tabs and keeps redemption separate", ()
   assert.equal(browser.label.textContent,"Copy invite code");
   const css=read("assets/styles.css"),detail=read("assets/detail.js");
   assert.match(css,/\.detail-code-panel\.detail-code-panel-copied\{/);
-  assert.match(css,/\.detail-code-panel-copied #detail-copy\{/);
-  assert.match(detail,/Redemption not verified/);
+  assert.match(css,/\.detail-code-heading \.detail-save\{display:grid;place-items:center/);
+  assert.match(css,/\.detail-code-heading \.detail-save-label\{position:absolute;width:1px/);
+  assert.match(css,/\.detail-code-heading \.detail-save\[hidden\]\{display:none\}/);
+  assert.match(css,/\.detail-action-row \.detail-open-invite,\.detail-action-row>a\[href\^="https:\/\/muse.ai\/invite\/"\]\{order:1;background:var\(--blue\)/);
+  assert.match(css,/\.detail-action-row #detail-copy\{order:2;background:#fff;color:var\(--blue\)/);
+  assert.match(css,/@media\(max-width:560px\)\{\s*\.detail-action-row\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css,/@media\(max-width:350px\)\{\.detail-action-row\{grid-template-columns:1fr\}\}/);
+  assert.match(detail,/cardHeading\.append\(detailSave\)/);
+  assert.match(detail,/inviteActions\.insertBefore\(openInvite,button\)/);
+    assert.match(css,/\.detail-code-panel-copied #detail-copy\{/);
+  assert.match(detail,/copiedNote\.textContent = "Copied on this device"/);
+  assert.match(detail,/normalizeLegacyDetail\(\)/);
+  assert.match(detail,/\.detail-action-row a\[href="https:\/\/muse.ai\/join"\]/);
+  assert.match(css,/\.detail-action-row a\[href="https:\/\/muse.ai\/join"\]/);
 });

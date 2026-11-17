@@ -34,7 +34,8 @@ test("detail skeleton covers the code layout without changing rendered SEO or co
     "skel-detail-code", "skel-instructions", "skel-detail-sidebar", "skel-site-footer"]) {
     assert.ok(skeleton.includes(part), "Missing detail skeleton part " + part);
   }
-  assert.match(detail, /<h1 id="detail-title">Invite code/);
+  assert.match(detail, /<h1 id="detail-title">Invite code <span class="detail-title-code">TEST42<\/span><\/h1>/);
+  assert.match(detail, /<p class="detail-code-text" id="detail-code">TEST42<\/p>/);
   assert.match(detail, /<meta name="robots" content="index,follow">/);
   assert.match(detail, /rel="canonical" href="https:\/\/muse.eplus.dev\/codes\/TEST42\/"/);
   assert.match(detail, /DOMContentLoaded/);

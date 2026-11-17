@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { validateCatalog } from "./validate.mjs";
 import { fetchGitHubCatalog, changedRecord, changedRecords } from "./catalog.mjs";
 import { parsePublicSource, listedPlatform, LISTING_PLATFORMS } from "./source-platform.mjs";
-import { isShareCodeIssue, parseInviteCodes } from "./code-issue-map.mjs";
+import { isShareCodeIssue, issueCodes, originalIssueNumber, parseInviteCodes, withCanonicalIssueRefs } from "./code-issue-map.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
 const MARKER = "<!-- muse-issue-draft-pr -->";
@@ -47,6 +47,21 @@ export function readIssueFields(body) {
 }
 function field(fields, name) {
   return fields[name] || "";
+}
+// A manually created GitHub Issue is not a Telegram bot submission. Without any
+// public Telegram sender/source to attribute, credit only the GitHub reporter.
+// Never trust a self-inserted Telegram marker or silently claim Telegram ownership.
+function isUnattributedHumanTelegramIssue(issue, fields) {
+  if (field(fields,"Code source").trim() !== TELEGRAM_COMMUNITY ||
+      ["eplus-bot","github-actions[bot]"].includes(issue.user?.login)) return false;
+  const provenanceFields = [
+    SOCIAL_FIELD, THREADS_FIELD, "Public confirmation or context (optional)",
+    "Telegram contributor"
+  ];
+  if (provenanceFields.some(name => field(fields,name).trim())) return false;
+  const notes = field(fields,"Notes (optional)");
+  // A handle/link in notes still represents a Telegram attribution claim.
+  return !/(?:https?:\/\/|(?:^|[\s(])@[A-Za-z][A-Za-z0-9_]{4,31}\b|(?:^|[\s(])(?:t\.me|telegram\.me)\/)/i.test(notes);
 }
 // The web form requires these checkboxes, but Issues created through the API
 // or other non-form entry points can omit them. Validate the actual Issue body.
@@ -163,8 +178,11 @@ function updateQuota(target, quota, date) {
   if (target.usageReportedAt && target.usageReportedAt > date) return "stale";
   const keys=["reportedCapacity","reportedUses","reportedRemaining","usageReportedAt"];
   if (keys.every(key=>target[key]===quota[key])) return "duplicate";
+  const hadSnapshot = typeof target.usageReportedAt === "string" &&
+    keys.slice(0,3).some(key => target[key] !== undefined);
   for (const key of keys) delete target[key];
   Object.assign(target,quota);
+  if (hadSnapshot) target.quotaUpdateCount = (target.quotaUpdateCount || 0) + 1;
   return "updated";
 }
 function rememberOwnerId(target,issue) {
@@ -185,10 +203,22 @@ function planMultiInvite(issue, current, codes, fields) {
     return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
       reason:"For multiple invite codes, leave per-code uses/limit/remaining fields blank; provide separate owner-count updates after publication."};
   }
-  const existing = codes.find(code => findCode(current,code));
-  if (existing) {
+  const existing = codes.filter(code => findCode(current,code));
+  if (existing.length===codes.length){
+    const canonicalIssueNumbers=[...new Set(codes.map(code=>originalIssueNumber(findCode(current,code)))
+      .filter(Number.isSafeInteger))];
+    // Multi-code Issues can be resolved as duplicates only when every code is
+    // already listed; mixed new/existing batches still require human triage.
+    return {
+      outcome:canonicalIssueNumbers.length===1 && canonicalIssueNumbers[0]===issue.number
+        ? "already-published":"already-listed",
+      kind:"invite",code:codes[0],codes,canonicalIssueNumbers,
+      reason:"All submitted invite codes are already included in the catalog."
+    };
+  }
+  if (existing.length){
     return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
-      reason:"Invite code "+existing+" is already in the catalog. Multi-code Issues must contain only new, distinct codes."};
+      reason:"Invite code "+existing[0]+" is already in the catalog. Multi-code Issues must contain only new, distinct codes."};
   }
   const parts = String(issue.body || "").split(/^### /m);
   const index = parts.findIndex(part => /^Invite code\r?\n/.test(part));
@@ -257,7 +287,19 @@ export function planTelegramIssue(issue, current) {
     const value=field(fields,label);
     if(value && !explicitlyUnreported(value))return {outcome:"needs-review",kind:"invite",code,reason:"Telegram cannot authenticate owner-only quota."};
   }
-  if(current.some(entry=>entry.code===code))return {outcome:"needs-review",kind:"invite",code,reason:"Code is already published; do not create duplicate listing."};
+  const listed=findCode(current,code);
+  if(listed){
+    const canonicalIssueNumber=originalIssueNumber(listed);
+    if (canonicalIssueNumber===issue.number && listed.sourceUrl!==source.url){
+      return {outcome:"needs-review",kind:"invite",code,canonicalIssueNumber,
+        reason:"Original Telegram source differs from the catalog; manual review is required."};
+    }
+    return canonicalIssueNumber===issue.number
+      ? {outcome:"already-published",kind:"invite",code,canonicalIssueNumber,
+          reason:"This original Telegram contribution is already in the catalog."}
+      : {outcome:"already-listed",kind:"invite",code,canonicalIssueNumber,
+          reason:"Invite code is already in the catalog; no second record will be added."};
+  }
   const id="community-issue-"+issue.number;
   if(current.some(entry=>entry.id===id || entry.feedbackIssueNumber===issue.number))
     return {outcome:"needs-review",kind:"invite",code,reason:"A catalog record is already associated with this Issue."};
@@ -333,10 +375,20 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
       return {outcome:"needs-review",kind,code,
         reason:"Choose GitHub, Threads, X (Twitter) or Facebook as the code source."};
     }
-    const sourcePlatform = SUBMISSION_PLATFORMS.get(selectedSource) || "GitHub";
+    const githubFallback = isUnattributedHumanTelegramIssue(issue,f);
+    const sourcePlatform = githubFallback ? "GitHub" :
+      SUBMISSION_PLATFORMS.get(selectedSource) || "GitHub";
     if (sourcePlatform === "Telegram") {
       return {outcome:"needs-review",kind,code,
-        reason:"Telegram reports require a confirmed sender and manual permission/source review; GitHub Issue author is not code owner."};
+        reason:"A GitHub Issue selecting Telegram with a Telegram handle or link needs manual source review; submit through the bot for confirmed Telegram attribution."};
+    }
+    if (githubFallback && (
+      ["Invite limit (optional; self-reported)", "Uses so far (optional; self-reported)",
+        "Remaining invites (optional; self-reported)"].some(name => field(f,name).trim()) ||
+      /\b[0-9]+\s+(?:uses?|invites?)\s+(?:left|remaining)\b/i.test(field(f,"Notes (optional)"))
+    )) {
+      return {outcome:"needs-review",kind,code,
+        reason:"GitHub fallback cannot treat Telegram-selected quota figures as owner-confirmed; remove the quota claim or request maintainer review."};
     }
     const socialSubmission = sourcePlatform !== "GitHub";
     const urlField = field(f,SOCIAL_FIELD).trim() || field(f,THREADS_FIELD).trim();
@@ -371,13 +423,39 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
         reason:"Third-party social reports cannot claim owner-only quota numbers."};
     }
     if (existing) {
-      if (socialSubmission || parsePublicSource(existing.sourceUrl)) {
-        return {outcome:"needs-review",kind,code,
-          reason:"The code is already listed. A cross-platform report cannot replace attribution, ownership or quota automatically."};
+      // Replaying the SAME original social submission after its reviewed record
+      // reached main is idempotent, not a cross-platform hijack. Require an
+      // exact canonical Issue, record ID and unchanged validated permalink.
+      // Different Issues or changed sources still require manual review.
+      if (socialSubmission &&
+          existing.id === "community-issue-" + issue.number &&
+          existing.feedbackIssueNumber === issue.number &&
+          existing.sourceUrl === social.url) {
+        return {outcome:"already-published",kind,code,canonicalIssueNumber:issue.number,
+          reason:"The submitted code and source are already in the main catalog from this Issue."};
       }
-      if (!ownerMatches(existing,issue)) {
+      const canonicalIssueNumber=originalIssueNumber(existing);
+      // Different-source submissions are duplicates only when they do not
+      // attempt to supply owner-only quota figures. Never discard claims
+      // needing human validation by silently closing their Issues.
+      const hasQuotaClaim=["Invite limit (optional; self-reported)",
+        "Uses so far (optional; self-reported)",
+        "Remaining invites (optional; self-reported)"].some(label=>field(f,label).trim());
+      if (!socialSubmission && hasQuotaClaim &&
+          (parsePublicSource(existing.sourceUrl) || !ownerMatches(existing,issue))) {
         return {outcome:"needs-review",kind,code,
-          reason:"The code already exists under a different GitHub owner; manual review is required."};
+          reason:"A different source or owner reported quota numbers; manual review is required."};
+      }
+      if (socialSubmission || parsePublicSource(existing.sourceUrl) || !ownerMatches(existing,issue)) {
+        // A second submission of an existing CODE does not replace attribution
+        // or ownership. Give its author the existing listing/Issue link and
+        // close the duplicate; do not publish a competing record.
+        if (canonicalIssueNumber===issue.number){
+          return {outcome:"needs-review",kind,code,
+            reason:"Original Issue now reports a different source or owner; maintainer review required."};
+        }
+        return {outcome:"already-listed",kind,code,canonicalIssueNumber,
+          reason:"Invite code is already listed. New source/ownership claims were not adopted."};
       }
       const quota=actualQuota(f,date,{
         total:"Invite limit (optional; self-reported)",
@@ -385,8 +463,13 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
         remaining:"Remaining invites (optional; self-reported)",
         notes:"Notes (optional)"
       });
-      if (!quota) return {outcome:"needs-review",kind,code,
-        reason:"Owner confirmed, but no complete count or remaining-only value was provided."};
+      if (!quota){
+        return canonicalIssueNumber===issue.number
+          ? {outcome:"already-published",kind,code,canonicalIssueNumber,
+              reason:"The existing original code was already published; there is no new quota."}
+          : {outcome:"already-listed",kind,code,canonicalIssueNumber,
+              reason:"Invite code already exists; use its original discussion for updates."};
+      }
       const target=data.find(item=>item.code===existing.code);
       const state=updateQuota(target,quota,date);
       if(state!=="updated") return {outcome:state==="stale"?"needs-review":"duplicate",kind,code,
@@ -403,19 +486,32 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
         ...(socialSubmission
           ? {sourceUrl:social.url, note:"Public "+social.platform+" code reported in issue #"+issue.number+
               "; original post content and Muse redemption are unverified community reports."}
-          : {submittedBy:issue.user.login, note:"Community-submitted in issue #"+issue.number+
-              "; redemption not independently verified."})
+          : {submittedBy:issue.user.login,
+              note:githubFallback
+                ? "Reported in GitHub Issue #"+issue.number+" with Telegram selected but no public Telegram sender/source. GitHub reporter is not a verified code owner; redemption and quota are unverified."
+                : "Community-submitted in issue #"+issue.number+
+                    "; redemption not independently verified."})
       };
       if (!socialSubmission) {
-        rememberOwnerId(entry,issue);
-        const reported=actualQuota(f,date,{
-          total:"Invite limit (optional; self-reported)",
-          used:"Uses so far (optional; self-reported)",
-          remaining:"Remaining invites (optional; self-reported)",
-          notes:"Notes (optional)"
-        });
-        if (reported) Object.assign(entry,reported);
-        else notice="Usage numbers were absent or incomplete; no available-slot count has been guessed.";
+        if (githubFallback) {
+          notice="Telegram was selected without a public sender or source. "+
+            "Attribution falls back to GitHub Issue reporter @"+issue.user.login+
+            " (not a verified code owner). A review-only Draft PR is required; "+
+            "no owner quotas or Muse redemption have been verified.";
+        } else {
+          rememberOwnerId(entry,issue);
+          const reported=actualQuota(f,date,{
+            total:"Invite limit (optional; self-reported)",
+            used:"Uses so far (optional; self-reported)",
+            remaining:"Remaining invites (optional; self-reported)",
+            notes:"Notes (optional)"
+          });
+          if (reported) Object.assign(entry,reported);
+          else notice="Usage numbers were absent or incomplete; no available-slot count has been guessed.";
+        }
+      } else if (social.group) {
+        notice="Facebook group "+social.handle+" is the cited source, NOT the post author's identity or a verified code owner. "+
+          "The submitted group post has not been independently verified; a maintainer must check it manually before publication.";
       } else {
         notice=social.platform+" @"+social.handle+" is the cited public source, NOT the GitHub reporter or a verified code owner. "+
           "This is a contributor-supplied post URL, NOT independently verified; visitors must check it themselves. Do NOT invent availability or redemption results.";
@@ -521,7 +617,9 @@ export function isAutoPublishableNewSocialInvite(issue,proposal) {
   const platform=SUBMISSION_PLATFORMS.get(selected);
   const urlField=field(f,SOCIAL_FIELD).trim() || field(f,THREADS_FIELD).trim();
   const social=parsePublicSource(urlField);
-  if (!social?.post || social.platform!==platform ||
+  // Group permalinks identify the group but cannot establish the post author.
+  // Do not auto-publish them, even when the URL and submitter checklist are valid.
+  if (!social?.post || social.group || social.platform!==platform ||
       proposal.action!=="add "+platform+" source") return false;
   if (["Invite limit (optional; self-reported)","Uses so far (optional; self-reported)",
        "Remaining invites (optional; self-reported)"].some(k=>field(f,k).trim())) return false;
@@ -582,11 +680,86 @@ async function openBotPrs(token){
   const result=await api("GET","pulls?state=open&per_page=100",token);
   return result.filter(pr=>pr.head?.repo?.full_name===REPO);
 }
+// Never close a new Issue merely because a 6-character token appeared in it.
+// The trusted planner must first establish a valid, fully submitted invite,
+// an exact catalog match, and an existing canonical discussion or live detail.
+export function resolvedInviteComment({codes,canonicalIssueNumbers=[],liveCodes=[],canonical=false}){
+  const list=codes.join(", ");
+  const siteLinks=liveCodes.map(code=>"[View "+code+"](https://muse.eplus.dev/codes/"+code+"/)");
+  const issueLinks=canonicalIssueNumbers.map(n=>"[Issue #"+n+"](https://github.com/"+REPO+"/issues/"+n+")");
+  return [
+    canonical ? "✅ **This original contribution has been published.**" :
+      "ℹ️ **Duplicate invite submission — already tracked.**",
+    "",
+    "**Invite code"+(codes.length>1?"s":"")+":** "+list,
+    ...(siteLinks.length ? ["**Published detail"+(siteLinks.length>1?"s":"")+":** "+siteLinks.join(" · ")] : []),
+    ...(issueLinks.length ? ["**Original discussion"+(issueLinks.length>1?"s":"")+":** "+issueLinks.join(" · ")] : []),
+    "",
+    canonical ? "Closing the completed submission; its original Issue can be reopened for new feedback." :
+      "Closing this duplicate so that feedback stays in the original discussion. This submission does not change the listing's attribution or quota.",
+    "Being listed does **not** mean Muse has verified redemption, eligibility or available invitations."
+  ].join("\n");
+}
+
+async function publishedDetailReady(code){
+  if (!CODE_PATTERN.test(code)) return false;
+  const url="https://muse.eplus.dev/codes/"+code+"/";
+  try {
+    const response=await fetch(url+"?duplicate-check=1",{
+      cache:"no-store",signal:AbortSignal.timeout(12000)
+    });
+    if(!response.ok)return false;
+    const body=await response.text();
+    return body.includes("<title>"+code+" Muse Invite Code | Muse Invite Hub</title>") &&
+      body.includes('rel="canonical" href="'+url+'"') &&
+      !body.includes('name="robots" content="noindex');
+  } catch {return false;}
+}
+
+async function resolveListedInvite(issue,result,token){
+  const codes=result.codes||[result.code];
+  if(!codes.length || codes.some(code=>!CODE_PATTERN.test(code)))return result;
+  const canonical=result.outcome==="already-published";
+  const refs=result.canonicalIssueNumbers||
+    (Number.isSafeInteger(result.canonicalIssueNumber)?[result.canonicalIssueNumber]:[]);
+  const originalRefs=[];
+  for(const n of [...new Set(refs)]){
+    if(!Number.isSafeInteger(n) || n<1 || n===issue.number)continue;
+    const original=await api("GET","issues/"+n,token);
+    if(!original.pull_request && codes.some(code=>issueCodes(original).includes(code))){
+      originalRefs.push(n);
+    }
+  }
+  const liveCodes=[];
+  for(const code of codes)if(await publishedDetailReady(code))liveCodes.push(code);
+  // The original submission closes only when all its pages are actually live.
+  // A duplicate can instead point to a separately confirmed original Issue.
+  if ((canonical && liveCodes.length!==codes.length) ||
+      (!canonical && liveCodes.length!==codes.length && !originalRefs.length)){
+    await comment(issue,token,"The invite code"+(codes.length>1?"s are":" is")+
+      " already in the main catalog. Keeping this Issue open until a published "+
+      "detail or original discussion can be verified; no new PR was created.");
+    return {...result,outcome:"pending-publication"};
+  }
+  const latest=await api("GET","issues/"+issue.number,token);
+  if(latest.state!=="open" || latest.title!==issue.title || latest.body!==issue.body){
+    return {...result,outcome:"skipped",reason:"Issue changed while resolving duplicate."};
+  }
+  await comment(issue,token,resolvedInviteComment({
+    codes,canonicalIssueNumbers:originalRefs,liveCodes,canonical
+  }));
+  await api("PATCH","issues/"+issue.number,token,{
+    state:"closed",state_reason:canonical?"completed":"duplicate"
+  });
+  return {...result,outcome:canonical?"closed-completed":"closed-duplicate"};
+}
+
 async function propose(issue,token) {
   if(issue.state!=="open" || issue.pull_request) return {outcome:"skipped",reason:"Issue not open."};
   const ref=await api("GET","git/ref/heads/main",token);
   const mainSHA=ref.object.sha;
-  const catalog=await getCatalog(token,mainSHA);
+  const roots=JSON.parse(readFileSync(new URL("../data/code-issues.json",import.meta.url),"utf8"));
+  const catalog=withCanonicalIssueRefs(await getCatalog(token,mainSHA),roots);
   const proposed=planIssueChange(issue,catalog);
   if(proposed.outcome!=="proposal")return proposed;
 
@@ -673,7 +846,7 @@ async function propose(issue,token) {
          proposed.action==="add Telegram source"
            ? "- [ ] Verify the Telegram contributor consent, actual public-sharing permission and invite validity; Telegram profile is NOT ownership/source-post proof"
            : proposed.action.startsWith("add ") && proposed.action.endsWith(" source")
-             ? "- [ ] Open the original public social post and confirm it contains this code and matches the attributed account"
+             ? "- [ ] Open the original public social post and confirm it contains this code; for Facebook groups verify the group/post context without assuming the group is the author"
              : "- [ ] Confirm the original GitHub owner attribution and any account-reported quota",
          "- [ ] Review catalog diff, duplicates and contributor attribution",
          "- [ ] CI and security checks pass",
@@ -721,7 +894,11 @@ async function propose(issue,token) {
       "as **unverified** after CI, source/consent checks and duplicate checks pass. "+
       "The Issue stays open until successful deployment."
     : "Created [Draft PR #"+pr.number+"]("+pr.html_url+") for **"+codesLabel+
-      "**. This submission needs maintainer review; no website data has been published.");
+      "**. "+(readIssueFields(issue.body)["Code source"]===TELEGRAM_COMMUNITY &&
+        proposed.action!=="add Telegram source"
+          ? "No Telegram sender/source was supplied, so the proposal is credited to your GitHub account rather than Telegram. "
+          : "")+
+      "This submission needs maintainer review; no website data has been published.");
   // Explicitly dispatch validation on the generated branch. GITHUB_TOKEN PR
   // activity does not reliably start an ordinary CI workflow automatically.
   try {
@@ -753,6 +930,11 @@ export async function runIssueAutomation({
     if(result.outcome==="needs-review"||result.outcome==="duplicate"){
       await comment(issue,token,"No automatic Draft PR was created for this Issue: "+
         result.reason+". A maintainer can review the report manually. No change has been published.");
+    }
+    if(result.outcome==="already-published"||result.outcome==="already-listed"){
+      const resolved=await resolveListedInvite(issue,result,token);
+      console.log("Resolved existing invite Issue: "+JSON.stringify(resolved));
+      return resolved;
     }
     if(result.outcome==="already-open"){
       await comment(issue,token,"A [Draft PR]("+result.url+") already exists for this Issue. "+

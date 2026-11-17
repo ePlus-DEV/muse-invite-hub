@@ -28,6 +28,8 @@
   let codes = [];
   let loadFailed = false;
   let codeIssueMap = {};
+  let feedbackCounts = null;
+  let quotaUpdateBaselines = {};
   function feedbackIssue(code, outcome = "other") {
     const item = codes.find(entry => entry.code === code);
     const number = features.issueNumberFor(codeIssueMap, code) ??
@@ -64,18 +66,17 @@
     const code = card.dataset.code;
     const copied = copiedCodes.has(code);
     card.classList.toggle("code-card-copied", copied);
-    const note = card.querySelector(".card-copy-note");
-    if (note) note.hidden = !copied;
     const button = card.querySelector(".card-copy");
     if (!button) return;
     button.dataset.copied = String(copied);
     button.dataset.tooltip = copied
-      ? "Previously copied in this browser. Copying a code does not redeem it on Muse."
+      ? "Copied on this device. Click to copy again; this does not confirm Muse redemption."
       : "Copy this code. Copying does not redeem it in Muse.";
     button.setAttribute("aria-label",
       (copied ? "Copy again Muse invite code " : "Copy Muse invite code ") + code);
-    button.replaceChildren(icon(copied ? "fa-solid fa-rotate" : "fa-regular fa-copy"),
-      document.createTextNode(copied ? " Copy again" : " Copy code"));
+    const label = copied ? " Copied" : " Copy code";
+    button.replaceChildren(icon(copied ? "fa-solid fa-check" : "fa-regular fa-copy"),
+      document.createTextNode(label));
   }
   function syncCopiedCards() {
     grid.querySelectorAll(".code-card").forEach(updateCopiedCard);
@@ -227,7 +228,7 @@
       const url = new URL(value);
       if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) return null;
       const host = url.hostname.toLowerCase(), path = url.pathname;
-      let found, platform, key, iconName;
+      let found, platform, key, iconName, group = false;
       if (["threads.com", "www.threads.com"].includes(host)) {
         found = /^\/@([A-Za-z0-9_.]{1,30})(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.exec(path);
         [platform,key,iconName] = ["Threads","threads","fa-brands fa-threads"];
@@ -240,11 +241,13 @@
         if (found && ["share","joinchat","login","addstickers","proxy","socks","addemoji"].includes(found[1].toLowerCase())) return null;
         [platform,key,iconName] = ["Telegram","telegram","fa-brands fa-telegram"];
       } else if (["facebook.com","www.facebook.com","m.facebook.com"].includes(host)) {
-        found = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/[A-Za-z0-9_-]{4,120})?\/?$/.exec(path);
+        found = /^\/groups\/([A-Za-z0-9][A-Za-z0-9._-]{1,79})\/posts\/([1-9][0-9]{9,24})\/?$/.exec(path);
+        group = Boolean(found);
+        if (!group) found = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/[A-Za-z0-9_-]{4,120})?\/?$/.exec(path);
         if (found && ["share","groups","watch","reel","reels","events","marketplace","people","pages","profile.php","permalink.php","photo.php","login"].includes(found[1].toLowerCase())) return null;
         [platform,key,iconName] = ["Facebook","facebook","fa-brands fa-facebook-f"];
       }
-      return found ? {platform,key,handle:found[1],url:url.href,icon:iconName} : null;
+      return found ? {platform,key,handle:found[1],url:url.href,icon:iconName,group} : null;
     } catch { return null; }
   }
   function sourceInfo(item) {
@@ -274,56 +277,58 @@
       ? "Owner-confirmed by ePlus.DEV. Muse redemption has not been independently confirmed."
       : status.description;
     if (ownerConfirmed) badge.prepend(icon("fa-solid fa-circle-check"));
+    // Every card uses exactly the same hierarchy: status, code, source, facts, actions.
+    // A verified owner is not proof that Muse accepts the invite.
+    const statusRow = el("div", "card-status-row");
     const headActions = el("div", "card-head-actions");
     const saveButton = el("button", "card-save");
     saveButton.type = "button";
     saveButton.dataset.code = item.code;
     updateSaveButton(saveButton);
     saveButton.addEventListener("click", () => toggleSaved(item.code));
-    headActions.append(badge, saveButton);
-    head.append(name, headActions);
+    headActions.append(saveButton);
+    statusRow.append(badge, headActions);
+    head.append(name);
     const contributor = el("div", "card-contributor");
     const source = sourceInfo(item);
     const sourceTag = el("span", "card-source" + (source.key === "github" ? "" : " card-source-" + source.key));
     sourceTag.append(icon(source.icon), document.createTextNode(" " + source.platform));
     contributor.append(sourceTag);
     if (source.handle && source.url) {
-      const author = el("a", "card-author", "@" + source.handle);
+      const author = el("a", "card-author", (source.group ? "Group: " : "@") + source.handle);
       author.href = source.url;
       author.rel = "noopener noreferrer";
       author.target = "_blank";
-      author.setAttribute("aria-label", "View " + source.platform + " profile of " + source.handle);
+      author.setAttribute("aria-label", source.group
+        ? "View Facebook group post in " + source.handle
+        : "View " + source.platform + " profile of " + source.handle);
+      author.title = source.group
+        ? "Facebook group post: " + source.handle
+        : source.platform + " source: " + source.handle;
       contributor.append(author);
     } else {
-      contributor.append(el("span", "", "Community contributor"));
+      contributor.append(el("span", "card-author", "Community contributor"));
     }
     const info = el("div", "card-facts");
     const remaining = reportedRemaining(item);
     const amount = el("p", "card-availability");
+    const availability = remaining
+      ? remaining.remaining.toLocaleString("en-US") +
+          (remaining.total === null ? "" : " / " + remaining.total.toLocaleString("en-US")) +
+          " remaining · reported"
+      : "Not reported";
+    amount.title = remaining
+      ? "Community count reported " + remaining.date + ". Not live Muse availability."
+      : "No dated invite quota has been reported for this code.";
+    amount.setAttribute("aria-label", "Availability: " + availability +
+      (remaining ? ", as of " + remaining.date + ", not live" : ""));
     amount.append(icon("fa-solid fa-chart-simple"));
-    amount.append(document.createTextNode(remaining
-      ? " " + remaining.remaining.toLocaleString("en-US") +
-          (remaining.total === null ? "" : " of " + remaining.total.toLocaleString("en-US")) +
-          " remaining (reported)"
-      : " Availability not reported"));
+    amount.append(document.createTextNode(" Availability: " + availability));
     info.append(amount);
     const date = el("p", "card-date");
     date.append(icon("fa-regular fa-clock"));
-    date.append(document.createTextNode(remaining
-      ? " " + remaining.date + " · Not live"
-      : " Listed " + formatDate(item.addedAt)));
+    date.append(document.createTextNode(" Listed: " + formatDate(item.addedAt)));
     info.append(date);
-    if (ownerConfirmed) {
-      const redemption = el("p", "card-redemption");
-      redemption.append(icon("fa-solid fa-circle-info"));
-      redemption.append(document.createTextNode(" Muse redemption not independently confirmed"));
-      info.append(redemption);
-    }
-    const copiedNote = el("p", "card-copy-note");
-    copiedNote.append(icon("fa-solid fa-clipboard-check"),
-      document.createTextNode(" Copied on this device · Redemption not verified"));
-    copiedNote.hidden = true;
-    info.append(copiedNote);
     const actions = el("div", "card-actions");
     const copy = el("button", "card-copy");
     copy.type = "button";
@@ -331,11 +336,24 @@
     copy.setAttribute("aria-label", "Copy Muse invite code " + item.code);
     copy.append(icon("fa-regular fa-copy"), document.createTextNode(" Copy code"));
     copy.addEventListener("click", () => copyCode(item.code, copy));
+    const openInvite = el("a", "card-open-invite");
+    openInvite.href = features.museInviteUrl(item.code);
+    openInvite.target = "_blank";
+    openInvite.rel = "noopener noreferrer";
+    openInvite.dataset.tooltip = "Open the code-specific Muse link. Only Muse can confirm redemption.";
+    openInvite.setAttribute("aria-label", "Open Muse invite link for code " + item.code);
+    openInvite.append(icon("fa-solid fa-arrow-up-right-from-square"), document.createTextNode(" Open invite"));
+    const primaryActions = el("div", "card-primary-actions");
+    primaryActions.append(copy, openInvite);
     const subActions = el("div", "card-subactions");
-    const details = el("a", "card-detail-link", "View details");
+    const details = el("a", "card-utility-link card-detail-link");
     details.dataset.tooltip = "See the source, report date and details for this code.";
+    details.setAttribute("aria-label", "View details for Muse invite code " + item.code);
     details.href = "./codes/" + encodeURIComponent(item.code) + "/";
-    const report = el("a", "card-feedback-link", "Give feedback");
+    details.append(icon("fa-solid fa-circle-info"));
+    const report = el("a", "card-utility-link card-feedback-link");
+    report.setAttribute("aria-label", "Give feedback on Muse invite code " + item.code);
+    report.append(icon("fa-regular fa-comment-dots"));
     report.dataset.tooltip = "Comment on this code's existing GitHub Issue. New feedback reopens it for review.";
     report.href = feedbackIssue(item.code);
     report.addEventListener("click", event => prepareFeedback(event, item, "other"));
@@ -343,15 +361,40 @@
     report.rel = "noopener noreferrer";
     subActions.append(details, report);
     if (item.submittedBy && !item.sourceUrl) {
-      const countLink = el("a", "card-feedback-link", "Update count");
+      const countLink = el("a", "card-utility-link card-count-link");
+      countLink.setAttribute("aria-label", "Update owner invite count for code " + item.code);
+      countLink.append(icon("fa-solid fa-arrow-rotate-right"));
+      // Show only documented, accepted quota revisions; not visits or click counts.
+      // Documented pre-tracking revisions are in a trusted sidecar so the
+      // public preview catalog remains compatible with main's schema.
+      // Future approved revisions are counted separately in the record.
+      const tracked = Number.isSafeInteger(item.quotaUpdateCount) &&
+        item.quotaUpdateCount > 0 ? item.quotaUpdateCount : 0;
+      const baseline = Number.isSafeInteger(quotaUpdateBaselines[item.code]) &&
+        quotaUpdateBaselines[item.code] > 0 ? quotaUpdateBaselines[item.code] : 0;
+      const updates = tracked + baseline;
+      if (Number.isSafeInteger(updates) && updates > 0) {
+        const counter = el("span", "card-count-updates", updates > 99 ? "99+" : String(updates));
+        counter.setAttribute("aria-hidden", "true");
+        countLink.append(counter);
+        countLink.setAttribute("aria-label", "Update owner invite count for code " +
+          item.code + " — " + updates + " recorded quota " +
+          (updates === 1 ? "update" : "updates"));
+      }
       countLink.href = feedbackIssue(item.code, "count");
       countLink.target = "_blank";
       countLink.rel = "noopener noreferrer";
-      countLink.dataset.tooltip = "For this code's verified GitHub owner: report a dated Muse quota snapshot on the same Issue.";
+      countLink.dataset.tooltip = "For the original GitHub owner: report a dated quota snapshot on the same Issue." +
+        (Number.isSafeInteger(updates) && updates > 0
+          ? " " + updates + " accepted quota " + (updates === 1 ? "update" : "updates") +
+            " recorded since the first report."
+          : " No accepted quota revisions are recorded yet.");
       countLink.addEventListener("click", event => prepareFeedback(event, item, "count"));
       subActions.append(countLink);
     }
     const quickFeedback = el("div", "card-feedback-actions");
+    quickFeedback.setAttribute("role", "group");
+    quickFeedback.setAttribute("aria-label", "Report invite code experience");
     for (const [outcome, text, iconName] of [
       ["worked", "Worked for me", "fa-regular fa-thumbs-up"],
       ["failed", "Didn't work", "fa-regular fa-thumbs-down"]
@@ -365,11 +408,28 @@
         "Review a prepared success report, then copy and comment on the original Issue." :
         "Review a prepared failure report, then copy and comment on the original Issue.";
       link.setAttribute("aria-label", text + " — report Muse invite code " + item.code + " on GitHub");
-      link.append(icon(iconName), document.createTextNode(" " + text));
+      link.append(icon(iconName));
+      const summary = feedbackCounts?.[item.code];
+      const total = summary?.[outcome];
+      if (Number.isSafeInteger(total) && total >= 0) {
+        const counter = el("span", "card-feedback-count", total > 999 ? "999+" : String(total));
+        counter.setAttribute("aria-hidden", "true");
+        link.append(counter);
+        link.classList.add("has-count");
+        const description = total + " community " +
+          (total === 1 ? "report" : "reports") + " of " +
+          (outcome === "worked" ? "success" : "failure");
+        link.dataset.tooltip += " " + description +
+          " in the last published GitHub snapshot; not live or independently verified by Muse.";
+        link.setAttribute("aria-label", text + " — " + description +
+          " for Muse invite code " + item.code);
+      }
       quickFeedback.append(link);
     }
-    actions.append(copy, quickFeedback, subActions);
-    card.append(head, contributor, info, actions);
+    const utilityBar = el("div", "card-utility-bar");
+    utilityBar.append(quickFeedback, subActions);
+    actions.append(primaryActions, utilityBar);
+    card.append(statusRow, head, contributor, info, actions);
     updateCopiedCard(card);
     return card;
   }
@@ -431,6 +491,32 @@
       } catch (error) {
         // Use the repository Issue list, never an extra feedback Issue Form.
         console.warn("Canonical issue links unavailable:", error);
+      }
+      try {
+        const baselineResponse = await fetch("./data/quota-update-baseline.json",
+          {cache:"no-store",signal:controller.signal});
+        if (!baselineResponse.ok) throw Error("Quota history unavailable");
+        const baseline = await baselineResponse.json();
+        if (baseline && !Array.isArray(baseline) && typeof baseline === "object") {
+          quotaUpdateBaselines = baseline;
+        }
+      } catch {
+        // Historical count missing: show only catalog-tracked updates.
+        quotaUpdateBaselines = {};
+      }
+      try {
+        const feedbackResponse = await fetch("./data/feedback-counts.json",
+          {cache:"no-store",signal:controller.signal});
+        if (!feedbackResponse.ok) throw Error("Feedback totals unavailable");
+        const snapshot = await feedbackResponse.json();
+        if (snapshot?.source === "reviewed-github-feedback" && snapshot.codes &&
+            !Array.isArray(snapshot.codes) && typeof snapshot.codes === "object" &&
+            Number.isFinite(Date.parse(snapshot.generatedAt || ""))) {
+          feedbackCounts = snapshot.codes;
+        }
+      } catch {
+        // Missing/incomplete GitHub snapshots must not be rendered as fake zero votes.
+        feedbackCounts = null;
       }
     } catch (error) {
       console.error("Could not load invite directory:", error);

@@ -33,27 +33,181 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /rel="canonical" href="https:\/\/muse.eplus.dev\/codes\/DPNIHH\/"/);
   assert.match(html, /<meta name="robots" content="index,follow">/);
   assert.match(html, /Verified Owner/);
-  assert.match(html, /<dt>Code owner<\/dt><dd><span class="detail-owner-confirmed"/);
-  assert.match(html, /Verified Owner \(ePlus\.DEV\)/);
-  assert.match(html, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
+  assert.doesNotMatch(html, /<dt>Code owner<\/dt>/);
+  assert.doesNotMatch(html, /class="detail-lead"|class="detail-caution"|class="detail-owner"/);
+  assert.match(html, /<span class="detail-status" title="Ownership confirmed by ePlus.DEV; Muse redemption is not verified."/);
+  assert.match(html, /<div class="detail-code-panel detail-hero-unified">/);
+  assert.match(html, /<h1 id="detail-title">Invite code <span class="detail-title-code">DPNIHH<\/span><\/h1>/);
+  assert.match(html, /<p class="detail-code-text" id="detail-code">DPNIHH<\/p>/);
+  assert.match(html, /class="detail-page-intro"/);
+  assert.match(html, /class="detail-stats" aria-label="Community-reported invitation statistics"/);
+  assert.equal((html.match(/<h1\b/g)||[]).length,1,"Exactly one visible and SEO-readable H1");
+  assert.equal((html.match(/id="detail-code"/g)||[]).length,1,"Only one copy source ID");
+  assert.doesNotMatch(html, /<p class="detail-code" id="detail-code">/);
+  const introAt=html.indexOf('class="detail-page-intro"');
+  const titleAt=html.indexOf('id="detail-title"');
+  const heroStart=html.indexOf('class="detail-code-panel detail-hero-unified"');
+  const codeAt=html.indexOf('id="detail-code"');
+  const actionsAtHero=html.indexOf('class="detail-action-row"');
+  const statsAt=html.indexOf('class="detail-stats"');
+  const instructionsAt=html.indexOf('class="detail-instructions detail-mobile-fold"');
+  const sidebarAt=html.indexOf('class="detail-side"');
+  const marketAt=html.indexOf('class="availability-section detail-market-section"');
+  assert.ok(introAt < titleAt && titleAt < heroStart &&
+    heroStart < codeAt && codeAt < actionsAtHero &&
+    actionsAtHero < statsAt && statsAt < instructionsAt &&
+    instructionsAt < sidebarAt && sidebarAt < marketAt,
+    "Approved mockup: SEO H1 above hero, quota stats below actions, sidebar and market last");
+  assert.equal((html.match(/class="detail-slots-number"/g)||[]).length,1);
+  assert.doesNotMatch(html.slice(sidebarAt),/REPORTED AVAILABILITY/);
+  assert.match(html, /<strong class="detail-stat-updates">1 update<\/strong>/);
+  assert.match(html, /<strong class="detail-stat-date">Nov 11, 2026<\/strong>/);
+  assert.match(html, /class="detail-copy-inline" type="button" aria-label="Copy invite code DPNIHH"/);
+  assert.match(html, /<details class="detail-info-card detail-listing detail-mobile-fold"/);
+  assert.match(html, /<summary><i class="fa-solid fa-book-open"/);
+  assert.equal((html.match(/REPORTED AVAILABILITY/g)||[]).length,0,
+    "Stats footer replaces standalone Reported Availability box");
+    assert.match(html, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
   assert.doesNotMatch(html, /<dt>Redemption status<\/dt><dd>Unverified/);
   assert.match(html, /3 \/ 30/);
   assert.match(html, /Not live/);
   assert.match(html, /"BreadcrumbList"/);
   assert.match(html, /"WebPage"/);
   assert.match(html, /href="\.\.\/\.\.\/assets\/styles.css"/);
-  assert.match(html, /href="https:\/\/muse.ai\/join"/);
+  const actions = html.match(/<div class="detail-action-row">([\s\S]*?)<\/div>/)?.[1];
+  assert.ok(actions, "Detail action row should be present");
+  assert.doesNotMatch(actions, /href="https:\/\/muse.ai\/join"/);
+  assert.doesNotMatch(actions, />Open Muse <i/);
+  assert.match(actions, /class="button button-primary detail-open-invite"/);
+  assert.match(actions, /id="detail-copy"/);
+  assert.doesNotMatch(actions, /id="detail-save"/);
+  assert.equal((actions.match(/class="button /g)||[]).length,2,"Only two large actions allowed");
+  assert.ok(actions.indexOf("detail-open-invite") < actions.indexOf("detail-copy"),
+    "Open invite must precede Copy in keyboard and reading order");
+  const saveAt=html.indexOf('id="detail-save"');
+  const headingAt=html.indexOf('class="detail-code-heading"');
+  const actionsAt=html.indexOf('class="detail-action-row"');
+  assert.ok(headingAt>=0 && saveAt>headingAt && saveAt<actionsAt,
+    "Secondary Save icon belongs beside the verification badge");
+  assert.match(html, /class="detail-save" id="detail-save" type="button" aria-pressed="false" aria-label="Save Muse invite code DPNIHH" hidden/);
+  assert.match(html, /class="detail-save-label sr-only">Save code/);
+    assert.match(actions, />Open invite <i/);
+  assert.equal((html.match(/class="detail-action-row"/g) || []).length, 1);
+  assert.equal((html.match(/href="https:\/\/muse.ai\/invite\/DPNIHH"/g) || []).length, 1);
+  assert.match(html, /href="https:\/\/muse.ai\/invite\/DPNIHH"/);
+  assert.match(html, /aria-label="Open Muse invite link for code DPNIHH"/);
+  assert.doesNotMatch(html, /<p class="detail-caption">These figures are dated/);
+  assert.doesNotMatch(html, /Owner-confirmed; redemption is not independently tested/);
+  assert.match(html, /Select <strong>Open invite<\/strong> above to visit Muse with this code/);
+  assert.doesNotMatch(html, /<li>Copy the invitation code shown above/);
+  assert.doesNotMatch(html, /Ownership confirmation does not mean the code/);
   assert.doesNotMatch(html, /Muse has verified this code/);
 });
+test("detail visual restructure keeps SEO metadata, readable links and structured data intact", () => {
+  const item=owner();
+  const html=renderDetailPage(item);
+  const preview=renderDetailPage(item,{preview:true,basePath:"/pr-preview/pr-261/"});
+  const head=html.split("</head>")[0];
+  assert.match(head,/<title>DPNIHH Muse Invite Code \| Muse Invite Hub<\/title>/);
+  assert.match(head,/<meta name="description" content="[^"]+">/);
+  assert.match(head,/<meta name="robots" content="index,follow">/);
+  assert.match(head,/rel="canonical" href="https:\/\/muse.eplus.dev\/codes\/DPNIHH\/"/);
+  assert.match(head,/<meta property="og:title"/);
+  assert.match(head,/<meta property="og:description"/);
+  assert.match(head,/<meta property="og:url"/);
+  const ld=head.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+  assert.ok(ld,"Static structured data is preserved without depending on JS");
+  const graph=JSON.parse(ld[1]);
+  assert.ok(graph.some(e=>e["@type"]==="WebPage" && e.url==="https://muse.eplus.dev/codes/DPNIHH/"));
+  assert.ok(graph.some(e=>e["@type"]==="BreadcrumbList" &&
+    e.itemListElement.length===3));
+  assert.match(html, /href="\.\.\/\.\.\/#codes"/);
+  assert.match(html, /href="https:\/\/muse.ai\/invite\/DPNIHH"/);
+  assert.match(html, /<h2 id="how-to-redeem">How to use this code<\/h2>/);
+  assert.match(html, /<h2>Code details<\/h2>/);
+  assert.match(preview,/noindex,nofollow,noarchive/);
+  assert.doesNotMatch(preview,/rel="canonical"/);
+  assert.equal((preview.match(/<h1\b/g)||[]).length,1);
+  assert.match(generateSitemap([item]), /\/codes\/DPNIHH\//);
+});
+
+test("unreported community codes do not invent quota or update history", () => {
+  const html=renderDetailPage(community());
+  assert.match(html, /class="detail-slots-number">Not reported<\/strong>/);
+  assert.match(html, /class="detail-stat-date">No report<\/strong>/);
+  assert.match(html, /class="detail-stat-updates">—<\/strong>/);
+  assert.match(html, /No confirmed remaining-slot data/);
+  assert.equal((html.match(/class="detail-stats"/g)||[]).length,1);
+  assert.equal((html.match(/<h1\b/g)||[]).length,1);
+});
+test("mobile unreported quota has a full-width row and never overflows a 3-column strip", () => {
+  const html = renderDetailPage({
+    ...community(),
+    code:"2MAL34",
+    note:"Community-submitted in issue #259; redemption not independently verified."
+  });
+  const css = readFileSync(new URL("../assets/styles.css",import.meta.url),"utf8");
+  const heroStart = html.indexOf('class="detail-code-panel detail-hero-unified"');
+  const statsStart = html.indexOf('class="detail-stats"',heroStart);
+  const noteStart = html.indexOf('class="detail-note"',statsStart);
+  const heroEnd = html.indexOf('</div>',statsStart);
+  const foldStart = html.indexOf('class="detail-instructions detail-mobile-fold"',heroStart);
+  assert.ok(statsStart > heroStart && noteStart > statsStart && noteStart < foldStart,
+    "Community caveat must be visually attached to the invite card, not floating below it");
+  assert.match(html, /class="detail-slots-number">Not reported<\/strong>/);
+  assert.match(html, /class="detail-stat-date">No report<\/strong>/);
+  assert.match(css, /@media\(max-width:620px\)\{\s*\.detail-hero-unified \.detail-stats\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.detail-hero-unified \.detail-stat:first-child\{[\s\S]*?grid-column:1\/-1/);
+  assert.match(css, /\.detail-hero-unified \.detail-stat:first-child \.detail-slots-number\{[^}]*white-space:normal/);
+  assert.match(css, /\.detail-hero-unified \.detail-stat:nth-child\(2\)\{border-right:1px/);
+  assert.match(css, /\.detail-hero-unified \.detail-note\{margin:0 -22px/);
+  const js=readFileSync(new URL("../assets/detail.js",import.meta.url),"utf8");
+  assert.match(js, /hero\.append\(contributorNote\)/);
+  assert.equal((html.match(/<h1\b/g)||[]).length,1);
+  assert.match(html, /<details class="detail-instructions detail-mobile-fold"/);
+});
+
+test("approved desktop/mobile layout retains real counts and accessible controls", () => {
+  const css=readFileSync(new URL("../assets/styles.css",import.meta.url),"utf8");
+  const js=readFileSync(new URL("../assets/detail.js",import.meta.url),"utf8");
+  assert.match(css, /Approved invite-detail mockup/);
+  assert.match(css, /\.detail-hero-unified \.detail-stats\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.detail-instructions\.detail-mobile-fold ol\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /@media\(max-width:620px\)\{/);
+  assert.match(css, /\.detail-hero-unified \.detail-action-row\{display:grid;grid-template-columns:1fr/);
+  assert.match(css, /\.detail-mobile-fold>summary\{/);
+  assert.match(js, /document\.querySelector\("\.detail-side > \.detail-info-card:first-child"\)/);
+  assert.match(js, /detailLayout\.append\(market\)/);
+  assert.match(js, /foldMedia\.addEventListener\?\.\("change",syncFolds\)/);
+});
+test("desktop and mobile instruction steps wrap as complete sentences, not flex columns", () => {
+  const html=renderDetailPage(owner());
+  const css=readFileSync(new URL("../assets/styles.css",import.meta.url),"utf8");
+  const section=html.match(/<details class="detail-instructions detail-mobile-fold"[\s\S]*?<\/details>/)?.[0];
+  assert.ok(section,"How-to remains present in prerendered HTML");
+  assert.match(section, /<li>Select <strong>Open invite<\/strong> above to visit Muse with this code\.<\/li>/);
+  assert.match(section, /<li>Follow Muse's instructions and check eligibility before redeeming\.<\/li>/);
+  const instructionRule=css.match(/\.detail-instructions\.detail-mobile-fold li\{([^}]+)\}/)?.[1];
+  assert.ok(instructionRule,"How-to item CSS selector exists");
+  assert.match(instructionRule, /display:block/);
+  assert.match(instructionRule, /position:relative/);
+  assert.doesNotMatch(instructionRule, /display:flex/);
+  assert.match(css, /\.detail-instructions\.detail-mobile-fold li::before\{[^}]*position:absolute;top:0;left:0/);
+  assert.match(css, /@media\(max-width:1160px\)\{\.detail-instructions\.detail-mobile-fold ol\{grid-template-columns:1fr/);
+  assert.match(css, /@media\(max-width:620px\)\{[\s\S]*?\.detail-instructions\.detail-mobile-fold ol\{grid-template-columns:1fr/);
+});
+
 test("confirmed owner card and non-owner detail keep verification meanings separate", () => {
   const app = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../assets/styles.css", import.meta.url), "utf8");
   assert.match(app, /ownerConfirmed \? "Verified Owner" : featured \? "Featured"/);
   assert.match(app, /status-owner-verified/);
-  assert.match(app, /Muse redemption not independently confirmed/);
+  assert.match(app, /Owner-confirmed by ePlus.DEV\. Muse redemption has not been independently confirmed/);
   assert.match(css, /\.status-owner-verified\{/);
-  assert.match(css, /\.card-redemption\{/);
+  assert.match(css, /\.card-status-row\{display:flex/);
+  assert.doesNotMatch(css, /\.card-redemption\{/);
   const communityHtml = renderDetailPage(community());
+  assert.match(communityHtml, /href="https:\/\/muse.ai\/invite\/TEST42"/);
   assert.doesNotMatch(communityHtml, /Verified Owner \(ePlus\.DEV\)/);
   assert.match(communityHtml, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
 });
@@ -94,6 +248,16 @@ test("detail responsive layout groups feedback actions and stacks long metadata 
   assert.match(githubOwner, /class="detail-quick-feedback" data-feedback-outcome="failed"/);
   assert.doesNotMatch(social, /class="detail-owner-count"/);
   assert.match(social, /class="detail-quick-feedback"/);
+});
+
+test("Facebook group sources are labeled as groups, not code owners", () => {
+  const html=renderDetailPage({
+    ...community(),code:"FT4SHN",
+    sourceUrl:"https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/"
+  });
+  assert.match(html,/Facebook · Group: referralcodeshare/);
+  assert.doesNotMatch(html,/@referralcodeshare/);
+  assert.match(html,/href="https:\/\/www.facebook.com\/groups\/referralcodeshare\/posts\/1169239249161106\/"/);
 });
 
 test("all published invite details, including unverified codes, are indexable and in the sitemap", () => {
@@ -177,7 +341,7 @@ test("directory redesign preserves SEO, GA4, a single featured listing and verif
   assert.doesNotMatch(home, /id="featured-invite"/);
   assert.match(app, /new Set\(codes\.map/);
   assert.match(app, /ownerConfirmed/);
-  assert.match(app, /Muse redemption not independently confirmed/);
+  assert.match(app, /Owner-confirmed by ePlus.DEV\. Muse redemption has not been independently confirmed/);
   assert.match(app, /visible\.slice\(0, displayLimit\)/);
   assert.match(renderDetailPage(owner()), /G-N1MZ8YLNLJ/);
 });

@@ -69,8 +69,8 @@ test("trusted preview renderer publishes deep code routes and noindex without ex
     assert.match(detail, /3 \/ 30/);
     assert.match(detail, /noindex,nofollow,noarchive/);
     assert.match(detail, /https:\/\/muse.eplus.dev\/pr-preview\/pr-17\/codes\/DPNIHH\//);
-    assert.match(detail, /href="\.\.\/\.\.\/assets\/styles.css"/);
-    assert.match(detail, /src="\.\.\/\.\.\/assets\/detail.js"/);
+    assert.match(detail, /href="\.\.\/\.\.\/assets\/styles.css(?:\?v=[A-Za-z0-9-]+)?"/);
+    assert.match(detail, /src="\.\.\/\.\.\/assets\/detail.js(?:\?v=[A-Za-z0-9-]+)?"/);
     assert.match(detail, /https:\/\/muse.eplus.dev\/pr-preview\/pr-17\/assets\/social-preview.png/);
     assert.equal(JSON.parse(readFileSync(join(dir, "preview-meta.json"), "utf8")).detail_pages, 1);
   } finally {

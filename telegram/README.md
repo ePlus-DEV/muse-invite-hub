@@ -1,7 +1,5 @@
 # Oracle Cloud Always Free ARM64 — Telegram Bot deployment
 
-> **For end users:** see the [Telegram bot guide](../docs/TELEGRAM_BOT_GUIDE.md) for commands, privacy and review rules. This file is for maintainers running the bot.
->
 > **Alternative hosting:** the same bot also runs on Cloudflare Workers
 > (`worker.mjs`, no VM required) — see [WORKERS.md](WORKERS.md). The review
 > and privacy rules in section 7 below apply to both runtimes.
