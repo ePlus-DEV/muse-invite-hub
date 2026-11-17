@@ -29,12 +29,28 @@ export function feedbackCodeForIssue(issue, catalog, commentBody="") {
   return null;
 }
 
+// A pasted referral for a DIFFERENT code is a new submission, not feedback
+// on this canonical Issue. Only classify explicit stand-alone code labels
+// accompanied by the official Muse join link; ambiguous replies stay pending.
+export function unrelatedReferralCode(body, canonicalCodes) {
+  if (typeof body !== "string" || body.length > 3500 ||
+      !Array.isArray(canonicalCodes) || !canonicalCodes.length ||
+      !/https:\/\/muse\.ai\/join(?:[/?#]|\s|$)/i.test(body)) return null;
+  const labels=[...body.matchAll(/^[ \t]*(?:邀请码|邀请代码|Invite\s+code|Code|C[oó]digo|Mã\s*mời)\s*[:：]\s*([A-Z0-9]{6})[ \t]*$/gimu)];
+  if (labels.length !== 1) return null;
+  const candidate=labels[0][1].toUpperCase();
+  if (canonicalCodes.some(code=>code.toUpperCase()===candidate ||
+      new RegExp("(^|[^A-Z0-9])"+code+"([^A-Z0-9]|$)","i").test(body))) return null;
+  return candidate;
+}
+
 export function shouldReopen(issue, comment, catalog) {
   if (!comment || !Number.isSafeInteger(comment.id) ||
       !comment.body?.trim() || !comment.user?.login ||
       comment.user.type === "Bot" ||
       comment.user.login.endsWith("[bot]") || comment.user.login === "eplus-bot") return false;
-  return issue?.state === "closed" && Boolean(feedbackCodeForIssue(issue, catalog));
+  return issue?.state === "closed" && Boolean(feedbackCodeForIssue(issue, catalog)) &&
+    !unrelatedReferralCode(comment.body,issueCodes(issue));
 }
 
 async function github(method, path, token, body) {
@@ -70,8 +86,24 @@ export async function reopenOnFeedback({
   const entries = withCanonicalIssueRefs(rawEntries, roots);
   const issue = await github("GET", "issues/" + issueNumber, token);
   const comment = await github("GET", "issues/comments/" + commentId, token);
-  if (comment.issue_url?.split("/").at(-1) !== String(issueNumber) ||
-      !shouldReopen(issue, comment, entries)) {
+  if (comment.issue_url?.split("/").at(-1) !== String(issueNumber)) {
+    return {outcome:"ignored",reason:"Comment does not belong to this Issue."};
+  }
+  const foreign=unrelatedReferralCode(comment.body,issueCodes(issue));
+  if (foreign && feedbackCodeForIssue(issue,entries)) {
+    const marker="<!-- muse-unrelated-referral:"+commentId+" -->";
+    const comments=await github("GET","issues/"+issueNumber+"/comments?per_page=100",token);
+    if (!comments.some(row=>["github-actions[bot]","eplus-bot"].includes(row.user?.login) &&
+        String(row.body||"").includes(marker))) {
+      await github("POST","issues/"+issueNumber+"/comments",token,{body:marker+"\n"+
+        "ℹ️ **"+foreign+"** is a separate invite code, not feedback on this Issue. "+
+        "Please submit it through the [Share Code form](https://github.com/"+REPO+
+        "/issues/new?template=share-code.yml) with the required ownership/public-sharing "+
+        "confirmations. This comment has not been added to the public catalog."});
+    }
+    return {outcome:"redirected",issueNumber,code:foreign};
+  }
+  if (!shouldReopen(issue, comment, entries)) {
     console.log("No action: not new community feedback on a closed canonical code Issue.");
     return { outcome:"ignored" };
   }
