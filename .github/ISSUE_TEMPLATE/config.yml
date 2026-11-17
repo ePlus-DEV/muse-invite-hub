@@ -1,8 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: "Official Muse website"
-    url: "https://muse.ai/"
-    about: "For official Muse account eligibility, redemption, regional access and rewards."
-  - name: "Contributing guide"
+  - name: "Submit via Telegram bot"
+    url: "https://t.me/muse_invite_hub_bot"
+    about: "Share a code or send feedback without a GitHub account."
+  - name: "Contribution guide"
     url: "https://github.com/ePlus-DEV/muse-invite-hub/blob/main/CONTRIBUTING.md"
-    about: "Learn how invite codes are reviewed and published."
+    about: "How community codes are submitted and reviewed."
+  - name: "Official Muse support"
+    url: "https://muse.ai/"
+    about: "Questions about Muse accounts, redemption or eligibility."
