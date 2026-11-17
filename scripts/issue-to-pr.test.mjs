@@ -59,7 +59,7 @@ const telegramBody=(code="ABC123",handle="alice_dev") => [
 
 test("Telegram and GitHub use the exact same Share Code Issue Form headings and consent wording",()=>{
   const form=readFileSync(new URL("../.github/ISSUE_TEMPLATE/share-code.yml",import.meta.url),"utf8");
-  const labels=[...form.matchAll(/^\s{8}label: (.+)$/gm)].map(match=>match[1].replace(/^"|"$/g,""));
+  const labels=[...form.matchAll(/^\s{6}label: (.+)$/gm)].map(match=>match[1].replace(/^"|"$/g,""));
   const body=telegramBody();
   const headings=[...body.matchAll(/^### (.+)$/gm)].map(match=>match[1]);
   assert.deepEqual(headings,labels);
