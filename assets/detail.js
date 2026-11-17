@@ -32,7 +32,7 @@
         link.append(label);
         const context = count + " community " + (count === 1 ? "report" : "reports") +
           " of " + (outcome === "worked" ? "success" : "failure");
-        link.setAttribute("aria-label", link.textContent.trim() + " — " + context);
+        link.setAttribute("aria-label", (outcome === "worked" ? "Worked for me" : "Didn\'t work") + " — " + context);
         link.dataset.tooltip = context + " from the last published GitHub snapshot; not live or Muse-verified.";
       }
     } catch { /* Hide counts when the trusted snapshot is unavailable. */ }
