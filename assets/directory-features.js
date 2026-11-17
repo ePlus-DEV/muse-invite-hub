@@ -232,9 +232,9 @@
     const optionalCounts = document.createElement("details");
     optionalCounts.className = "feedback-count-extra";
     const optionalSummary = document.createElement("summary");
-    optionalSummary.textContent = "Have total and used counts? (optional)";
+    optionalSummary.textContent = "Total and used invites (if known)";
     const optionalHelp = document.createElement("p");
-    optionalHelp.textContent = "If you do not know the remaining count, enter BOTH total and used.";
+    optionalHelp.textContent = "If this code already shows a total, confirm and re-enter the current total to preserve its breakdown. Used invites can be calculated from total minus remaining. Otherwise, if remaining is unknown, enter both total and used.";
     optionalHelp.className = "feedback-count-hint";
     const optionalGrid = document.createElement("div");
     optionalGrid.className = "feedback-count-grid";
