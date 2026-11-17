@@ -147,7 +147,7 @@ async function tryAssignCommenter(api,issue,comment) {
   }
 }
 
-async function notePendingAssignee(api,issue,comment,code,sourceCommentId) {
+async function notePendingAssignee(api,issue,comment,code,sourceIssueNumber,sourceCommentId) {
   const marker="<!-- "+ASSIGNMENT_MARKER+":"+sourceCommentId+
     ":"+comment.user.id+":"+code+" -->";
   const current=await api("GET","issues/"+issue.number+"/comments?per_page=100");
@@ -157,7 +157,7 @@ async function notePendingAssignee(api,issue,comment,code,sourceCommentId) {
     marker,
     "ℹ️ This Issue tracks **"+code+"** from [@"+comment.user.login+
       "'s original comment](https://github.com/"+REPO+
-      "/issues/204#issuecomment-"+sourceCommentId+").",
+      "/issues/"+sourceIssueNumber+"#issuecomment-"+sourceCommentId+").",
     "@"+comment.user.login+": GitHub does not currently allow assigning you "+
       "to this Issue. Please comment here if you'd like to take responsibility; "+
       "the bot will retry the assignment automatically.",
@@ -273,7 +273,7 @@ export async function reopenOnFeedback({
     if (candidateIssue) {
       assignment=await tryAssignCommenter(api,candidateIssue,comment);
       if (!assignment) {
-        await notePendingAssignee(api,candidateIssue,comment,foreign,commentId);
+        await notePendingAssignee(api,candidateIssue,comment,foreign,issueNumber,commentId);
       }
     }
     const newLink=candidateIssue
