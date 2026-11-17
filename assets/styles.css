@@ -644,6 +644,25 @@ html.is-page-loading body>.site-footer{display:none!important}
 }
 @media(max-width:350px){.detail-hero-unified h1{font-size:36px}}
 
+/* Availability belongs to the invitation it describes, not the sidebar.
+   Keep the dated/not-live report adjacent to the single H1 on every viewport. */
+.detail-hero-unified .detail-identity-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(166px,195px);gap:22px;align-items:center;margin:17px 0 22px;min-width:0}
+.detail-hero-unified .detail-identity-row h1{min-width:0;margin:0}
+.detail-hero-unified .detail-availability-inline{position:relative;z-index:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:12px 14px;border:1px solid var(--blue-line);border-radius:15px;background:rgba(255,255,255,.8)}
+.detail-hero-unified .detail-availability-inline .section-kicker{font-size:10px;letter-spacing:.055em;line-height:1.4;margin:0;color:var(--blue);font-weight:800}
+.detail-hero-unified .detail-availability-inline .detail-slots-number{font-size:clamp(26px,3.1vw,34px);line-height:1.18;white-space:nowrap}
+.detail-hero-unified .detail-availability-inline .detail-slots-caption{margin:0;font-size:10.5px;line-height:1.55}
+.detail-hero-unified .detail-instructions ol{grid-template-columns:1fr;gap:10px}
+.detail-hero-unified .detail-instructions li{align-items:center;line-height:1.65}
+@media(max-width:600px){
+  .detail-hero-unified .detail-identity-row{grid-template-columns:1fr;gap:14px;margin:15px 0 18px}
+  .detail-hero-unified .detail-availability-inline{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 12px;padding:11px 13px}
+  .detail-hero-unified .detail-availability-inline .section-kicker{grid-column:1;grid-row:1;margin:0}
+  .detail-hero-unified .detail-availability-inline .detail-slots-number{grid-column:2;grid-row:1 / span 2;font-size:26px}
+  .detail-hero-unified .detail-availability-inline .detail-slots-caption{grid-column:1;grid-row:2;margin:0}
+  .detail-hero-unified .detail-instructions li{align-items:flex-start}
+}
+
 /* Link from the existing sourced market disclosure to its full map page. */
 .availability-map-link{margin:14px 0 4px}
 .availability-map-link .button{font-size:12px;padding:9px 13px;min-height:40px}
