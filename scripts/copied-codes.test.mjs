@@ -50,7 +50,7 @@ test("storage disabled does not turn a successful copy into a failed copy", () =
   assert.equal(features.rememberCopiedCode(writeBlocked,"DPNIHH"),null);
 });
 
-test("homepage applies copied tint only after clipboard success and syncs storage events", () => {
+test("homepage copied state keeps the same card geometry and syncs storage events", () => {
   const app=read("assets/app.js");
   const css=read("assets/styles.css");
   assert.match(app,/function updateCopiedCard\(card\)/);
@@ -59,7 +59,8 @@ test("homepage applies copied tint only after clipboard success and syncs storag
   assert.match(app,/copiedCodes = new Set\(features\.parseCopied\(event\.key === null \? null : event\.newValue\)\)/);
   assert.match(app,/updateCopiedCard\(card\);\s*return card;/);
   assert.match(app,/Copy again/);
-  assert.match(app,/Copied on this device · Redemption not verified/);
+  assert.doesNotMatch(app,/card-copy-note/);
+  assert.match(app,/icon\(copied \? "fa-solid fa-check" : "fa-regular fa-copy"\)/);
   const copy=app.slice(app.indexOf("async function copyCode("),app.indexOf("function socialSource("));
   assert.ok(copy.indexOf("await navigator.clipboard.writeText(value)") <
     copy.indexOf("features.rememberCopiedCode(window.localStorage, value)"));
@@ -67,9 +68,11 @@ test("homepage applies copied tint only after clipboard success and syncs storag
     copy.indexOf("features.rememberCopiedCode(window.localStorage, value)"));
   assert.match(copy,/else copiedCodes\.add\(value\)/);
   assert.match(copy,/syncCopiedCards\(\)/);
-  assert.match(css,/\.code-card\.code-card-copied\{border-color:#bda7ec/);
-  assert.match(css,/\.code-card-featured\.code-card-copied \.card-copy/);
-  assert.match(css,/\.card-facts \.card-copy-note/);
+  assert.match(css,/\.card-primary-actions\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css,/\.code-card-copied:not\(\.code-card-featured\) \.card-copy i\{color:var\(--green\)\}/);
+  assert.doesNotMatch(css,/\.code-card\.code-card-copied\{/);
+  assert.doesNotMatch(css,/\.code-card-copied \.card-copy,/);
+  assert.doesNotMatch(css,/\.card-facts \.card-copy-note/);
 });
 
 function detailHarness({ copied=false, failCopy=false }={}) {

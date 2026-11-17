@@ -557,12 +557,7 @@ html.is-page-loading body>.site-footer{display:none!important}
 
 /* Copy history is a personal browser cue, not a redemption/owner status.
    Use soft violet so it cannot be confused with blue verified-owner or green success. */
-.code-card.code-card-copied{border-color:#bda7ec;background:linear-gradient(155deg,#f7f3ff,#fff 82%);box-shadow:0 5px 22px rgba(88,54,151,.08)}
-.code-card.code-card-copied:hover{border-color:#9f83df;box-shadow:0 14px 30px rgba(88,54,151,.13)}
-.code-card-copied .card-copy,.code-card-featured.code-card-copied .card-copy{background:#ede5ff;color:#6335a4;border:1px solid #d3c2f5}
-.code-card-copied .card-copy:hover,.code-card-featured.code-card-copied .card-copy:hover{background:#e3d7ff;color:#51278d}
-.card-facts .card-copy-note{color:#6335a4;font-size:10.5px;font-weight:750}
-.card-facts .card-copy-note i{color:#8252c8}
+.code-card-copied:not(.code-card-featured) .card-copy i{color:var(--green)}
 .detail-code-panel.detail-code-panel-copied{border-color:#bda7ec;background:linear-gradient(135deg,#f3ecff,#fff 75%);box-shadow:0 12px 30px rgba(88,54,151,.08)}
 .detail-code-panel-copied #detail-copy{background:#ede5ff;color:#6335a4;border-color:#d3c2f5}
 .detail-code-panel-copied #detail-copy:hover,.detail-code-panel-copied #detail-copy:focus-visible{background:#e3d7ff;color:#51278d}

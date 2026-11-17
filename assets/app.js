@@ -64,8 +64,6 @@
     const code = card.dataset.code;
     const copied = copiedCodes.has(code);
     card.classList.toggle("code-card-copied", copied);
-    const note = card.querySelector(".card-copy-note");
-    if (note) note.hidden = !copied;
     const button = card.querySelector(".card-copy");
     if (!button) return;
     button.dataset.copied = String(copied);
@@ -74,7 +72,7 @@
       : "Copy this code. Copying does not redeem it in Muse.";
     button.setAttribute("aria-label",
       (copied ? "Copy again Muse invite code " : "Copy Muse invite code ") + code);
-    button.replaceChildren(icon(copied ? "fa-solid fa-rotate" : "fa-regular fa-copy"),
+    button.replaceChildren(icon(copied ? "fa-solid fa-check" : "fa-regular fa-copy"),
       document.createTextNode(copied ? " Copy again" : " Copy code"));
   }
   function syncCopiedCards() {
@@ -319,11 +317,6 @@
       redemption.append(document.createTextNode(" Muse redemption not independently confirmed"));
       info.append(redemption);
     }
-    const copiedNote = el("p", "card-copy-note");
-    copiedNote.append(icon("fa-solid fa-clipboard-check"),
-      document.createTextNode(" Copied on this device · Redemption not verified"));
-    copiedNote.hidden = true;
-    info.append(copiedNote);
     const actions = el("div", "card-actions");
     const copy = el("button", "card-copy");
     copy.type = "button";
