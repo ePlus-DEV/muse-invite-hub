@@ -102,6 +102,27 @@ test("every card uses the same status, source, availability and original listing
   assert.match(app,/if \(item\.submittedBy && !item\.sourceUrl\)/);
 });
 
+test("invite card colors follow a single brand-blue palette without fake success states", () => {
+  const css=read("assets/styles.css");
+  assert.match(css, /:root\{[^}]*--blue:#0064ff;--blue-hover:#0057dd;--blue-soft:#e8f1ff;--blue-line:#c7deff/);
+  assert.match(css, /\.status-featured\{color:var\(--blue\);background:var\(--blue-soft\)/);
+  assert.match(css, /\.status-owner-verified\{[^}]*color:var\(--blue\);background:var\(--blue-soft\)/);
+  assert.match(css, /\.card-source\{[^}]*background:var\(--blue-soft\);color:var\(--blue\)/);
+  for (const platform of ["threads","x","facebook","telegram"]) {
+    assert.doesNotMatch(css,new RegExp("\\.card-source-"+platform+"\\{"),
+      "platform "+platform+" must not create a competing color scheme");
+  }
+  assert.match(css,/\.code-card-copied:not\(\.code-card-featured\) \.card-copy\{background:var\(--blue-soft\);border-color:var\(--blue-line\);color:var\(--blue\)\}/);
+  assert.match(css,/\.card-quick-feedback\{[^}]*background:var\(--blue-soft\);color:var\(--blue\)/);
+  assert.match(css,/\.card-quick-worked i\{color:var\(--green\)\}/);
+  assert.match(css,/\.card-quick-failed i\{color:var\(--red\)\}/);
+  assert.match(css,/\.status-reported-working\{color:var\(--green\)/);
+  assert.match(css,/\.status-reported-not-working\{color:var\(--red\)/);
+  assert.match(css,/\.detail-code-panel-copied #detail-copy\{background:var\(--blue-soft\);color:var\(--blue\);border-color:var\(--blue-line\)\}/);
+  assert.match(css,/\.detail-copy-note::before\{[^}]*background:var\(--blue\)/);
+  assert.doesNotMatch(css,/#(?:6335a4|8252c8|e3d7ff|f1edff|865919)/i);
+});
+
 test("saved codes parse safely and remain scoped to the browser", () => {
   assert.equal(features.STORAGE_KEY, "muse-invite-hub:saved-codes:v1");
   assert.deepEqual(features.parseSaved(null), []);
