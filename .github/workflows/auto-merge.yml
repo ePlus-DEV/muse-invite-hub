@@ -16,7 +16,7 @@ on:
     workflows: ["Validate website and invite catalog"]
     types: [completed]
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -53,7 +53,7 @@ jobs:
           script: |
             const { autoMergeDecision, verifyNewGithubInvitePR, verifyNewSocialInvitePR,
               ciHasPassed, getMaintainerAuthorization, qualifiesForDefaultAutoMerge,
-              needsEplusBotReview, isTransientMergeError,
+              needsEplusBotReview, dispatchBotValidation, isTransientMergeError,
               confirmedMergeAfterError, shouldDispatchPagesRecovery } = await import(
               process.env.GITHUB_WORKSPACE + "/scripts/auto-merge.mjs"
             );
@@ -241,8 +241,9 @@ jobs:
                     });
                     core.info("Updated verified bot PR #" + number +
                       " with the current main; waiting for new-head CI.");
-                    // GitHub's GITHUB_TOKEN suppresses downstream push events.
-                    // Dispatch after GitHub has applied the update asynchronously.
+                    // The GITHUB_TOKEN branch update suppresses ordinary push triggers.
+                    // Once GitHub applies it, dispatch CI with eplus-bot so
+                    // its completion can wake this auto-merge workflow.
                     let updated=false;
                     for(let n=0;n<6;n++){
                       await new Promise(resolve=>setTimeout(resolve,1200));
@@ -255,10 +256,24 @@ jobs:
                       }
                     }
                     if (updated) {
-                      await github.rest.actions.createWorkflowDispatch({
-                        owner,repo,workflow_id:"validate.yml",ref:pr.head.ref
-                      });
-                      core.info("Dispatched fresh validation for PR #" + number);
+                      try {
+                        await dispatchBotValidation({
+                          repository:fullName,branch:pr.head.ref,
+                          token:process.env.EPLUS_BOT_TOKEN
+                        });
+                        core.info("eplus-bot dispatched fresh validation for PR #" +
+                          number + "; workflow_run will recheck after CI.");
+                      } catch (dispatchError) {
+                        // Preserve the existing read-only CI fallback even when
+                        // eplus-bot is unavailable; scheduled reconciliation
+                        // can safely recover the missing workflow_run callback.
+                        core.warning("Bot validation dispatch unavailable for PR #" +
+                          number + ": " + dispatchError.message +
+                          "; using GITHUB_TOKEN with scheduled recovery.");
+                        await github.rest.actions.createWorkflowDispatch({
+                          owner,repo,workflow_id:"validate.yml",ref:pr.head.ref
+                        });
+                      }
                     } else {
                       core.warning("PR #" + number +
                         " update is pending; next reconciliation will verify the new head.");
