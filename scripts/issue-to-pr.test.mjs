@@ -64,6 +64,10 @@ test("Telegram and GitHub use the exact same Share Code Issue Form headings and 
   const headings=[...body.matchAll(/^### (.+)$/gm)].map(match=>match[1]);
   assert.deepEqual(headings,labels);
   assert.match(form,/I am authorized to share this code publicly; I understand this Issue is public\./);
+  assert.ok(form.includes("https://t.me/muse_invite_hub_bot"));
+  const chooser=readFileSync(new URL("../.github/ISSUE_TEMPLATE/config.yml",import.meta.url),"utf8");
+  assert.ok(chooser.includes("https://t.me/muse_invite_hub_bot"));
+  assert.ok(!form.includes("t.me/share/url"));
   assert.equal(readIssueFields(body)["Code source"],"Telegram (community code shared through bot)");
   assert.equal(hasRequiredInviteConfirmations(body),true);
 });

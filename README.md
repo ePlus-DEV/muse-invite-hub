@@ -38,7 +38,7 @@ Missing confirmations or malformed fields are handled on the **existing open Iss
 
 No coding required:
 
-- [**Share an invite code**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml)
+- [**Share an invite code on GitHub**](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) or [**via Telegram bot**](https://t.me/muse_invite_hub_bot) (no GitHub account)
 - [**Report code feedback**](https://muse.eplus.dev/#codes)
 - [**Update invite count on an existing code**](https://muse.eplus.dev/#codes)
 - [**Contribute code or documentation**](CONTRIBUTING.md#contribute-code-or-documentation)

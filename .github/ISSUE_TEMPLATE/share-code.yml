@@ -1,19 +1,20 @@
 name: "✦ Share a Muse invite code"
-description: "Contribute a publicly shareable Muse invite/referral code."
+description: "Share a public code, or contribute through Telegram without GitHub."
 title: "[Invite] "
 body:
   - type: markdown
     attributes:
       value: |
-        **For a new, unlisted code only.** Search https://muse.eplus.dev/#codes first. If the code already exists, use **Give feedback** or **Update count** on its card to comment in the original Issue instead of creating a duplicate. Issues are public. Choose **your own GitHub code** or a **public code found on Threads, X (Twitter) or Facebook**.
-        For a social post, provide the original public post permalink: a profile alone cannot prove authorship and needs manual review. Facebook Group post links (/groups/GROUP/posts/POST_ID/) are allowed as group-level references only and always require human review; the group is not necessarily the post author. For confirmed Telegram attribution, use the bot to share your public @username. If you select Telegram here without a username or public source, the contribution is instead credited to your GitHub Issue account and requires manual review; GitHub identity does NOT verify code ownership. Telegram links or handles submitted here also require manual source review. Your GitHub account is only the reporter, NOT automatically the owner of someone else's code.
-        Muse's invite field shows six slots. Submit up to 10 six-character codes in one Issue (comma, space, or newline separated). One reviewed Draft PR keeps each code in a separate record. For multiple codes, do not fill per-code quota/count fields.
-        Never submit passwords, authentication codes, sessions, cookies or private account information. All accepted reports produce review-only Draft PRs, never automatic publication.
+        **New codes only.** Check [existing codes](https://muse.eplus.dev/#codes) first. For a listed code, leave feedback on its page instead of creating another Issue.
+
+        **Prefer Telegram?** [Open @muse_invite_hub_bot](https://t.me/muse_invite_hub_bot) to submit a code or report feedback without GitHub sign-in.
+
+        Using GitHub? Share 1–10 codes (6 letters or digits each). For a code found on Threads, X or Facebook, include its original public post link. Issues are public. Share only codes you are allowed to publish; never include passwords, OTPs or private data.
   - type: textarea
     id: invite_code
     attributes:
       label: Invite code
-      description: "Enter 1–10 distinct codes of exactly 6 letters (A–Z) or digits (0–9), without hyphens or spaces within a code. Lowercase letters are normalized. Separate multiple codes by commas, spaces, or new lines. If pasting the complete Muse referral message, include exactly one standalone 'Code: ABC123' or Spanish 'Código: ABC123' line; do not paste ambiguous codes. Never enter login or verification codes. For multiple codes, leave quota/count fields blank because they belong to individual codes."
+      description: "Enter 1–10 unique 6-character codes (A–Z, 0–9), separated by commas, spaces or lines. If pasting a referral message, use one 'Code: ABC123' or 'Código: ABC123' line."
       placeholder: "ABC123, DEF456"
     validations:
       required: true
@@ -21,7 +22,7 @@ body:
     id: code_source
     attributes:
       label: Code source
-      description: "GitHub means your own code; Telegram attribution needs a confirmed bot sender. Without a Telegram username/link, a human Issue choosing Telegram falls back to GitHub reporter attribution and manual review. Identical usernames across platforms are different identities."
+      description: "Choose where the code came from. For Telegram submissions, prefer the bot above; Telegram sources entered here require manual review."
       options:
         - GitHub (my own code)
         - Threads (public code I found)
@@ -34,7 +35,7 @@ body:
     id: social_url
     attributes:
       label: Social post or profile URL (required for Threads, X or Facebook)
-      description: "Paste the original public post containing the code: threads.com/@handle/post/ID, x.com/handle/status/ID, facebook.com/handle/posts/ID or facebook.com/groups/GROUP/posts/POST_ID/. Facebook Group links reference a group, not an identifiable post author, and require human review. Profile-only, share-shortlink or ambiguous URLs require manual review."
+      description: "Link to the original public post containing the code. Profile-only or ambiguous links need manual review."
       placeholder: "https://x.com/username/status/123456789..."
     validations:
       required: false
@@ -42,7 +43,7 @@ body:
     id: source_url
     attributes:
       label: Public confirmation or context (optional)
-      description: "For your own GitHub code only: optional public HTTPS page you control or official Muse reference. For Threads, X or Facebook use the social URL field above."
+      description: "Optional supporting public link for your own GitHub code. For social sources, use the field above."
       placeholder: "https://..."
     validations:
       required: false
@@ -50,7 +51,7 @@ body:
     id: reported_uses
     attributes:
       label: Uses so far (optional; self-reported)
-      description: "For your own GitHub code only, from your Muse invite screen. Never enter quotas found on another person's social profile."
+      description: "Only for your own GitHub code. Leave blank when submitting multiple codes."
       placeholder: "e.g. 1"
     validations:
       required: false
@@ -58,7 +59,7 @@ body:
     id: reported_capacity
     attributes:
       label: Invite limit (optional; self-reported)
-      description: "For GitHub-owned codes only, from your Muse account. Never guess."
+      description: "Only for your own GitHub code; do not guess."
       placeholder: "e.g. 30"
     validations:
       required: false
@@ -66,7 +67,7 @@ body:
     id: remaining
     attributes:
       label: Remaining invites (optional; self-reported)
-      description: "For your own GitHub code only; use your Muse account. Social-source reports cannot claim another user's invite quota."
+      description: "Only for your own GitHub code, from your Muse invite screen."
       placeholder: "e.g. 17"
     validations:
       required: false
@@ -74,7 +75,7 @@ body:
     id: notes
     attributes:
       label: Notes (optional)
-      description: "Additional conditions or observations; do not promise rewards."
+      description: "Any useful context; do not promise rewards."
     validations:
       required: false
   - type: checkboxes
