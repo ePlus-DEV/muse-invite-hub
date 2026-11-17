@@ -208,6 +208,10 @@
       oldIdentity.remove?.();
     }
     if (parentStats && parentStats.parentElement !== hero) hero.append(parentStats);
+    const contributorNote = document.querySelector(".detail-primary > .detail-note");
+    if (contributorNote && contributorNote.parentElement !== hero) {
+      hero.append(contributorNote);
+    }
     const moveIntoFold = (original,headingText,iconClass,kind) => {
       if (!original || original.tagName === "DETAILS") return original;
       const fold=make("details",original.className+" detail-mobile-fold");
