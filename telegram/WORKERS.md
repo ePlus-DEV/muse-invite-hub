@@ -1,5 +1,7 @@
 # Cloudflare Workers — Telegram Bot deployment (alternative to OCI)
 
+For end-user commands, privacy, and contribution rules, see the [Telegram bot guide](../docs/TELEGRAM_BOT_GUIDE.md). This page covers deployment only.
+
 `worker.mjs` runs the same bot as `server.mjs` — same commands, messages and
 review rules — on Cloudflare Workers instead of an OCI VM. It reuses
 `bot.mjs` and `github.mjs` unchanged. Webhook secret comparison is
