@@ -95,10 +95,10 @@ export function createTelegramApp({
       chat_id:chatId,text,disable_web_page_preview:true,reply_markup:replyKeyboard(language,role)
     });
   }
-  function allowWrite(chatId,updateId,kind) {
+  function allowWrite(chatId,updateId,kind,code) {
     const now=Date.now();
     const key=String(chatId);
-    const personal=writeDecision(writeLimits[key]||[],{kind,updateId,now,scope:"chat"});
+    const personal=writeDecision(writeLimits[key]||[],{kind,updateId,code,now,scope:"chat"});
     if(!personal.allowed)return false;
     if(personal.retry)return true;
     let global=null;
@@ -152,7 +152,7 @@ export function createTelegramApp({
       }
       return await handleLegacy({
         action,profiles,send,complete,services,githubToken,
-        allowWrite:async id=>allowWrite(id,action.updateId,action.type)
+        allowWrite:async (id,code)=>allowWrite(id,action.updateId,action.type,code)
       });
     } catch(error) {
       if(action.callbackId&&["submit","report"].includes(action.type)&&
