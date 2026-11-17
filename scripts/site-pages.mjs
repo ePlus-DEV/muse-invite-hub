@@ -190,8 +190,8 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '            <div class="detail-stat"><i class="fa-solid fa-users" aria-hidden="true"></i><span class="detail-stat-body">' + usage + '</span></div>' +
     '            <div class="detail-stat"><i class="fa-regular fa-calendar" aria-hidden="true"></i><span class="detail-stat-body"><strong class="detail-stat-date">' + escapeHtml(lastReported) + '</strong><span class="detail-stat-label">Last reported</span></span></div>' +
     '            <div class="detail-stat"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i><span class="detail-stat-body"><strong class="detail-stat-updates">' + escapeHtml(updateLabel) + '</strong><span class="detail-stat-label">' + (totalUpdates > 0 ? 'Quota updated' : 'No recorded updates') + '</span></span></div>' +
-    '          </div>' +
-    '        </div>' + notes +
+    '          </div>' + notes +
+    '        </div>' +
     '        <details class="detail-instructions detail-mobile-fold" open><summary><i class="fa-solid fa-book-open" aria-hidden="true"></i><h2 id="how-to-redeem">How to use this code</h2><i class="fa-solid fa-chevron-down detail-fold-chevron" aria-hidden="true"></i></summary>' +
     '          <div class="detail-fold-body"><ol><li>Select <strong>Open invite</strong> above to visit Muse with this code.</li>' +
     '          <li>Follow Muse\'s instructions and check eligibility before redeeming.</li></ol></div>' +
