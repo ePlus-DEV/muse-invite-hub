@@ -126,6 +126,30 @@ test("submit and report are explicitly confirmed, then sent to GitHub once",asyn
     await new Promise(resolve=>restarted.close(resolve));
   });
 });
+test("OCI anti-spam limits persist across service restarts and profile deletion",async()=>{
+  await withApp(async({post,dir,options,calls,sent})=>{
+    for(let i=0;i<3;i++){
+      assert.equal((await post(callback(700+i,"t:submit:CODE1"+i))).status,200);
+    }
+    assert.equal(calls.submit.length,3);
+    assert.equal((await post(message(705,"/delete_data"))).status,200);
+    const saved=JSON.parse(readFileSync(join(dir,"write-limits.json"),"utf8"));
+    assert.equal(saved["42"].length,3);
+    // A new process loads the private limits instead of resetting them.
+    const restarted=createTelegramApp(options);
+    await new Promise(resolve=>restarted.listen(0,"127.0.0.1",resolve));
+    const response=await fetch("http://127.0.0.1:"+restarted.address().port+"/telegram/webhook",{
+      method:"POST",headers:{"Content-Type":"application/json",
+        "X-Telegram-Bot-Api-Secret-Token":secret},
+      body:JSON.stringify(callback(706,"t:submit:CODE14"))
+    });
+    assert.equal(response.status,200);
+    assert.equal(calls.submit.length,3,"Restart must not bypass daily quota");
+    assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/Too many submissions/);
+    await new Promise(resolve=>restarted.close(resolve));
+  });
+});
+
 test("code status and privacy are informational in the Node webhook",async()=>{
   await withApp(async({post,sent,calls})=>{
     assert.equal((await post(message(30,"/status DPNIHH"))).status,200);
