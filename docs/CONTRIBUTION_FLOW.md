@@ -47,7 +47,7 @@ flowchart TD
 
 For grouped submissions (2–10 codes), each code is stored in its own `data/invite-records/<id>.json` record. Per-code quota/usage figures must be omitted for grouped Issues. Duplicate codes or an existing-code update are **not** eligible for automatic new-code publication.
 
-## 2. Auto-publish vs review
+Telegram only sends a six-character code and explicit consent to create a public Issue. It does **not** collect a verified GitHub identity, original source permalink or proof of sharing permission. The bot-authored `[Telegram submission]` Issue therefore requires a maintainer to establish public provenance/permission and check duplicates before proposing any review-only Draft PR. Do not convert it to a GitHub-owned `[Invite]` Issue or mark consent boxes on behalf of the sender. A closed, unpublished Issue should be shown as **closed**, not pending, on repeat submission; never open a duplicate just to retry. If accepted and deployed, post the live code link before closing the original Issue.\n\n## 2. Auto-publish vs review
 
 | Submission or PR | Result |
 | --- | --- |
