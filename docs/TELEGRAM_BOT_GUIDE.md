@@ -2,13 +2,13 @@
 
 Use the optional Muse Invite Hub Telegram bot to browse invite codes, share a public code, send feedback and follow a listing. The bot is a **community companion** to [muse.eplus.dev](https://muse.eplus.dev/), not an official Muse or Meta service. A listed code is not guaranteed to work.
 
-> **Bot access:** You can scan the QR on [our contribution page](https://muse.eplus.dev/#contribute) to open the channel choices on your phone. **The QR does not start the bot.** This repository does not currently contain a verified public bot `@username` or `t.me` invitation URL. We do not publish an unverified bot link. If you already have an authenticated chat with the bot, use it; otherwise you can [contribute through GitHub](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) until the project publishes its verified Telegram handle. Never give a third-party bot your password, session token or OTP.
+> **Bot access:** You can scan the QR on [our contribution page](https://muse.eplus.dev/#contribute) to open the channel choices on your phone. **The QR opens the website's choice dialog directly, without scrolling, and does not start the bot.** This repository does not currently contain a verified public bot `@username` or `t.me` invitation URL. We do not publish an unverified bot link. If you already have an authenticated chat with the bot, use it; otherwise you can [contribute through GitHub](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) until the project publishes its verified Telegram handle. Never give a third-party bot your password, session token or OTP.
 
 ## Choose a way to share
 
 The website offers three clear entry points: **Telegram** (private bot chat, no GitHub account for submission), **GitHub** (Share Code Issue Form; GitHub account required), and **existing-code feedback** (choose a listed code on the site; GitHub account is required to post its canonical Issue comment, while the Telegram bot can submit feedback too). Threads, X and Facebook are accepted **sources of public code evidence**, not independent automated submission inboxes.
 
-The desktop QR opens `https://muse.eplus.dev/#contribute`, not a guessed `t.me` bot identity. Once the project publishes a verified public Telegram handle, the same contribution section can link it without changing old QR images.
+The desktop QR opens `https://muse.eplus.dev/#contribute`, which immediately displays the choice dialog without scrolling, not a guessed `t.me` bot identity. Once the project publishes a verified public Telegram handle, the same contribution section can link it without changing old QR images.
 
 ## Get started
 
