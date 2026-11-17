@@ -100,6 +100,73 @@ function candidateIssueBody(code,comment,issueNumber) {
   ].join("\n");
 }
 
+const BOT_LOGINS=new Set(["github-actions[bot]","eplus-bot"]);
+const ASSIGNMENT_MARKER="muse-referral-assignee-request";
+const GITHUB_LOGIN=/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
+
+// A commenter may not be assignable until they personally comment on the
+// *destination* Issue. Do not grant repository access or confuse assignment
+// with ownership/permission to publish a code.
+export function pendingReferralAssignee(issue,comment,comments=[]) {
+  if (!issue || issue.pull_request || issue.state!=="open" ||
+      !Number.isSafeInteger(issue.number) || !comment?.user ||
+      !Number.isSafeInteger(comment.user.id) || comment.user.id<=0 ||
+      !GITHUB_LOGIN.test(comment.user.login||"") ||
+      comment.user.type==="Bot" || BOT_LOGINS.has(comment.user.login)) return null;
+  const login=comment.user.login,id=comment.user.id;
+  const body=String(issue.body||"");
+  const generated=/<!-- muse-comment-referral-candidate:([A-Z0-9]{6}) -->/.exec(body);
+  if (generated && body.includes("**Original GitHub commenter:** @"+login+
+      " (user ID "+id+")")) return generated[1];
+  const codes=issueCodes(issue);
+  for (const row of comments) {
+    if (!BOT_LOGINS.has(row.user?.login)) continue;
+    const marker=new RegExp("<!-- "+ASSIGNMENT_MARKER+
+      ":([1-9][0-9]*):"+id+":([A-Z0-9]{6}) -->").exec(String(row.body||""));
+    if (marker && codes.includes(marker[2]) &&
+        String(row.body).includes("@"+login)) return marker[2];
+  }
+  return null;
+}
+
+async function tryAssignCommenter(api,issue,comment) {
+  const number=issue?.number,login=comment?.user?.login;
+  if (!Number.isSafeInteger(number) || !GITHUB_LOGIN.test(login||"")) return false;
+  if (issue.assignees?.some(x=>x.login===login)) return true;
+  try {
+    // GitHub explicitly answers 204 when assignable and 404 otherwise.
+    await api("GET","issues/"+number+"/assignees/"+encodeURIComponent(login));
+    const changed=await api("POST","issues/"+number+"/assignees",
+      {assignees:[login]});
+    return changed?.assignees?.some(x=>x.login===login)===true;
+  } catch (error) {
+    // A public commenter is often not eligible to be assigned to a *different*
+    // Issue. Keep tracking and @mention; never fail unrelated issue triage.
+    if (/\bHTTP (403|404|422)\b/.test(String(error?.message||""))) return false;
+    throw error;
+  }
+}
+
+async function notePendingAssignee(api,issue,comment,code,sourceCommentId) {
+  const marker="<!-- "+ASSIGNMENT_MARKER+":"+sourceCommentId+
+    ":"+comment.user.id+":"+code+" -->";
+  const current=await api("GET","issues/"+issue.number+"/comments?per_page=100");
+  if (current.some(x=>BOT_LOGINS.has(x.user?.login) &&
+      String(x.body||"").includes(marker))) return;
+  await api("POST","issues/"+issue.number+"/comments",{body:[
+    marker,
+    "ℹ️ This Issue tracks **"+code+"** from [@"+comment.user.login+
+      "'s original comment](https://github.com/"+REPO+
+      "/issues/204#issuecomment-"+sourceCommentId+").",
+    "@"+comment.user.login+": GitHub does not currently allow assigning you "+
+      "to this Issue. Please comment here if you'd like to take responsibility; "+
+      "the bot will retry the assignment automatically.",
+    "Assignment does not verify code ownership or replace the required "+
+      "[Share Code confirmations](https://github.com/"+REPO+
+      "/issues/new?template=share-code.yml)."
+  ].join("\n")});
+}
+
 export function shouldReopen(issue, comment, catalog) {
   if (!comment || !Number.isSafeInteger(comment.id) ||
       !comment.body?.trim() || !comment.user?.login ||
@@ -147,6 +214,22 @@ export async function reopenOnFeedback({
   if (comment.issue_url?.split("/").at(-1) !== String(issueNumber)) {
     return {outcome:"ignored",reason:"Comment does not belong to this Issue."};
   }
+  // When the original commenter later replies on the tracking Issue, they
+  // become eligible under GitHub's commenter assignment rule. Assign only the
+  // same GitHub account recorded by the trusted intake bot.
+  if (comment.user?.type!=="Bot" && !BOT_LOGINS.has(comment.user?.login)) {
+    const candidate=String(issue.body||"").includes("<!-- muse-comment-referral-candidate:");
+    const relevant=candidate || issueCodes(issue).length>0;
+    if (issue.state==="open" && relevant) {
+      const issueComments=await api("GET","issues/"+issueNumber+"/comments?per_page=100");
+      const requested=pendingReferralAssignee(issue,comment,issueComments);
+      if (requested) {
+        const assigned=await tryAssignCommenter(api,issue,comment);
+        return {outcome:assigned?"assignee-added":"assignee-pending",
+          issueNumber,code:requested};
+      }
+    }
+  }
   const human=comment?.user?.login && Number.isSafeInteger(comment.user.id) &&
     comment.user.id>0 && comment.user.type!=="Bot" &&
     !comment.user.login.endsWith("[bot]") && comment.user.login!=="eplus-bot";
@@ -186,10 +269,20 @@ export async function reopenOnFeedback({
         }
       }
     }
+    let assignment=null;
+    if (candidateIssue) {
+      assignment=await tryAssignCommenter(api,candidateIssue,comment);
+      if (!assignment) {
+        await notePendingAssignee(api,candidateIssue,comment,foreign,commentId);
+      }
+    }
     const newLink=candidateIssue
       ? "Existing tracking [Issue #"+candidateIssue.number+"](https://github.com/"+
           REPO+"/issues/"+candidateIssue.number+") "+(existingCount?"already tracks":"now tracks")+
-          " this code. "
+          " this code. "+(assignment
+            ? "@"+comment.user.login+" has been assigned automatically. "
+            : "@"+comment.user.login+" could not be assigned yet; "+
+              "please comment on that Issue to allow automatic assignment. ")
       : existingCount>1
         ? "Multiple Issues already mention this code; review duplicates before taking action. "
         : "No tracking Issue was created because the per-user safety limit was reached. ";
