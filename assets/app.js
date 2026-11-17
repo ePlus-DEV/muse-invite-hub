@@ -29,6 +29,7 @@
   let loadFailed = false;
   let codeIssueMap = {};
   let feedbackCounts = null;
+  let quotaUpdateBaselines = {};
   function feedbackIssue(code, outcome = "other") {
     const item = codes.find(entry => entry.code === code);
     const number = features.issueNumberFor(codeIssueMap, code) ??
@@ -364,7 +365,14 @@
       countLink.setAttribute("aria-label", "Update owner invite count for code " + item.code);
       countLink.append(icon("fa-solid fa-arrow-rotate-right"));
       // Show only documented, accepted quota revisions; not visits or click counts.
-      const updates = item.quotaUpdateCount;
+      // Documented pre-tracking revisions are in a trusted sidecar so the
+      // public preview catalog remains compatible with main's schema.
+      // Future approved revisions are counted separately in the record.
+      const tracked = Number.isSafeInteger(item.quotaUpdateCount) &&
+        item.quotaUpdateCount > 0 ? item.quotaUpdateCount : 0;
+      const baseline = Number.isSafeInteger(quotaUpdateBaselines[item.code]) &&
+        quotaUpdateBaselines[item.code] > 0 ? quotaUpdateBaselines[item.code] : 0;
+      const updates = tracked + baseline;
       if (Number.isSafeInteger(updates) && updates > 0) {
         const counter = el("span", "card-count-updates", updates > 99 ? "99+" : String(updates));
         counter.setAttribute("aria-hidden", "true");
@@ -483,6 +491,18 @@
       } catch (error) {
         // Use the repository Issue list, never an extra feedback Issue Form.
         console.warn("Canonical issue links unavailable:", error);
+      }
+      try {
+        const baselineResponse = await fetch("./data/quota-update-baseline.json",
+          {cache:"no-store",signal:controller.signal});
+        if (!baselineResponse.ok) throw Error("Quota history unavailable");
+        const baseline = await baselineResponse.json();
+        if (baseline && !Array.isArray(baseline) && typeof baseline === "object") {
+          quotaUpdateBaselines = baseline;
+        }
+      } catch {
+        // Historical count missing: show only catalog-tracked updates.
+        quotaUpdateBaselines = {};
       }
       try {
         const feedbackResponse = await fetch("./data/feedback-counts.json",
