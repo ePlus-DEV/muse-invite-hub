@@ -8,6 +8,35 @@
   const features = window.MuseDirectoryFeatures;
   const detailSave = document.getElementById("detail-save");
   const detailCode = code.textContent.trim();
+  // Counts are published human GitHub reports, not votes cast by clicking here.
+  // Incomplete or missing snapshots never become a fabricated zero.
+  void (async () => {
+    if (typeof fetch !== "function") return;
+    try {
+      const response = await fetch("../../data/feedback-counts.json",{cache:"no-store"});
+      if (!response.ok) return;
+      const snapshot = await response.json();
+      if (snapshot?.source !== "github-issue-comments" ||
+          !Number.isFinite(Date.parse(snapshot.generatedAt || ""))) return;
+      const counts = snapshot.codes?.[detailCode];
+      if (!counts) return;
+      for (const link of document.querySelectorAll(".detail-quick-feedback")) {
+        const outcome = link.dataset.feedbackOutcome;
+        const count = counts[outcome];
+        if (!["worked","failed"].includes(outcome) ||
+            !Number.isSafeInteger(count) || count < 0) continue;
+        const label = document.createElement("span");
+        label.className = "detail-feedback-count";
+        label.textContent = count > 999 ? "999+" : String(count);
+        label.setAttribute("aria-hidden","true");
+        link.append(label);
+        const context = count + " community " + (count === 1 ? "report" : "reports") +
+          " of " + (outcome === "worked" ? "success" : "failure");
+        link.setAttribute("aria-label", link.textContent.trim() + " — " + context);
+        link.dataset.tooltip = context + " from the last published GitHub snapshot; not live or Muse-verified.";
+      }
+    } catch { /* Hide counts when the trusted snapshot is unavailable. */ }
+  })();
   // PR previews deliberately use the trusted main HTML generator. Until the
   // generator fix is merged, normalize its legacy detail DOM on the client.
   // This also handles browser-cached detail HTML without running untrusted
