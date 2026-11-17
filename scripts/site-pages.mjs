@@ -4,6 +4,7 @@ import { validateCatalog } from "./validate.mjs";
 import { parsePublicSource } from "./source-platform.mjs";
 import { renderPageSkeleton } from "./page-skeleton.mjs";
 import { renderSiteHeader } from "./site-navigation.mjs";
+import { renderContributionDialog } from "./contribution-dialog.mjs";
 
 export const SITE_ORIGIN = "https://muse.eplus.dev";
 export const DETAIL_PATH = "codes";
@@ -205,6 +206,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '    <p class="detail-independent">Muse Invite Hub is independent and not affiliated with Muse or Meta.</p>' +
     '    <p id="detail-live" class="sr-only" role="status" aria-live="polite"></p>' +
     '  </main>\n' +
+    renderContributionDialog("../../") + '\n' +
     '  <footer class="site-footer"><div class="container footer-inner">' +
     '    <div class="footer-main-row">' +
     '      <a class="footer-brand" href="../../"><span class="brand-icon brand-icon-small" aria-hidden="true"><img src="../../assets/favicon.svg" width="30" height="30" alt=""></span> Muse Invite Hub</a>' +
@@ -212,8 +214,8 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '        <a href="../../countries/">Country map</a>' +
     '        <a href="https://muse.ai/" target="_blank" rel="noopener noreferrer">Official Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>' +
     '        <a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</a>' +
-    '        <a href="../../#contribute">Contribute</a>' +
-    '        <a href="../../#telegram-bot"><i class="fa-brands fa-telegram" aria-hidden="true"></i> Telegram bot</a>' +
+    '        <a href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" data-contribute-trigger>Contribute</a>' +
+    '        <a href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" data-contribute-trigger><i class="fa-brands fa-telegram" aria-hidden="true"></i> Telegram bot</a>' +
     '      </nav></div><p class="footer-tagline">Small gestures. Bigger possibilities.</p></div>' +
     '    <div class="container footer-bottom"><span>© 2026 ePlus.DEV · Open source, community driven.</span>' +
     '      <span>Independent project · Not affiliated with Meta or Muse.</span></div></footer>' +
