@@ -4,7 +4,7 @@ import {
   issueMarker, issueCode, issueCodes, parseInviteCodes, originalIssueNumber, canonicalThreadBody,
   syncCodeIssueMap, validIssueMap, resolveExistingIssue, withCanonicalIssueRefs
 } from "./code-issue-map.mjs";
-import { feedbackCodeForIssue, shouldReopen, unrelatedReferralCode, referralIssueMatches, reopenOnFeedback } from "./reopen-code-feedback.mjs";
+import { feedbackCodeForIssue, shouldReopen, unrelatedReferralCode, referralIssueMatches, reopenOnFeedback, pendingReferralAssignee } from "./reopen-code-feedback.mjs";
 
 const contributor = {id:"community-issue-55",code:"IY56PP"};
 const seeded = {id:"eplus-owner-dpnihh",code:"DPNIHH"};
@@ -184,12 +184,13 @@ test("comment intake auto-creates only unverified tracking Issues, never an invi
   const user={login:"Wang-bbb",id:350407184,type:"User"};
   const submitted={id:6935502783,body:message,user,issue_url:
     "https://api.github.com/repos/ePlus-DEV/muse-invite-hub/issues/55"};
-  function setup({issues=[base],published=false,ack=false,failCreate=false,reporter=user}={}){
+  function setup({issues=[base],published=false,ack=false,failCreate=false,reporter=user,eligible=false}={}){
     const events=[];
     const comments=ack?[{user:{login:"github-actions[bot]"},
       body:"<!-- muse-unrelated-referral:6935502783 -->"}]:[];
     const source={...submitted,user:reporter};
     const list=[...issues];
+    const targetComments=new Map();
     async function request(raw,options={}){
       const url=new URL(raw);
       const method=options.method||"GET";
@@ -197,8 +198,21 @@ test("comment intake auto-creates only unverified tracking Issues, never an invi
       events.push(method+" "+path);
       let value;
       if(method==="GET" && path==="issues/55") value=base;
+      else if(method==="GET" && /^issues\/[0-9]+$/.test(path)) value=list.find(row=>row.number===Number(path.split("/")[1]));
       else if(method==="GET" && path==="issues/comments/6935502783") value=source;
+      else if(method==="GET" && path==="issues/comments/6935503000")
+        value={...submitted,id:6935503000,body:"I can review this candidate",user:reporter,
+          issue_url:"https://api.github.com/repos/ePlus-DEV/muse-invite-hub/issues/224"};
       else if(method==="GET" && path==="issues/55/comments")value=comments;
+      else if(method==="GET" && /^issues\/[0-9]+\/comments$/.test(path))
+        value=targetComments.get(Number(path.split("/")[1]))||[];
+      else if(method==="GET" && /^issues\/[0-9]+\/assignees\/Wang-bbb$/.test(path))
+        return eligible?{ok:true,status:204}:{ok:false,status:404};
+      else if(method==="POST" && /^issues\/[0-9]+\/assignees$/.test(path)) {
+        assert.equal(eligible,true);
+        assert.deepEqual(JSON.parse(options.body),{assignees:["Wang-bbb"]});
+        value={assignees:[{login:"Wang-bbb"}]};
+      }
       else if(method==="GET" && path==="issues"){
         value=url.searchParams.get("page")==="1"?list:[];
       } else if(method==="POST" && path==="issues"){
@@ -211,6 +225,15 @@ test("comment intake auto-creates only unverified tracking Issues, never an invi
         assert.doesNotMatch(body.body,/^\s*-\s*\[x\]/mi,"Never synthesize consent");
         value={number:225,title:body.title,body:body.body,state:"open"};
         list.push(value);
+      } else if(method==="POST" && /^issues\/[0-9]+\/comments$/.test(path) && path!=="issues/55/comments") {
+        const number=Number(path.split("/")[1]);
+        const body=JSON.parse(options.body).body;
+        assert.match(body,/<!-- muse-referral-assignee-request:6935502783:350407184:MIN0OF -->/);
+        assert.match(body,/@Wang-bbb/);
+        assert.match(body,/issues\/55#issuecomment-6935502783/);
+        const target=[...(targetComments.get(number)||[]),{user:{login:"github-actions[bot]"},body}];
+        targetComments.set(number,target);
+        value={id:1000};
       } else if(method==="POST" && path==="issues/55/comments"){
         const body=JSON.parse(options.body).body;
         assert.match(body,/<!-- muse-unrelated-referral:6935502783 -->/);
@@ -221,7 +244,7 @@ test("comment intake auto-creates only unverified tracking Issues, never an invi
       return {ok:true,status:200,json:async()=>value};
     }
     const catalog=published?[contributor,{id:"eplus-other-min0of",code:"MIN0OF"}]:[contributor];
-    return {request,catalog,events,comments,list};
+    return {request,catalog,events,comments,list,targetComments};
   }
   async function run(m) {
     return reopenOnFeedback({repository:"ePlus-DEV/muse-invite-hub",
@@ -246,6 +269,40 @@ test("comment intake auto-creates only unverified tracking Issues, never an invi
   assert.equal((await run(existing)).candidateIssueNumber,224);
   assert.equal(existing.events.filter(x=>x==="POST issues").length,0);
   assert.match(existing.comments[0].body,/Issue #224/);
+  assert.ok(existing.events.includes("GET issues/224/assignees/Wang-bbb"));
+  assert.ok(existing.events.includes("POST issues/224/comments"));
+  assert.ok(!existing.events.includes("POST issues/224/assignees"));
+  assert.equal(pendingReferralAssignee(issue224,{user,id:6935503000},
+    existing.targetComments.get(224)),"MIN0OF");
+  assert.equal(pendingReferralAssignee(issue224,
+    {user:{...user,id:999},id:6935503000},existing.targetComments.get(224)),null);
+
+  // After the original commenter replies in Issue #224, GitHub makes them
+  // eligible for assignment. Do not forge ownership or checked consent.
+  const eligibleReply=setup({issues:[base,issue224],eligible:true});
+  await run(eligibleReply);
+  assert.ok(eligibleReply.events.includes("POST issues/224/assignees"));
+  assert.ok(!eligibleReply.events.includes("POST issues/224/comments"));
+  const newlyEligible=setup({issues:[base,issue224],eligible:true});
+  await run(newlyEligible); // produces an assignee or a pending note
+  const retry=await reopenOnFeedback({repository:"ePlus-DEV/muse-invite-hub",
+    token:"test",issueNumber:224,commentId:6935503000,
+    request:existing.request,catalog:existing.catalog});
+  assert.equal(retry.outcome,"assignee-pending","without GitHub eligibility, keep pending");
+
+  const afterComment=setup({issues:[base,issue224],eligible:true});
+  // Add the trusted bot request marker to the target Issue before the user reply.
+  const marker="<!-- muse-referral-assignee-request:6935502783:350407184:MIN0OF -->";
+  afterComment.targetComments.set(224,[{user:{login:"github-actions[bot]"},
+    body:marker+"\n@Wang-bbb please comment on this Issue."}]);
+  const result=await reopenOnFeedback({repository:"ePlus-DEV/muse-invite-hub",
+    token:"test",issueNumber:224,commentId:6935503000,
+    request:afterComment.request,catalog:afterComment.catalog});
+  assert.deepEqual(result,{outcome:"assignee-added",issueNumber:224,code:"MIN0OF"});
+  assert.ok(afterComment.events.includes("POST issues/224/assignees"));
+  assert.ok(!afterComment.events.includes("POST issues"));
+  assert.ok(!afterComment.events.includes("PATCH issues/224"));
+
 
   const live=setup({published:true});
   assert.deepEqual(await run(live),{outcome:"redirected",
