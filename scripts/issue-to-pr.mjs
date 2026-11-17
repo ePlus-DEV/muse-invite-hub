@@ -683,6 +683,21 @@ async function propose(issue,token) {
     "",
     "Tracks Issue #"+issue.number+". The Issue is closed only after the reviewed change is merged, live, and a detail link has been posted."
   ].join("\n");
+  // The source Issue may have been deleted while preparing Git objects.
+  // A bot must not open a data PR based on a missing or edited submission.
+  let latestIssue;
+  try {
+    latestIssue=await api("GET","issues/"+issue.number,token);
+  }catch(error){
+    if(/returned HTTP 410(?:\\b|:)/.test(error.message)){
+      return {outcome:"skipped",reason:"Source Issue was deleted before PR creation."};
+    }
+    throw error;
+  }
+  if(latestIssue.state!=="open" ||
+      latestIssue.title!==issue.title || latestIssue.body!==issue.body){
+    return {outcome:"skipped",reason:"Source Issue changed or closed before PR creation."};
+  }
   let pr;
   try {
     pr=await api("POST","pulls",token,{
