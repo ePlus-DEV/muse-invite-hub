@@ -184,6 +184,7 @@ test("valid complete new owner quota is a dated, unverified report",()=>{
   const p=planIssueChange(issue(25,"[Invite] owner",body),[item]);
   const next=p.data.find(x=>x.code==="PNSMZZ");
   assert.deepEqual([next.reportedCapacity,next.reportedUses,next.usageReportedAt],[30,27,"2026-11-11"]);
+  assert.equal(next.quotaUpdateCount,undefined,"First report is not a revision");
 });
 test("existing codes are never duplicated under another account",()=>{
   const p=planIssueChange(issue(26,"[Invite]",share,"another-user"),[item,community]);
@@ -207,11 +208,13 @@ test("existing code can be updated by its GitHub owner from Issue #28 Notes",()=
   assert.equal(updated.reportedCapacity,undefined);
   assert.equal(updated.reportedUses,undefined);
   assert.equal(updated.usageReportedAt,"2026-11-11");
+  assert.equal(updated.quotaUpdateCount,1);
   assert.equal(updated.submittedBy,"pdm0809");
   assert.equal(updated.submittedById,316039127);
   assert.equal(updated.id,"jx-issue-19");
   assert.deepEqual(validateCatalog(p.data),[]);
   assert.equal(planIssueChange(ownerIssue,p.data).outcome,"duplicate");
+  assert.equal(p.data.find(x=>x.code==="ARKHZZ").quotaUpdateCount,1);
 });
 test("duplicate from a different owner requires manual review",()=>{
   const body=share.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
