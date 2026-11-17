@@ -48,7 +48,20 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.ok(actions, "Detail action row should be present");
   assert.doesNotMatch(actions, /href="https:\/\/muse.ai\/join"/);
   assert.doesNotMatch(actions, />Open Muse <i/);
-  assert.match(actions, />Open invite <i/);
+  assert.match(actions, /class="button button-primary detail-open-invite"/);
+  assert.match(actions, /id="detail-copy"/);
+  assert.doesNotMatch(actions, /id="detail-save"/);
+  assert.equal((actions.match(/class="button /g)||[]).length,2,"Only two large actions allowed");
+  assert.ok(actions.indexOf("detail-open-invite") < actions.indexOf("detail-copy"),
+    "Open invite must precede Copy in keyboard and reading order");
+  const saveAt=html.indexOf('id="detail-save"');
+  const headingAt=html.indexOf('class="detail-code-heading"');
+  const actionsAt=html.indexOf('class="detail-action-row"');
+  assert.ok(headingAt>=0 && saveAt>headingAt && saveAt<actionsAt,
+    "Secondary Save icon belongs beside the verification badge");
+  assert.match(html, /class="detail-save" id="detail-save" type="button" aria-pressed="false" aria-label="Save Muse invite code DPNIHH" hidden/);
+  assert.match(html, /class="detail-save-label sr-only">Save code/);
+    assert.match(actions, />Open invite <i/);
   assert.equal((html.match(/class="detail-action-row"/g) || []).length, 1);
   assert.equal((html.match(/href="https:\/\/muse.ai\/invite\/DPNIHH"/g) || []).length, 1);
   assert.match(html, /href="https:\/\/muse.ai\/invite\/DPNIHH"/);
