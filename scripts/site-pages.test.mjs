@@ -38,7 +38,7 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /<span class="detail-status" title="Ownership confirmed by ePlus.DEV; Muse redemption is not verified."/);
   assert.match(html, /<div class="detail-code-panel detail-hero-unified">/);
   assert.match(html, /<h1 id="detail-title"><span class="detail-h1-prefix">Invite code<\/span> <span class="detail-code-text" id="detail-code">DPNIHH<\/span><\/h1>/);
-  assert.equal((html.match(/<h1\\b/g)||[]).length,1,"Exactly one visible and SEO-readable H1");
+  assert.equal((html.match(/<h1\b/g)||[]).length,1,"Exactly one visible and SEO-readable H1");
   assert.equal((html.match(/id="detail-code"/g)||[]).length,1,"No duplicate large code label");
   assert.doesNotMatch(html, /<p class="detail-code" id="detail-code">/);
   const heroStart=html.indexOf('class="detail-code-panel detail-hero-unified"');
