@@ -28,7 +28,7 @@ test("direct Muse invitation links use validated codes and safe new-tab navigati
   assert.match(app, /openInvite\.target = "_blank"/);
   assert.match(app, /openInvite\.rel = "noopener noreferrer"/);
   assert.match(app, /primaryActions\.append\(copy, openInvite\)/);
-  assert.match(read("assets/styles.css"), /\.card-primary-actions\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(read("assets/styles.css"), /\.card-primary-actions\{display:grid;grid-template-columns:1\.12fr 1fr/);
 });
 
 test("Facebook group sources render as group references, never @person attribution", () => {
@@ -36,6 +36,97 @@ test("Facebook group sources render as group references, never @person attributi
   assert.match(app,/\(source\.group \? "Group: " : "@"\)/);
   assert.match(detailJs,/\(group \? "Group: " : "@"\)/);
   assert.match(app,/View Facebook group post in/);
+});
+
+test("invite cards use two primary actions with labeled icon-only feedback and utilities", () => {
+  const css=read("assets/styles.css");
+  assert.match(app, /const primaryActions = el\("div", "card-primary-actions"\)/);
+  assert.match(app, /primaryActions\.append\(copy, openInvite\)/);
+  assert.match(app, /const utilityBar = el\("div", "card-utility-bar"\)/);
+  assert.match(app, /utilityBar\.append\(quickFeedback, subActions\)/);
+  assert.match(app, /actions\.append\(primaryActions, utilityBar\)/);
+  assert.match(app, /details\.setAttribute\("aria-label", "View details for Muse invite code "/);
+  assert.match(app, /report\.setAttribute\("aria-label", "Give feedback on Muse invite code "/);
+  assert.match(app, /countLink\.setAttribute\("aria-label", "Update owner invite count for code "/);
+  assert.match(app, /link\.setAttribute\("aria-label", text \+ " — report Muse invite code "/);
+  assert.match(app, /link\.append\(icon\(iconName\)\)/);
+  assert.match(app,/const label = copied \? " Copied" : " Copy code"/);
+  assert.doesNotMatch(app,/card\.classList\.contains\("code-card-featured"\) \? " Copy again"/);
+  assert.doesNotMatch(app, /link\.append\(icon\(iconName\), document\.createTextNode/);
+  assert.match(app, /if \(item\.submittedBy && !item\.sourceUrl\)/);
+  assert.match(css, /\.card-utility-bar\{display:flex;align-items:center;justify-content:space-between/);
+  assert.match(css, /\.card-utility-link:focus-visible,\.card-quick-feedback:focus-visible/);
+  assert.match(css, /\.card-quick-worked i\{color:var\(--green\)\}/);
+  assert.match(css, /\.card-quick-failed i\{color:var\(--red\)\}/);
+  assert.match(css, /\.card-quick-feedback,\.card-utility-link\{min-height:44px;width:44px\}/);
+  assert.doesNotMatch(app, /Reported votes|thumbsUpCount|thumbsDownCount/);
+});
+
+test("compact card controls have smaller desktop proportions without shrinking mobile targets", () => {
+  const css=read("assets/styles.css");
+  assert.match(css, /\.code-card\{min-width:0;min-height:300px/);
+  assert.match(css, /\.card-actions\{display:flex;flex-direction:column;gap:9px\}/);
+  for (const name of ["card-copy", "card-open-invite"]) {
+    const rule=css.match(new RegExp("\\."+name+"\\{([^\\n}]*)\\}"));
+    assert.ok(rule, name+" CSS rule is present");
+    assert.match(rule[1], /min-height:40px/);
+    assert.match(rule[1], /font-size:12\.5px/);
+    assert.match(rule[1], /font-weight:750/);
+    assert.match(rule[1], /border-radius:10px/);
+  }
+  assert.match(css,/\.container\{max-width:1200px;margin-inline:auto;padding-inline:30px\}/);
+  assert.match(home,/<section class="overview container" aria-label="Community statistics">/);
+  assert.match(home,/<section class="directory container" id="codes"/);
+  assert.doesNotMatch(css,/\.directory\.container\s*\{\s*max-width:/);
+  assert.doesNotMatch(css,/\.overview\.container\s*\{\s*max-width:/);
+  assert.match(css,/@media\(min-width:1081px\) and \(max-width:1279px\)\{\.cards-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}\}/);
+  assert.match(css,/\.card-copy,\.card-open-invite\{min-height:44px;font-size:12px\}/);
+  assert.match(css,/@media\(max-width:390px\)\{\.card-copy,\.card-open-invite\{font-size:11\.5px\}\}/);
+  assert.match(css,/\.card-quick-feedback,\.card-utility-link\{min-height:44px;width:44px\}/);
+});
+
+test("every card uses the same status, source, availability and original listing-date rows", () => {
+  const css=read("assets/styles.css");
+  assert.match(app,/const statusRow = el\("div", "card-status-row"\)/);
+  assert.match(app,/statusRow\.append\(badge, headActions\)/);
+  assert.match(app,/head\.append\(name\)/);
+  assert.match(app,/card\.append\(statusRow, head, contributor, info, actions\)/);
+  assert.doesNotMatch(app,/card-featured-label|card-redemption/);
+  assert.match(app,/document\.createTextNode\(" Availability: " \+ availability\)/);
+  assert.match(app,/document\.createTextNode\(" Listed: " \+ formatDate\(item\.addedAt\)\)/);
+  assert.match(app,/amount\.title = remaining/);
+  assert.match(app,/remaining\.date \+ "\. Not live Muse availability\."/);
+  assert.match(app,/amount\.setAttribute\("aria-label", "Availability: " \+ availability/);
+  assert.match(app,/author\.title = source\.group/);
+  assert.match(css,/\.card-status-row\{display:flex;align-items:center;justify-content:space-between/);
+  assert.match(css,/\.card-contributor\{[^}]*flex-wrap:nowrap/);
+  assert.match(css,/\.card-author\{[^}]*text-overflow:ellipsis;white-space:nowrap/);
+  assert.match(css,/\.card-subactions\{display:grid;grid-template-columns:repeat\(3,36px\)/);
+  assert.match(css,/\.card-subactions\{grid-template-columns:repeat\(3,44px\);gap:5px\}/);
+  // Third utility slot stays empty for non-GitHub sources; never add a dead button.
+  assert.match(app,/if \(item\.submittedBy && !item\.sourceUrl\)/);
+});
+
+test("invite card colors follow a single brand-blue palette without fake success states", () => {
+  const css=read("assets/styles.css");
+  assert.match(css, /:root\{[^}]*--blue:#0064ff;--blue-hover:#0057dd;--blue-soft:#e8f1ff;--blue-line:#c7deff/);
+  assert.match(css, /\.status-featured\{color:var\(--blue\);background:var\(--blue-soft\)/);
+  assert.match(css, /\.status-owner-verified\{[^}]*color:var\(--blue\);background:var\(--blue-soft\)/);
+  assert.match(css, /\.card-source\{[^}]*background:var\(--blue-soft\);color:var\(--blue\)/);
+  for (const platform of ["threads","x","facebook","telegram"]) {
+    assert.doesNotMatch(css,new RegExp("\\.card-source-"+platform+"\\{"),
+      "platform "+platform+" must not create a competing color scheme");
+  }
+  assert.match(css,/\.code-card-copied \.card-copy\{background:var\(--blue-soft\);border-color:var\(--blue-line\);color:var\(--blue\)\}/);
+  assert.doesNotMatch(css,/\.code-card-copied:not\(\.code-card-featured\)/);
+  assert.match(css,/\.card-quick-feedback\{[^}]*background:var\(--blue-soft\);color:var\(--blue\)/);
+  assert.match(css,/\.card-quick-worked i\{color:var\(--green\)\}/);
+  assert.match(css,/\.card-quick-failed i\{color:var\(--red\)\}/);
+  assert.match(css,/\.status-reported-working\{color:var\(--green\)/);
+  assert.match(css,/\.status-reported-not-working\{color:var\(--red\)/);
+  assert.match(css,/\.detail-code-panel-copied #detail-copy\{background:var\(--blue-soft\);color:var\(--blue\);border-color:var\(--blue-line\)\}/);
+  assert.match(css,/\.detail-copy-note::before\{[^}]*background:var\(--blue\)/);
+  assert.doesNotMatch(css,/#(?:6335a4|8252c8|e3d7ff|f1edff|865919)/i);
 });
 
 test("saved codes parse safely and remain scoped to the browser", () => {
@@ -102,8 +193,11 @@ test("quick feedback links to existing canonical Issue and suggests editable com
 });
 
 test("homepage and detail load helpers before existing scripts without altering SEO", () => {
-  const homeHelper = home.indexOf('src="./assets/directory-features.js"');
-  const homeApp = home.indexOf('src="./assets/app.js"');
+  // Versioned preview assets avoid browser caching an earlier card layout.
+  const homeHelper = home.indexOf('src="./assets/directory-features.js?v=20261117-pr248-alignment"');
+  const homeApp = home.indexOf('src="./assets/app.js?v=20261117-pr248-alignment"');
+  assert.match(home, /href="\.\/assets\/styles\.css\?v=20261117-pr248-alignment"/);
+  assert.match(home, /src="\.\/assets\/site-ui\.js\?v=20261117-pr248-alignment"/);
   assert.ok(homeHelper > 0 && homeApp > homeHelper);
   assert.match(home, /<title>Muse Invite Hub — Share the spark<\/title>/);
   assert.match(home, /rel="canonical" href="https:\/\/muse\.eplus\.dev\/"/);

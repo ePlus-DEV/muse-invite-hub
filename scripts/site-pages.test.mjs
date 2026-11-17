@@ -33,8 +33,10 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /rel="canonical" href="https:\/\/muse.eplus.dev\/codes\/DPNIHH\/"/);
   assert.match(html, /<meta name="robots" content="index,follow">/);
   assert.match(html, /Verified Owner/);
-  assert.match(html, /<dt>Code owner<\/dt><dd><span class="detail-owner-confirmed"/);
-  assert.match(html, /Verified Owner \(ePlus\.DEV\)/);
+  assert.doesNotMatch(html, /<dt>Code owner<\/dt>/);
+  assert.doesNotMatch(html, /class="detail-lead"|class="detail-caution"|class="detail-owner"/);
+  assert.match(html, /<span class="detail-status" title="Ownership confirmed by ePlus.DEV; Muse redemption is not verified."/);
+  assert.match(html, /<p class="section-kicker">MUSE INVITE<\/p>/);
   assert.match(html, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
   assert.doesNotMatch(html, /<dt>Redemption status<\/dt><dd>Unverified/);
   assert.match(html, /3 \/ 30/);
@@ -42,9 +44,20 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /"BreadcrumbList"/);
   assert.match(html, /"WebPage"/);
   assert.match(html, /href="\.\.\/\.\.\/assets\/styles.css"/);
-  assert.match(html, /href="https:\/\/muse.ai\/join"/);
+  const actions = html.match(/<div class="detail-action-row">([\s\S]*?)<\/div>/)?.[1];
+  assert.ok(actions, "Detail action row should be present");
+  assert.doesNotMatch(actions, /href="https:\/\/muse.ai\/join"/);
+  assert.doesNotMatch(actions, />Open Muse <i/);
+  assert.match(actions, />Open invite <i/);
+  assert.equal((html.match(/class="detail-action-row"/g) || []).length, 1);
+  assert.equal((html.match(/href="https:\/\/muse.ai\/invite\/DPNIHH"/g) || []).length, 1);
   assert.match(html, /href="https:\/\/muse.ai\/invite\/DPNIHH"/);
   assert.match(html, /aria-label="Open Muse invite link for code DPNIHH"/);
+  assert.doesNotMatch(html, /<p class="detail-caption">These figures are dated/);
+  assert.doesNotMatch(html, /Owner-confirmed; redemption is not independently tested/);
+  assert.match(html, /Select <strong>Open invite<\/strong> above to visit Muse with this code/);
+  assert.doesNotMatch(html, /<li>Copy the invitation code shown above/);
+  assert.doesNotMatch(html, /Ownership confirmation does not mean the code/);
   assert.doesNotMatch(html, /Muse has verified this code/);
 });
 test("confirmed owner card and non-owner detail keep verification meanings separate", () => {
@@ -52,9 +65,10 @@ test("confirmed owner card and non-owner detail keep verification meanings separ
   const css = readFileSync(new URL("../assets/styles.css", import.meta.url), "utf8");
   assert.match(app, /ownerConfirmed \? "Verified Owner" : featured \? "Featured"/);
   assert.match(app, /status-owner-verified/);
-  assert.match(app, /Muse redemption not independently confirmed/);
+  assert.match(app, /Owner-confirmed by ePlus.DEV\. Muse redemption has not been independently confirmed/);
   assert.match(css, /\.status-owner-verified\{/);
-  assert.match(css, /\.card-redemption\{/);
+  assert.match(css, /\.card-status-row\{display:flex/);
+  assert.doesNotMatch(css, /\.card-redemption\{/);
   const communityHtml = renderDetailPage(community());
   assert.match(communityHtml, /href="https:\/\/muse.ai\/invite\/TEST42"/);
   assert.doesNotMatch(communityHtml, /Verified Owner \(ePlus\.DEV\)/);
@@ -190,7 +204,7 @@ test("directory redesign preserves SEO, GA4, a single featured listing and verif
   assert.doesNotMatch(home, /id="featured-invite"/);
   assert.match(app, /new Set\(codes\.map/);
   assert.match(app, /ownerConfirmed/);
-  assert.match(app, /Muse redemption not independently confirmed/);
+  assert.match(app, /Owner-confirmed by ePlus.DEV\. Muse redemption has not been independently confirmed/);
   assert.match(app, /visible\.slice\(0, displayLimit\)/);
   assert.match(renderDetailPage(owner()), /G-N1MZ8YLNLJ/);
 });
