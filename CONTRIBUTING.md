@@ -2,13 +2,17 @@
 
 Thanks for helping! **You can share an invite, report feedback or update a count without writing code.** Use the Share Code GitHub Issue Form **only for new invite codes**. You can submit up to **10 distinct new codes in one Issue**, separated by commas, spaces or newlines. They receive **separate catalog records in one PR**: eligible new GitHub-owned codes auto-publish after validation, while strict, single-code public social-post submissions can also auto-publish as unverified reports; ambiguous social sources stay review-only Draft PRs. Per-code usage/quota fields must be blank for grouped submissions. If one code already exists, submit that code's update through its existing listing instead. Existing-code feedback and owner-count updates reuse the code’s canonical Issue through the website. UI and documentation improvements use Pull Requests.
 
-[Homepage](https://muse.eplus.dev/) · [README](README.md) · [Visual contribution flow](docs/CONTRIBUTION_FLOW.md) · [Telegram bot guide](docs/TELEGRAM_BOT_GUIDE.md) · [Share code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report feedback](https://muse.eplus.dev/#codes) · [Update count](https://muse.eplus.dev/#codes)
+[Homepage](https://muse.eplus.dev/) · [Choose how to contribute](https://muse.eplus.dev/#contribute) · [README](README.md) · [Visual contribution flow](docs/CONTRIBUTION_FLOW.md) · [Telegram bot guide](docs/TELEGRAM_BOT_GUIDE.md) · [Share code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml) · [Report feedback](https://muse.eplus.dev/#codes) · [Update count](https://muse.eplus.dev/#codes)
 
 > **Privacy:** GitHub Issues, PRs and repository content are public. Never share passwords, OTPs, authentication codes, session tokens, cookies, private login or invite links, account identifiers, or screenshots containing sensitive details.
 
 Each accepted code contribution is stored as an independent reviewed JSON record to reduce merge conflicts. The trusted build combines these with the historical catalog; the website still loads a single generated directory. Multiple submissions for the same code require review and are never silently merged.
 
 ## Share a public invite code
+
+For most visitors, start with [**Choose how to contribute**](https://muse.eplus.dev/#contribute): Telegram private bot (no GitHub account needed for submission), the existing GitHub Issue Form, or feedback on a code already published. The desktop QR opens this same website page on your phone; it is **not** a bot link. Telegram bot access still requires a verified existing chat until a public bot handle is published.
+
+**If using GitHub:**
 
 1. Open [Share a Muse invite code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml).
 2. Select **GitHub (my own code)** if you own the code, or **Threads**, **X (Twitter)** or **Facebook** if you found a public code posted by another person. **Telegram** is also supported as a human-reviewed community source; use the private Telegram bot to attribute your own contribution.
