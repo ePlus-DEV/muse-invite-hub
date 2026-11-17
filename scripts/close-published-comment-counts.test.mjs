@@ -32,12 +32,13 @@ function mock({pull=pr,source=comment,sources={},issueState="open",newHuman=fals
   live=true,liveRecord=record,mergedRecord=record,comparison="ahead",filePath,
   posted=false,failNotify=false}={}) {
   const events=[];
+  const publishedPrNumber=Math.max(...(Array.isArray(pull)?pull:[pull]).map(row=>row.number));
   const issue={number:14,state:issueState,body:"### Invite code\n\nDPNIHH"};
   const comments=[
     source,
     ...(newHuman?[{id:commentId+100,user:{login:"another-human",type:"User"},body:"New report"}]:[]),
     ...(posted?[{id:commentId+300,user:{login:"github-actions[bot]"},
-      body:"<!-- muse-published-comment-pr:157 -->"}]:[])
+      body:"<!-- muse-published-comment-pr:"+publishedPrNumber+" -->"}]:[])
   ];
   async function request(raw,options={}) {
     const url=new URL(raw),method=options.method||"GET";
@@ -58,7 +59,7 @@ function mock({pull=pr,source=comment,sources={},issueState="open",newHuman=fals
     else if(method==="GET" && path.startsWith("issues/comments/"))
       data=sources[Number(path.split("/").at(-1))]||source;
     else if(method==="GET" && path==="issues/14/comments")data=comments;
-    else if(method==="GET" && path==="pulls/157/files")data=[{
+    else if(method==="GET" && /^pulls\/[1-9]\d*\/files$/.test(path))data=[{
       filename:filePath||"data/invite-records/eplus-owner-dpnihh.json",status:"modified"
     }];
     else if(method==="GET" && path==="compare/"+merged+"..."+deployed)data={status:comparison};
@@ -67,13 +68,13 @@ function mock({pull=pr,source=comment,sources={},issueState="open",newHuman=fals
     else if(method==="POST" && path==="issues/14/comments"){
       if(failNotify)return {ok:false,status:500};
       const body=JSON.parse(options.body).body;
-      assert.match(body,/<!-- muse-published-comment-pr:157 -->/);
+      assert.ok(body.includes("<!-- muse-published-comment-pr:"+publishedPrNumber+" -->"));
       assert.match(body,/https:\/\/muse\.eplus\.dev\/codes\/DPNIHH\//);
       assert.match(body,/not live Muse availability/);
       comments.push({id:999,user:{login:"github-actions[bot]"},body});
       data={id:999};
     }else if(method==="PATCH" && path==="issues/14"){
-      assert.ok(comments.some(x=>x.body?.includes("<!-- muse-published-comment-pr:157 -->")));
+      assert.ok(comments.some(x=>x.body?.includes("<!-- muse-published-comment-pr:"+publishedPrNumber+" -->")));
       assert.deepEqual(JSON.parse(options.body),{state:"closed",state_reason:"completed"});
       issue.state="closed";data=issue;
     }else throw Error("Unexpected "+method+" "+path+url.search);
@@ -89,7 +90,8 @@ async function run(m,chosenRecord=record) {
 
 test("accept only strictly attributable, merged, bot-authored count-comment PRs",()=>{
   assert.deepEqual(commentCountCandidate(pr),{
-    issueNumber:14,commentId,code,prNumber:157,mergeSha:merged
+    issueNumber:14,commentId,code,prNumber:157,mergeSha:merged,
+    provenance:"auto",allowNarrative:false
   });
   assert.ok(commentCountCandidate({...pr,user:{login:"eplus-bot"}}));
   for(const change of [
@@ -97,6 +99,97 @@ test("accept only strictly attributable, merged, bot-authored count-comment PRs"
     {base:{ref:"staging"}},{head:{ref:"auto/comment-14-6889445306-feedback",repo:{full_name:repo}}},
     {body:"Closes #14"},{merge_commit_sha:null}
   ])assert.equal(commentCountCandidate({...pr,...change}),null);
+});
+
+test("recognize PR #220's real manual owner-count review provenance",()=>{
+  const pr220={
+    number:220,
+    title:"data: review YKDCA9 owner count from issue #204 (30 total, 29 remaining)",
+    body:[
+      "## Owner-reported quota update — Issue #204",
+      "Source: [@JackChong1's comment](https://github.com/ePlus-DEV/muse-invite-hub/issues/204#issuecomment-6934787451) on 2026-11-17 (UTC).",
+      "Existing invite code: **YKDCA9**. Previously published through merged PR #205.",
+      "Tracks Issue #204 and comment #6934787451."
+    ].join("\n"),
+    user:{login:"hoangsvit"},
+    head:{ref:"review/issue-204-owner-count-20261117",repo:{full_name:repo}},
+    base:{ref:"main"},merged_at:"2026-11-17T01:37:08Z",
+    merge_commit_sha:merged
+  };
+  assert.deepEqual(commentCountCandidate(pr220),{
+    issueNumber:204,commentId:6934787451,code:"YKDCA9",prNumber:220,mergeSha:merged,
+    provenance:"maintainer",allowNarrative:true
+  });
+  for(const change of [
+    {user:{login:"untrusted-contributor"}},
+    {merged_at:null},
+    {body:pr220.body.replace("Tracks Issue #204","Tracks Issue #205")},
+    {body:pr220.body.replace("Existing invite code: **YKDCA9**.","Existing invite code: **OTHER1**.")},
+    {body:pr220.body.replace("#issuecomment-6934787451","#issuecomment-6934787451")+
+      "\nhttps://github.com/ePlus-DEV/muse-invite-hub/issues/204#issuecomment-6934787451"},
+    {body:pr220.body.replace("/issues/204#","/issues/205#")},
+    {title:"data: review OTHER1 owner count from issue #204"},
+    {base:{ref:"dev"}}
+  ])assert.equal(commentCountCandidate({...pr220,...change}),null);
+  const reported={
+    id:"community-issue-204",code:"YKDCA9",submittedBy:"JackChong1",
+    submittedById:123796417,feedbackIssueNumber:204,
+    reportedCapacity:30,reportedUses:1,usageReportedAt:"2026-11-17"
+  };
+  const source={
+    id:6934787451,created_at:"2026-11-17T01:20:21Z",
+    user:{login:"JackChong1",id:123796417},
+    body:"Owner count update — YKDCA9\n\n- Total invites: 30\n- Remaining invites: 29\n- Used invites: 1\n\n"+
+      "I am the owner of this invite code. One friend redeemed the code on 2026-11-16, so 29 uses remain."
+  };
+  assert.equal(matchesPublishedQuota(source,reported),false);
+  assert.equal(matchesPublishedQuota(source,reported,{allowNarrative:true}),true);
+  for(const changed of [
+    {user:{login:"JackChong1",id:999}},
+    {body:source.body.replace("Remaining invites: 29","Remaining invites: 28")},
+    {body:source.body.replace("Used invites: 1","Used invites: two")},
+    {body:source.body.replace("- Used invites: 1","- Used invites: 1\n- Used invites: 1")},
+    {body:source.body.replace("I am the owner of this invite code.","")},
+    {created_at:"2026-11-16T01:20:21Z"}
+  ])assert.equal(matchesPublishedQuota({...source,...changed},reported,{allowNarrative:true}),false);
+});
+
+test("new bot-created narrative count proposals can close after a trusted merge",()=>{
+  const body=pr.body.replace("Action: update quota","Action: review owner-reported count");
+  const narrativeBot={...pr,body};
+  assert.equal(commentCountCandidate(narrativeBot)?.allowNarrative,true);
+  assert.equal(commentCountCandidate({...narrativeBot,body:body.replace("review owner-reported count","unreviewed claim")}),null);
+});
+
+test("manual and automated reviewed narrative owner counts close only after live deployment",async()=>{
+  const source={...comment,body:"Owner count update — DPNIHH\n\n- Total invites: 30\n"+
+    "- Remaining invites: 23\n- Used invites: 7\n\n"+
+    "I am the owner of this invite code. One friend redeemed this code."};
+  const manual={
+    ...pr,number:220,
+    title:"data: review DPNIHH owner count from issue #14 (30 total, 23 remaining)",
+    body:"## Owner-reported quota update — Issue #14\n"+
+      "Source: [@hoangsvit's comment](https://github.com/ePlus-DEV/muse-invite-hub/issues/14#issuecomment-"+commentId+")\n"+
+      "Existing invite code: **DPNIHH**.\nTracks Issue #14 and comment #"+commentId+".",
+    head:{...pr.head,ref:"review/issue-14-owner-count"},
+    user:{login:"hoangsvit"}
+  };
+  const m=mock({pull:manual,source});
+  assert.deepEqual(await run(m),{notified:1,closed:1,pending:0,skipped:0});
+  assert.equal(m.issue.state,"closed");
+  assert.ok(m.events.indexOf("live:/data/invites.json")<m.events.indexOf("POST issues/14/comments"));
+  assert.ok(m.events.indexOf("POST issues/14/comments")<m.events.indexOf("PATCH issues/14"));
+  const rerun=mock({pull:manual,source,issueState:"closed"});
+  assert.deepEqual(await run(rerun),{notified:0,closed:0,pending:0,skipped:1});
+  for(const option of [{live:false},{newHuman:true},{comparison:"behind"},
+    {mergedRecord:{...record,reportedUses:8}},{liveRecord:{...record,reportedUses:8}}]) {
+    const bad=mock({pull:manual,source,...option});
+    assert.equal((await run(bad)).closed,0);
+    assert.ok(!bad.events.includes("PATCH issues/14"));
+  }
+  const bot={...pr,body:pr.body.replace("Action: update quota","Action: review owner-reported count")};
+  const automated=mock({pull:bot,source});
+  assert.equal((await run(automated)).closed,1);
 });
 
 test("match only the owner-confirmed source comment and exact dated count",()=>{
