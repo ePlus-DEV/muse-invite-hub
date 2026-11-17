@@ -175,7 +175,7 @@ attached later as a Workers custom domain; re-run this step after changing it.
 - `/report DPNIHH worked` — confirmation prompt. **Only confirm a genuine attempt**,
   because doing so writes a public comment.
 
-Review and privacy rules are identical to the OCI deployment (see README.md
+Public-write anti-spam uses private `BOT_STATE` KV: 8 writes/hour, 12 writes/day, max 3 new-code Issues/chat/day, max 1 feedback per code/chat/day, plus a best-effort 20-new-Issues/hour and 80/day across chats. Telegram update retry IDs are idempotent. KV's eventual consistency means distributed concurrency can still bypass the cap; strict limits require an atomic coordinator. Review and privacy rules are identical to the OCI deployment (see README.md
 section 7): new codes become standard `[Invite] CODE` Issues with an internal
 Telegram marker, which automatically prepare review-only Draft PRs;
 feedback lands on the canonical Issue, and Telegram identity never proves
