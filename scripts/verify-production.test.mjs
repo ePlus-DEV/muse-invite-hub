@@ -4,8 +4,8 @@ import { probeProduction, verifyProduction } from "./verify-production.mjs";
 
 const root = "https://muse.eplus.dev";
 const detail = '<!doctype html><html><head><title>DPNIHH Muse Invite Code | Muse Invite Hub</title><link rel="canonical" href="' +
-  root + '/codes/DPNIHH/"></head><body><a href="../../assets/styles.css?v=20261117-pr251-reports">Styles</a>' +
-  '<script src="../../assets/detail.js?v=20261117-pr251-reports"></script><script type="application/ld+json">"BreadcrumbList"</script></body></html>';
+  root + '/codes/DPNIHH/"></head><body><a href="../../assets/styles.css?v=abc123def456">Styles</a>' +
+  '<script src="../../assets/detail.js?v=abc123def456"></script><script type="application/ld+json">"BreadcrumbList"</script></body></html>';
 const country = '<!doctype html><title>Muse Country Availability Map | Muse Invite Hub</title>' +
   '<link rel="canonical" href="' + root + '/countries/"><link href="../assets/countries.css"><script src="../assets/countries.js"></script>';
 const geo = JSON.stringify({type:"FeatureCollection",features:["US","CA","JP","MX"].map(code => ({code,geometry:{type:"Polygon",coordinates:[]}}))});
@@ -38,7 +38,7 @@ test("verifies production directory route, explicit HTML, JS/CSS and sitemap", a
   assert.deepEqual(result, {checked:14,detailPath:"/codes/DPNIHH/"});
 });
 test("still accepts non-versioned relative detail assets", async () => {
-  const plain = detail.replaceAll("?v=20261117-pr251-reports", "");
+  const plain = detail.replaceAll("?v=abc123def456", "");
   const result = await probeProduction({get:mockGet({
     "/codes/DPNIHH/":plain,
     "/codes/DPNIHH/index.html":plain
