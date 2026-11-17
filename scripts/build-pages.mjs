@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join, resolve } from "node:path";
 import { buildPreview, isSafeSiteFile } from "./preview-core.mjs";
 import { generateSite } from "./site-pages.mjs";
+import { stampSiteAssets } from "./asset-version.mjs";
 import { syncCodeIssueMap, validIssueMap } from "./code-issue-map.mjs";
 import { readCatalog } from "./catalog.mjs";
 import { validateCatalog } from "./validate.mjs";
@@ -105,6 +106,7 @@ writeFileSync(join(output,"data","feedback-counts.json"),
   JSON.stringify(summary,null,2) + "\n");
 console.log("Published reviewed feedback from local per-code JSON records.");
 const productionPages = generateSite(output);
+stampSiteAssets(output); // Hash trusted production asset bytes before deployment.
 console.log("Generated " + productionPages.created + " static invite detail pages and " + productionPages.indexed + " indexable entries.");
 
 async function listOpenPRs() {
@@ -185,6 +187,7 @@ for (const pr of (await listOpenPRs()).slice(0, MAX_PREVIEWS)) {
     if (existsSync(feedbackPath)) copyFileSync(feedbackPath,
       join(dest,"data","feedback-counts.json"));
     record.detail_pages = built.detail_pages;
+    stampSiteAssets(dest); // Hash each preview against its own PR asset bytes.
     // Parse JavaScript but never execute scripts from the untrusted PR ref.
     const syntax = spawnSync(process.execPath, ["--check", join(dest, "assets/app.js")],
       { encoding: "utf8", timeout: 15000 });

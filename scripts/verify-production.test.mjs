@@ -4,8 +4,8 @@ import { probeProduction, verifyProduction } from "./verify-production.mjs";
 
 const root = "https://muse.eplus.dev";
 const detail = '<!doctype html><html><head><title>DPNIHH Muse Invite Code | Muse Invite Hub</title><link rel="canonical" href="' +
-  root + '/codes/DPNIHH/"></head><body><a href="../../assets/styles.css">Styles</a>' +
-  '<script src="../../assets/detail.js"></script><script type="application/ld+json">"BreadcrumbList"</script></body></html>';
+  root + '/codes/DPNIHH/"></head><body><a href="../../assets/styles.css?v=abc123def456">Styles</a>' +
+  '<script src="../../assets/detail.js?v=abc123def456"></script><script type="application/ld+json">"BreadcrumbList"</script></body></html>';
 const country = '<!doctype html><title>Muse Country Availability Map | Muse Invite Hub</title>' +
   '<link rel="canonical" href="' + root + '/countries/"><link href="../assets/countries.css"><script src="../assets/countries.js"></script>';
 const geo = JSON.stringify({type:"FeatureCollection",features:["US","CA","JP","MX"].map(code => ({code,geometry:{type:"Polygon",coordinates:[]}}))});
@@ -36,6 +36,21 @@ function mockGet(overrides = {}) {
 test("verifies production directory route, explicit HTML, JS/CSS and sitemap", async () => {
   const result = await probeProduction({get:mockGet()});
   assert.deepEqual(result, {checked:14,detailPath:"/codes/DPNIHH/"});
+});
+test("still accepts non-versioned relative detail assets", async () => {
+  const plain = detail.replaceAll("?v=abc123def456", "");
+  const result = await probeProduction({get:mockGet({
+    "/codes/DPNIHH/":plain,
+    "/codes/DPNIHH/index.html":plain
+  })});
+  assert.equal(result.checked,14);
+});
+test("rejects incorrect detail asset paths even when files exist", async () => {
+  const broken = detail.replaceAll("../../assets/", "/assets/");
+  await assert.rejects(probeProduction({get:mockGet({
+    "/codes/DPNIHH/":broken,
+    "/codes/DPNIHH/index.html":broken
+  })}), /broken relative asset references/);
 });
 test("fails when the pretty URL returns 404 even if index.html works", async () => {
   await assert.rejects(
