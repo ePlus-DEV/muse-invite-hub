@@ -6,6 +6,7 @@ import { generateSite } from "./site-pages.mjs";
 import { syncCodeIssueMap, validIssueMap } from "./code-issue-map.mjs";
 import { readCatalog } from "./catalog.mjs";
 import { validateCatalog } from "./validate.mjs";
+import { fetchAllFeedbackComments, summarizeFeedback } from "./feedback-counts.mjs";
 
 const REPO = process.env.GITHUB_REPOSITORY;
 const ORIGIN = "https://muse.eplus.dev";
@@ -92,6 +93,20 @@ if (!readonly && !validIssueMap(issueMap, code)) {
 }
 writeFileSync(join(output, "data", "code-issues.json"), JSON.stringify(issueMap, null, 2) + "\n");
 console.log("Mapped " + code.length + " published invite codes to canonical GitHub Issues.");
+// A single paginated repository-wide read avoids one request per listing.
+// Incomplete API results must never be displayed as zero reports.
+try {
+  const comments = await fetchAllFeedbackComments(page =>
+    api("repos/" + REPO + "/issues/comments?per_page=100&sort=created&direction=desc&page=" + page));
+  const summary = summarizeFeedback(code,issueMap,comments,new Date().toISOString());
+  writeFileSync(join(output,"data","feedback-counts.json"),
+    JSON.stringify(summary,null,2) + "\\n");
+  console.log("Compiled community report counts from " + comments.length +
+    " GitHub comments (deduplicated by account and code).");
+} catch (error) {
+  console.warn("Feedback report counts unavailable; omitting numbers, never inventing zeros: " +
+    String(error.message).slice(0,180));
+}
 const productionPages = generateSite(output);
 console.log("Generated " + productionPages.created + " static invite detail pages and " + productionPages.indexed + " indexable entries.");
 
@@ -169,6 +184,9 @@ for (const pr of (await listOpenPRs()).slice(0, MAX_PREVIEWS)) {
     // codes only. Unmerged codes never create Issues or gain false mappings.
     copyFileSync(join(output, "data", "code-issues.json"),
       join(dest, "data", "code-issues.json"));
+    const feedbackPath = join(output,"data","feedback-counts.json");
+    if (existsSync(feedbackPath)) copyFileSync(feedbackPath,
+      join(dest,"data","feedback-counts.json"));
     record.detail_pages = built.detail_pages;
     // Parse JavaScript but never execute scripts from the untrusted PR ref.
     const syntax = spawnSync(process.execPath, ["--check", join(dest, "assets/app.js")],
