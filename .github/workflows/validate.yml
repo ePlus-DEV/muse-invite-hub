@@ -60,7 +60,8 @@ jobs:
           node --check scripts/code-issue-map.mjs
           node --check scripts/reopen-code-feedback.mjs
           node --check scripts/feedback-comment-to-pr.mjs
-          node --test scripts/issue-to-pr.test.mjs scripts/close-accepted-issues.test.mjs
+          node --check scripts/close-deleted-issue-prs.mjs
+          node --test scripts/issue-to-pr.test.mjs scripts/close-accepted-issues.test.mjs scripts/close-deleted-issue-prs.test.mjs
           node --test scripts/auto-merge.test.mjs
           node --check scripts/issue-triage.mjs
           node --test scripts/issue-triage.test.mjs
