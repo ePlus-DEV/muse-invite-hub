@@ -86,51 +86,167 @@
       openInvite.nextElementSibling !== button) {
     inviteActions.insertBefore(openInvite,button);
   }
-  // Trusted PR previews render the current main template, which may still
-  // contain two large copies of the same invite code. Convert only that legacy
-  // presentation to the new single-H1 hero while keeping the original heading,
-  // code text, links and instructions accessible and crawlable in HTML.
+  // Trusted Pages previews use the main HTML generator. Recompose its existing
+  // real content to match the reviewed mockup; do not inject untrusted HTML.
   const hero = document.querySelector(".detail-code-panel");
+  const detailLayout = document.querySelector(".detail-layout");
+  const detailPrimary = document.querySelector(".detail-primary");
   const title = document.getElementById("detail-title");
-  const oldCode = document.getElementById("detail-code");
   const guidance = document.querySelector(".detail-instructions");
-  if (hero && cardHeading && title && oldCode) {
+  const legacyReport = document.querySelector(".detail-side > .detail-info-card:first-child");
+  const make = (tag,cls,text) => {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  };
+  const makeStat = (iconClass,value,valueClass,caption) => {
+    const stat = make("div","detail-stat");
+    const icon = make("i",iconClass);
+    icon.setAttribute("aria-hidden","true");
+    const body = make("span","detail-stat-body");
+    if (typeof value === "string") body.append(make("strong",valueClass,value));
+    else body.append(value);
+    body.append(make("span",valueClass==="detail-slots-number" ?
+      "detail-slots-caption" : "detail-stat-label",caption));
+    stat.append(icon,body);
+    return stat;
+  };
+  if (hero && title && detailLayout && detailPrimary) {
     hero.classList.add("detail-hero-unified");
-    const codeInTitle = title.querySelector?.(".detail-code-text");
-    if (codeInTitle && codeInTitle !== oldCode &&
-        typeof title.replaceChildren === "function" &&
-        typeof document.createElement === "function") {
-      const prefix = document.createElement("span");
-      prefix.className = "detail-h1-prefix";
-      prefix.textContent = "Invite code ";
-      codeInTitle.id = "detail-code";
-      title.replaceChildren(prefix,codeInTitle);
-      oldCode.remove?.();
+    let intro = document.querySelector(".detail-page-intro");
+    if (!intro) {
+      intro = make("header","detail-page-intro");
+      detailLayout.before(intro);
+      intro.append(title,make("p","",
+        "A community-shared Muse invite code. Check reported availability and share your experience below."));
     }
-    if (title.parentElement !== hero && typeof cardHeading.after === "function") {
-      cardHeading.after(title);
+    const titleCode = title.querySelector(".detail-code-text,.detail-title-code");
+    if (titleCode) {
+      titleCode.className = "detail-title-code";
+      titleCode.removeAttribute?.("id");
     }
-    // The main-based preview can still place Reported Availability in a
-    // separate sidebar card. Keep its actual value and timestamp, and move
-    // that single real card beside the invite H1 (never clone or fake it).
-    const reportCard = document.querySelector(".detail-side > .detail-info-card:first-child");
-    if (reportCard?.querySelector?.(".detail-slots-number") &&
-        !hero.querySelector?.(".detail-identity-row") &&
-        typeof document.createElement === "function") {
-      const identityRow = document.createElement("div");
-      identityRow.className = "detail-identity-row";
-      reportCard.classList.remove("detail-info-card");
-      reportCard.classList.add("detail-availability-inline");
-      reportCard.setAttribute?.("role", "group");
-      reportCard.setAttribute?.("aria-label", "Community-reported remaining invitation slots");
-      if (typeof title.before === "function" && typeof identityRow.append === "function") {
-        title.before(identityRow);
-        identityRow.append(title, reportCard);
+    if (title.parentElement !== intro) intro.prepend(title);
+    const codeDisplay = hero.querySelector(".detail-code-display") || make("div","detail-code-display");
+    let visibleCode = hero.querySelector("#detail-code");
+    if (!visibleCode) {
+      visibleCode = make("p","detail-code-text",detailCode);
+      visibleCode.id = "detail-code";
+    }
+    visibleCode.className = "detail-code-text";
+    if (!hero.querySelector(".detail-code-display")) {
+      cardHeading?.after(codeDisplay);
+      codeDisplay.append(visibleCode);
+    }
+    if (!codeDisplay.querySelector(".detail-copy-inline")) {
+      const quickCopy = make("button","detail-copy-inline");
+      quickCopy.type = "button";
+      quickCopy.setAttribute("aria-label","Copy invite code "+detailCode);
+      quickCopy.title = "Copy invite code";
+      const icon = make("i","fa-regular fa-copy");
+      icon.setAttribute("aria-hidden","true");
+      quickCopy.append(icon);
+      quickCopy.addEventListener("click",()=>button.click());
+      codeDisplay.append(quickCopy);
+    }
+    if (!hero.querySelector(".detail-stats")) {
+      const stats = make("div","detail-stats");
+      stats.setAttribute("aria-label","Community-reported invitation statistics");
+      const value = legacyReport?.querySelector?.(".detail-slots-number");
+      const rawCaption = legacyReport?.querySelector?.(".detail-slots-caption")?.textContent || "";
+      const reportDate = rawCaption.match(/reported\s+(.+?)\s*[·•]\s*Not live/i)?.[1]?.trim() || "No report";
+      const reported = value?.textContent?.trim() || "Not reported";
+      stats.append(
+        makeStat("fa-solid fa-users",reported,"detail-slots-number",
+          reported === "Not reported" ? "No confirmed data" : "Invites remaining · Not live"),
+        makeStat("fa-regular fa-calendar",reportDate,"detail-stat-date","Last reported"),
+        makeStat("fa-solid fa-arrows-rotate","—","detail-stat-updates","No recorded updates")
+      );
+      inviteActions?.after(stats);
+      legacyReport?.remove?.();
+      // The published sidecar holds reviewed pre-tracking revisions. A missing
+      // sidecar is unknown history, not a fabricated count of zero.
+      const updateStat = stats.querySelector(".detail-stat-updates");
+      const updateCaption = updateStat?.nextElementSibling;
+      void (async () => {
+        if (typeof fetch !== "function" || !updateStat) return;
+        let baseline=0,tracked=0;
+        for (const url of ["../../data/quota-update-baseline.json",
+          "/data/quota-update-baseline.json"]) {
+          try {
+            const response=await fetch(url,{cache:"no-store"});
+            if (!response.ok) continue;
+            const data=await response.json();
+            if (Number.isSafeInteger(data?.[detailCode]) && data[detailCode] > 0) {
+              baseline=data[detailCode];
+            }
+            break;
+          } catch { /* A preview may omit the optional sidecar. */ }
+        }
+        try {
+          const response=await fetch("../../data/invites.json",{cache:"no-store"});
+          if (response.ok) {
+            const items=await response.json();
+            const item=Array.isArray(items) ?
+              items.find(entry=>entry?.code===detailCode) : null;
+            if (Number.isSafeInteger(item?.quotaUpdateCount) &&
+                item.quotaUpdateCount>0) tracked=item.quotaUpdateCount;
+          }
+        } catch { /* Keep the reviewed baseline, if known. */ }
+        const count=baseline+tracked;
+        if (count>0) {
+          updateStat.textContent=count+(count===1?" update":" updates");
+          if (updateCaption) updateCaption.textContent="Quota updated";
+        }
+      })();
+    }
+    const parentStats = hero.querySelector(".detail-stats");
+    const oldIdentity = hero.querySelector(".detail-identity-row");
+    if (oldIdentity) {
+      // Earlier previews place the title and reported quota in this row.
+      oldIdentity.remove?.();
+    }
+    if (parentStats && parentStats.parentElement !== hero) hero.append(parentStats);
+    const moveIntoFold = (original,headingText,iconClass,kind) => {
+      if (!original || original.tagName === "DETAILS") return original;
+      const fold=make("details",original.className+" detail-mobile-fold");
+      if (kind) fold.classList.add(kind);
+      fold.open=true;
+      const summary=make("summary");
+      const mark=make("i",iconClass);mark.setAttribute("aria-hidden","true");
+      const caret=make("i","fa-solid fa-chevron-down detail-fold-chevron");
+      caret.setAttribute("aria-hidden","true");
+      const body=make("div","detail-fold-body");
+      for (const element of [...original.children]) {
+        if (element.matches?.("h2,.section-kicker")) continue;
+        body.append(element);
       }
+      summary.append(mark,make("span","",headingText),caret);
+      fold.append(summary,body);
+      original.replaceWith(fold);
+      return fold;
+    };
+    moveIntoFold(guidance,"How to use this code",
+      "fa-solid fa-book-open","detail-instructions");
+    const listing=document.querySelector(".detail-side > .detail-info-card:first-child");
+    if (listing && listing.querySelector(".detail-meta")) {
+      moveIntoFold(listing,"Code details",
+        "fa-solid fa-circle-info","detail-listing");
     }
-    if (guidance && guidance.parentElement !== hero &&
-        typeof hero.append === "function") hero.append(guidance);
-    document.querySelector(".detail-primary > .section-kicker")?.remove?.();
+    const market=document.querySelector(".detail-market-section");
+    if (market && market.parentElement !== detailLayout) detailLayout.append(market);
+  }
+  // Mobile accordions start compact; desktop content is always expanded.
+  const foldMedia=typeof window.matchMedia==="function" ?
+    window.matchMedia("(max-width:620px)") : null;
+  const syncFolds=()=>{
+    for (const fold of document.querySelectorAll(".detail-mobile-fold")) {
+      fold.open=!foldMedia?.matches;
+    }
+  };
+  if (foldMedia) {
+    syncFolds();
+    foldMedia.addEventListener?.("change",syncFolds);
   }
   // The trusted PR preview renderer can still use old main HTML. Align DOM focus
   // order with the new visual order: redemption choices before secondary actions.
