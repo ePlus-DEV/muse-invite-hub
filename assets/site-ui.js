@@ -54,7 +54,7 @@
       const prefix = path.includes("/codes/") ? "../../" :
         path.includes("/countries/") ? "../" : "./";
       const github = "https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml";
-      const guide = "https://github.com/ePlus-DEV/muse-invite-hub/blob/main/docs/TELEGRAM_BOT_GUIDE.md";
+      const telegram = "https://t.me/share/url?url=https%3A%2F%2Fmuse.eplus.dev%2F";
       const template = document.createElement("template");
       template.innerHTML = `  <dialog id="contribute" class="contribute-dialog" aria-labelledby="contribute-title" aria-describedby="contribute-intro">
     <div class="contribute-dialog-head">
@@ -64,9 +64,9 @@
     <p id="contribute-intro" class="contribute-dialog-intro">No coding needed. Choose a way to share a public code or help check an existing one.</p>
     <div class="contribute-dialog-body">
       <div class="contribute-dialog-options">
-        <a class="contribute-option contribute-option-telegram" href="${guide}" target="_blank" rel="noopener noreferrer">
+        <a class="contribute-option contribute-option-telegram" href="${telegram}" target="_blank" rel="noopener noreferrer">
           <i class="fa-brands fa-telegram" aria-hidden="true"></i>
-          <span><strong>Telegram <small>Mobile-friendly</small></strong><span>Use an existing trusted bot chat to submit or report a code; no GitHub account needed.</span><em>View Telegram guide</em></span>
+          <span><strong>Telegram <small>Mobile-friendly</small></strong><span>Open Telegram, choose your trusted bot chat, then use /submit or /report. No GitHub sign-in.</span><em>Open Telegram</em></span>
           <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
         </a>
         <a class="contribute-option" href="${github}" target="_blank" rel="noopener noreferrer">
