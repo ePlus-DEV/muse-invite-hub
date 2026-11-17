@@ -219,7 +219,9 @@ export async function closePublishedCommentCounts({
         summary.pending++;continue;
       }
       const comments=await allComments(api,issueNumber);
-      const canonicalCodes=issueCodes(issue);
+      // Include the validated PR code even for legacy canonical Issues whose
+      // title lacks a parseable [Invite]/[Count update] prefix.
+      const canonicalCodes=[...new Set([code,...issueCodes(issue)])];
       let pendingFeedback=false;
       for (const row of comments) {
         if (row.id<=commentId || BOT_LOGINS.has(row.user?.login) ||
