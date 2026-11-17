@@ -513,8 +513,8 @@ test("reprocessing Issue #240 after its reviewed merge is already-listed, not re
   assert.equal(planIssueChange(issue(241,"[Invite] FT4SHN",body,"other"),[item,published]).outcome,"needs-review");
   const changed=body.replace(url,"https://www.facebook.com/groups/referralcodeshare/posts/1169239249161107/");
   assert.equal(planIssueChange({...original,body:changed},[item,published]).outcome,"needs-review");
-  const quota=body.replace("### Remaining invites (optional; self-reported)\\n\\n_No response_",
-    "### Remaining invites (optional; self-reported)\\n\\n3");
+  const quota=body.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+    "### Remaining invites (optional; self-reported)\n\n3");
   assert.equal(planIssueChange({...original,body:quota},[item,published]).outcome,"needs-review");
   assert.equal(isAutoPublishableNewSocialInvite(original,replay),false);
 });
