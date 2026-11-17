@@ -509,7 +509,7 @@
           {cache:"no-store",signal:controller.signal});
         if (!feedbackResponse.ok) throw Error("Feedback totals unavailable");
         const snapshot = await feedbackResponse.json();
-        if (snapshot?.source === "github-issue-comments" && snapshot.codes &&
+        if (snapshot?.source === "reviewed-github-feedback" && snapshot.codes &&
             !Array.isArray(snapshot.codes) && typeof snapshot.codes === "object" &&
             Number.isFinite(Date.parse(snapshot.generatedAt || ""))) {
           feedbackCounts = snapshot.codes;
