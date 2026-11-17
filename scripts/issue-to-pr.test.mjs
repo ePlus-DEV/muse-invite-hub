@@ -115,6 +115,58 @@ test("Telegram submissions reject mismatched identity, missing consent and owner
   assert.equal(planIssueChange(general,[item]).outcome,"needs-review");
 });
 
+
+test("Issue #271: human-selected Telegram without source falls back to GitHub reporter in a Draft proposal",()=>{
+  const body=[
+    "### Invite code","","B9C2XA","",
+    "### Code source","","Telegram (community code shared through bot)","",
+    "### Social post or profile URL (required for Threads, X or Facebook)","","_No response_","",
+    "### Public confirmation or context (optional)","","_No response_","",
+    "### Uses so far (optional; self-reported)","","_No response_","",
+    "### Invite limit (optional; self-reported)","","_No response_","",
+    "### Remaining invites (optional; self-reported)","","_No response_","",
+    "### Notes (optional)","","B9C2XA","",
+    "### Contributor checklist","",
+    "- [x] I am authorized to share this code publicly; I understand this Issue is public.",
+    "- [x] This code is not a password, 2FA code, session token or private credential."
+  ].join("\n");
+  const source=issue(271,"[Invite]",body,"yarzycausepain");
+  source.user.id=147738311;
+  const proposal=planIssueChange(source,[item]);
+  assert.equal(proposal.outcome,"proposal");
+  assert.equal(proposal.action,"add");
+  assert.match(proposal.notice,/falls back to GitHub Issue reporter/);
+  const record=proposal.data.find(row=>row.code==="B9C2XA");
+  assert.equal(record.submittedBy,"yarzycausepain");
+  assert.equal(record.submittedById,undefined);
+  assert.equal(record.sourceUrl,undefined);
+  assert.equal(record.status,"unverified");
+  assert.equal(record.reportedUses,undefined);
+  assert.equal(record.reportedCapacity,undefined);
+  assert.match(record.note,/not a verified code owner/);
+  assert.equal(isAutoPublishableNewGithubInvite(source,proposal),false);
+  assert.equal(isAutoPublishableNewSocialInvite(source,proposal),false);
+  assert.deepEqual(validateCatalog(proposal.data),[]);
+
+  // A bot account without authenticated Telegram provenance must never fall back.
+  assert.equal(planIssueChange({...source,user:{login:"eplus-bot"}},[item]).outcome,"needs-review");
+  // Explicit identity claims, links and owner-only quotas must not be silently reattributed.
+  const cases=[
+    body.replace("### Public confirmation or context (optional)\n\n_No response_",
+      "### Public confirmation or context (optional)\n\nhttps://t.me/alice_dev"),
+    body.replace("### Social post or profile URL (required for Threads, X or Facebook)\n\n_No response_",
+      "### Social post or profile URL (required for Threads, X or Facebook)\n\nhttps://t.me/channel/12345"),
+    body.replace("### Notes (optional)\n\nB9C2XA",
+      "### Notes (optional)\n\nShared by @alice_dev"),
+    body.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+      "### Remaining invites (optional; self-reported)\n\n12")
+  ];
+  for(const changed of cases)
+    assert.equal(planIssueChange({...source,body:changed},[item]).outcome,"needs-review");
+  const unchecked=body.replace("- [x] I am authorized","- [ ] I am authorized");
+  assert.throws(()=>planIssueChange({...source,body:unchecked},[item]),/confirmations/);
+});
+
 test("older [Telegram submission] issues retain backwards-compatible review-only parsing",()=>{
   const body=[
     "<!-- muse-telegram-submission:ABC123 -->",

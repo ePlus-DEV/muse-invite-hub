@@ -48,6 +48,21 @@ export function readIssueFields(body) {
 function field(fields, name) {
   return fields[name] || "";
 }
+// A manually created GitHub Issue is not a Telegram bot submission. Without any
+// public Telegram sender/source to attribute, credit only the GitHub reporter.
+// Never trust a self-inserted Telegram marker or silently claim Telegram ownership.
+function isUnattributedHumanTelegramIssue(issue, fields) {
+  if (field(fields,"Code source").trim() !== TELEGRAM_COMMUNITY ||
+      ["eplus-bot","github-actions[bot]"].includes(issue.user?.login)) return false;
+  const provenanceFields = [
+    SOCIAL_FIELD, THREADS_FIELD, "Public confirmation or context (optional)",
+    "Telegram contributor"
+  ];
+  if (provenanceFields.some(name => field(fields,name).trim())) return false;
+  const notes = field(fields,"Notes (optional)");
+  // A handle/link in notes still represents a Telegram attribution claim.
+  return !/(?:https?:\/\/|(?:^|[\s(])@[A-Za-z][A-Za-z0-9_]{4,31}\b|(?:^|[\s(])(?:t\.me|telegram\.me)\/)/i.test(notes);
+}
 // The web form requires these checkboxes, but Issues created through the API
 // or other non-form entry points can omit them. Validate the actual Issue body.
 export function hasRequiredInviteConfirmations(body) {
@@ -360,10 +375,20 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
       return {outcome:"needs-review",kind,code,
         reason:"Choose GitHub, Threads, X (Twitter) or Facebook as the code source."};
     }
-    const sourcePlatform = SUBMISSION_PLATFORMS.get(selectedSource) || "GitHub";
+    const githubFallback = isUnattributedHumanTelegramIssue(issue,f);
+    const sourcePlatform = githubFallback ? "GitHub" :
+      SUBMISSION_PLATFORMS.get(selectedSource) || "GitHub";
     if (sourcePlatform === "Telegram") {
       return {outcome:"needs-review",kind,code,
-        reason:"Telegram reports require a confirmed sender and manual permission/source review; GitHub Issue author is not code owner."};
+        reason:"A GitHub Issue selecting Telegram with a Telegram handle or link needs manual source review; submit through the bot for confirmed Telegram attribution."};
+    }
+    if (githubFallback && (
+      ["Invite limit (optional; self-reported)", "Uses so far (optional; self-reported)",
+        "Remaining invites (optional; self-reported)"].some(name => field(f,name).trim()) ||
+      /\b[0-9]+\s+(?:uses?|invites?)\s+(?:left|remaining)\b/i.test(field(f,"Notes (optional)"))
+    )) {
+      return {outcome:"needs-review",kind,code,
+        reason:"GitHub fallback cannot treat Telegram-selected quota figures as owner-confirmed; remove the quota claim or request maintainer review."};
     }
     const socialSubmission = sourcePlatform !== "GitHub";
     const urlField = field(f,SOCIAL_FIELD).trim() || field(f,THREADS_FIELD).trim();
@@ -461,19 +486,29 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
         ...(socialSubmission
           ? {sourceUrl:social.url, note:"Public "+social.platform+" code reported in issue #"+issue.number+
               "; original post content and Muse redemption are unverified community reports."}
-          : {submittedBy:issue.user.login, note:"Community-submitted in issue #"+issue.number+
-              "; redemption not independently verified."})
+          : {submittedBy:issue.user.login,
+              note:githubFallback
+                ? "Reported in GitHub Issue #"+issue.number+" with Telegram selected but no public Telegram sender/source. GitHub reporter is not a verified code owner; redemption and quota are unverified."
+                : "Community-submitted in issue #"+issue.number+
+                    "; redemption not independently verified."})
       };
       if (!socialSubmission) {
-        rememberOwnerId(entry,issue);
-        const reported=actualQuota(f,date,{
-          total:"Invite limit (optional; self-reported)",
-          used:"Uses so far (optional; self-reported)",
-          remaining:"Remaining invites (optional; self-reported)",
-          notes:"Notes (optional)"
-        });
-        if (reported) Object.assign(entry,reported);
-        else notice="Usage numbers were absent or incomplete; no available-slot count has been guessed.";
+        if (githubFallback) {
+          notice="Telegram was selected without a public sender or source. "+
+            "Attribution falls back to GitHub Issue reporter @"+issue.user.login+
+            " (not a verified code owner). A review-only Draft PR is required; "+
+            "no owner quotas or Muse redemption have been verified.";
+        } else {
+          rememberOwnerId(entry,issue);
+          const reported=actualQuota(f,date,{
+            total:"Invite limit (optional; self-reported)",
+            used:"Uses so far (optional; self-reported)",
+            remaining:"Remaining invites (optional; self-reported)",
+            notes:"Notes (optional)"
+          });
+          if (reported) Object.assign(entry,reported);
+          else notice="Usage numbers were absent or incomplete; no available-slot count has been guessed.";
+        }
       } else if (social.group) {
         notice="Facebook group "+social.handle+" is the cited source, NOT the post author's identity or a verified code owner. "+
           "The submitted group post has not been independently verified; a maintainer must check it manually before publication.";
@@ -859,7 +894,11 @@ async function propose(issue,token) {
       "as **unverified** after CI, source/consent checks and duplicate checks pass. "+
       "The Issue stays open until successful deployment."
     : "Created [Draft PR #"+pr.number+"]("+pr.html_url+") for **"+codesLabel+
-      "**. This submission needs maintainer review; no website data has been published.");
+      "**. "+(readIssueFields(issue.body)["Code source"]===TELEGRAM_COMMUNITY &&
+        proposed.action!=="add Telegram source"
+          ? "No Telegram sender/source was supplied, so the proposal is credited to your GitHub account rather than Telegram. "
+          : "")+
+      "This submission needs maintainer review; no website data has been published.");
   // Explicitly dispatch validation on the generated branch. GITHUB_TOKEN PR
   // activity does not reliably start an ordinary CI workflow automatically.
   try {
