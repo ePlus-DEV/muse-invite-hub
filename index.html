@@ -52,9 +52,9 @@
         <a href="./countries/"><i class="fa-solid fa-earth-americas" aria-hidden="true"></i> Country map</a>
         <a href="#about"><i class="fa-regular fa-circle-question" aria-hidden="true"></i> About</a>
         <a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</a>
-        <a class="nav-mobile-share" href="#contribute"><i class="fa-solid fa-plus" aria-hidden="true"></i> Share code</a>
+        <a class="nav-mobile-share" href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" data-contribute-trigger><i class="fa-solid fa-plus" aria-hidden="true"></i> Share code</a>
       </nav>
-      <a class="button button-primary nav-share" href="#contribute"><i class="fa-solid fa-plus" aria-hidden="true"></i> Share code</a>
+      <a class="button button-primary nav-share" href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" data-contribute-trigger><i class="fa-solid fa-plus" aria-hidden="true"></i> Share code</a>
       <button class="nav-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="site-nav"><i class="fa-solid fa-bars" aria-hidden="true"></i></button>
     </div>
   </header>
@@ -65,10 +65,10 @@
         <h1 id="hero-title">Muse AI Invite Hub</h1>
         <p class="hero-intro">Discover, copy and share Muse AI invite codes with the community.</p>
         <div class="hero-actions">
-          <a class="button button-primary" href="#contribute"><i class="fa-solid fa-plus" aria-hidden="true"></i> Share your code</a>
+          <a class="button button-primary" href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" data-contribute-trigger><i class="fa-solid fa-plus" aria-hidden="true"></i> Share your code</a>
           <a class="button button-outlined" href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> View on GitHub</a>
         </div>
-        <p class="hero-telegram-link"><i class="fa-brands fa-telegram" aria-hidden="true"></i> Telegram, GitHub or feedback — <a href="#contribute">choose how to share</a></p>
+        <p class="hero-telegram-link"><i class="fa-brands fa-telegram" aria-hidden="true"></i> Telegram, GitHub or feedback — <a href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" data-contribute-trigger>choose how to share</a></p>
       </div>
       <div class="hero-art" aria-hidden="true">
         <span class="art-star art-star-one"><i class="fa-solid fa-star"></i></span>
@@ -153,50 +153,9 @@
       </div>
       <div class="cards-grid" id="code-grid" aria-live="off"><div class="loading-card">Loading community codes…</div></div>
       <div class="directory-more" id="directory-more" hidden><button type="button" class="button button-outlined" id="load-more-codes" aria-controls="code-grid">Load more <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button></div>
-      <div class="empty-state" id="empty-state" hidden><div class="empty-symbol" aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></div><h3 id="empty-title">No matching codes</h3><p id="empty-description">Try another search or help the community by sharing your code.</p><a class="button button-primary" href="#contribute">Share a code</a></div>
+      <div class="empty-state" id="empty-state" hidden><div class="empty-symbol" aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></div><h3 id="empty-title">No matching codes</h3><p id="empty-description">Try another search or help the community by sharing your code.</p><a class="button button-primary" href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" data-contribute-trigger>Share a code</a></div>
       <p class="directory-footnote"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Community-reported codes are not independently verified by Muse. Remaining counts are dated, not live.</p>
       <p id="live-message" class="sr-only" role="status" aria-live="polite"></p>
-    </section>
-    <section class="contribute-section container" id="contribute" aria-labelledby="contribute-title">
-      <div class="contribute-heading">
-        <p class="section-kicker">SHARE WITH THE COMMUNITY</p>
-        <h2 id="contribute-title">Choose how to contribute</h2>
-        <p>You do not need to be a developer. Share a public invite code or report whether a code worked for you, using a channel you are comfortable with.</p>
-      </div>
-      <div class="contribute-grid">
-        <article class="contribute-card contribute-telegram" id="telegram-bot" aria-labelledby="telegram-bot-title">
-          <p class="contribute-channel"><i class="fa-brands fa-telegram" aria-hidden="true"></i> Telegram <span class="contribute-tag">Easy on mobile</span></p>
-          <h3 id="telegram-bot-title">Share directly in a chat</h3>
-          <p>Use our optional bot to browse codes, submit a new code or report feedback. You do not need a GitHub account to submit through Telegram.</p>
-          <div class="contribute-commands" aria-label="Telegram commands">
-            <code>/submit CODE</code><code>/report CODE worked</code><code>/status CODE</code>
-          </div>
-          <a class="button button-primary" href="https://github.com/ePlus-DEV/muse-invite-hub/blob/main/docs/TELEGRAM_BOT_GUIDE.md" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-book-open" aria-hidden="true"></i> How to use Telegram</a>
-          <p class="contribute-status"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> A verified public bot link has not yet been published. The guide is for people with an existing trusted bot chat; do not use an unverified account.</p>
-        </article>
-        <div class="contribute-alternatives" aria-label="Other ways to contribute">
-          <article class="contribute-card contribute-alternative">
-            <p class="contribute-channel"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</p>
-            <h3>Share with an Issue Form</h3>
-            <p>Prefer a web form? Submit your own public code or cite a public Threads, X or Facebook post. A GitHub account is required.</p>
-            <a class="contribute-text-link" href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" target="_blank" rel="noopener noreferrer">Open Share Code form <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
-          </article>
-          <article class="contribute-card contribute-alternative">
-            <p class="contribute-channel"><i class="fa-regular fa-comment-dots" aria-hidden="true"></i> Code feedback</p>
-            <h3>Help verify an existing code</h3>
-            <p>Find a code on this website and select “Worked for me” or “Didn't work”. Posting on the linked GitHub Issue requires a GitHub account; Telegram can report feedback too.</p>
-            <a class="contribute-text-link" href="#codes">Find a code to review <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
-          </article>
-        </div>
-        <aside class="contribute-qr" aria-label="Scan QR to view contribution channels on your phone">
-          <img src="./assets/contribute-qr.svg" width="180" height="180" alt="QR code opening muse.eplus.dev contribution choices on your phone" loading="lazy">
-          <strong>On your computer?</strong>
-          <p>Scan to open all contribution options on your phone.</p>
-          <a href="https://muse.eplus.dev/#contribute">muse.eplus.dev/#contribute</a>
-          <small>QR opens this page, not an unverified Telegram account.</small>
-        </aside>
-      </div>
-      <p class="contribute-safety"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Telegram submissions require your permission before publishing your public @username in a GitHub Issue. They create review-only Draft PRs; a code is not listed until reviewed. Never share passwords or private tokens.</p>
     </section>
     <section class="help-section container" id="about" aria-labelledby="about-title">
       <h2 class="about-title" id="about-title">About Muse Invite Hub</h2>
@@ -215,12 +174,44 @@
             <h3>Does a listed invite code guarantee Muse access?</h3>
             <p>No. Codes, feedback and remaining counts are community reports that may be outdated. Only Muse can confirm whether a code can be redeemed and what terms or rewards apply.</p>
             <h3>How can I share or report a code?</h3>
-            <p>Start with <a href="#contribute">Choose how to contribute</a>. You can share a code using the Telegram bot (no GitHub account needed for the private-chat submission), use the <a href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" target="_blank" rel="noopener noreferrer">GitHub Share Code form</a>, or <a href="#codes">choose a published code and leave feedback</a>. GitHub sign-in is needed to post its Issue comment. Telegram submissions automatically create public GitHub Issues and review-only Draft PRs. Maintainers review Telegram submissions before publication. Never share passwords or private tokens.</p>
+            <p>Start with <a href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" data-contribute-trigger>Choose how to contribute</a>. You can share a code using the Telegram bot (no GitHub account needed for the private-chat submission), use the <a href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" target="_blank" rel="noopener noreferrer">GitHub Share Code form</a>, or <a href="#codes">choose a published code and leave feedback</a>. GitHub sign-in is needed to post its Issue comment. Telegram submissions automatically create public GitHub Issues and review-only Draft PRs. Maintainers review Telegram submissions before publication. Never share passwords or private tokens.</p>
           </div>
         </div>
       </details>
     </section>
   </main>
+  <dialog id="contribute" class="contribute-dialog" aria-labelledby="contribute-title" aria-describedby="contribute-intro">
+    <div class="contribute-dialog-head">
+      <div><p class="section-kicker">SHARE WITH THE COMMUNITY</p><h2 id="contribute-title">Choose how to contribute</h2></div>
+      <button class="contribute-dialog-close" type="button" data-contribute-close aria-label="Close contribution choices"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </div>
+    <p id="contribute-intro" class="contribute-dialog-intro">No coding needed. Choose a way to share a public code or help check an existing one.</p>
+    <div class="contribute-dialog-body">
+      <div class="contribute-dialog-options">
+        <a class="contribute-option contribute-option-telegram" href="https://github.com/ePlus-DEV/muse-invite-hub/blob/main/docs/TELEGRAM_BOT_GUIDE.md" target="_blank" rel="noopener noreferrer">
+          <i class="fa-brands fa-telegram" aria-hidden="true"></i>
+          <span><strong>Telegram <small>Mobile-friendly</small></strong><span>Use an existing trusted bot chat to submit or report a code; no GitHub account needed.</span><em>View Telegram guide</em></span>
+          <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+        </a>
+        <a class="contribute-option" href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" target="_blank" rel="noopener noreferrer">
+          <i class="fa-brands fa-github" aria-hidden="true"></i>
+          <span><strong>GitHub form</strong><span>Share your own public code or a public Threads, X or Facebook source. GitHub sign-in required.</span><em>Open form</em></span>
+          <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+        </a>
+        <a class="contribute-option" data-contribute-feedback href="./#codes">
+          <i class="fa-regular fa-comment-dots" aria-hidden="true"></i>
+          <span><strong>Give code feedback</strong><span>Choose a listed code; posting on its GitHub Issue requires sign-in, or use the Telegram bot.</span><em>Find a code</em></span>
+          <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+        </a>
+      </div>
+      <div class="contribute-dialog-qr">
+        <img src="./assets/contribute-qr.svg" width="154" height="154" alt="QR code to open the contribution choices on muse.eplus.dev" loading="lazy">
+        <strong>Scan with your phone</strong>
+        <p>Opens this same choice menu. QR does not open an unverified Telegram account.</p>
+      </div>
+    </div>
+    <p class="contribute-dialog-safety"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Telegram needs consent to publish your public @username. Submissions require review; code validity is not guaranteed. A verified public bot link has not yet been published.</p>
+  </dialog>
   <footer class="site-footer">
     <div class="container footer-inner">
       <div class="footer-main-row">
@@ -229,8 +220,8 @@
           <a href="./countries/">Country map</a>
           <a href="https://muse.ai/" target="_blank" rel="noopener noreferrer">Official Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
           <a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</a>
-          <a href="./#contribute">Contribute</a>
-          <a href="./#telegram-bot"><i class="fa-brands fa-telegram" aria-hidden="true"></i> Telegram bot</a>
+          <a href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" data-contribute-trigger>Contribute</a>
+          <a href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" data-contribute-trigger><i class="fa-brands fa-telegram" aria-hidden="true"></i> Telegram bot</a>
         </nav>
       </div>
       <p class="footer-tagline">Small gestures. Bigger possibilities.</p>
