@@ -37,26 +37,37 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.doesNotMatch(html, /class="detail-lead"|class="detail-caution"|class="detail-owner"/);
   assert.match(html, /<span class="detail-status" title="Ownership confirmed by ePlus.DEV; Muse redemption is not verified."/);
   assert.match(html, /<div class="detail-code-panel detail-hero-unified">/);
-  assert.match(html, /<h1 id="detail-title"><span class="detail-h1-prefix">Invite code<\/span> <span class="detail-code-text" id="detail-code">DPNIHH<\/span><\/h1>/);
+  assert.match(html, /<h1 id="detail-title">Invite code <span class="detail-title-code">DPNIHH<\/span><\/h1>/);
+  assert.match(html, /<p class="detail-code-text" id="detail-code">DPNIHH<\/p>/);
+  assert.match(html, /class="detail-page-intro"/);
+  assert.match(html, /class="detail-stats" aria-label="Community-reported invitation statistics"/);
   assert.equal((html.match(/<h1\b/g)||[]).length,1,"Exactly one visible and SEO-readable H1");
-  assert.equal((html.match(/id="detail-code"/g)||[]).length,1,"No duplicate large code label");
+  assert.equal((html.match(/id="detail-code"/g)||[]).length,1,"Only one copy source ID");
   assert.doesNotMatch(html, /<p class="detail-code" id="detail-code">/);
+  const introAt=html.indexOf('class="detail-page-intro"');
+  const headingAt=html.indexOf('id="detail-title"');
   const heroStart=html.indexOf('class="detail-code-panel detail-hero-unified"');
-  const heading=html.indexOf('id="detail-title"');
+  const codeAt=html.indexOf('id="detail-code"');
   const actionsAtHero=html.indexOf('class="detail-action-row"');
-  const instructionsAtHero=html.indexOf('class="detail-instructions"');
-  const marketAt=html.indexOf('class="availability-section detail-market-section"');
-  const availabilityAt=html.indexOf('class="detail-availability-inline"');
+  const statsAt=html.indexOf('class="detail-stats"');
+  const instructionsAt=html.indexOf('class="detail-instructions detail-mobile-fold"');
   const sidebarAt=html.indexOf('class="detail-side"');
-  assert.ok(heroStart < heading && heading < availabilityAt &&
-    availabilityAt < actionsAtHero && actionsAtHero < instructionsAtHero &&
-    instructionsAtHero < marketAt && marketAt < sidebarAt,
-    "Single hero must contain code and reported availability before actions and guidance");
-  assert.equal((html.match(/REPORTED AVAILABILITY/g)||[]).length,1,
-    "Don't duplicate the reported quota across the hero and the sidebar");
+  const marketAt=html.indexOf('class="availability-section detail-market-section"');
+  assert.ok(introAt < headingAt && headingAt < heroStart &&
+    heroStart < codeAt && codeAt < actionsAtHero &&
+    actionsAtHero < statsAt && statsAt < instructionsAt &&
+    instructionsAt < sidebarAt && sidebarAt < marketAt,
+    "Approved mockup: SEO H1 above hero, quota stats below actions, sidebar and market last");
   assert.equal((html.match(/class="detail-slots-number"/g)||[]).length,1);
   assert.doesNotMatch(html.slice(sidebarAt),/REPORTED AVAILABILITY/);
-  assert.match(html, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
+  assert.match(html, /<strong class="detail-stat-updates">1 update<\/strong>/);
+  assert.match(html, /<strong class="detail-stat-date">Nov 11, 2026<\/strong>/);
+  assert.match(html, /class="detail-copy-inline" type="button" aria-label="Copy invite code DPNIHH"/);
+  assert.match(html, /<details class="detail-listing detail-mobile-fold"/);
+  assert.match(html, /<summary><i class="fa-solid fa-book-open"/);
+  assert.equal((html.match(/REPORTED AVAILABILITY/g)||[]).length,0,
+    "Stats footer replaces standalone Reported Availability box");
+    assert.match(html, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
   assert.doesNotMatch(html, /<dt>Redemption status<\/dt><dd>Unverified/);
   assert.match(html, /3 \/ 30/);
   assert.match(html, /Not live/);
@@ -112,35 +123,35 @@ test("detail visual restructure keeps SEO metadata, readable links and structure
     e.itemListElement.length===3));
   assert.match(html, /href="\.\.\/\.\.\/#codes"/);
   assert.match(html, /href="https:\/\/muse.ai\/invite\/DPNIHH"/);
-  assert.match(html, /<h2 id="how-to-redeem">How to use this code<\/h2>/);
+  assert.match(html, /<span id="how-to-redeem">How to use this code<\/span>/);
   assert.match(preview,/noindex,nofollow,noarchive/);
   assert.doesNotMatch(preview,/rel="canonical"/);
   assert.equal((preview.match(/<h1\b/g)||[]).length,1);
   assert.match(generateSitemap([item]), /\/codes\/DPNIHH\//);
 });
 
-test("unreported community codes keep the single availability block in the invite hero", () => {
+test("unreported community codes do not invent quota or update history", () => {
   const html=renderDetailPage(community());
-  const hero=html.indexOf('class="detail-identity-row"');
-  const empty=html.indexOf('class="detail-slots-number">Not reported');
-  const actions=html.indexOf('class="detail-action-row"');
-  assert.ok(hero>0 && empty>hero && empty<actions);
-  assert.equal((html.match(/class="detail-slots-number"/g)||[]).length,1);
-  assert.match(html,/No confirmed remaining-slot data/);
-  assert.match(html,/id="detail-title"/);
+  assert.match(html, /class="detail-slots-number">Not reported<\/strong>/);
+  assert.match(html, /class="detail-stat-date">No report<\/strong>/);
+  assert.match(html, /class="detail-stat-updates">—<\/strong>/);
+  assert.match(html, /No confirmed remaining-slot data/);
+  assert.equal((html.match(/class="detail-stats"/g)||[]).length,1);
+  assert.equal((html.match(/<h1\b/g)||[]).length,1);
 });
-
-test("responsive report layout keeps full-width readable how-to and existing SEO contract", () => {
+test("approved desktop/mobile layout retains real counts and accessible controls", () => {
   const css=readFileSync(new URL("../assets/styles.css",import.meta.url),"utf8");
   const js=readFileSync(new URL("../assets/detail.js",import.meta.url),"utf8");
-  assert.match(css,/\.detail-hero-unified \.detail-identity-row\{display:grid;grid-template-columns:minmax\(0,1fr\) minmax\(166px,195px\)/);
-  assert.match(css,/\.detail-hero-unified \.detail-instructions ol\{grid-template-columns:1fr/);
-  assert.match(css,/@media\(max-width:600px\)\{[\s\S]*?\.detail-hero-unified \.detail-identity-row\{grid-template-columns:1fr/);
-  assert.match(js,/reportCard\?\.querySelector\?\.\("\.detail-slots-number"\)/);
-  assert.match(js,/identityRow\.append\(title, reportCard\)/);
-  assert.match(js,/reportCard\.classList\.remove\("detail-info-card"\)/);
+  assert.match(css, /Approved invite-detail mockup/);
+  assert.match(css, /\.detail-hero-unified \.detail-stats\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.detail-instructions\.detail-mobile-fold ol\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /@media\(max-width:620px\)\{/);
+  assert.match(css, /\.detail-hero-unified \.detail-action-row\{display:grid;grid-template-columns:1fr/);
+  assert.match(css, /\.detail-mobile-fold>summary\{/);
+  assert.match(js, /document\.querySelector\("\.detail-side > \.detail-info-card:first-child"\)/);
+  assert.match(js, /detailLayout\.append\(market\)/);
+  assert.match(js, /foldMedia\.addEventListener\?\.\("change",syncFolds\)/);
 });
-
 test("confirmed owner card and non-owner detail keep verification meanings separate", () => {
   const app = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../assets/styles.css", import.meta.url), "utf8");
