@@ -1,7 +1,7 @@
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
-import { planIssueChange, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance, isAutoPublishableNewSocialInvite, isAutoPublishableNewGithubInvite } from "./issue-to-pr.mjs";
+import { planIssueChange, resolvedInviteComment, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance, isAutoPublishableNewSocialInvite, isAutoPublishableNewGithubInvite } from "./issue-to-pr.mjs";
 import { validateCatalog } from "./validate.mjs";
 import { changedRecords } from "./catalog.mjs";
 
@@ -106,7 +106,7 @@ test("Telegram submissions reject mismatched identity, missing consent and owner
     assert.notEqual(plan.outcome,"proposal",JSON.stringify(submitted).slice(0,160));
   }
   const published=[item,{id:"already-listed",code:"ABC123",status:"unverified",addedAt:"2026-11-11",sourceUrl:"https://t.me/alice_dev"}];
-  assert.equal(planIssueChange(original,published).outcome,"needs-review");
+  assert.equal(planIssueChange(original,published).outcome,"already-listed");
   const general=issue(232,"[Invite] ABC123",body.replace("<!-- muse-telegram-submission:ABC123 -->",""),"hoangsvit");
   assert.equal(planIssueChange(general,[item]).outcome,"needs-review");
 });
@@ -373,10 +373,10 @@ test("a third-party Threads reporter cannot claim quotas or edit existing source
     addedAt:"2026-11-11",sourceUrl:url};
   const original=[item,sourceOnly];
   const same=planIssueChange(issue(69,"[Invite]",updatedShare("Threads (public code I found)",url)),original);
-  assert.equal(same.outcome,"needs-review");
+  assert.equal(same.outcome,"already-listed");
   assert.deepEqual(original,[item,sourceOnly]);
   const hijackBody=updatedShare("GitHub (my own code)");
-  assert.equal(planIssueChange(issue(70,"[Invite]",hijackBody),original).outcome,"needs-review");
+  assert.equal(planIssueChange(issue(70,"[Invite]",hijackBody),original).outcome,"already-listed");
   const countBody=count().replace("DPNIHH","18I70N");
   assert.equal(planIssueChange(issue(71,"[Count update]",countBody,"baijiling2"),original).outcome,"needs-review");
 });
@@ -510,13 +510,44 @@ test("reprocessing Issue #240 after its reviewed merge is already-listed, not re
   assert.equal(replay.outcome,"already-published");
   assert.match(replay.reason,/already in the main catalog/);
   // A new reporter, changed source, or owner-only quota claim is not a replay.
-  assert.equal(planIssueChange(issue(241,"[Invite] FT4SHN",body,"other"),[item,published]).outcome,"needs-review");
+  const duplicate=planIssueChange(issue(241,"[Invite] FT4SHN",body,"other"),[item,published]);
+  assert.equal(duplicate.outcome,"already-listed");
+  assert.equal(duplicate.canonicalIssueNumber,240);
   const changed=body.replace(url,"https://www.facebook.com/groups/referralcodeshare/posts/1169239249161107/");
   assert.equal(planIssueChange({...original,body:changed},[item,published]).outcome,"needs-review");
   const quota=body.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
     "### Remaining invites (optional; self-reported)\n\n3");
   assert.equal(planIssueChange({...original,body:quota},[item,published]).outcome,"needs-review");
   assert.equal(isAutoPublishableNewSocialInvite(original,replay),false);
+});
+
+test("a duplicate invite shows only actual published detail and canonical Issue links",()=>{
+  const comment=resolvedInviteComment({codes:["FT4SHN"],canonicalIssueNumbers:[240],
+    liveCodes:["FT4SHN"],canonical:false});
+  assert.match(comment,/https:\/\/muse\.eplus\.dev\/codes\/FT4SHN\//);
+  assert.match(comment,/https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/240/);
+  assert.match(comment,/Closing this duplicate/);
+  assert.doesNotMatch(comment,/verified redemption/i);
+  const original=resolvedInviteComment({codes:["FT4SHN"],liveCodes:["FT4SHN"],canonical:true});
+  assert.match(original,/original contribution has been published/);
+  assert.doesNotMatch(original,/Original discussion/);
+});
+
+test("all-listed multi-code reports resolve as duplicates, mixed batches remain open",()=>{
+  const clean=share.replace("### Invite limit (optional; self-reported)\\n\\n30",
+    "### Invite limit (optional; self-reported)\\n\\n_No response_");
+  const make=value=>clean.replace("PNSMZZ",value);
+  const rows=[item,
+    {id:"community-issue-150-alfa12",code:"ALFA12",status:"unverified",
+      feedbackIssueNumber:150,addedAt:"2026-11-11",submittedBy:"alfa"},
+    {id:"community-issue-160-bravo2",code:"BRAVO2",status:"unverified",
+      feedbackIssueNumber:160,addedAt:"2026-11-11",submittedBy:"bravo"}];
+  const duplicate=planIssueChange(issue(170,"[Invite]",make("ALFA12, BRAVO2")),rows);
+  assert.equal(duplicate.outcome,"already-listed");
+  assert.deepEqual(duplicate.codes,["ALFA12","BRAVO2"]);
+  assert.deepEqual(duplicate.canonicalIssueNumbers,[150,160]);
+  const mixed=planIssueChange(issue(171,"[Invite]",make("ALFA12, NEW123")),rows);
+  assert.equal(mixed.outcome,"needs-review");
 });
 
 test("reject wrong social source, profile-only links and third-party quota claims", () => {
