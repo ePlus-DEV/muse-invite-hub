@@ -8,6 +8,43 @@
   const features = window.MuseDirectoryFeatures;
   const detailSave = document.getElementById("detail-save");
   const detailCode = code.textContent.trim();
+  // PR previews deliberately use the trusted main HTML generator. Until the
+  // generator fix is merged, normalize its legacy detail DOM on the client.
+  // This also handles browser-cached detail HTML without running untrusted
+  // pull-request scripts in the privileged Pages build.
+  function normalizeLegacyDetail() {
+    for (const selector of [
+      '.detail-action-row a[href="https://muse.ai/join"]',
+      ".detail-lead", ".detail-caution", ".detail-code-heading .detail-owner",
+      ".detail-info-card .detail-caption"
+    ]) {
+      document.querySelector(selector)?.remove?.();
+    }
+    const kicker = document.querySelector(".detail-primary > .section-kicker");
+    if (kicker?.textContent?.includes("MUSE INVITE ·")) kicker.textContent = "MUSE INVITE";
+    const status = document.querySelector(".detail-status");
+    if (status?.textContent?.includes("Verified Owner")) {
+      status.title = "Ownership confirmed by ePlus.DEV; Muse redemption is not verified.";
+    }
+    const note = document.querySelector(".detail-note");
+    if (note && /owner.confirmed/i.test(note.textContent || "") &&
+        /redeem|availability|independently/i.test(note.textContent || "")) {
+      note.remove?.();
+    }
+    const metadata = document.querySelector(".detail-meta");
+    for (const row of metadata?.querySelectorAll?.("div") || []) {
+      if (row.querySelector?.("dt")?.textContent?.trim() === "Code owner") row.remove?.();
+    }
+    const instructions = document.querySelector(".detail-instructions");
+    const steps = [...(instructions?.querySelector?.("ol")?.querySelectorAll?.("li") || [])];
+    if (steps.length >= 3) {
+      steps[0].textContent = "Select Open invite above to visit Muse with this code.";
+      steps[1].textContent = "Follow Muse's instructions and check eligibility before redeeming.";
+      for (const item of steps.slice(2)) item.remove?.();
+    }
+    instructions?.querySelector?.("p")?.remove?.();
+  }
+  normalizeLegacyDetail();
   // The trusted PR preview renderer can still use old main HTML. Align DOM focus
   // order with the new visual order: redemption choices before secondary actions.
   const feedbackCard = document.querySelector(".detail-feedback");
@@ -200,7 +237,7 @@
   if (copyPanel && copyActions && typeof document.createElement === "function") {
     copiedNote = document.createElement("p");
     copiedNote.className = "detail-copy-note";
-    copiedNote.textContent = "Copied on this device · Redemption not verified";
+    copiedNote.textContent = "Copied on this device";
     copiedNote.hidden = true;
     copyActions.after(copiedNote);
   }
