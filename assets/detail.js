@@ -16,7 +16,7 @@
       const response = await fetch("../../data/feedback-counts.json",{cache:"no-store"});
       if (!response.ok) return;
       const snapshot = await response.json();
-      if (snapshot?.source !== "github-issue-comments" ||
+      if (snapshot?.source !== "reviewed-github-feedback" ||
           !Number.isFinite(Date.parse(snapshot.generatedAt || ""))) return;
       const counts = snapshot.codes?.[detailCode];
       if (!counts) return;
