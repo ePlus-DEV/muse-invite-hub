@@ -689,7 +689,7 @@ async function propose(issue,token) {
   try {
     latestIssue=await api("GET","issues/"+issue.number,token);
   }catch(error){
-    if(/returned HTTP 410(?:\\b|:)/.test(error.message)){
+    if(error.message.includes("returned HTTP 410:")){
       return {outcome:"skipped",reason:"Source Issue was deleted before PR creation."};
     }
     throw error;
