@@ -6,6 +6,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { readCatalog, recordPath } from "./catalog.mjs";
+import { issueCodes } from "./code-issue-map.mjs";
+import { unrelatedReferralCode } from "./reopen-code-feedback.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
 const ORIGIN = "https://muse.eplus.dev";
@@ -217,10 +219,38 @@ export async function closePublishedCommentCounts({
         summary.pending++;continue;
       }
       const comments=await allComments(api,issueNumber);
-      if(comments.some(row=>row.id>commentId && !BOT_LOGINS.has(row.user?.login) &&
-          row.user?.type!=="Bot" && String(row.body||"").trim())) {
-        summary.pending++;continue;
+      const canonicalCodes=issueCodes(issue);
+      let pendingFeedback=false;
+      for (const row of comments) {
+        if (row.id<=commentId || BOT_LOGINS.has(row.user?.login) ||
+            row.user?.type==="Bot" || !String(row.body||"").trim()) continue;
+        // An earlier human-authored completion note for THIS reviewed PR is
+        // not new feedback. This marker is specific and never general-purpose.
+        if (row.user?.login==="hoangsvit" &&
+            String(row.body).startsWith("<!-- muse-manual-published-owner-count:"+prNumber+" -->") &&
+            String(row.body).includes("**Code:** "+code) &&
+            String(row.body).includes("[PR #"+prNumber+"]")) continue;
+        const unrelated=unrelatedReferralCode(row.body,canonicalCodes);
+        if (unrelated) {
+          // Do not silently discard a different invite pasted into this Issue:
+          // point the contributor to the proper Issue Form. Without their
+          // consent checkboxes, never create or publish a new code on behalf
+          // of the commenter. A failed guidance comment blocks closure.
+          const marker="<!-- muse-unrelated-referral:"+row.id+" -->";
+          if (!comments.some(entry=>BOT_LOGINS.has(entry.user?.login) &&
+              String(entry.body||"").includes(marker))) {
+            await api("POST","issues/"+issueNumber+"/comments",{body:marker+"\n"+
+              "ℹ️ **"+unrelated+"** is a different invite code and not feedback "+
+              "for **"+code+"**. Submit it using the [Share Code Issue Form]("+
+              "https://github.com/"+REPO+"/issues/new?template=share-code.yml"+
+              ") and check the required ownership/privacy confirmations. "+
+              "No new invite was published from this comment."});
+          }
+          continue;
+        }
+        pendingFeedback=true;
       }
+      if (pendingFeedback) {summary.pending++;continue;}
       const files=await api("GET","pulls/"+prNumber+"/files?per_page=100");
       const path=recordPath(item);
       if(files.length!==1 || files[0].filename!==path || files[0].status==="removed") {
