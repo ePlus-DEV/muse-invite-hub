@@ -16,6 +16,7 @@ export const AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER = "<!-- muse-auto-publish-new
 const THREADS_FOUND = "Threads (public code I found)";
 const X_FOUND = "X (Twitter) (public code I found)";
 const FACEBOOK_FOUND = "Facebook (public code I found)";
+const TELEGRAM_COMMUNITY = "Telegram (community code shared through bot)";
 const THREADS_FIELD = "Threads public post or profile URL (required for Threads)";
 const SOCIAL_FIELD = "Social post or profile URL (required for Threads, X or Facebook)";
 const listedPlatformOf = listedPlatform;
@@ -23,7 +24,8 @@ const SUBMISSION_PLATFORMS = new Map([
   [GITHUB_OWN, "GitHub"],
   [THREADS_FOUND, "Threads"],
   [X_FOUND, "X (Twitter)"],
-  [FACEBOOK_FOUND, "Facebook"]
+  [FACEBOOK_FOUND, "Facebook"],
+  [TELEGRAM_COMMUNITY, "Telegram"]
 ]);
 function threadsReference(value) {
   const social = parsePublicSource(value);
@@ -228,6 +230,12 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
   if (!Array.isArray(current)) throw Error("Expected a catalog array.");
   if (!USER_PATTERN.test(issue.user?.login || "")) throw Error("Invalid contributor username.");
   const title = String(issue.title || "").trim();
+  // Bot-authored Telegram Issues may use normal Issue Form headings but must not
+  // be attributed to their GitHub bot author or converted into automatic PRs.
+  if (title.startsWith("[Telegram submission]") ||
+      String(issue.body||"").includes("<!-- muse-telegram-submission:")) {
+    return {outcome:"unsupported",reason:"Telegram submissions require human review; GitHub bot author is not code owner."};
+  }
   const kind = title.startsWith("[Count update]") ? "count" :
     title.startsWith("[Code feedback]") ? "feedback" :
     title.startsWith("[Invite]") || isShareCodeIssue(issue) ? "invite" : null;
@@ -275,6 +283,10 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
         reason:"Choose GitHub, Threads, X (Twitter) or Facebook as the code source."};
     }
     const sourcePlatform = SUBMISSION_PLATFORMS.get(selectedSource) || "GitHub";
+    if (sourcePlatform === "Telegram") {
+      return {outcome:"needs-review",kind,code,
+        reason:"Telegram reports require a confirmed sender and manual permission/source review; GitHub Issue author is not code owner."};
+    }
     const socialSubmission = sourcePlatform !== "GitHub";
     const urlField = field(f,SOCIAL_FIELD).trim() || field(f,THREADS_FIELD).trim();
     // Legacy issues omitted source selection; never claim public social URLs
