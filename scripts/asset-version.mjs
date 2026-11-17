@@ -8,6 +8,10 @@ const LOCAL_ASSET = /^(?:(?:\.\.\/)*|\.\/|https:\/\/muse\.eplus\.dev\/(?:pr-prev
 
 export function stampAssetUrls(html, siteRoot, cache = new Map()) {
   return html.replace(/((?:href|src|content)=")([^"]+)(")/g, (full, start, url, end) => {
+    // A preview can link to the production OG image; never attach the preview's
+    // hash to an asset that is actually served by the production site.
+    if (/\\/pr-preview\\/pr-[0-9]+$/.test(siteRoot) &&
+        url.startsWith("https://muse.eplus.dev/assets/")) return full;
     const matched = LOCAL_ASSET.exec(url);
     if (!matched) return full;
     const file = matched[1];
