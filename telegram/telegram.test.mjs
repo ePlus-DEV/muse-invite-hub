@@ -249,8 +249,9 @@ test("deployment sources never embed real credentials or auto-publish third-part
   const server=read("server.mjs");
   const compose=read("compose.yaml");
   const workflow=read("../.github/workflows/telegram-oci-image.yml");
-  assert.match(github,/\[Telegram submission\]/);
-  assert.doesNotMatch(github,/title:"\[Invite\]/);
+  assert.match(github,/title:"\[Invite\] "/);
+  assert.match(github,/muse-telegram-submission:/);
+  assert.match(github,/review-only Draft PR/);
   assert.match(github,/maintainer review only/);
   assert.match(server,/timingSafeEqual/);
   assert.match(server,/MAX_BODY=32\*1024/);
