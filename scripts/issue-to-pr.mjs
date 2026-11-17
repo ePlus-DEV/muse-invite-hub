@@ -539,6 +539,15 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
       remaining:"Remaining invites shown by Muse"
     });
     if (!quota) return { outcome:"needs-review",kind,code,reason:"Supply remaining invites or a consistent total and used count." };
+    // A remaining-only update would erase the previously published total/used
+    // snapshot. Do not infer that the old capacity is still correct: ask the
+    // owner to explicitly reconfirm the current total alongside the remainder.
+    if (quota.reportedRemaining !== undefined &&
+        Number.isInteger(existing.reportedCapacity) &&
+        Number.isInteger(existing.reportedUses) && existing.usageReportedAt) {
+      return {outcome:"needs-review",kind,code,
+        reason:"The published listing already has total and used counts. A remaining-only update would replace those fields. Please confirm the current total invites alongside remaining (used can be derived) before publishing."};
+    }
     const target=data.find(item=>item.code===existing.code);
     const state=updateQuota(target,quota,date);
     if(state!=="updated") return {outcome:state==="stale"?"needs-review":"duplicate",kind,code,

@@ -71,6 +71,26 @@ test("only actual listed GitHub owner can propose quota update via original Issu
   assert.match(stranger.reason,/cataloged code owner/);
 });
 
+test("Issue #14 remaining-only owner comment cannot erase published total and used counts",()=>{
+  const previous={...item,submittedById:11882322,
+    reportedCapacity:30,reportedUses:7,usageReportedAt:"2026-11-15"};
+  const body="## Muse invite report\n\nCode: DPNIHH\nUpdate type: Owner count\n"+
+    "Remaining invites: 20\nTotal invites: \nUsed invites: \n"+
+    "Owner confirmation: I confirm these figures came from my own Muse invite screen.";
+  const comment=member(body,{id:6953354142,created_at:"2026-11-17T16:00:00Z",
+    user:{login:"hoangsvit",id:11882322,type:"User"}});
+  const blocked=planCommentProposal(issue,comment,[previous]);
+  assert.equal(blocked.outcome,"needs-review");
+  assert.match(blocked.reason,/remaining-only update would replace/);
+  assert.equal(previous.reportedCapacity,30);
+  assert.equal(previous.reportedUses,7);
+  const confirmed=planCommentProposal(issue,{...comment,
+    body:body.replace("Total invites: ","Total invites: 30")},[previous]);
+  assert.equal(confirmed.outcome,"proposal");
+  assert.equal(confirmed.data[0].reportedCapacity,30);
+  assert.equal(confirmed.data[0].reportedUses,10);
+});
+
 test("owner count requires an explicit confirmation and numeric input",()=>{
   const author={login:"hoangsvit",type:"User",id:124};
   const missing=planCommentProposal(issue,member(

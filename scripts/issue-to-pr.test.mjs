@@ -351,6 +351,29 @@ test("count updates require owner confirmation, known total and internally consi
   assert.throws(()=>planIssueChange(issue(14,"[Count update]",
     count({used:"6"}),"hoangsvit"),[item]),/inconsistent/);
 });
+test("owner count update preserves prior full report until current total is reconfirmed",()=>{
+  const previous={...item,reportedCapacity:30,reportedUses:7,usageReportedAt:"2026-11-10"};
+  const comment={...issue(14,"[Count update]",count({
+    remaining:"20",total:"_No response_",used:"_No response_"
+  }),"hoangsvit"),updated_at:"2026-11-17T10:00:00Z"};
+  const partial=planIssueChange(comment,[previous]);
+  assert.equal(partial.outcome,"needs-review");
+  assert.match(partial.reason,/remaining-only update would replace/);
+  assert.deepEqual([previous.reportedCapacity,previous.reportedUses],[30,7]);
+  const reconfirmed={...comment,body:count({
+    remaining:"20",total:"30",used:"_No response_"
+  })};
+  const complete=planIssueChange(reconfirmed,[previous]);
+  assert.equal(complete.outcome,"proposal");
+  assert.equal(complete.data[0].reportedCapacity,30);
+  assert.equal(complete.data[0].reportedUses,10);
+  assert.equal(complete.data[0].reportedRemaining,undefined);
+  assert.equal(complete.data[0].quotaUpdateCount,1);
+  const noPrevious=planIssueChange(comment,[item]);
+  assert.equal(noPrevious.outcome,"proposal");
+  assert.equal(noPrevious.data[0].reportedRemaining,20);
+});
+
 test("feedback is proposed for human review, not marked as official Muse verification",()=>{
   const p=planIssueChange(issue(30,"[Code feedback]",
     feedback("Muse accepted the code (worked for me)")),[item,community]);
