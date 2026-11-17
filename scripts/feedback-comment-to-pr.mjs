@@ -27,6 +27,74 @@ function lines(body) {
   return result;
 }
 
+// Recognize one narrow, owner-authored count-summary format without rewriting
+// their comment or forging a Muse-screen confirmation. Such reports create
+// REVIEW-ONLY Draft PRs; an explicit screen confirmation remains a review task.
+function narrativeOwnerCount(issue, comment, catalog, code, item) {
+  const rows = comment.body.trim().split(/\r?\n/).map(row => row.trim());
+  const header = /^Owner count update\s*[—–:-]\s*([A-Z0-9]{6})\s*$/i.exec(rows[0] || "");
+  if (!header) return null;
+  const review = reason => ({outcome:"needs-review",kind:"count",code,reason});
+  if (header[1].toUpperCase() !== code) return review("Owner count header does not match the canonical Issue code.");
+  if (listedPlatform(item) !== "GitHub") return review("Social-source ownership cannot be established from a GitHub comment.");
+  const sameOwner = Number.isSafeInteger(item.submittedById)
+    ? item.submittedById === comment.user?.id
+    : Boolean(item.submittedBy) && item.submittedBy.toLowerCase() === comment.user.login.toLowerCase();
+  if (!sameOwner) return review("Only the original GitHub code owner may report owner-only quota.");
+  if (!rows.slice(1).some(row => /^I am the owner of this invite code\b/i.test(row))) {
+    return review("The commenter must explicitly claim ownership of this code.");
+  }
+
+  const values = new Map();
+  for (const row of rows.slice(1)) {
+    const match = /^(?:[-*]\s*)?(Total invites|Remaining invites|Used invites):\s*(.+)$/i.exec(row);
+    if (!match) continue;
+    const key = match[1].toLowerCase();
+    if (values.has(key)) return review("Duplicate owner-count field; no number was selected.");
+    if (!/^(?:0|[1-9][0-9]{0,3})$/.test(match[2])) {
+      return review("Owner-count fields must be non-negative whole numbers.");
+    }
+    const number = Number(match[2]);
+    if (number > 1000) return review("Owner-count value exceeds the supported range.");
+    values.set(key, number);
+  }
+  if (!["total invites","remaining invites","used invites"].every(key => values.has(key))) {
+    return review("Provide all three owner-count figures: total, remaining and used.");
+  }
+  const total = values.get("total invites");
+  const remaining = values.get("remaining invites");
+  const used = values.get("used invites");
+  if (total <= 0 || used > total || remaining > total || total - used !== remaining) {
+    return review("Owner-count figures do not reconcile (total - used must equal remaining).");
+  }
+  if (!Number.isFinite(Date.parse(comment.created_at || ""))) {
+    return review("Comment is missing a reliable timestamp.");
+  }
+  const date = new Date(comment.created_at).toISOString().slice(0,10);
+  if (item.usageReportedAt && item.usageReportedAt > date) {
+    return review("A newer owner report is already published.");
+  }
+  if (item.reportedCapacity === total && item.reportedUses === used &&
+      item.usageReportedAt === date) {
+    return {outcome:"duplicate",kind:"count",code,reason:"This dated owner report is already published."};
+  }
+  const data = structuredClone(catalog);
+  const target = data.find(entry => entry.code === code);
+  delete target.reportedRemaining;
+  target.reportedCapacity = total;
+  target.reportedUses = used;
+  target.usageReportedAt = date;
+  return {
+    outcome:"proposal",kind:"count",code,action:"review owner-reported count",data,
+    branch:"auto/comment-"+issue.number+"-"+comment.id+"-count",
+    issueNumber:issue.number,commentId:comment.id,reporter:comment.user.login,
+    notice:"The original owner-authored comment reports "+total+" total, "+used+
+      " used and "+remaining+" remaining. The comment does NOT explicitly say these "+
+      "figures came from the owner's own Muse invite screen. Obtain that confirmation "+
+      "before merging. This is not a live or Muse-verified balance."
+  };
+}
+
 // This parser never promotes an informal conversation into a verified report.
 export function planCommentProposal(issue, comment, catalog) {
   if (!Array.isArray(catalog) || typeof comment?.body !== "string" ||
@@ -37,9 +105,11 @@ export function planCommentProposal(issue, comment, catalog) {
   const code = feedbackCodeForIssue(issue,catalog,comment.body);
   if (!code) return {outcome:"ignored"};
   const fields = lines(comment.body);
-  if (fields.Code !== code) return {outcome:"ignored"};
   const item = catalog.find(entry=>entry.code===code);
   if (!item) return {outcome:"ignored"};
+  if (fields.Code !== code) {
+    return narrativeOwnerCount(issue,comment,catalog,code,item) || {outcome:"ignored"};
+  }
   let kind, body, title;
   const header = "### Invite code\n\n"+code+"\n\n### Listing platform\n\n"+listedPlatform(item)+"\n\n";
   if (fields.Result) {
@@ -212,6 +282,7 @@ export async function proposeCommentDraft({
       "### Before merging",
       "- [ ] Confirm source, reporter, date, and consistency with newer reports",
       "- [ ] Verify ownership before accepting any quota claim",
+      "- [ ] If the original owner report does not explicitly confirm its source, request confirmation from the owner's own Muse invite screen before merge",
       "- [ ] Check CI and preview",
       "- [ ] Review the resulting catalog diff",
       "",
