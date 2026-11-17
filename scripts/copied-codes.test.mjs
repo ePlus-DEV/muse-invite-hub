@@ -180,5 +180,8 @@ test("copy state synchronizes from other tabs and keeps redemption separate", ()
   const css=read("assets/styles.css"),detail=read("assets/detail.js");
   assert.match(css,/\.detail-code-panel\.detail-code-panel-copied\{/);
   assert.match(css,/\.detail-code-panel-copied #detail-copy\{/);
-  assert.match(detail,/Redemption not verified/);
+  assert.match(detail,/copiedNote\.textContent = "Copied on this device"/);
+  assert.match(detail,/normalizeLegacyDetail\(\)/);
+  assert.match(detail,/\.detail-action-row a\[href="https:\/\/muse.ai\/join"\]/);
+  assert.match(css,/\.detail-action-row a\[href="https:\/\/muse.ai\/join"\]/);
 });
