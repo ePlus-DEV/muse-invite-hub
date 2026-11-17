@@ -80,10 +80,14 @@ function narrativeOwnerCount(issue, comment, catalog, code, item) {
   }
   const data = structuredClone(catalog);
   const target = data.find(entry => entry.code === code);
+  const hadSnapshot = typeof target.usageReportedAt === "string" &&
+    [target.reportedCapacity,target.reportedUses,target.reportedRemaining]
+      .some(value => value !== undefined);
   delete target.reportedRemaining;
   target.reportedCapacity = total;
   target.reportedUses = used;
   target.usageReportedAt = date;
+  if (hadSnapshot) target.quotaUpdateCount = (target.quotaUpdateCount || 0) + 1;
   return {
     outcome:"proposal",kind:"count",code,action:"review owner-reported count",data,
     branch:"auto/comment-"+issue.number+"-"+comment.id+"-count",
