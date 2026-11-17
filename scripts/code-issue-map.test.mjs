@@ -4,7 +4,7 @@ import {
   issueMarker, issueCode, issueCodes, parseInviteCodes, originalIssueNumber, canonicalThreadBody,
   syncCodeIssueMap, validIssueMap, resolveExistingIssue, withCanonicalIssueRefs
 } from "./code-issue-map.mjs";
-import { feedbackCodeForIssue, shouldReopen } from "./reopen-code-feedback.mjs";
+import { feedbackCodeForIssue, shouldReopen, unrelatedReferralCode } from "./reopen-code-feedback.mjs";
 
 const contributor = {id:"community-issue-55",code:"IY56PP"};
 const seeded = {id:"eplus-owner-dpnihh",code:"DPNIHH"};
@@ -148,6 +148,22 @@ test("reopen only genuine user feedback on the canonical code issue",()=>{
   assert.equal(shouldReopen({...oldIssue,body:"wrong"},regularComment,[contributor]),false);
   const mapped={number:103,state:"closed",title:"[Code] DPNIHH",body:canonicalThreadBody(seeded)};
   assert.equal(shouldReopen(mapped,regularComment,[seeded]),true);
+});
+
+test("a different-language referral cannot reopen an unrelated canonical Issue",()=>{
+  const chinese="快来看看你的个人 AI 智能体 Muse 。在加入后的 48 小时内通过“设置”兑现我的邀请码，我们就能分别获得 10 亿个 Muse 词元。\n\n"+
+    "邀请码：MIN0OF\nhttps://muse.ai/join";
+  const changed=oldIssue;
+  assert.equal(unrelatedReferralCode(chinese,["IY56PP"]),"MIN0OF");
+  assert.equal(unrelatedReferralCode(chinese,["IY56PP","MIN0OF"]),null);
+  assert.equal(shouldReopen(changed,{...regularComment,body:chinese},[contributor]),false);
+  assert.equal(shouldReopen(changed,{...regularComment,body:"Code: IY56PP\nResult: worked"},[contributor]),true);
+  for(const content of [
+    chinese.replace("https://muse.ai/join",""),
+    chinese.replace("MIN0OF","IY56PP"),
+    chinese+"\n邀请码：OTHER1",
+    "I tried MIN0OF and it failed."
+  ]) assert.equal(unrelatedReferralCode(content,["IY56PP"]),null);
 });
 
 test("original Share Code form remains canonical even if its title is edited",()=>{
