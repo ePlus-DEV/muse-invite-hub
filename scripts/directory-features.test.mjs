@@ -78,6 +78,18 @@ test("quota update badge displays recorded revisions, not click counts", () => {
   assert.match(app,/if \(item\.submittedBy && !item\.sourceUrl\)/);
 });
 
+test("feedback report counts render only from the trusted published GitHub snapshot", () => {
+  const css=read("assets/styles.css");
+  assert.match(app,/fetch\("\.\/data\/feedback-counts\.json"/);
+  assert.match(app,/const summary = feedbackCounts\?\.\[item\.code\]/);
+  assert.match(app,/Number\.isSafeInteger\(total\) && total >= 0/);
+  assert.match(app,/counter\.setAttribute\("aria-hidden", "true"\)/);
+  assert.match(css,/\.card-quick-feedback\.has-count\{width:50px/);
+  assert.match(css,/\.detail-feedback-count\{padding:2px 6px/);
+  assert.match(detailJs,/fetch\("\.\.\/\.\.\/data\/feedback-counts\.json"/);
+  assert.match(detailJs,/snapshot\?\.source !== "github-issue-comments"/);
+});
+
 test("compact card controls have smaller desktop proportions without shrinking mobile targets", () => {
   const css=read("assets/styles.css");
   assert.match(css, /\.code-card\{min-width:0;min-height:300px/);
@@ -210,16 +222,16 @@ test("quick feedback links to existing canonical Issue and suggests editable com
 
 test("homepage and detail load helpers before existing scripts without altering SEO", () => {
   // Versioned preview assets avoid browser caching an earlier card layout.
-  const homeHelper = home.indexOf('src="./assets/directory-features.js?v=20261117-pr248-alignment"');
-  const homeApp = home.indexOf('src="./assets/app.js?v=20261117-pr248-alignment"');
-  assert.match(home, /href="\.\/assets\/styles\.css\?v=20261117-pr248-alignment"/);
-  assert.match(home, /src="\.\/assets\/site-ui\.js\?v=20261117-pr248-alignment"/);
+  const homeHelper = home.indexOf('src="./assets/directory-features.js?v=20261117-pr251-reports"');
+  const homeApp = home.indexOf('src="./assets/app.js?v=20261117-pr251-reports"');
+  assert.match(home, /href="\.\/assets\/styles\.css\?v=20261117-pr251-reports"/);
+  assert.match(home, /src="\.\/assets\/site-ui\.js\?v=20261117-pr251-reports"/);
   assert.ok(homeHelper > 0 && homeApp > homeHelper);
   assert.match(home, /<title>Muse Invite Hub — Share the spark<\/title>/);
   assert.match(home, /rel="canonical" href="https:\/\/muse\.eplus\.dev\/"/);
   const detail = renderDetailPage(owner);
   assert.ok(detail.indexOf('src="../../assets/directory-features.js"') <
-    detail.indexOf('src="../../assets/detail.js"'));
+    detail.indexOf('src="../../assets/detail.js?v=20261117-pr251-reports"'));
   assert.match(detail, /id="detail-save" type="button" aria-pressed="false" hidden/);
   assert.match(detail, /data-feedback-outcome="worked"/);
   assert.match(detail, /data-feedback-outcome="failed"/);
