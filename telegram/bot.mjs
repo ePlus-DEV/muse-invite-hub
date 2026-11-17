@@ -2,6 +2,9 @@
 import { menuChoice } from "./menu.mjs";
 import { normalizeLocale, tr } from "./i18n.mjs";
 export const CODE_PATTERN = /^[A-Z0-9]{6}$/;
+// Telegram @username is public only after explicit consent; never expose numeric IDs.
+export const TELEGRAM_USERNAME = /^[A-Za-z][A-Za-z0-9_]{4,31}$/;
+const publicUsername = name => typeof name==="string"&&TELEGRAM_USERNAME.test(name)?name:null;
 
 export const BOT_COMMANDS = [
   {command:"start",description:"Help and contribution guide"},
@@ -110,7 +113,8 @@ export function parseUpdate(update) {
     if (!Number.isSafeInteger(chat?.id)) return null;
     if (chat.type!=="private") return {type:"private-only",chatId:chat.id,updateId:update.update_id};
     return {...parseCommand(message.text),chatId:chat.id,updateId:update.update_id,
-      ...(typeof message.from?.language_code==="string"?{telegramLanguage:message.from.language_code}:{})};
+      ...(typeof message.from?.language_code==="string"?{telegramLanguage:message.from.language_code}:{}),
+      telegramUsername:publicUsername(message.from?.username)};
   }
   const callback=update.callback_query;
   if (!callback || typeof callback.id!=="string" ||
@@ -147,6 +151,7 @@ export function parseUpdate(update) {
     result:matchReport?.[2]||matchPick?.[2],
     chatId:callback.from.id,
     ...(typeof callback.from?.language_code==="string"?{telegramLanguage:callback.from.language_code}:{}),
+    telegramUsername:publicUsername(callback.from?.username),
     callbackId:callback.id,
     messageId:Number.isSafeInteger(callback.message?.message_id)&&callback.message.message_id>0
       ? callback.message.message_id : null,
