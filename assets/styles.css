@@ -103,16 +103,13 @@ button{cursor:pointer}
 .code-value{font-size:25px;line-height:1.2;letter-spacing:.15px;font-weight:900;margin:0;min-width:0;overflow-wrap:anywhere;color:var(--ink)}
 .code-link:hover{color:var(--blue);text-decoration:underline;text-underline-offset:3px}
 .status-badge{flex:none;padding:6px 8px;border-radius:999px;font-size:10px;white-space:nowrap;font-weight:800;background:#edf0f4;color:var(--muted)}
-.status-featured{color:#865919;background:#fff4d8}
-.status-owner-verified{display:inline-flex;align-items:center;gap:5px;color:#0057dd;background:var(--blue-soft);border:1px solid var(--blue-line)}
+.status-featured{color:var(--blue);background:var(--blue-soft);border:1px solid var(--blue-line)}
+.status-owner-verified{display:inline-flex;align-items:center;gap:5px;color:var(--blue);background:var(--blue-soft);border:1px solid var(--blue-line)}
 .status-reported-working{color:var(--green);background:var(--green-bg)}
 .status-reported-not-working{color:var(--red);background:var(--red-bg)}
 .card-contributor{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;min-width:0;flex-wrap:nowrap}
-.card-source{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:7px;background:#f2f5fa;color:var(--muted);font-size:10px;font-weight:800;white-space:nowrap}
-.card-source-threads{background:#f1edff;color:#5946a0}
-.card-source-x{background:#eff0f2;color:#1a1a1a}
-.card-source-facebook{background:#e9f2ff;color:#1764cc}
-.card-source-telegram{background:#e8f5ff;color:#167ca7}
+.card-source{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:7px;background:var(--blue-soft);color:var(--blue);font-size:10px;font-weight:800;white-space:nowrap}
+/* Platform identity stays in its logo and label, not a competing color palette. */
 .card-contributor i{color:var(--blue);flex:none}
 .card-author{min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);text-decoration:none}
 .card-author:hover{text-decoration:underline;color:var(--blue)}
@@ -126,11 +123,11 @@ button{cursor:pointer}
 .card-open-invite:hover{background:var(--blue-soft);border-color:var(--blue);color:var(--blue-hover)}
 .card-copy{min-height:40px;padding:8px 7px;border:1px solid var(--blue);width:100%;background:var(--blue);color:#fff;border-radius:10px;font-size:12.5px;font-weight:750;display:flex;justify-content:center;align-items:center;gap:5px;white-space:nowrap}
 .card-copy:hover,.code-card-featured .card-copy:hover{background:var(--blue-hover);border-color:var(--blue-hover);color:#fff}
-.code-card-copied:not(.code-card-featured) .card-copy{background:#e4f7ed;border-color:#c4ecd8;color:#12794e}
-.code-card-copied:not(.code-card-featured) .card-copy:hover{background:#cff0df;border-color:#a0debe;color:#096c40}
+.code-card-copied:not(.code-card-featured) .card-copy{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue)}
+.code-card-copied:not(.code-card-featured) .card-copy:hover{background:#d8e8ff;border-color:var(--blue);color:var(--blue-hover)}
 .card-utility-bar{display:flex;align-items:center;justify-content:space-between;gap:7px;padding-top:10px;border-top:1px solid var(--line)}
 .card-subactions{display:grid;grid-template-columns:repeat(3,36px);align-items:center;gap:4px;min-width:0}
-.card-utility-link{width:36px;min-height:36px;display:grid;place-items:center;flex:none;border:1px solid transparent;border-radius:10px;color:#56708e;font-size:15px;text-decoration:none;transition:background .15s,color .15s,border-color .15s}
+.card-utility-link{width:36px;min-height:36px;display:grid;place-items:center;flex:none;border:1px solid transparent;border-radius:10px;color:var(--muted);font-size:15px;text-decoration:none;transition:background .15s,color .15s,border-color .15s}
 .card-utility-link:hover,.card-utility-link:focus-visible{color:var(--blue);background:var(--blue-soft);border-color:var(--blue-line);text-decoration:none}
 .card-utility-link:focus-visible,.card-quick-feedback:focus-visible{outline:3px solid #a9c8ff;outline-offset:2px}
 .directory-more{text-align:center;margin-top:20px}
@@ -459,11 +456,10 @@ html.is-page-loading body>.site-footer{display:none!important}
 .card-head-actions{display:flex;align-items:center;gap:6px;flex:none}
 .card-save{display:grid;place-items:center;flex:none;width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--muted);font-size:14px;transition:border-color .15s,background .15s,color .15s}
 .card-save:hover,.card-save:focus-visible{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
-.card-save[aria-pressed="true"]{background:var(--blue-soft);border-color:#a9c8ff;color:#0064ff}
+.card-save[aria-pressed="true"]{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue)}
 .card-feedback-actions{display:flex;align-items:center;gap:5px;flex:none}
-.card-quick-feedback{width:36px;min-height:36px;display:grid;place-items:center;flex:none;border:1px solid transparent;border-radius:10px;background:#edf8f2;color:var(--green);font-size:15px;text-decoration:none;transition:background .15s,border-color .15s,color .15s}
-.card-quick-worked{background:#edf8f2;color:var(--green)}
-.card-quick-failed{background:#fdf1f2;color:var(--red)}
+.card-quick-feedback{width:36px;min-height:36px;display:grid;place-items:center;flex:none;border:1px solid var(--blue-line);border-radius:10px;background:var(--blue-soft);color:var(--blue);font-size:15px;text-decoration:none;transition:background .15s,border-color .15s,color .15s}
+/* Feedback icons retain semantic success/failure colors, with the same brand-blue surface. */
 .card-quick-feedback:hover,.card-quick-feedback:focus-visible{background:var(--blue-soft);border-color:var(--blue-line)}
 .card-quick-worked i{color:var(--green)}
 .card-quick-failed i{color:var(--red)}
@@ -567,12 +563,12 @@ html.is-page-loading body>.site-footer{display:none!important}
 
 
 /* Copy history is a personal browser cue, never a Muse redemption status.
-   Copy again stays clickable, with a soft green tint only on ordinary cards. */
-.detail-code-panel.detail-code-panel-copied{border-color:#bda7ec;background:linear-gradient(135deg,#f3ecff,#fff 75%);box-shadow:0 12px 30px rgba(88,54,151,.08)}
-.detail-code-panel-copied #detail-copy{background:#ede5ff;color:#6335a4;border-color:#d3c2f5}
-.detail-code-panel-copied #detail-copy:hover,.detail-code-panel-copied #detail-copy:focus-visible{background:#e3d7ff;color:#51278d}
-.detail-copy-note{margin:11px 0 0;font-size:12px;font-weight:750;line-height:1.5;color:#6335a4}
-.detail-copy-note::before{content:"";display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:#8252c8;vertical-align:middle}
+   Copied actions use the same blue tokens on directory cards and code details. */
+.detail-code-panel.detail-code-panel-copied{border-color:var(--blue-line);background:linear-gradient(135deg,var(--blue-soft),#fff 75%);box-shadow:0 12px 30px rgba(0,100,255,.08)}
+.detail-code-panel-copied #detail-copy{background:var(--blue-soft);color:var(--blue);border-color:var(--blue-line)}
+.detail-code-panel-copied #detail-copy:hover,.detail-code-panel-copied #detail-copy:focus-visible{background:#d8e8ff;color:var(--blue-hover)}
+.detail-copy-note{margin:11px 0 0;font-size:12px;font-weight:750;line-height:1.5;color:var(--blue)}
+.detail-copy-note::before{content:"";display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:var(--blue);vertical-align:middle}
 
 /* Link from the existing sourced market disclosure to its full map page. */
 .availability-map-link{margin:14px 0 4px}
