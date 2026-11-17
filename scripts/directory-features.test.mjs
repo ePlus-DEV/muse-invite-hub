@@ -28,7 +28,7 @@ test("direct Muse invitation links use validated codes and safe new-tab navigati
   assert.match(app, /openInvite\.target = "_blank"/);
   assert.match(app, /openInvite\.rel = "noopener noreferrer"/);
   assert.match(app, /primaryActions\.append\(copy, openInvite\)/);
-  assert.match(read("assets/styles.css"), /\.card-primary-actions\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(read("assets/styles.css"), /\.card-primary-actions\{display:grid;grid-template-columns:1\.12fr 1fr/);
 });
 
 test("Facebook group sources render as group references, never @person attribution", () => {
@@ -36,6 +36,28 @@ test("Facebook group sources render as group references, never @person attributi
   assert.match(app,/\(source\.group \? "Group: " : "@"\)/);
   assert.match(detailJs,/\(group \? "Group: " : "@"\)/);
   assert.match(app,/View Facebook group post in/);
+});
+
+test("invite cards use two primary actions with labeled icon-only feedback and utilities", () => {
+  const css=read("assets/styles.css");
+  assert.match(app, /const primaryActions = el\("div", "card-primary-actions"\)/);
+  assert.match(app, /primaryActions\.append\(copy, openInvite\)/);
+  assert.match(app, /const utilityBar = el\("div", "card-utility-bar"\)/);
+  assert.match(app, /utilityBar\.append\(quickFeedback, subActions\)/);
+  assert.match(app, /actions\.append\(primaryActions, utilityBar\)/);
+  assert.match(app, /details\.setAttribute\("aria-label", "View details for Muse invite code "/);
+  assert.match(app, /report\.setAttribute\("aria-label", "Give feedback on Muse invite code "/);
+  assert.match(app, /countLink\.setAttribute\("aria-label", "Update owner invite count for code "/);
+  assert.match(app, /link\.setAttribute\("aria-label", text \+ " — report Muse invite code "/);
+  assert.match(app, /link\.append\(icon\(iconName\)\)/);
+  assert.doesNotMatch(app, /link\.append\(icon\(iconName\), document\.createTextNode/);
+  assert.match(app, /if \(item\.submittedBy && !item\.sourceUrl\)/);
+  assert.match(css, /\.card-utility-bar\{display:flex;align-items:center;justify-content:space-between/);
+  assert.match(css, /\.card-utility-link:focus-visible,\.card-quick-feedback:focus-visible/);
+  assert.match(css, /\.card-quick-worked i\{color:var\(--green\)\}/);
+  assert.match(css, /\.card-quick-failed i\{color:var\(--red\)\}/);
+  assert.match(css, /\.card-quick-feedback,\.card-utility-link\{min-height:44px;width:44px\}/);
+  assert.doesNotMatch(app, /Reported votes|thumbsUpCount|thumbsDownCount/);
 });
 
 test("saved codes parse safely and remain scoped to the browser", () => {
