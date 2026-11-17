@@ -59,7 +59,8 @@ test("homepage copied state keeps the same card geometry and syncs storage event
   assert.match(app,/copiedCodes = new Set\(features\.parseCopied\(event\.key === null \? null : event\.newValue\)\)/);
   assert.match(app,/updateCopiedCard\(card\);\s*return card;/);
   assert.match(app,/Copy again/);
-  assert.match(app,/card\.classList\.contains\("code-card-featured"\) \? " Copy again" : " Copied"/);
+  assert.match(app,/const label = copied \? " Copied" : " Copy code"/);
+  assert.doesNotMatch(app,/card\.classList\.contains\("code-card-featured"\) \? " Copy again"/);
   assert.match(app,/\(copied \? "Copy again Muse invite code " : "Copy Muse invite code "\)/);
   assert.match(app,/button\.dataset\.tooltip = copied/);
   assert.doesNotMatch(app,/card-copy-note/);
@@ -72,7 +73,9 @@ test("homepage copied state keeps the same card geometry and syncs storage event
   assert.match(copy,/else copiedCodes\.add\(value\)/);
   assert.match(copy,/syncCopiedCards\(\)/);
   assert.match(css,/\.card-primary-actions\{display:grid;grid-template-columns:1\.12fr 1fr/);
-  assert.match(css,/\.code-card-copied:not\(\.code-card-featured\) \.card-copy\{background:var\(--blue-soft\);border-color:var\(--blue-line\);color:var\(--blue\)/);
+  assert.match(css,/\.code-card-copied \.card-copy\{background:var\(--blue-soft\);border-color:var\(--blue-line\);color:var\(--blue\)/);
+  assert.match(css,/\.code-card-copied \.card-copy:hover,\.code-card-copied \.card-copy:focus-visible\{/);
+  assert.doesNotMatch(css,/\.code-card-copied:not\(\.code-card-featured\)/);
   assert.doesNotMatch(css,/\.code-card\.code-card-copied\{/);
   assert.doesNotMatch(css,/\.code-card-copied \.card-copy,/);
   assert.doesNotMatch(css,/\.card-facts \.card-copy-note/);
