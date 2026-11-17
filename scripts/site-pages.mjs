@@ -215,7 +215,6 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '        <a href="https://muse.ai/" target="_blank" rel="noopener noreferrer">Official Muse <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>' +
     '        <a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</a>' +
     '        <a href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" data-contribute-trigger>Contribute</a>' +
-    '        <a href="https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml" data-contribute-trigger><i class="fa-brands fa-telegram" aria-hidden="true"></i> Telegram bot</a>' +
     '      </nav></div><p class="footer-tagline">Small gestures. Bigger possibilities.</p></div>' +
     '    <div class="container footer-bottom"><span>© 2026 ePlus.DEV · Open source, community driven.</span>' +
     '      <span>Independent project · Not affiliated with Meta or Muse.</span></div></footer>' +
