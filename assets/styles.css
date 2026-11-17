@@ -574,6 +574,30 @@ html.is-page-loading body>.site-footer{display:none!important}
 .detail-copy-note{margin:11px 0 0;font-size:12px;font-weight:750;line-height:1.5;color:var(--blue)}
 .detail-copy-note::before{content:"";display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:var(--blue);vertical-align:middle}
 
+/* Detail CTA hierarchy: Open invite first, Copy second, browser-only Save as a
+   small header utility like the directory bookmark. Keep legacy preview HTML
+   functional: detail.js moves its old Save button into the heading. */
+.detail-code-heading{min-height:44px;gap:12px}
+.detail-code-heading .detail-save{display:grid;place-items:center;flex:0 0 auto;width:42px;height:42px;min-height:42px;padding:0;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--muted);font-size:16px;cursor:pointer;box-shadow:none;transition:background .15s,border-color .15s,color .15s}
+.detail-code-heading .detail-save[hidden]{display:none}
+.detail-code-heading .detail-save:hover,.detail-code-heading .detail-save:focus-visible{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.detail-code-heading .detail-save[aria-pressed="true"]{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue)}
+.detail-action-row{align-items:stretch;flex-wrap:nowrap}
+.detail-action-row .button{min-width:0;justify-content:center;gap:8px}
+.detail-action-row .detail-open-invite,.detail-action-row>a[href^="https://muse.ai/invite/"]{order:1;background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:var(--shadow-sm);font-weight:800}
+.detail-action-row .detail-open-invite:hover,.detail-action-row .detail-open-invite:focus-visible,.detail-action-row>a[href^="https://muse.ai/invite/"]:hover,.detail-action-row>a[href^="https://muse.ai/invite/"]:focus-visible{background:var(--blue-hover);border-color:var(--blue-hover);color:#fff}
+.detail-action-row #detail-copy{order:2;background:#fff;color:var(--blue);border-color:var(--blue-line);box-shadow:none;font-weight:750}
+.detail-action-row #detail-copy:hover,.detail-action-row #detail-copy:focus-visible{background:var(--blue-soft);border-color:var(--blue);color:var(--blue-hover)}
+.detail-code-panel-copied .detail-action-row #detail-copy{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue)}
+.detail-code-panel-copied .detail-action-row #detail-copy:hover,.detail-code-panel-copied .detail-action-row #detail-copy:focus-visible{background:#d8e8ff;border-color:var(--blue);color:var(--blue-hover)}
+@media(max-width:560px){
+  .detail-action-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .detail-action-row .button{width:100%;padding:10px 8px;font-size:12px;white-space:nowrap}
+  .detail-code-heading .detail-save{width:44px;height:44px;min-height:44px}
+}
+@media(max-width:350px){.detail-action-row{grid-template-columns:1fr}}
+
+
 /* Link from the existing sourced market disclosure to its full map page. */
 .availability-map-link{margin:14px 0 4px}
 .availability-map-link .button{font-size:12px;padding:9px 13px;min-height:40px}
