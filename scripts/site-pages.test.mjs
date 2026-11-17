@@ -153,6 +153,23 @@ test("approved desktop/mobile layout retains real counts and accessible controls
   assert.match(js, /detailLayout\.append\(market\)/);
   assert.match(js, /foldMedia\.addEventListener\?\.\("change",syncFolds\)/);
 });
+test("desktop and mobile instruction steps wrap as complete sentences, not flex columns", () => {
+  const html=renderDetailPage(owner());
+  const css=readFileSync(new URL("../assets/styles.css",import.meta.url),"utf8");
+  const section=html.match(/<details class="detail-instructions detail-mobile-fold"[\s\S]*?<\/details>/)?.[0];
+  assert.ok(section,"How-to remains present in prerendered HTML");
+  assert.match(section, /<li>Select <strong>Open invite<\/strong> above to visit Muse with this code\.<\/li>/);
+  assert.match(section, /<li>Follow Muse's instructions and check eligibility before redeeming\.<\/li>/);
+  const instructionRule=css.match(/\.detail-instructions\.detail-mobile-fold li\{([^}]+)\}/)?.[1];
+  assert.ok(instructionRule,"How-to item CSS selector exists");
+  assert.match(instructionRule, /display:block/);
+  assert.match(instructionRule, /position:relative/);
+  assert.doesNotMatch(instructionRule, /display:flex/);
+  assert.match(css, /\.detail-instructions\.detail-mobile-fold li::before\{[^}]*position:absolute;top:0;left:0/);
+  assert.match(css, /@media\(max-width:1160px\)\{\.detail-instructions\.detail-mobile-fold ol\{grid-template-columns:1fr/);
+  assert.match(css, /@media\(max-width:620px\)\{[\s\S]*?\.detail-instructions\.detail-mobile-fold ol\{grid-template-columns:1fr/);
+});
+
 test("confirmed owner card and non-owner detail keep verification meanings separate", () => {
   const app = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../assets/styles.css", import.meta.url), "utf8");
