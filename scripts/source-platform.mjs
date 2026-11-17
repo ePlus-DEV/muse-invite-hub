@@ -1,6 +1,6 @@
 // Trusted, shared classification for public social provenance across catalog, details and Issues.
 // URL validation is intentionally strict; unsupported links require human review.
-export const SOCIAL_PLATFORMS = ["Threads", "X (Twitter)", "Facebook"];
+export const SOCIAL_PLATFORMS = ["Threads", "X (Twitter)", "Facebook", "Telegram"];
 export const LISTING_PLATFORMS = ["GitHub", ...SOCIAL_PLATFORMS];
 
 export function parsePublicSource(value) {
@@ -19,6 +19,12 @@ export function parsePublicSource(value) {
       const reserved = new Set(["i","home","search","explore","intent","share","settings","messages"]);
       return hit && !reserved.has(hit[1].toLowerCase())
         ? {platform:"X (Twitter)",key:"x",handle:hit[1],url:url.href,post:Boolean(hit[2])} : null;
+    }
+    if (["t.me", "www.t.me"].includes(host)) {
+      const hit = /^\/([A-Za-z][A-Za-z0-9_]{4,31})(?:\/([1-9][0-9]{0,18}))?\/?$/.exec(path);
+      const reserved = new Set(["share","joinchat","login","addstickers","proxy","socks","addemoji"]);
+      return hit && !reserved.has(hit[1].toLowerCase())
+        ? {platform:"Telegram",key:"telegram",handle:hit[1],url:url.href,post:Boolean(hit[2])} : null;
     }
     if (["facebook.com", "www.facebook.com", "m.facebook.com"].includes(host)) {
       const hit = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/([A-Za-z0-9_-]{4,120}))?\/?$/.exec(path);
