@@ -173,35 +173,48 @@ test("Footer layout, links and back-to-top button are shared by home/detail; SEO
   assert.match(css, /\.help-section\{[^}]*scroll-margin-top:90px/);
 });
 
-test("Telegram companion is discoverable, accessible and consistent across home, map and details",()=>{
+test("contribution hub offers Telegram first, GitHub and feedback with an honest stable QR",()=>{
   const detail=renderDetailPage(sample);
   const countries=read("countries/index.html");
   const guide=read("docs/TELEGRAM_BOT_GUIDE.md");
   const readme=read("README.md");
   const contributing=read("CONTRIBUTING.md");
-  const section=home.match(/<section class="telegram-section container" id="telegram-bot"[\s\S]*?<\/section>/)?.[0];
-  assert.ok(section,"Missing dedicated home Telegram guide");
-  assert.match(section,/aria-labelledby="telegram-bot-title"/);
-  assert.match(section,/<h2 id="telegram-bot-title">Muse Invite Hub on Telegram<\/h2>/);
+  const section=home.match(/<section class="contribute-section container" id="contribute"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(section,"Missing multi-channel contribution hub");
+  assert.match(section,/aria-labelledby="contribute-title"/);
+  assert.match(section,/<h2 id="contribute-title">Choose how to contribute<\/h2>/);
+  assert.match(section,/id="telegram-bot"/);
+  assert.match(section,/Share directly in a chat/);
+  assert.match(section,/You do not need a GitHub account to submit through Telegram/);
   assert.match(section,/href="https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/blob\/main\/docs\/TELEGRAM_BOT_GUIDE\.md"/);
-  assert.match(section,/explicit consent to publish your public @username/);
-  assert.match(section,/reviewed before a code can be listed/);
-  assert.doesNotMatch(section,/href="https:\/\/t\.me\//,"No unverified public Telegram bot link");
-  assert.match(home,/href="#telegram-bot">Learn about the Telegram bot<\/a>/);
-  assert.match(home,/href="\.\/#telegram-bot"/);
-  assert.match(countries,/href="\.\.\/#telegram-bot"/);
-  assert.match(detail,/href="\.\.\/\.\.\/#telegram-bot"/);
-  for(const command of ["/codes","/status CODE","/submit CODE","/report CODE worked","/subscribe"]){
+  assert.match(section,/Open Share Code form/);
+  assert.match(section,/Find a code to review/);
+  assert.match(section,/A GitHub account is required/);
+  assert.match(section,/Posting on the linked GitHub Issue requires a GitHub account/);
+  assert.match(section,/href="#codes"/);
+  assert.doesNotMatch(section,/href="https:\/\/t\.me\//,"Do not create a fake direct bot link");
+  assert.match(section,/A verified public bot link has not yet been published/);
+  assert.match(section,/src="\.\/assets\/contribute-qr\.svg"/);
+  assert.match(section,/QR opens this page, not an unverified Telegram account/);
+  assert.match(section,/href="https:\/\/muse\.eplus\.dev\/#contribute"/);
+  assert.match(home,/href="#contribute">Share your code<\/a>/);
+  assert.match(home,/href="#contribute">Share a code<\/a>/);
+  assert.match(home,/href="#contribute">choose how to share<\/a>/);
+  assert.match(home,/href="\.\/#contribute">Contribute<\/a>/);
+  assert.match(countries,/href="\.\.\/#contribute">Contribute<\/a>/);
+  assert.match(detail,/href="\.\.\/\.\.\/#contribute">Contribute<\/a>/);
+  for(const command of ["/submit CODE","/report CODE worked","/status CODE"]){
     assert.ok(section.includes(command),"Missing Telegram command "+command);
     assert.ok(guide.includes(command),"Guide differs on "+command);
   }
-  assert.match(guide,/review-only Draft PR|unverified Draft PR/);
-  assert.match(guide,/does not currently contain a verified public bot/);
-  assert.match(guide,/private Telegram chat/);
+  const svg=read("assets/contribute-qr.svg");
+  assert.match(svg,/<svg[^>]*viewBox="0 0 37 37"/);
+  assert.match(svg,/<path fill="#152742" d="M4 4h7v1H4z/);
+  assert.doesNotMatch(svg,/<script|<foreignObject|https?:/i);
   assert.match(readme,/docs\/TELEGRAM_BOT_GUIDE\.md/);
   assert.match(contributing,/docs\/TELEGRAM_BOT_GUIDE\.md/);
-  assert.match(css,/\.telegram-panel\{display:grid/);
-  assert.match(css,/@media\(max-width:620px\)\{\.telegram-section/);
-  assert.equal((home.match(/id="telegram-bot"/g)||[]).length,1);
+  assert.match(css,/\.contribute-grid\{display:grid/);
+  assert.match(css,/@media\(max-width:620px\)\{\.contribute-section/);
+  assert.equal((home.match(/id="contribute"/g)||[]).length,1);
   assert.match(home,/<link rel="canonical" href="https:\/\/muse\.eplus\.dev\/"/);
 });
