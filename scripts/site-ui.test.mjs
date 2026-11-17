@@ -172,3 +172,36 @@ test("Footer layout, links and back-to-top button are shared by home/detail; SEO
   assert.match(css, /\.back-to-top\{position:fixed/);
   assert.match(css, /\.help-section\{[^}]*scroll-margin-top:90px/);
 });
+
+test("Telegram companion is discoverable, accessible and consistent across home, map and details",()=>{
+  const detail=renderDetailPage(sample);
+  const countries=read("countries/index.html");
+  const guide=read("docs/TELEGRAM_BOT_GUIDE.md");
+  const readme=read("README.md");
+  const contributing=read("CONTRIBUTING.md");
+  const section=home.match(/<section class="telegram-section container" id="telegram-bot"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(section,"Missing dedicated home Telegram guide");
+  assert.match(section,/aria-labelledby="telegram-bot-title"/);
+  assert.match(section,/<h2 id="telegram-bot-title">Muse Invite Hub on Telegram<\/h2>/);
+  assert.match(section,/href="https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/blob\/main\/docs\/TELEGRAM_BOT_GUIDE\.md"/);
+  assert.match(section,/explicit consent to publish your public @username/);
+  assert.match(section,/reviewed before a code can be listed/);
+  assert.doesNotMatch(section,/href="https:\/\/t\.me\//,"No unverified public Telegram bot link");
+  assert.match(home,/href="#telegram-bot">Learn about the Telegram bot<\/a>/);
+  assert.match(home,/href="\.\/#telegram-bot"/);
+  assert.match(countries,/href="\.\.\/#telegram-bot"/);
+  assert.match(detail,/href="\.\.\/\.\.\/#telegram-bot"/);
+  for(const command of ["/codes","/status CODE","/submit CODE","/report CODE worked","/subscribe"]){
+    assert.ok(section.includes(command),"Missing Telegram command "+command);
+    assert.ok(guide.includes(command),"Guide differs on "+command);
+  }
+  assert.match(guide,/review-only Draft PR|unverified Draft PR/);
+  assert.match(guide,/does not currently contain a verified public bot/);
+  assert.match(guide,/private Telegram chat/);
+  assert.match(readme,/docs\/TELEGRAM_BOT_GUIDE\.md/);
+  assert.match(contributing,/docs\/TELEGRAM_BOT_GUIDE\.md/);
+  assert.match(css,/\.telegram-panel\{display:grid/);
+  assert.match(css,/@media\(max-width:620px\)\{\.telegram-section/);
+  assert.equal((home.match(/id="telegram-bot"/g)||[]).length,1);
+  assert.match(home,/<link rel="canonical" href="https:\/\/muse\.eplus\.dev\/"/);
+});
