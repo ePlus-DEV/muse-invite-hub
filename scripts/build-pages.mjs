@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { buildPreview, isSafeSiteFile } from "./preview-core.mjs";
 import { generateSite } from "./site-pages.mjs";
 import { stampSiteAssets } from "./asset-version.mjs";
+import { fetchGitHubJson } from "./github-api.mjs";
 import { syncCodeIssueMap, validIssueMap } from "./code-issue-map.mjs";
 import { readCatalog } from "./catalog.mjs";
 import { validateCatalog } from "./validate.mjs";
@@ -42,18 +43,7 @@ const code = readCatalog();
 const catalogErrors = validateCatalog(code);
 if (catalogErrors.length) throw Error("Production catalog invalid: " + catalogErrors.join("; "));
 writeFileSync(join(output,"data/invites.json"),JSON.stringify(code,null,2)+"\n");
-async function api(path) {
-  const res = await fetch("https://api.github.com/" + path, {
-    headers: {
-      Authorization: "Bearer " + TOKEN,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28"
-    },
-    signal: AbortSignal.timeout(25000)
-  });
-  if (!res.ok) throw Error("GitHub API " + res.status + ": " + path);
-  return res.json();
-}
+const api = path => fetchGitHubJson(path, TOKEN);
 async function listAllRepositoryIssues() {
   const result = [];
   for (let page = 1; page <= 20; page++) {
