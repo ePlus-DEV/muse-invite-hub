@@ -214,6 +214,7 @@ test("Threads codes retain attribution and are included in the production sitema
   assert.match(home, /data-source="facebook"/);
   assert.match(home, /data-source="threads"/);
   assert.match(home, /data-source="telegram"/);
+  assert.match(app, /"Telegram","telegram","fa-brands fa-telegram"/);
   assert.match(app, /sourceInfo\(item\)\.handle/);
   assert.match(app, /sourceFilter === "all"/);
   assert.match(app, /render\(true\)/);
