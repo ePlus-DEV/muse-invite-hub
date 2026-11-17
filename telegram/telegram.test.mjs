@@ -78,10 +78,10 @@ async function withApp(run,services={}) {
     rmSync(dir,{recursive:true,force:true});
   }
 }
-const message=(id,text)=>({update_id:id,message:{text,from:{id:42,is_bot:false},
+const message=(id,text)=>({update_id:id,message:{text,from:{id:42,is_bot:false,username:"alice_dev"},
   chat:{id:42,type:"private"}}});
 const callback=(id,data)=>({update_id:id,callback_query:{id:"cb-"+id,data,
-  from:{id:42},message:{message_id:id+100,chat:{id:42,type:"private"}}}});
+  from:{id:42,username:"alice_dev"},message:{message_id:id+100,chat:{id:42,type:"private"}}}});
 
 test("webhook checks method, path, JSON and constant-time shared secret",async()=>{
   await withApp(async({origin,post})=>{
@@ -101,7 +101,7 @@ test("submit and report are explicitly confirmed, then sent to GitHub once",asyn
     assert.match(sent.at(-1).payload.text,/PUBLIC GitHub Issue/);
     assert.equal((await post(callback(11,"t:submit:TEST42"))).status,200);
     assert.equal(calls.submit.length,1);
-    assert.deepEqual(calls.submit[0],["TEST42",11,"issue-token-test"]);
+    assert.deepEqual(calls.submit[0],["TEST42",11,"issue-token-test","alice_dev"]);
     assert.equal(sent.at(-1).name,"editMessageReplyMarkup");
     assert.deepEqual(sent.at(-1).payload.reply_markup,{inline_keyboard:[]});
     assert.equal((await post(callback(11,"t:submit:TEST42"))).status,200);
@@ -187,20 +187,45 @@ test("Telegram contributions keep closed Issues distinct and require human sourc
       }
       throw Error("Unexpected request: "+request);
     };
-    const closed=await submitNewCode("CLOSED",80,"test-token");
+    const closed=await submitNewCode("CLOSED",80,"test-token","alice_dev");
     assert.equal(closed.kind,"closed");
     assert.equal(closed.url,"https://github.com/ePlus-DEV/muse-invite-hub/issues/43");
     assert.equal(writes.length,0,"Closed duplicate must not create a new Issue");
     includeClosed=false;
-    const fresh=await submitNewCode("NEW123",81,"test-token");
+    const fresh=await submitNewCode("NEW123",81,"test-token","alice_dev");
     assert.equal(fresh.kind,"submitted");
     assert.equal(writes.length,1);
     assert.equal(writes[0].title,"[Telegram submission] NEW123");
-    assert.match(writes[0].body,/Source evidence: \*\*Not supplied by Telegram/);
+    assert.match(writes[0].body,/### Invite code\n\nNEW123/);
+    assert.match(writes[0].body,/### Code source\n\nTelegram \(community code shared through bot\)/);
+    assert.match(writes[0].body,/### Contributor checklist\n\n- \[x\]/);
+    assert.match(writes[0].body,/### Telegram contributor\n\n@alice_dev/);
+    assert.match(writes[0].body,/https:\/\/t\.me\/alice_dev/);
     assert.match(writes[0].body,/Maintainer review checklist/);
     assert.match(writes[0].body,/review-only Draft PR/);
-    assert.doesNotMatch(writes[0].body,/Telegram chat ID|Telegram username:/);
+    assert.doesNotMatch(writes[0].body,/Telegram chat ID|Telegram user ID|id:42|chat_id/);
   } finally {globalThis.fetch=original;}
+});
+
+test("New Telegram contributions require a real username and explicit public attribution consent",async()=>{
+  await withApp(async({post,sent,calls})=>{
+    const unassigned=message(800,"/submit NEW123");
+    delete unassigned.message.from.username;
+    assert.equal((await post(unassigned)).status,200);
+    assert.match(sent.at(-1).payload.text,/set a public Telegram @username/);
+    assert.equal(calls.submit.length,0);
+    const callbackWithout=callback(801,"t:submit:NEW123");
+    delete callbackWithout.callback_query.from.username;
+    assert.equal((await post(callbackWithout)).status,200);
+    assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/set a public Telegram @username/);
+    assert.equal(calls.submit.length,0);
+    assert.equal((await post(message(802,"/submit NEW123"))).status,200);
+    assert.match(sent.at(-1).payload.text,/@alice_dev/);
+    assert.match(sent.at(-1).payload.text,/PUBLIC GitHub Issue/);
+    assert.equal(calls.submit.length,0);
+    assert.equal((await post(callback(803,"t:submit:NEW123"))).status,200);
+    assert.deepEqual(calls.submit[0],["NEW123",803,"issue-token-test","alice_dev"]);
+  });
 });
 
 test("processing failures return 503 so Telegram can retry, without recording success",async()=>{
