@@ -110,6 +110,7 @@ async function findExistingTelegramSubmission(code,token) {
       const original=/^### Invite code\s*\r?\n\s*([A-Z0-9]{6})\s*(?:\r?\n|$)/m.exec(body)?.[1];
       const canonical=/<!-- (?:muse-code-feedback-thread:\s*|muse-code-feedback-root:)([A-Z0-9]{6})\s*-->/.exec(body)?.[1];
       return (title==="[Telegram submission] "+code&&body.includes("<!-- muse-telegram-submission:"+code+" -->"))||
+        (title==="[Invite] "+code&&body.includes("<!-- muse-telegram-submission:"+code+" -->"))||
         (title.startsWith("[Invite]")&&original===code)||
         (title.startsWith("[Code discussion]")&&canonical===code)||
         (canonical===code);
@@ -126,8 +127,9 @@ export async function submitNewCode(code,updateId,token,username) {
   if(existing)return {kind:"listed",url:SITE+"/codes/"+encodeURIComponent(code)+"/"};
   const prior=await findExistingTelegramSubmission(code,token);
   if(prior)return {kind:prior.state==="open"?"pending":"closed",url:prior.html_url};
-  // Deliberately NOT [Invite]: that workflow assumes issue.user is the GitHub
-  // owner, but here the actor is the service bot. Human review is mandatory.
+  // Use the same [Invite] Issue Form as other platforms. The internal Telegram
+  // marker instructs the trusted planner to avoid GitHub-bot owner attribution
+  // and to propose a review-only Draft PR, never automatic publication.
   const issue=await github("issues",token,"POST",{
     title:"[Invite] "+code,
     body:[
