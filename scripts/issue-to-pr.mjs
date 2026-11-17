@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { validateCatalog } from "./validate.mjs";
 import { fetchGitHubCatalog, changedRecord, changedRecords } from "./catalog.mjs";
 import { parsePublicSource, listedPlatform, LISTING_PLATFORMS } from "./source-platform.mjs";
-import { isShareCodeIssue, parseInviteCodes } from "./code-issue-map.mjs";
+import { isShareCodeIssue, issueCodes, originalIssueNumber, parseInviteCodes, withCanonicalIssueRefs } from "./code-issue-map.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
 const MARKER = "<!-- muse-issue-draft-pr -->";
@@ -185,10 +185,22 @@ function planMultiInvite(issue, current, codes, fields) {
     return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
       reason:"For multiple invite codes, leave per-code uses/limit/remaining fields blank; provide separate owner-count updates after publication."};
   }
-  const existing = codes.find(code => findCode(current,code));
-  if (existing) {
+  const existing = codes.filter(code => findCode(current,code));
+  if (existing.length===codes.length){
+    const canonicalIssueNumbers=[...new Set(codes.map(code=>originalIssueNumber(findCode(current,code)))
+      .filter(Number.isSafeInteger))];
+    // Multi-code Issues can be resolved as duplicates only when every code is
+    // already listed; mixed new/existing batches still require human triage.
+    return {
+      outcome:canonicalIssueNumbers.length===1 && canonicalIssueNumbers[0]===issue.number
+        ? "already-published":"already-listed",
+      kind:"invite",code:codes[0],codes,canonicalIssueNumbers,
+      reason:"All submitted invite codes are already included in the catalog."
+    };
+  }
+  if (existing.length){
     return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
-      reason:"Invite code "+existing+" is already in the catalog. Multi-code Issues must contain only new, distinct codes."};
+      reason:"Invite code "+existing[0]+" is already in the catalog. Multi-code Issues must contain only new, distinct codes."};
   }
   const parts = String(issue.body || "").split(/^### /m);
   const index = parts.findIndex(part => /^Invite code\r?\n/.test(part));
@@ -257,7 +269,19 @@ export function planTelegramIssue(issue, current) {
     const value=field(fields,label);
     if(value && !explicitlyUnreported(value))return {outcome:"needs-review",kind:"invite",code,reason:"Telegram cannot authenticate owner-only quota."};
   }
-  if(current.some(entry=>entry.code===code))return {outcome:"needs-review",kind:"invite",code,reason:"Code is already published; do not create duplicate listing."};
+  const listed=findCode(current,code);
+  if(listed){
+    const canonicalIssueNumber=originalIssueNumber(listed);
+    if (canonicalIssueNumber===issue.number && listed.sourceUrl!==source.url){
+      return {outcome:"needs-review",kind:"invite",code,canonicalIssueNumber,
+        reason:"Original Telegram source differs from the catalog; manual review is required."};
+    }
+    return canonicalIssueNumber===issue.number
+      ? {outcome:"already-published",kind:"invite",code,canonicalIssueNumber,
+          reason:"This original Telegram contribution is already in the catalog."}
+      : {outcome:"already-listed",kind:"invite",code,canonicalIssueNumber,
+          reason:"Invite code is already in the catalog; no second record will be added."};
+  }
   const id="community-issue-"+issue.number;
   if(current.some(entry=>entry.id===id || entry.feedbackIssueNumber===issue.number))
     return {outcome:"needs-review",kind:"invite",code,reason:"A catalog record is already associated with this Issue."};
@@ -379,16 +403,31 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
           existing.id === "community-issue-" + issue.number &&
           existing.feedbackIssueNumber === issue.number &&
           existing.sourceUrl === social.url) {
-        return {outcome:"already-published",kind,code,
+        return {outcome:"already-published",kind,code,canonicalIssueNumber:issue.number,
           reason:"The submitted code and source are already in the main catalog from this Issue."};
       }
-      if (socialSubmission || parsePublicSource(existing.sourceUrl)) {
+      const canonicalIssueNumber=originalIssueNumber(existing);
+      // Different-source submissions are duplicates only when they do not
+      // attempt to supply owner-only quota figures. Never discard claims
+      // needing human validation by silently closing their Issues.
+      const hasQuotaClaim=["Invite limit (optional; self-reported)",
+        "Uses so far (optional; self-reported)",
+        "Remaining invites (optional; self-reported)"].some(label=>field(f,label).trim());
+      if (!socialSubmission && hasQuotaClaim &&
+          (parsePublicSource(existing.sourceUrl) || !ownerMatches(existing,issue))) {
         return {outcome:"needs-review",kind,code,
-          reason:"The code is already listed. A cross-platform report cannot replace attribution, ownership or quota automatically."};
+          reason:"A different source or owner reported quota numbers; manual review is required."};
       }
-      if (!ownerMatches(existing,issue)) {
-        return {outcome:"needs-review",kind,code,
-          reason:"The code already exists under a different GitHub owner; manual review is required."};
+      if (socialSubmission || parsePublicSource(existing.sourceUrl) || !ownerMatches(existing,issue)) {
+        // A second submission of an existing CODE does not replace attribution
+        // or ownership. Give its author the existing listing/Issue link and
+        // close the duplicate; do not publish a competing record.
+        if (canonicalIssueNumber===issue.number){
+          return {outcome:"needs-review",kind,code,
+            reason:"Original Issue now reports a different source or owner; maintainer review required."};
+        }
+        return {outcome:"already-listed",kind,code,canonicalIssueNumber,
+          reason:"Invite code is already listed. New source/ownership claims were not adopted."};
       }
       const quota=actualQuota(f,date,{
         total:"Invite limit (optional; self-reported)",
@@ -396,8 +435,13 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
         remaining:"Remaining invites (optional; self-reported)",
         notes:"Notes (optional)"
       });
-      if (!quota) return {outcome:"needs-review",kind,code,
-        reason:"Owner confirmed, but no complete count or remaining-only value was provided."};
+      if (!quota){
+        return canonicalIssueNumber===issue.number
+          ? {outcome:"already-published",kind,code,canonicalIssueNumber,
+              reason:"The existing original code was already published; there is no new quota."}
+          : {outcome:"already-listed",kind,code,canonicalIssueNumber,
+              reason:"Invite code already exists; use its original discussion for updates."};
+      }
       const target=data.find(item=>item.code===existing.code);
       const state=updateQuota(target,quota,date);
       if(state!=="updated") return {outcome:state==="stale"?"needs-review":"duplicate",kind,code,
@@ -598,11 +642,86 @@ async function openBotPrs(token){
   const result=await api("GET","pulls?state=open&per_page=100",token);
   return result.filter(pr=>pr.head?.repo?.full_name===REPO);
 }
+// Never close a new Issue merely because a 6-character token appeared in it.
+// The trusted planner must first establish a valid, fully submitted invite,
+// an exact catalog match, and an existing canonical discussion or live detail.
+export function resolvedInviteComment({codes,canonicalIssueNumbers=[],liveCodes=[],canonical=false}){
+  const list=codes.join(", ");
+  const siteLinks=liveCodes.map(code=>"[View "+code+"](https://muse.eplus.dev/codes/"+code+"/)");
+  const issueLinks=canonicalIssueNumbers.map(n=>"[Issue #"+n+"](https://github.com/"+REPO+"/issues/"+n+")");
+  return [
+    canonical ? "✅ **This original contribution has been published.**" :
+      "ℹ️ **Duplicate invite submission — already tracked.**",
+    "",
+    "**Invite code"+(codes.length>1?"s":"")+":** "+list,
+    ...(siteLinks.length ? ["**Published detail"+(siteLinks.length>1?"s":"")+":** "+siteLinks.join(" · ")] : []),
+    ...(issueLinks.length ? ["**Original discussion"+(issueLinks.length>1?"s":"")+":** "+issueLinks.join(" · ")] : []),
+    "",
+    canonical ? "Closing the completed submission; its original Issue can be reopened for new feedback." :
+      "Closing this duplicate so that feedback stays in the original discussion. This submission does not change the listing's attribution or quota.",
+    "Being listed does **not** mean Muse has verified redemption, eligibility or available invitations."
+  ].join("\n");
+}
+
+async function publishedDetailReady(code){
+  if (!CODE_PATTERN.test(code)) return false;
+  const url="https://muse.eplus.dev/codes/"+code+"/";
+  try {
+    const response=await fetch(url+"?duplicate-check=1",{
+      cache:"no-store",signal:AbortSignal.timeout(12000)
+    });
+    if(!response.ok)return false;
+    const body=await response.text();
+    return body.includes("<title>"+code+" Muse Invite Code | Muse Invite Hub</title>") &&
+      body.includes('rel="canonical" href="'+url+'"') &&
+      !body.includes('name="robots" content="noindex');
+  } catch {return false;}
+}
+
+async function resolveListedInvite(issue,result,token){
+  const codes=result.codes||[result.code];
+  if(!codes.length || codes.some(code=>!CODE_PATTERN.test(code)))return result;
+  const canonical=result.outcome==="already-published";
+  const refs=result.canonicalIssueNumbers||
+    (Number.isSafeInteger(result.canonicalIssueNumber)?[result.canonicalIssueNumber]:[]);
+  const originalRefs=[];
+  for(const n of [...new Set(refs)]){
+    if(!Number.isSafeInteger(n) || n<1 || n===issue.number)continue;
+    const original=await api("GET","issues/"+n,token);
+    if(!original.pull_request && codes.some(code=>issueCodes(original).includes(code))){
+      originalRefs.push(n);
+    }
+  }
+  const liveCodes=[];
+  for(const code of codes)if(await publishedDetailReady(code))liveCodes.push(code);
+  // The original submission closes only when all its pages are actually live.
+  // A duplicate can instead point to a separately confirmed original Issue.
+  if ((canonical && liveCodes.length!==codes.length) ||
+      (!canonical && liveCodes.length!==codes.length && !originalRefs.length)){
+    await comment(issue,token,"The invite code"+(codes.length>1?"s are":" is")+
+      " already in the main catalog. Keeping this Issue open until a published "+
+      "detail or original discussion can be verified; no new PR was created.");
+    return {...result,outcome:"pending-publication"};
+  }
+  const latest=await api("GET","issues/"+issue.number,token);
+  if(latest.state!=="open" || latest.title!==issue.title || latest.body!==issue.body){
+    return {...result,outcome:"skipped",reason:"Issue changed while resolving duplicate."};
+  }
+  await comment(issue,token,resolvedInviteComment({
+    codes,canonicalIssueNumbers:originalRefs,liveCodes,canonical
+  }));
+  await api("PATCH","issues/"+issue.number,token,{
+    state:"closed",state_reason:canonical?"completed":"duplicate"
+  });
+  return {...result,outcome:canonical?"closed-completed":"closed-duplicate"};
+}
+
 async function propose(issue,token) {
   if(issue.state!=="open" || issue.pull_request) return {outcome:"skipped",reason:"Issue not open."};
   const ref=await api("GET","git/ref/heads/main",token);
   const mainSHA=ref.object.sha;
-  const catalog=await getCatalog(token,mainSHA);
+  const roots=JSON.parse(readFileSync(new URL("../data/code-issues.json",import.meta.url),"utf8"));
+  const catalog=withCanonicalIssueRefs(await getCatalog(token,mainSHA),roots);
   const proposed=planIssueChange(issue,catalog);
   if(proposed.outcome!=="proposal")return proposed;
 
@@ -770,11 +889,10 @@ export async function runIssueAutomation({
       await comment(issue,token,"No automatic Draft PR was created for this Issue: "+
         result.reason+". A maintainer can review the report manually. No change has been published.");
     }
-    if(result.outcome==="already-published"){
-      await comment(issue,token,"✅ **Already included in the main catalog:** **"+result.code+
-        "** was recorded from this same Issue and source URL. No duplicate Draft PR "+
-        "is necessary; this is **not a rejection**. The invite remains an unverified "+
-        "community report until its source and redemption are independently checked.");
+    if(result.outcome==="already-published"||result.outcome==="already-listed"){
+      const resolved=await resolveListedInvite(issue,result,token);
+      console.log("Resolved existing invite Issue: "+JSON.stringify(resolved));
+      return resolved;
     }
     if(result.outcome==="already-open"){
       await comment(issue,token,"A [Draft PR]("+result.url+") already exists for this Issue. "+
