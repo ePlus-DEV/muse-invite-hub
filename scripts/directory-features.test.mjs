@@ -238,7 +238,7 @@ test("homepage and detail load helpers before existing scripts without altering 
   const detail = renderDetailPage(owner);
   assert.ok(detail.indexOf('src="../../assets/directory-features.js"') <
     detail.indexOf('src="../../assets/detail.js"'));
-  assert.match(detail, /id="detail-save" type="button" aria-pressed="false" hidden/);
+  assert.match(detail, /id="detail-save" type="button" aria-pressed="false" aria-label="Save Muse invite code DPNIHH" hidden/);
   assert.match(detail, /data-feedback-outcome="worked"/);
   assert.match(detail, /data-feedback-outcome="failed"/);
   assert.match(detail, /<meta name="robots" content="index,follow">/);

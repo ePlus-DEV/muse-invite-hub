@@ -8,6 +8,8 @@ import { renderSiteHeader } from "./site-navigation.mjs";
 export const SITE_ORIGIN = "https://muse.eplus.dev";
 export const DETAIL_PATH = "codes";
 export const PAGE_SIZE = 12;
+// Documented pre-tracking quota revisions; not clicks and not Muse-confirmed redemptions.
+const quotaHistory = JSON.parse(readFileSync(new URL("../data/quota-update-baseline.json", import.meta.url),"utf8"));
 
 export function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, char =>
@@ -89,9 +91,15 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
   const quota = reportedSlots(item);
   const usage = quota
     ? '<strong class="detail-slots-number">' + escapeHtml(quota.remaining) +
-      (quota.capacity === null ? '' : ' / ' + escapeHtml(quota.capacity)) + '</strong><span class="detail-slots-caption">invites remaining, reported ' +
-      escapeHtml(quota.date) + ' · Not live</span>'
+      (quota.capacity === null ? '' : ' / ' + escapeHtml(quota.capacity)) + '</strong><span class="detail-slots-caption">Invites remaining · Not live</span>'
     : '<strong class="detail-slots-number">Not reported</strong><span class="detail-slots-caption">No confirmed remaining-slot data</span>';
+  const baseUpdates = Number.isSafeInteger(quotaHistory[item.code]) && quotaHistory[item.code] > 0
+    ? quotaHistory[item.code] : 0;
+  const reviewedUpdates = Number.isSafeInteger(item.quotaUpdateCount) && item.quotaUpdateCount > 0
+    ? item.quotaUpdateCount : 0;
+  const totalUpdates = baseUpdates + reviewedUpdates;
+  const updateLabel = totalUpdates > 0 ? totalUpdates + (totalUpdates === 1 ? " update" : " updates") : "—";
+  const lastReported = quota ? quota.date : "No report";
   const social = parsePublicSource(item.sourceUrl);
   const platform = social?.platform || "GitHub";
   const handle = social?.handle || item.submittedBy;
@@ -165,34 +173,37 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '  <main class="container detail-page">' +
     '    <nav class="detail-breadcrumb" aria-label="Breadcrumb"><a href="../../">Home</a><span aria-hidden="true">/</span>' +
     '      <a href="../../#codes">Invite codes</a><span aria-hidden="true">/</span><span aria-current="page">' + escapeHtml(item.code) + '</span></nav>' +
+    '    <header class="detail-page-intro"><h1 id="detail-title">Invite code <span class="detail-title-code">' + escapeHtml(item.code) + '</span></h1>' +
+    '      <p>A community-shared Muse invite code. Check reported availability and share your experience below.</p></header>' +
     '    <div class="detail-layout">' +
     '      <section class="detail-primary" aria-labelledby="detail-title">' +
-    '        <p class="section-kicker">MUSE INVITE</p>' +
-    '        <h1 id="detail-title">Invite code <span class="detail-code-text">' + escapeHtml(item.code) + '</span></h1>' +
-    '        <div class="detail-code-panel">' +
+    '        <div class="detail-code-panel detail-hero-unified">' +
     '          <div class="detail-code-heading"><span class="detail-status"' + (item.ownerConfirmed
     ? ' title="Ownership confirmed by ePlus.DEV; Muse redemption is not verified."'
-    : '') + '>' + (item.ownerConfirmed ? '<i class="fa-solid fa-check" aria-hidden="true"></i> ' : '') + escapeHtml(status) + '</span></div>' +
-    '          <p class="detail-code" id="detail-code">' + escapeHtml(item.code) + '</p>' +
-    '          <div class="detail-action-row"><button class="button button-primary" type="button" id="detail-copy"><i class="fa-regular fa-copy" aria-hidden="true"></i> <span class="detail-copy-label">Copy invite code</span></button>' +
-    '            <button class="button button-outlined detail-save" id="detail-save" type="button" aria-pressed="false" hidden><i class="fa-regular fa-bookmark" aria-hidden="true"></i> <span class="detail-save-label">Save code</span></button>' +
-    '            <a class="button button-outlined" href="https://muse.ai/invite/' + encodeURIComponent(item.code) + '" target="_blank" rel="noopener noreferrer" aria-label="Open Muse invite link for code ' + escapeHtml(item.code) + '">Open invite <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div>' +
-    '        </div>' + notes +
-    '        <section class="detail-instructions" aria-labelledby="how-to-redeem"><h2 id="how-to-redeem">How to use this code</h2>' +
-    '          <ol><li>Select <strong>Open invite</strong> above to visit Muse with this code.</li>' +
-    '          <li>Follow Muse\'s instructions and check eligibility before redeeming.</li></ol>' +
-    '        </section>' +
-    renderDetailMarketAvailability() +
+    : '') + '>' + (item.ownerConfirmed ? '<i class="fa-solid fa-check" aria-hidden="true"></i> ' : '') + escapeHtml(status) + '</span>' +
+    '            <button class="detail-save" id="detail-save" type="button" aria-pressed="false" aria-label="Save Muse invite code ' + escapeHtml(item.code) + '" hidden><i class="fa-regular fa-bookmark" aria-hidden="true"></i><span class="detail-save-label sr-only">Save code</span></button></div>' +
+    '          <div class="detail-code-display"><p class="detail-code-text" id="detail-code">' + escapeHtml(item.code) + '</p>' +
+    '            <button class="detail-copy-inline" type="button" aria-label="Copy invite code ' + escapeHtml(item.code) + '" title="Copy invite code"><i class="fa-regular fa-copy" aria-hidden="true"></i></button></div>' +
+    '          <div class="detail-action-row"><a class="button button-primary detail-open-invite" href="https://muse.ai/invite/' + encodeURIComponent(item.code) + '" target="_blank" rel="noopener noreferrer" aria-label="Open Muse invite link for code ' + escapeHtml(item.code) + '">Open invite <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>' +
+    '            <button class="button button-outlined" type="button" id="detail-copy"><i class="fa-regular fa-copy" aria-hidden="true"></i> <span class="detail-copy-label">Copy invite code</span></button></div>' +
+    '          <div class="detail-stats" aria-label="Community-reported invitation statistics">' +
+    '            <div class="detail-stat"><i class="fa-solid fa-users" aria-hidden="true"></i><span class="detail-stat-body">' + usage + '</span></div>' +
+    '            <div class="detail-stat"><i class="fa-regular fa-calendar" aria-hidden="true"></i><span class="detail-stat-body"><strong class="detail-stat-date">' + escapeHtml(lastReported) + '</strong><span class="detail-stat-label">Last reported</span></span></div>' +
+    '            <div class="detail-stat"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i><span class="detail-stat-body"><strong class="detail-stat-updates">' + escapeHtml(updateLabel) + '</strong><span class="detail-stat-label">' + (totalUpdates > 0 ? 'Quota updated' : 'No recorded updates') + '</span></span></div>' +
+    '          </div>' + notes +
+    '        </div>' +
+    '        <details class="detail-instructions detail-mobile-fold" open><summary><i class="fa-solid fa-book-open" aria-hidden="true"></i><h2 id="how-to-redeem">How to use this code</h2><i class="fa-solid fa-chevron-down detail-fold-chevron" aria-hidden="true"></i></summary>' +
+    '          <div class="detail-fold-body"><ol><li>Select <strong>Open invite</strong> above to visit Muse with this code.</li>' +
+    '          <li>Follow Muse\'s instructions and check eligibility before redeeming.</li></ol></div>' +
+    '        </details>' +
     '      </section>' +
     '      <aside class="detail-side" aria-label="Invite information">' +
-    '        <div class="detail-info-card"><p class="section-kicker">REPORTED AVAILABILITY</p>' + usage +
-    '        </div>' +
-    '        <div class="detail-info-card"><p class="section-kicker">LISTING DETAILS</p>' +
-    '          <dl class="detail-meta"><div><dt>Contributor</dt><dd>' + escapeHtml(author) + '</dd></div>' +
+    '        <details class="detail-info-card detail-listing detail-mobile-fold" open><summary><i class="fa-solid fa-circle-info" aria-hidden="true"></i><h2>Code details</h2><i class="fa-solid fa-chevron-down detail-fold-chevron" aria-hidden="true"></i></summary>' +
+    '          <div class="detail-fold-body"><dl class="detail-meta"><div><dt>Contributor</dt><dd>' + escapeHtml(author) + '</dd></div>' +
     '            <div><dt>Source</dt><dd>' + sourceLink + '</dd></div>' +
     '            <div><dt>Listed</dt><dd>' + escapeHtml(dateText(item.addedAt)) + '</dd></div>' +
-    '            <div><dt>Muse redemption</dt><dd>' + escapeHtml(redemptionLine) + '</dd></div></dl>' +
-    '        </div><div class="detail-info-card detail-feedback"><h2>Does this code work?</h2><p>Share your experience to help the community keep listings accurate.</p>' +
+    '            <div><dt>Muse redemption</dt><dd>' + escapeHtml(redemptionLine) + '</dd></div></dl></div>' +
+    '        </details><div class="detail-info-card detail-feedback"><h2>Does this code work?</h2><p>Share your experience to help the community keep listings accurate.</p>' +
     '          <div class="detail-feedback-actions"><a class="detail-quick-feedback" data-feedback-outcome="worked" href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-thumbs-up" aria-hidden="true"></i> Worked for me</a>' +
     '            <a class="detail-quick-feedback" data-feedback-outcome="failed" href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-thumbs-down" aria-hidden="true"></i> Didn\'t work</a></div>' +
     '          <a href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-comment" aria-hidden="true"></i> Give feedback</a>' +
@@ -200,6 +211,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
       '          <a class="detail-owner-count" data-feedback-outcome="count" href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer">Update owner count</a>' : '') +
     '        </div>' +
     '      </aside>' +
+    renderDetailMarketAvailability() +
     '    </div><a class="detail-back" href="../../#codes"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to all invite codes</a>' +
     '    <p class="detail-independent">Muse Invite Hub is independent and not affiliated with Muse or Meta.</p>' +
     '    <p id="detail-live" class="sr-only" role="status" aria-live="polite"></p>' +
