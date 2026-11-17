@@ -228,7 +228,7 @@ function planMultiInvite(issue, current, codes, fields) {
 // Telegram Issue authors are the bot credential, never the contributor.
 // Build only review-only Draft PRs from the bot's strict public form and consent.
 export function planTelegramIssue(issue, current) {
-  const title=/^\[Telegram submission\] ([A-Z0-9]{6})$/.exec(String(issue.title||""));
+  const title=/^\[(?:Invite|Telegram submission)\] ([A-Z0-9]{6})$/.exec(String(issue.title||""));
   const body=String(issue.body||"");
   const marker=/<!-- muse-telegram-submission:([A-Z0-9]{6}) -->/.exec(body);
   if(!title || !marker || title[1]!==marker[1])return {outcome:"needs-review",kind:"invite",reason:"Telegram title/marker mismatch; human review required."};
@@ -240,10 +240,16 @@ export function planTelegramIssue(issue, current) {
   if(!hasRequiredInviteConfirmations(body) ||
       !field(fields,"Contributor checklist").includes("- [x] I am authorized to share this code publicly; I understand this Issue is public."))
     return {outcome:"needs-review",kind:"invite",code,reason:"Telegram contributor public-sharing/privacy confirmation is missing."};
-  const who=/^@([A-Za-z][A-Za-z0-9_]{4,31}) \(Telegram sender, public attribution accepted during confirmation\)$/.exec(field(fields,"Telegram contributor").trim());
   const context=field(fields,"Public confirmation or context (optional)").trim();
-  const url=/^(https:\/\/t\.me\/[A-Za-z][A-Za-z0-9_]{4,31}) \(Telegram profile only, not source-post evidence\)$/.exec(context);
-  const source=url?parsePublicSource(url[1]):null;
+  const standard=title[0].startsWith("[Invite]");
+  // The normal Share Code form fields carry the Telegram identity. No custom
+  // headings are needed, and the bot's GitHub account is never the sender.
+  const notes=field(fields,"Notes (optional)").trim();
+  const standardWho=/^Submitted via Telegram by @([A-Za-z][A-Za-z0-9_]{4,31})\. Human review required; public profile is not proof of code ownership, redemption or quota\.$/.exec(notes);
+  const legacyWho=/^@([A-Za-z][A-Za-z0-9_]{4,31}) \(Telegram sender, public attribution accepted during confirmation\)$/.exec(field(fields,"Telegram contributor").trim());
+  const legacyUrl=/^(https:\/\/t\.me\/[A-Za-z][A-Za-z0-9_]{4,31}) \(Telegram profile only, not source-post evidence\)$/.exec(context);
+  const who=standard?standardWho:legacyWho;
+  const source=parsePublicSource(standard?context:(legacyUrl?.[1]||""));
   if(!who || !source || source.platform!=="Telegram" || source.post || source.handle!==who[1])
     return {outcome:"needs-review",kind:"invite",code,reason:"Missing or mismatched consented Telegram username/profile."};
   // Telegram identity cannot authorize self-reported owner-only quota fields.
