@@ -68,12 +68,15 @@
     if (!button) return;
     button.dataset.copied = String(copied);
     button.dataset.tooltip = copied
-      ? "Previously copied in this browser. Copying a code does not redeem it on Muse."
+      ? "Copied on this device. Click to copy again; this does not confirm Muse redemption."
       : "Copy this code. Copying does not redeem it in Muse.";
     button.setAttribute("aria-label",
       (copied ? "Copy again Muse invite code " : "Copy Muse invite code ") + code);
+    const label = copied
+      ? (card.classList.contains("code-card-featured") ? " Copy again" : " Copied")
+      : " Copy code";
     button.replaceChildren(icon(copied ? "fa-solid fa-check" : "fa-regular fa-copy"),
-      document.createTextNode(copied ? " Copy again" : " Copy code"));
+      document.createTextNode(label));
   }
   function syncCopiedCards() {
     grid.querySelectorAll(".code-card").forEach(updateCopiedCard);
