@@ -1,0 +1,89 @@
+name: Close PRs with deleted source Issues
+
+# Close only trusted bot-generated catalog PRs with exact Issue references.
+# React immediately to deletion and recover any missed/early events hourly.
+on:
+  issues:
+    types: [deleted]
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: muse-deleted-issue-pr-cleanup
+  cancel-in-progress: false
+
+jobs:
+  close-orphans:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted main only
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Use Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Test orphan PR matching and deletion policy
+        run: node --test scripts/close-deleted-issue-prs.test.mjs
+      - name: Close generated PRs whose source Issue was deleted
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const { automatedSourceIssueNumber, deletedSourceConfirmed, deletionNotice } =
+              await import(process.env.GITHUB_WORKSPACE + "/scripts/close-deleted-issue-prs.mjs");
+            const {owner,repo}=context.repo;
+            const repository=owner+"/"+repo;
+            // Only trust GitHub's issues.deleted payload, not PR descriptions.
+            const deletedEventNumber=context.eventName==="issues" &&
+              context.payload.action==="deleted" &&
+              Number.isSafeInteger(context.payload.issue?.number)
+              ? context.payload.issue.number : null;
+            if(context.eventName==="issues" && deletedEventNumber===null) {
+              core.warning("Malformed Issue deletion event; no action taken.");
+              return;
+            }
+            const opened=await github.paginate(github.rest.pulls.list,{
+              owner,repo,state:"open",per_page:100
+            });
+            let closed=0;
+            for(const candidate of opened){
+              const issueNumber=automatedSourceIssueNumber(candidate,repository);
+              if(!issueNumber || (deletedEventNumber!==null &&
+                  issueNumber!==deletedEventNumber))continue;
+              // Revalidate current PR metadata immediately before touching it.
+              const live=(await github.rest.pulls.get({
+                owner,repo,pull_number:candidate.number
+              })).data;
+              if(automatedSourceIssueNumber(live,repository)!==issueNumber)continue;
+              let status=200;
+              try {
+                await github.rest.issues.get({owner,repo,issue_number:issueNumber});
+              }catch(error){
+                status=error.status;
+                // Fail closed: never interpret rate limits or credentials as deletion.
+                if(status!==404 && status!==410)throw error;
+              }
+              if(!deletedSourceConfirmed(status,issueNumber,deletedEventNumber))continue;
+              await github.rest.issues.createComment({
+                owner,repo,issue_number:live.number,
+                body:deletionNotice(issueNumber)
+              });
+              await github.rest.pulls.update({
+                owner,repo,pull_number:live.number,state:"closed"
+              });
+              closed++;
+              core.info("Closed orphaned PR #"+live.number+
+                " (deleted source Issue #"+issueNumber+", HTTP "+status+").");
+            }
+            core.info("Closed "+closed+" orphaned generated PR(s).");
