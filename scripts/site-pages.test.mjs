@@ -45,7 +45,7 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.equal((html.match(/id="detail-code"/g)||[]).length,1,"Only one copy source ID");
   assert.doesNotMatch(html, /<p class="detail-code" id="detail-code">/);
   const introAt=html.indexOf('class="detail-page-intro"');
-  const headingAt=html.indexOf('id="detail-title"');
+  const titleAt=html.indexOf('id="detail-title"');
   const heroStart=html.indexOf('class="detail-code-panel detail-hero-unified"');
   const codeAt=html.indexOf('id="detail-code"');
   const actionsAtHero=html.indexOf('class="detail-action-row"');
@@ -53,7 +53,7 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   const instructionsAt=html.indexOf('class="detail-instructions detail-mobile-fold"');
   const sidebarAt=html.indexOf('class="detail-side"');
   const marketAt=html.indexOf('class="availability-section detail-market-section"');
-  assert.ok(introAt < headingAt && headingAt < heroStart &&
+  assert.ok(introAt < titleAt && titleAt < heroStart &&
     heroStart < codeAt && codeAt < actionsAtHero &&
     actionsAtHero < statsAt && statsAt < instructionsAt &&
     instructionsAt < sidebarAt && sidebarAt < marketAt,
