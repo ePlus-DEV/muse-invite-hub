@@ -713,9 +713,12 @@ html.is-page-loading body>.site-footer{display:none!important}
 .detail-mobile-fold .detail-fold-chevron{display:none;margin-left:auto;color:var(--blue);font-size:12px}
 .detail-mobile-fold>.detail-fold-body{padding-top:17px}
 .detail-instructions.detail-mobile-fold ol{list-style:none;counter-reset:invite-step;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0;padding:0}
-.detail-instructions.detail-mobile-fold li{counter-increment:invite-step;display:flex;gap:11px;align-items:flex-start;margin:0;padding:0;color:var(--ink);font-size:13px;line-height:1.6}
-.detail-instructions.detail-mobile-fold li::before{content:counter(invite-step);display:grid;place-items:center;flex:none;width:28px;height:28px;background:var(--blue-soft);color:var(--blue);font-size:14px;font-weight:850;border-radius:50%}
+.detail-instructions.detail-mobile-fold li{counter-increment:invite-step;display:block;position:relative;min-width:0;margin:0;padding:2px 0 2px 40px;color:var(--ink);font-size:13px;line-height:1.65;overflow-wrap:break-word}
+.detail-instructions.detail-mobile-fold li::before{content:counter(invite-step);position:absolute;top:0;left:0;display:grid;place-items:center;width:28px;height:28px;background:var(--blue-soft);color:var(--blue);font-size:14px;font-weight:850;border-radius:50%}
 .detail-instructions.detail-mobile-fold strong{color:var(--ink)}
+/* Keep inline emphasis in the SAME text flow; flex children would split each
+   anonymous text node (Select / Open invite / above...) into separate columns. */
+@media(max-width:1160px){.detail-instructions.detail-mobile-fold ol{grid-template-columns:1fr;gap:12px}}
 .detail-listing.detail-mobile-fold{padding:22px}
 .detail-listing.detail-mobile-fold>summary{font-size:18px}
 .detail-listing.detail-mobile-fold>.detail-fold-body{padding-top:16px}
