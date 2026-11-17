@@ -122,7 +122,7 @@ export async function submitNewCode(code,updateId,token) {
   const existing=(await publishedCatalog()).find(item=>item.code===code);
   if(existing)return {kind:"listed",url:SITE+"/codes/"+encodeURIComponent(code)+"/"};
   const prior=await findExistingTelegramSubmission(code,token);
-  if(prior)return {kind:"pending",url:prior.html_url};
+  if(prior)return {kind:prior.state==="open"?"pending":"closed",url:prior.html_url};
   // Deliberately NOT [Invite]: that workflow assumes issue.user is the GitHub
   // owner, but here the actor is the service bot. Human review is mandatory.
   const issue=await github("issues",token,"POST",{
@@ -133,13 +133,24 @@ export async function submitNewCode(code,updateId,token) {
       "",
       "Invite code: **"+code+"**",
       "",
+      "Source evidence: **Not supplied by Telegram; manual review required.**",
+      "",
       "This report came from Telegram. The sender's GitHub identity, code ownership,",
       "Muse eligibility, redemption and remaining quota are **not verified**.",
       "",
       "A maintainer must check the code and attribution before opening a",
       "review-only data Draft PR. Do not auto-publish this bot-authored Issue.",
       "",
-      "Do not request or publish Telegram usernames, private screenshots or secrets."
+      "Do not request or publish Telegram usernames, private screenshots or secrets.",
+      "",
+      "### Maintainer review checklist",
+      "- [ ] Check whether the code is a genuine public invite, not a test/placeholder.",
+      "- [ ] Establish a legitimate public source or sharing permission; do not infer ownership from the GitHub Issue author.",
+      "- [ ] Check for duplicate codes, attribution conflicts and prior discussions.",
+      "- [ ] Only after review, prepare a **review-only Draft PR** with status `unverified`.",
+      "- [ ] After verified live publication, comment the canonical detail link before closing this Issue.",
+      "",
+      "If source evidence is missing, request only a **public original-post URL** or other non-sensitive evidence."
     ].join("\n")
   });
   return {kind:"submitted",url:issue.html_url};
