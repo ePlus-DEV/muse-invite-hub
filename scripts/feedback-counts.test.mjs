@@ -59,9 +59,10 @@ test("same timestamp uses latest comment ID, does not double count",()=>{
   assert.deepEqual(results.codes.DPNIHH,{worked:0,failed:1});
 });
 
-test("missing issue mappings do not invent reports or match unrelated GitHub Issues",()=>{
+test("canonical fallback uses the catalog Issue and never invents unmapped code reports",()=>{
   const result=summarizeFeedback(entries,{},[report(1,11,"DPNIHH",accepted)],createdAt);
-  assert.deepEqual(result.codes.DPNIHH,{worked:0,failed:0});
+  assert.deepEqual(result.codes.DPNIHH,{worked:1,failed:0});
+  assert.deepEqual(result.codes.EMPTY1,{worked:0,failed:0});
   for(const input of [null,{},"not-a-catalog"]) {
     assert.throws(()=>summarizeFeedback(input,{},[],createdAt));
   }
