@@ -1,6 +1,7 @@
 name: Reopen Code Feedback Issue
 
 # Trusted main script only. Untrusted comments are inspected as data.
+# Repo-wide serialization prevents two comments from racing to create duplicate candidate Issues.
 on:
   issue_comment:
     types: [created, edited]
@@ -22,7 +23,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: muse-feedback-issue-${{ github.event.issue.number || inputs.issue_number }}
+  group: muse-feedback-comment-intake-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
