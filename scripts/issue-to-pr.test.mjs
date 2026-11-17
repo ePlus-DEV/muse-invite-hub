@@ -107,7 +107,7 @@ test("Telegram submissions reject mismatched identity, missing consent and owner
   }
   const published=[item,{id:"already-listed",code:"ABC123",status:"unverified",addedAt:"2026-11-11",sourceUrl:"https://t.me/alice_dev"}];
   assert.equal(planIssueChange(original,published).outcome,"already-listed");
-  const sameCanonical={...published[1],id:"community-issue-230",feedbackIssueNumber:230};
+  const sameCanonical={...published[1],id:"community-issue-231",feedbackIssueNumber:231};
   assert.equal(planIssueChange(original,[item,sameCanonical]).outcome,"already-published");
   const changedSame={...sameCanonical,sourceUrl:"https://t.me/different_account"};
   assert.equal(planIssueChange(original,[item,changedSame]).outcome,"needs-review");
