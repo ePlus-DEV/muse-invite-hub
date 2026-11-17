@@ -4,6 +4,16 @@ name: Reopen Code Feedback Issue
 on:
   issue_comment:
     types: [created, edited]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Canonical Issue number to reprocess"
+        required: true
+        type: number
+      comment_id:
+        description: "Original comment ID to reprocess"
+        required: true
+        type: number
 
 permissions:
   contents: write
@@ -12,15 +22,16 @@ permissions:
   actions: write
 
 concurrency:
-  group: muse-feedback-issue-${{ github.event.issue.number }}
+  group: muse-feedback-issue-${{ github.event.issue.number || inputs.issue_number }}
   cancel-in-progress: false
 
 jobs:
   reopen:
     if: >
-      github.event.issue.pull_request == null &&
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request == null &&
       github.event.comment.user.type != 'Bot' &&
-      github.event.comment.user.login != 'github-actions[bot]'
+      github.event.comment.user.login != 'github-actions[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -40,12 +51,12 @@ jobs:
       - name: Reopen original code Issue after a real comment
         env:
           GH_TOKEN: ${{ github.token }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          COMMENT_ID: ${{ github.event.comment.id }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+          COMMENT_ID: ${{ github.event.comment.id || inputs.comment_id }}
         run: node scripts/reopen-code-feedback.mjs
       - name: Propose review-only Draft PR for a structured report
         env:
           GH_TOKEN: ${{ github.token }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          COMMENT_ID: ${{ github.event.comment.id }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+          COMMENT_ID: ${{ github.event.comment.id || inputs.comment_id }}
         run: node scripts/feedback-comment-to-pr.mjs
