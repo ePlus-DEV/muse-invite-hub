@@ -66,9 +66,15 @@ test("quota update badge displays recorded revisions, not click counts", () => {
   const css=read("assets/styles.css");
   const published=JSON.parse(read("data/invite-records/eplus-owner-dpnihh.json"));
   assert.equal(published.code,"DPNIHH");
-  assert.equal(published.quotaUpdateCount,1,
+  const baseline=JSON.parse(read("data/quota-update-baseline.json"));
+  assert.equal(published.quotaUpdateCount,undefined,
+    "The trusted main preview validator must accept the historical record");
+  assert.equal(baseline.DPNIHH,1,
     "Issue #14 and PR #157 document one approved update after the initial report");
-  assert.match(app,/const updates = item\.quotaUpdateCount/);
+  assert.match(app,/const tracked = Number\.isSafeInteger\(item\.quotaUpdateCount\)/);
+  assert.match(app,/const baseline = Number\.isSafeInteger\(quotaUpdateBaselines\[item\.code\]\)/);
+  assert.match(app,/const updates = tracked \+ baseline/);
+  assert.match(app,/fetch\("\.\/data\/quota-update-baseline\.json"/);
   assert.match(app,/Number\.isSafeInteger\(updates\) && updates > 0/);
   assert.match(app,/updates > 99 \? "99\+" : String\(updates\)/);
   assert.match(app,/counter\.setAttribute\("aria-hidden", "true"\)/);
