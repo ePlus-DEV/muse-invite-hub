@@ -42,8 +42,11 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /"BreadcrumbList"/);
   assert.match(html, /"WebPage"/);
   assert.match(html, /href="\.\.\/\.\.\/assets\/styles.css"/);
-  assert.doesNotMatch(html, /href="https:\/\/muse.ai\/join"/);
-  assert.doesNotMatch(html, />Open Muse <i/);
+  const actions = html.match(/<div class="detail-action-row">([\s\S]*?)<\/div>/)?.[1];
+  assert.ok(actions, "Detail action row should be present");
+  assert.doesNotMatch(actions, /href="https:\/\/muse.ai\/join"/);
+  assert.doesNotMatch(actions, />Open Muse <i/);
+  assert.match(actions, />Open invite <i/);
   assert.equal((html.match(/class="detail-action-row"/g) || []).length, 1);
   assert.equal((html.match(/href="https:\/\/muse.ai\/invite\/DPNIHH"/g) || []).length, 1);
   assert.match(html, /href="https:\/\/muse.ai\/invite\/DPNIHH"/);
