@@ -27,6 +27,11 @@ export function parsePublicSource(value) {
         ? {platform:"Telegram",key:"telegram",handle:hit[1],url:url.href,post:Boolean(hit[2])} : null;
     }
     if (["facebook.com", "www.facebook.com", "m.facebook.com"].includes(host)) {
+      // A Facebook group permalink identifies the group, NOT the post author.
+      // Only explicit post URLs qualify; group homes, shares and shortlinks do not.
+      const groupPost = /^\/groups\/([A-Za-z0-9][A-Za-z0-9._-]{1,79})\/posts\/([1-9][0-9]{9,24})\/?$/.exec(path);
+      if (groupPost) return {platform:"Facebook",key:"facebook",handle:groupPost[1],
+        url:url.href,post:true,group:true};
       const hit = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/([A-Za-z0-9_-]{4,120}))?\/?$/.exec(path);
       const reserved = new Set(["share","groups","watch","reel","reels","events","marketplace","people","pages","profile.php","permalink.php","photo.php","login"]);
       return hit && !reserved.has(hit[1].toLowerCase())
