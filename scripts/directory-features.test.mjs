@@ -50,6 +50,7 @@ test("invite cards use two primary actions with labeled icon-only feedback and u
   assert.match(app, /countLink\.setAttribute\("aria-label", "Update owner invite count for code "/);
   assert.match(app, /link\.setAttribute\("aria-label", text \+ " — report Muse invite code "/);
   assert.match(app, /link\.append\(icon\(iconName\)\)/);
+  assert.match(app,/card\.classList\.contains\("code-card-featured"\) \? " Copy again" : " Copied"/);
   assert.doesNotMatch(app, /link\.append\(icon\(iconName\), document\.createTextNode/);
   assert.match(app, /if \(item\.submittedBy && !item\.sourceUrl\)/);
   assert.match(css, /\.card-utility-bar\{display:flex;align-items:center;justify-content:space-between/);
@@ -62,17 +63,20 @@ test("invite cards use two primary actions with labeled icon-only feedback and u
 
 test("compact card controls have smaller desktop proportions without shrinking mobile targets", () => {
   const css=read("assets/styles.css");
-  assert.match(css, /\.code-card\{min-width:0;min-height:286px/);
+  assert.match(css, /\.code-card\{min-width:0;min-height:300px/);
   assert.match(css, /\.card-actions\{display:flex;flex-direction:column;gap:9px\}/);
   for (const name of ["card-copy", "card-open-invite"]) {
     const rule=css.match(new RegExp("\\."+name+"\\{([^\\n}]*)\\}"));
     assert.ok(rule, name+" CSS rule is present");
-    assert.match(rule[1], /min-height:38px/);
-    assert.match(rule[1], /font-size:11\.5px/);
+    assert.match(rule[1], /min-height:40px/);
+    assert.match(rule[1], /font-size:12\.5px/);
     assert.match(rule[1], /font-weight:750/);
-    assert.match(rule[1], /border-radius:9px/);
+    assert.match(rule[1], /border-radius:10px/);
   }
+  assert.match(css,/\.directory\.container\{max-width:1360px\}/);
+  assert.match(css,/@media\(min-width:1081px\) and \(max-width:1279px\)\{\.cards-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}\}/);
   assert.match(css,/\.card-copy,\.card-open-invite\{min-height:44px;font-size:12px\}/);
+  assert.match(css,/@media\(max-width:390px\)\{\.card-copy,\.card-open-invite\{font-size:11\.5px\}\}/);
   assert.match(css,/\.card-quick-feedback,\.card-utility-link\{min-height:44px;width:44px\}/);
 });
 
