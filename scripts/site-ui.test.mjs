@@ -68,7 +68,11 @@ function createBrowser({ hash = "", loading = false, reduced = false, readyState
     matchMedia: () => ({ matches: reduced }),
     requestAnimationFrame: cb => cb(),
     scrollTo: options => calls.topScrolls.push(options),
-    addEventListener: (type, cb) => windowListeners.set(type, cb)
+    addEventListener: (type, cb) => {
+      const listeners=windowListeners.get(type)||[];
+      listeners.push(cb);
+      windowListeners.set(type,listeners);
+    }
   };
   class MockMutationObserver {
     constructor(callback) { this.callback = callback; calls.observers.push(this); }
@@ -93,7 +97,7 @@ function createBrowser({ hash = "", loading = false, reduced = false, readyState
     clickFeedback: () => dialogCloseCallbacks.get("feedback:click")?.(),
 
     triggerDoc: type => listeners.get(type)?.(),
-    triggerWindow: type => windowListeners.get(type)?.(),
+    triggerWindow: type => windowListeners.get(type)?.forEach(callback=>callback()),
     clickAbout: () => linkListeners.get("click")?.(),
     clickTop: () => topListeners.get("click")?.(),
     setFooterVisible: value => {
