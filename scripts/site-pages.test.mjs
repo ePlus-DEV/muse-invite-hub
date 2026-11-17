@@ -63,7 +63,7 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /<strong class="detail-stat-updates">1 update<\/strong>/);
   assert.match(html, /<strong class="detail-stat-date">Nov 11, 2026<\/strong>/);
   assert.match(html, /class="detail-copy-inline" type="button" aria-label="Copy invite code DPNIHH"/);
-  assert.match(html, /<details class="detail-listing detail-mobile-fold"/);
+  assert.match(html, /<details class="detail-info-card detail-listing detail-mobile-fold"/);
   assert.match(html, /<summary><i class="fa-solid fa-book-open"/);
   assert.equal((html.match(/REPORTED AVAILABILITY/g)||[]).length,0,
     "Stats footer replaces standalone Reported Availability box");
