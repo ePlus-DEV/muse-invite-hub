@@ -36,7 +36,19 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.doesNotMatch(html, /<dt>Code owner<\/dt>/);
   assert.doesNotMatch(html, /class="detail-lead"|class="detail-caution"|class="detail-owner"/);
   assert.match(html, /<span class="detail-status" title="Ownership confirmed by ePlus.DEV; Muse redemption is not verified."/);
-  assert.match(html, /<p class="section-kicker">MUSE INVITE<\/p>/);
+  assert.match(html, /<div class="detail-code-panel detail-hero-unified">/);
+  assert.match(html, /<h1 id="detail-title"><span class="detail-h1-prefix">Invite code<\/span> <span class="detail-code-text" id="detail-code">DPNIHH<\/span><\/h1>/);
+  assert.equal((html.match(/<h1\\b/g)||[]).length,1,"Exactly one visible and SEO-readable H1");
+  assert.equal((html.match(/id="detail-code"/g)||[]).length,1,"No duplicate large code label");
+  assert.doesNotMatch(html, /<p class="detail-code" id="detail-code">/);
+  const heroStart=html.indexOf('class="detail-code-panel detail-hero-unified"');
+  const heading=html.indexOf('id="detail-title"');
+  const actionsAtHero=html.indexOf('class="detail-action-row"');
+  const instructionsAtHero=html.indexOf('class="detail-instructions"');
+  const marketAt=html.indexOf('class="availability-section"');
+  assert.ok(heroStart < heading && heading < actionsAtHero &&
+    actionsAtHero < instructionsAtHero && instructionsAtHero < marketAt,
+    "Actions and concise guidance should share the hero before market disclosure");
   assert.match(html, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
   assert.doesNotMatch(html, /<dt>Redemption status<\/dt><dd>Unverified/);
   assert.match(html, /3 \/ 30/);
@@ -73,6 +85,33 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.doesNotMatch(html, /Ownership confirmation does not mean the code/);
   assert.doesNotMatch(html, /Muse has verified this code/);
 });
+test("detail visual restructure keeps SEO metadata, readable links and structured data intact", () => {
+  const item=owner();
+  const html=renderDetailPage(item);
+  const preview=renderDetailPage(item,{preview:true,basePath:"/pr-preview/pr-261/"});
+  const head=html.split("</head>")[0];
+  assert.match(head,/<title>DPNIHH Muse Invite Code \| Muse Invite Hub<\/title>/);
+  assert.match(head,/<meta name="description" content="[^"]+">/);
+  assert.match(head,/<meta name="robots" content="index,follow">/);
+  assert.match(head,/rel="canonical" href="https:\/\/muse.eplus.dev\/codes\/DPNIHH\/"/);
+  assert.match(head,/<meta property="og:title"/);
+  assert.match(head,/<meta property="og:description"/);
+  assert.match(head,/<meta property="og:url"/);
+  const ld=head.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+  assert.ok(ld,"Static structured data is preserved without depending on JS");
+  const graph=JSON.parse(ld[1]);
+  assert.ok(graph.some(e=>e["@type"]==="WebPage" && e.url==="https://muse.eplus.dev/codes/DPNIHH/"));
+  assert.ok(graph.some(e=>e["@type"]==="BreadcrumbList" &&
+    e.itemListElement.length===3));
+  assert.match(html, /href="\.\.\/\.\.\/#codes"/);
+  assert.match(html, /href="https:\/\/muse.ai\/invite\/DPNIHH"/);
+  assert.match(html, /<h2 id="how-to-redeem">How to use this code<\/h2>/);
+  assert.match(preview,/noindex,nofollow,noarchive/);
+  assert.doesNotMatch(preview,/rel="canonical"/);
+  assert.equal((preview.match(/<h1\b/g)||[]).length,1);
+  assert.match(generateSitemap([item]), /\/codes\/DPNIHH\//);
+});
+
 test("confirmed owner card and non-owner detail keep verification meanings separate", () => {
   const app = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../assets/styles.css", import.meta.url), "utf8");
