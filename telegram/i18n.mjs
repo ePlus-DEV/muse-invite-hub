@@ -382,7 +382,7 @@ const STRINGS = {
     "privateOnly": "プライバシー保護のため、ボットとのプライベートチャットをご利用ください。",
     "usageCode": "/get CODE、/watch CODE、/unwatch CODE を使用してください（英数字6文字）。",
     "usageStatus": "英数字6文字を指定して /status CODE を使用してください（例：/status DPNIHH）。",
-    "privacy": "公開招待コードと実際の利用結果のみ投稿してください。新規コード投稿の明示的な確認後に限り、公開 GitHub Issue に Telegram の @username と公開プロフィールが表示されます。数値 ID は公開されず、既存コードへのフィードバックは匿名です。管理者が審査します。パスワード、OTP、非公開リンク、個人情報は送らないでください。Telegram の身元は所有権を証明しません。",
+    "privacy": "公開招待コードと実際の利用結果のみ投稿してください。新規コード投稿の明示的な確認後に限り、公開 GitHub Issue に Telegram の @username と公開プロフィールが表示されます。数値 ID は公開されず、既存コードへのフィードバックは匿名です。管理者が審査します。パスワード、OTP、非公開リンク、個人情報は送らないでください。Telegramの身元は所有権を証明しません。",
     "count": "使用可能数の更新は、GitHubで確認されたコード所有者のみ可能です。Telegramアカウントだけでは所有権を証明できません。コード詳細ページで更新してください。",
     "usageSubmit": "英数字6文字で /submit CODE を使用してください（例：/submit DPNIHH）。認証情報は送信しないでください。",
     "usageReport": "/report CODE worked または /report CODE failed を使用してください。コミュニティ報告であり、Museによる認証ではありません。",
