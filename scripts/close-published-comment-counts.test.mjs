@@ -30,13 +30,18 @@ const html='<title>DPNIHH Muse Invite Code | Muse Invite Hub</title>'+
 
 function mock({pull=pr,source=comment,sources={},issueState="open",newHuman=false,
   live=true,liveRecord=record,mergedRecord=record,comparison="ahead",filePath,
-  posted=false,failNotify=false}={}) {
+  posted=false,failNotify=false,manualCompletion=false,guidancePosted=false,failGuidance=false}={}) {
   const events=[];
   const publishedPrNumber=Math.max(...(Array.isArray(pull)?pull:[pull]).map(row=>row.number));
   const issue={number:14,state:issueState,body:"### Invite code\n\nDPNIHH"};
   const comments=[
     source,
-    ...(newHuman?[{id:commentId+100,user:{login:"another-human",type:"User"},body:"New report"}]:[]),
+    ...(manualCompletion?[{id:commentId+50,user:{login:"hoangsvit",type:"User"},
+      body:"<!-- muse-manual-published-owner-count:"+publishedPrNumber+" -->\\n**Code:** DPNIHH\\n[PR #"+publishedPrNumber+"]"}]:[]),
+    ...(newHuman?[{id:commentId+100,user:{login:"another-human",type:"User"},
+      body:typeof newHuman==="string"?newHuman:"New report"}]:[]),
+    ...(guidancePosted?[{id:commentId+200,user:{login:"github-actions[bot]",type:"Bot"},
+      body:"<!-- muse-unrelated-referral:"+(commentId+100)+" -->"}]:[]),
     ...(posted?[{id:commentId+300,user:{login:"github-actions[bot]"},
       body:"<!-- muse-published-comment-pr:"+publishedPrNumber+" -->"}]:[])
   ];
@@ -66,8 +71,15 @@ function mock({pull=pr,source=comment,sources={},issueState="open",newHuman=fals
     else if(method==="GET" && path==="contents/data/invite-records/eplus-owner-dpnihh.json")
       data={encoding:"base64",content:Buffer.from(JSON.stringify(mergedRecord)).toString("base64")};
     else if(method==="POST" && path==="issues/14/comments"){
-      if(failNotify)return {ok:false,status:500};
       const body=JSON.parse(options.body).body;
+      if(body.startsWith("<!-- muse-unrelated-referral:")){
+        if(failGuidance)return {ok:false,status:500};
+        assert.match(body,/Share Code Issue Form/);
+        comments.push({id:commentId+500,user:{login:"github-actions[bot]",type:"Bot"},body});
+        data={id:commentId+500};
+        return {ok:true,status:200,json:async()=>data};
+      }
+      if(failNotify)return {ok:false,status:500};
       assert.ok(body.includes("<!-- muse-published-comment-pr:"+publishedPrNumber+" -->"));
       assert.match(body,/https:\/\/muse\.eplus\.dev\/codes\/DPNIHH\//);
       assert.match(body,/not live Muse availability/);
@@ -190,6 +202,43 @@ test("manual and automated reviewed narrative owner counts close only after live
   const bot={...pr,body:pr.body.replace("Action: update quota","Action: review owner-reported count")};
   const automated=mock({pull:bot,source});
   assert.equal((await run(automated)).closed,1);
+});
+
+test("auto-triage an unrelated new invite comment before closing a reviewed owner count",async()=>{
+  const source={...comment,body:"Owner count update — DPNIHH\n\n- Total invites: 30\n"+
+    "- Remaining invites: 23\n- Used invites: 7\n\nI am the owner of this invite code."};
+  const manual={...pr,number:220,
+    title:"data: review DPNIHH owner count from issue #14 (30 total, 23 remaining)",
+    body:"Source: [@hoangsvit's comment](https://github.com/ePlus-DEV/muse-invite-hub/issues/14#issuecomment-"+commentId+")\n"+
+      "Existing invite code: **DPNIHH**.\nTracks Issue #14 and comment #"+commentId+".",
+    head:{...pr.head,ref:"review/issue-14-owner-count"},
+    user:{login:"hoangsvit"}};
+  const unrelated="快来看看你的个人 AI 智能体 Muse 。\n邀请码：MIN0OF\nhttps://muse.ai/join";
+  const m=mock({pull:manual,source,newHuman:unrelated,manualCompletion:true});
+  assert.deepEqual(await run(m),{notified:1,closed:1,pending:0,skipped:0});
+  assert.ok(m.comments.some(c=>String(c.body).includes("<!-- muse-unrelated-referral:"+(commentId+100)+" -->")));
+  const posts=m.events.map((v,i)=>({v,i})).filter(x=>x.v==="POST issues/14/comments");
+  assert.equal(posts.length,2,"one guidance then one completion comment");
+  assert.ok(posts[1].i>posts[0].i);
+  assert.ok(m.events.indexOf("PATCH issues/14")>posts[1].i);
+
+  const alreadyGuided=mock({pull:manual,source,newHuman:unrelated,manualCompletion:true,guidancePosted:true});
+  assert.equal((await run(alreadyGuided)).closed,1);
+  assert.equal(alreadyGuided.events.filter(v=>v==="POST issues/14/comments").length,1);
+  const failedGuidance=mock({pull:manual,source,newHuman:unrelated,failGuidance:true});
+  await assert.rejects(run(failedGuidance),/HTTP 500/);
+  assert.ok(!failedGuidance.events.includes("PATCH issues/14"));
+
+  for(const body of [
+    "I tried DPNIHH and it failed.",
+    "Code: MIN0OF\nResult: not working",
+    "邀请码：MIN0OF\n邀请码：OTHER1\nhttps://muse.ai/join",
+    "邀请码：DPNIHH\nhttps://muse.ai/join"
+  ]) {
+    const pending=mock({pull:manual,source,newHuman:body,manualCompletion:true});
+    assert.equal((await run(pending)).closed,0);
+    assert.ok(!pending.events.includes("PATCH issues/14"));
+  }
 });
 
 test("match only the owner-confirmed source comment and exact dated count",()=>{
