@@ -172,11 +172,11 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '        <div class="detail-code-panel">' +
     '          <div class="detail-code-heading"><span class="detail-status"' + (item.ownerConfirmed
     ? ' title="Ownership confirmed by ePlus.DEV; Muse redemption is not verified."'
-    : '') + '>' + (item.ownerConfirmed ? '<i class="fa-solid fa-check" aria-hidden="true"></i> ' : '') + escapeHtml(status) + '</span></div>' +
+    : '') + '>' + (item.ownerConfirmed ? '<i class="fa-solid fa-check" aria-hidden="true"></i> ' : '') + escapeHtml(status) + '</span>' +
+    '            <button class="detail-save" id="detail-save" type="button" aria-pressed="false" aria-label="Save Muse invite code ' + escapeHtml(item.code) + '" hidden><i class="fa-regular fa-bookmark" aria-hidden="true"></i><span class="detail-save-label sr-only">Save code</span></button></div>' +
     '          <p class="detail-code" id="detail-code">' + escapeHtml(item.code) + '</p>' +
-    '          <div class="detail-action-row"><button class="button button-primary" type="button" id="detail-copy"><i class="fa-regular fa-copy" aria-hidden="true"></i> <span class="detail-copy-label">Copy invite code</span></button>' +
-    '            <button class="button button-outlined detail-save" id="detail-save" type="button" aria-pressed="false" hidden><i class="fa-regular fa-bookmark" aria-hidden="true"></i> <span class="detail-save-label">Save code</span></button>' +
-    '            <a class="button button-outlined" href="https://muse.ai/invite/' + encodeURIComponent(item.code) + '" target="_blank" rel="noopener noreferrer" aria-label="Open Muse invite link for code ' + escapeHtml(item.code) + '">Open invite <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div>' +
+    '          <div class="detail-action-row"><a class="button button-primary detail-open-invite" href="https://muse.ai/invite/' + encodeURIComponent(item.code) + '" target="_blank" rel="noopener noreferrer" aria-label="Open Muse invite link for code ' + escapeHtml(item.code) + '"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Open invite</a>' +
+    '            <button class="button button-outlined" type="button" id="detail-copy"><i class="fa-regular fa-copy" aria-hidden="true"></i> <span class="detail-copy-label">Copy invite code</span></button></div>' +
     '        </div>' + notes +
     '        <section class="detail-instructions" aria-labelledby="how-to-redeem"><h2 id="how-to-redeem">How to use this code</h2>' +
     '          <ol><li>Select <strong>Open invite</strong> above to visit Muse with this code.</li>' +
