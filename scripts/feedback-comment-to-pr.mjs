@@ -110,6 +110,21 @@ export function planCommentProposal(issue, comment, catalog) {
   const code = feedbackCodeForIssue(issue,catalog,comment.body);
   if (!code) return {outcome:"ignored"};
   const fields = lines(comment.body);
+  // This format is meant to be unambiguous. Previously the first repeated
+  // field silently won, so a copied/edited owner report could publish the
+  // wrong count even though a conflicting value appeared later in the text.
+  if (fields["Update type"] === "Owner count") {
+    const relevant=new Set(["Code","Update type","Remaining invites","Total invites",
+      "Used invites","Owner confirmation"]);
+    const seen=new Set();
+    for(const row of comment.body.split(/\r?\n/)) {
+      const match=/^([A-Za-z][A-Za-z ]{1,48}):\s*(.*)$/.exec(row.trim());
+      if (!match || !relevant.has(match[1])) continue;
+      if (seen.has(match[1])) return {outcome:"needs-review",kind:"count",code,
+        reason:"Duplicate owner-count field: "+match[1]+". Keep exactly one value."};
+      seen.add(match[1]);
+    }
+  }
   const item = catalog.find(entry=>entry.code===code);
   if (!item) return {outcome:"ignored"};
   if (fields.Code !== code) {

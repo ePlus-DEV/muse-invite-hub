@@ -167,6 +167,9 @@ function actualQuota(fields, date, labels) {
     }
     return { reportedCapacity: total, reportedUses: count, usageReportedAt: date };
   }
+  // Do not discard a supplied "used" figure merely because total is blank.
+  // The owner must explicitly report the total before we publish a full breakdown.
+  if (used !== null) throw Error("Used invites requires Total invites. Reconfirm the total, or leave Used invites blank.");
   if (remaining !== null) return { reportedRemaining: remaining, usageReportedAt: date };
   return null;
 }
@@ -178,12 +181,26 @@ function updateQuota(target, quota, date) {
   if (target.usageReportedAt && target.usageReportedAt > date) return "stale";
   const keys=["reportedCapacity","reportedUses","reportedRemaining","usageReportedAt"];
   if (keys.every(key=>target[key]===quota[key])) return "duplicate";
+  // Apply the same safety rule to owner count Issues, edits of original
+  // invite Issues, and canonical Issue comments. Never silently discard a
+  // published complete snapshot when a new report only supplies "remaining".
+  if (quota.reportedRemaining !== undefined &&
+      Number.isInteger(target.reportedCapacity) &&
+      Number.isInteger(target.reportedUses) &&
+      typeof target.usageReportedAt === "string") return "requires-total";
   const hadSnapshot = typeof target.usageReportedAt === "string" &&
     keys.slice(0,3).some(key => target[key] !== undefined);
   for (const key of keys) delete target[key];
   Object.assign(target,quota);
   if (hadSnapshot) target.quotaUpdateCount = (target.quotaUpdateCount || 0) + 1;
   return "updated";
+}
+function quotaUpdateBlocked(state,kind,code) {
+  return {outcome:state==="stale"||state==="requires-total"?"needs-review":"duplicate",kind,code,
+    reason:state==="stale"?"Newer usage data is already published.":
+      state==="requires-total"
+        ? "The published listing already has total and used counts. A remaining-only update would replace those fields. Please confirm the current total invites alongside remaining (used can be derived) before publishing."
+        : "The published catalog already has this dated quota."};
 }
 function rememberOwnerId(target,issue) {
   if (Number.isSafeInteger(issue.user?.id) && issue.user.id > 0) target.submittedById=issue.user.id;
@@ -472,8 +489,7 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
       }
       const target=data.find(item=>item.code===existing.code);
       const state=updateQuota(target,quota,date);
-      if(state!=="updated") return {outcome:state==="stale"?"needs-review":"duplicate",kind,code,
-        reason:state==="stale"?"Newer usage data is already published.":"The published catalog already has this dated quota."};
+      if(state!=="updated") return quotaUpdateBlocked(state,kind,code);
       rememberOwnerId(target,issue);
       action="update owner report";
       notice="The GitHub owner updated a dated self-reported count; this is NOT a live Muse balance.";
@@ -539,19 +555,9 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
       remaining:"Remaining invites shown by Muse"
     });
     if (!quota) return { outcome:"needs-review",kind,code,reason:"Supply remaining invites or a consistent total and used count." };
-    // A remaining-only update would erase the previously published total/used
-    // snapshot. Do not infer that the old capacity is still correct: ask the
-    // owner to explicitly reconfirm the current total alongside the remainder.
-    if (quota.reportedRemaining !== undefined &&
-        Number.isInteger(existing.reportedCapacity) &&
-        Number.isInteger(existing.reportedUses) && existing.usageReportedAt) {
-      return {outcome:"needs-review",kind,code,
-        reason:"The published listing already has total and used counts. A remaining-only update would replace those fields. Please confirm the current total invites alongside remaining (used can be derived) before publishing."};
-    }
     const target=data.find(item=>item.code===existing.code);
     const state=updateQuota(target,quota,date);
-    if(state!=="updated") return {outcome:state==="stale"?"needs-review":"duplicate",kind,code,
-      reason:state==="stale"?"Newer usage data is already published.":"The published catalog already has this dated quota."};
+    if(state!=="updated") return quotaUpdateBlocked(state,kind,code);
     rememberOwnerId(target,issue);
     action = "update quota";
   } else {

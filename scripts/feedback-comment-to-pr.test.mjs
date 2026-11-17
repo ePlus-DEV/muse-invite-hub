@@ -91,6 +91,30 @@ test("Issue #14 remaining-only owner comment cannot erase published total and us
   assert.equal(confirmed.data[0].reportedUses,10);
 });
 
+test("ambiguous repeated quota labels require manual review",()=>{
+  const owner={login:"hoangsvit",type:"User",id:124};
+  for(const repeated of [
+    "\nRemaining invites: 29",
+    "\nUsed invites: 0",
+    "\nTotal invites: 60",
+    "\nOwner confirmation: I confirm these figures came from my own Muse invite screen."
+  ]) {
+    const proposal=planCommentProposal(issue,member(ownerCount+repeated,{user:owner}),[item]);
+    assert.equal(proposal.outcome,"needs-review");
+    assert.match(proposal.reason,/Duplicate owner-count field/);
+  }
+  const clean=planCommentProposal(issue,member(ownerCount,{user:owner}),[item]);
+  assert.equal(clean.outcome,"proposal");
+});
+
+test("remaining and used without total cannot silently drop the used count",()=>{
+  const owner={login:"hoangsvit",type:"User",id:124};
+  const comment=ownerCount.replace("Total invites: 30","Total invites: ");
+  const result=planCommentProposal(issue,member(comment,{user:owner}),[item]);
+  assert.equal(result.outcome,"needs-review");
+  assert.match(result.reason,/Used invites requires Total invites/);
+});
+
 test("owner count requires an explicit confirmation and numeric input",()=>{
   const author={login:"hoangsvit",type:"User",id:124};
   const missing=planCommentProposal(issue,member(

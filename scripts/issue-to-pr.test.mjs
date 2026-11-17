@@ -246,7 +246,7 @@ test("existing codes are never duplicated under another account",()=>{
   const p=planIssueChange(issue(26,"[Invite]",share,"another-user"),[item,community]);
   assert.equal(p.outcome,"needs-review");
 });
-test("existing code can be updated by its GitHub owner from Issue #28 Notes",()=>{
+test("existing invite Issue updates preserve complete snapshots and accept confirmed totals",()=>{
   const existing={ ...community, code:"ARKHZZ", id:"jx-issue-19", submittedBy:"pdm0809",
     reportedCapacity:17, reportedUses:0, usageReportedAt:"2026-11-10" };
   const body=share.replace("PNSMZZ","ARKHZZ")
@@ -255,22 +255,38 @@ test("existing code can be updated by its GitHub owner from Issue #28 Notes",()=
     .replace("### Notes (optional)\n\n_No response_",
       "### Notes (optional)\n\nInvite code ARKHZZ — 17 uses left. Enter it within 48 hours.");
   const ownerIssue={...issue(28,"[Invite] ARKHZZ",body,"pdm0809"),user:{login:"pdm0809",id:316039127}};
-  const p=planIssueChange(ownerIssue,[item,existing]);
+  const rejected=planIssueChange(ownerIssue,[item,existing]);
+  assert.equal(rejected.outcome,"needs-review");
+  assert.match(rejected.reason,/remaining-only update would replace/);
+  assert.equal(existing.reportedCapacity,17);
+  assert.equal(existing.reportedUses,0);
+
+  const reconfirmed={...ownerIssue,body:body.replace(
+    "### Invite limit (optional; self-reported)\n\n_No response_",
+    "### Invite limit (optional; self-reported)\n\n17")};
+  const p=planIssueChange(reconfirmed,[item,existing]);
   assert.equal(p.outcome,"proposal");
   assert.equal(p.action,"update owner report");
   const updated=p.data.find(x=>x.code==="ARKHZZ");
   assert.equal(p.data.length,2);
-  assert.equal(updated.reportedRemaining,17);
-  assert.equal(updated.reportedCapacity,undefined);
-  assert.equal(updated.reportedUses,undefined);
+  assert.equal(updated.reportedCapacity,17);
+  assert.equal(updated.reportedUses,0);
+  assert.equal(updated.reportedRemaining,undefined);
   assert.equal(updated.usageReportedAt,"2026-11-11");
   assert.equal(updated.quotaUpdateCount,1);
   assert.equal(updated.submittedBy,"pdm0809");
   assert.equal(updated.submittedById,316039127);
   assert.equal(updated.id,"jx-issue-19");
   assert.deepEqual(validateCatalog(p.data),[]);
-  assert.equal(planIssueChange(ownerIssue,p.data).outcome,"duplicate");
-  assert.equal(p.data.find(x=>x.code==="ARKHZZ").quotaUpdateCount,1);
+  assert.equal(planIssueChange(reconfirmed,p.data).outcome,"duplicate");
+
+  const partialBefore={...existing,reportedRemaining:12};
+  delete partialBefore.reportedCapacity;
+  delete partialBefore.reportedUses;
+  const accepted=planIssueChange(ownerIssue,[item,partialBefore]);
+  assert.equal(accepted.outcome,"proposal");
+  assert.equal(accepted.data.find(x=>x.code==="ARKHZZ").reportedRemaining,17);
+  assert.equal(accepted.data.find(x=>x.code==="ARKHZZ").quotaUpdateCount,1);
 });
 test("duplicate from a different owner requires manual review",()=>{
   const body=share.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
@@ -372,6 +388,50 @@ test("owner count update preserves prior full report until current total is reco
   const noPrevious=planIssueChange(comment,[item]);
   assert.equal(noPrevious.outcome,"proposal");
   assert.equal(noPrevious.data[0].reportedRemaining,20);
+});
+
+test("owner quota combinations, freshness, changes and incomplete reports",()=>{
+  const full={...item,reportedCapacity:30,reportedUses:7,usageReportedAt:"2026-11-15"};
+  const partial={...item,reportedRemaining:23,usageReportedAt:"2026-11-15"};
+  const date="2026-11-17T13:00:00Z";
+  const change=(fields,previous=full,timestamp=date)=>planIssueChange({
+    ...issue(14,"[Count update]",count(fields),"hoangsvit"),updated_at:timestamp
+  },[previous]);
+  const cases=[
+    [{remaining:"20",total:"30",used:"_No response_"},30,10],
+    [{remaining:"20",total:"_No response_",used:"_No response_"},null,null],
+    [{remaining:"_No response_",total:"30",used:"10"},30,10],
+    [{remaining:"20",total:"30",used:"10"},30,10],
+    [{remaining:"20",total:"50",used:"30"},50,30],
+    [{remaining:"0",total:"30",used:"30"},30,30]
+  ];
+  for(const [fields,total,used] of cases) {
+    const proposal=change(fields);
+    if(total===null){
+      assert.equal(proposal.outcome,"needs-review");
+      assert.match(proposal.reason,/remaining-only update would replace/);
+    } else {
+      assert.equal(proposal.outcome,"proposal");
+      assert.equal(proposal.data[0].reportedCapacity,total);
+      assert.equal(proposal.data[0].reportedUses,used);
+      assert.equal(proposal.data[0].reportedRemaining,undefined);
+      assert.equal(proposal.data[0].quotaUpdateCount,1);
+    }
+  }
+  assert.equal(change({remaining:"20",total:"_No response_",used:"_No response_"},partial).outcome,"proposal");
+  assert.equal(change({remaining:"20",total:"_No response_",used:"_No response_"},item).outcome,"proposal");
+  for(const [remaining,total,used] of [
+    ["20","30","9"],
+    ["40","30","_No response_"],
+    ["20","_No response_","10"],
+    ["_No response_","_No response_","7"]
+  ]) {
+    assert.throws(()=>change({remaining,total,used}),/inconsistent|requires Total invites/);
+  }
+  assert.equal(change({remaining:"20",total:"30",used:"10"},full,"2026-11-14T13:00:00Z").outcome,"needs-review");
+  assert.match(change({remaining:"20",total:"30",used:"10"},full,"2026-11-14T13:00:00Z").reason,/Newer usage data/);
+  assert.equal(change({remaining:"23",total:"30",used:"7"},full,"2026-11-15T13:00:00Z").outcome,"duplicate");
+  assert.deepEqual([full.reportedCapacity,full.reportedUses,full.usageReportedAt],[30,7,"2026-11-15"]);
 });
 
 test("feedback is proposed for human review, not marked as official Muse verification",()=>{
