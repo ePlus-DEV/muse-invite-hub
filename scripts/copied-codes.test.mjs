@@ -59,6 +59,9 @@ test("homepage copied state keeps the same card geometry and syncs storage event
   assert.match(app,/copiedCodes = new Set\(features\.parseCopied\(event\.key === null \? null : event\.newValue\)\)/);
   assert.match(app,/updateCopiedCard\(card\);\s*return card;/);
   assert.match(app,/Copy again/);
+  assert.match(app,/card\.classList\.contains\("code-card-featured"\) \? " Copy again" : " Copied"/);
+  assert.match(app,/\(copied \? "Copy again Muse invite code " : "Copy Muse invite code "\)/);
+  assert.match(app,/button\.dataset\.tooltip = copied/);
   assert.doesNotMatch(app,/card-copy-note/);
   assert.match(app,/icon\(copied \? "fa-solid fa-check" : "fa-regular fa-copy"\)/);
   const copy=app.slice(app.indexOf("async function copyCode("),app.indexOf("function socialSource("));
