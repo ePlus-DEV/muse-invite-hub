@@ -222,7 +222,7 @@
         if (element.matches?.("h2,.section-kicker")) continue;
         body.append(element);
       }
-      const titleText=make("span","",headingText);
+      const titleText=make("h2","",headingText);
       if (kind === "detail-instructions") titleText.id = "how-to-redeem";
       summary.append(mark,titleText,caret);
       fold.append(summary,body);
