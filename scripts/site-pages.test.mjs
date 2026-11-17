@@ -45,7 +45,7 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   const heading=html.indexOf('id="detail-title"');
   const actionsAtHero=html.indexOf('class="detail-action-row"');
   const instructionsAtHero=html.indexOf('class="detail-instructions"');
-  const marketAt=html.indexOf('class="availability-section"');
+  const marketAt=html.indexOf('class="availability-section detail-market-section"');
   assert.ok(heroStart < heading && heading < actionsAtHero &&
     actionsAtHero < instructionsAtHero && instructionsAtHero < marketAt,
     "Actions and concise guidance should share the hero before market disclosure");
