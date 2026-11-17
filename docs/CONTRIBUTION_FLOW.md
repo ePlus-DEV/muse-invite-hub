@@ -9,8 +9,10 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for contributor instructions, [AGENTS.
 ```mermaid
 flowchart TD
     A["Visitor on muse.eplus.dev"] --> B{"Is this code already published?"}
-    TG["Telegram /submit CODE (confirm public Issue)"] --> TGI["Review-only GitHub Issue; no owner identity"]
-    TGI --> R
+    TG["Telegram /submit CODE (confirm public username + permissions)"] --> TGI["Structured Telegram Issue with username and source"]
+    TGI --> TGD{"Trusted Issue validator: consent, source, duplicates?"}
+    TGD -->|"Valid new code"| P
+    TGD -->|"Missing or conflicting"| J
     B -->|"No, new code"| C["Share Code GitHub Issue Form"]
     B -->|"Yes"| D["Code directory or detail"]
     D --> E["Give feedback / Worked / Didn't work / Update count"]
@@ -47,7 +49,7 @@ flowchart TD
 
 For grouped submissions (2–10 codes), each code is stored in its own `data/invite-records/<id>.json` record. Per-code quota/usage figures must be omitted for grouped Issues. Duplicate codes or an existing-code update are **not** eligible for automatic new-code publication.
 
-Telegram accepts six-character codes and records the **sender's Telegram @username** from Telegram's private-chat update **only after explicit public attribution and sharing/privacy consent**. Numeric Telegram IDs and per-chat Issue history remain private. A new `[Telegram submission]` Issue uses the same `### Invite code`, `### Code source`, `### Contributor checklist` and optional metadata headings as the Share Code form, with the explicit Telegram reporter @username. A Telegram profile URL is not proof of ownership or original public post. The **GitHub Issue author is the bot**, so the trusted Issue-to-PR workflow excludes all Telegram submissions even though they use standard form headings. A maintainer must review source/permission and duplicates before creating a **review-only Draft PR**. Repeat submissions to a closed, unpublished Issue return the closed link without duplication. After accepted live publication, comment the canonical code link before closing the Issue.
+Telegram accepts six-character codes and records the **sender's Telegram @username** from Telegram's private-chat update **only after explicit public attribution and sharing/privacy consent**. Numeric Telegram IDs and per-chat Issue history remain private. A new `[Telegram submission]` Issue uses the same `### Invite code`, `### Code source`, `### Contributor checklist` and optional metadata headings as the Share Code form, with the explicit Telegram reporter @username. A Telegram profile URL is not proof of ownership or original public post. The **GitHub Issue author is the bot**, so the trusted Issue-to-PR workflow excludes all Telegram submissions even though they use standard form headings. The trusted Issue-to-PR workflow now checks the sender's consented public username, source URL, Issue marker, bot author and duplicates, then automatically **creates a review-only Draft PR** for a structurally valid new Telegram code. The Draft PR is never eligible for automatic publication; a maintainer must independently verify authenticity and sharing permission before making it ready or merging. Repeat submissions to a closed, unpublished Issue return the closed link without duplication. After accepted live publication, comment the canonical code link before closing the Issue.
 
 ## 2. Auto-publish vs review
 
@@ -55,6 +57,7 @@ Telegram accepts six-character codes and records the **sender's Telegram @userna
 | --- | --- |
 | New **GitHub (my own code)** Issue; both contributor confirmations checked; no duplicate; exact bot-generated record(s) | Bot creates a **Ready PR**. Trusted automation verifies the original Issue, current catalog, all changed JSON files, green CI and clean merge before **automatic merge**. Entries publish as `unverified`. |
 | New public code from **Threads, X (Twitter), Facebook** | A single new code with a strict supported direct post permalink and contributor confirmations can auto-publish **as an unverified public report** after trusted checks. Ambiguous, grouped or conflicting reports require review. |
+| New Telegram code from a structurally valid, bot-authored Issue | Create an **unverified Draft PR** with the public Telegram attribution; no automatic merge. Source/permission/real Muse code require human review. |
 | Existing-code quota update, report, duplicate, source mismatch, ownership dispute | **Draft PR or manual triage**. Never auto-publish merely because CI succeeds. |
 | Missing permission/privacy checklist or invalid form fields | **Original Issue remains open.** Bot explains how the contributor can edit that Issue; do not invent consent or require a new Issue. |
 | Non-Draft documentation-only PR by **@hoangsvit** (`README.md`, `CONTRIBUTING.md`, Markdown under `docs/`; up to 15 files, no rename/deletion) | Separate low-risk default auto-merge policy after CI and mergeability checks. |
