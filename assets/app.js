@@ -274,13 +274,20 @@
       ? "Owner-confirmed by ePlus.DEV. Muse redemption has not been independently confirmed."
       : status.description;
     if (ownerConfirmed) badge.prepend(icon("fa-solid fa-circle-check"));
+    // Featured labels sit above the code; ordinary status stays in its header.
+    if (featured) {
+      const featuredLabel = el("div", "card-featured-label");
+      featuredLabel.append(badge);
+      card.append(featuredLabel);
+    }
     const headActions = el("div", "card-head-actions");
     const saveButton = el("button", "card-save");
     saveButton.type = "button";
     saveButton.dataset.code = item.code;
     updateSaveButton(saveButton);
     saveButton.addEventListener("click", () => toggleSaved(item.code));
-    headActions.append(badge, saveButton);
+    if (featured) headActions.append(saveButton);
+    else headActions.append(badge, saveButton);
     head.append(name, headActions);
     const contributor = el("div", "card-contributor");
     const source = sourceInfo(item);
@@ -338,10 +345,14 @@
     const primaryActions = el("div", "card-primary-actions");
     primaryActions.append(copy, openInvite);
     const subActions = el("div", "card-subactions");
-    const details = el("a", "card-detail-link", "View details");
+    const details = el("a", "card-utility-link card-detail-link");
     details.dataset.tooltip = "See the source, report date and details for this code.";
+    details.setAttribute("aria-label", "View details for Muse invite code " + item.code);
     details.href = "./codes/" + encodeURIComponent(item.code) + "/";
-    const report = el("a", "card-feedback-link", "Give feedback");
+    details.append(icon("fa-regular fa-circle-info"));
+    const report = el("a", "card-utility-link card-feedback-link");
+    report.setAttribute("aria-label", "Give feedback on Muse invite code " + item.code);
+    report.append(icon("fa-regular fa-comment-dots"));
     report.dataset.tooltip = "Comment on this code's existing GitHub Issue. New feedback reopens it for review.";
     report.href = feedbackIssue(item.code);
     report.addEventListener("click", event => prepareFeedback(event, item, "other"));
@@ -349,7 +360,9 @@
     report.rel = "noopener noreferrer";
     subActions.append(details, report);
     if (item.submittedBy && !item.sourceUrl) {
-      const countLink = el("a", "card-feedback-link", "Update count");
+      const countLink = el("a", "card-utility-link card-count-link");
+      countLink.setAttribute("aria-label", "Update owner invite count for code " + item.code);
+      countLink.append(icon("fa-solid fa-arrow-rotate-right"));
       countLink.href = feedbackIssue(item.code, "count");
       countLink.target = "_blank";
       countLink.rel = "noopener noreferrer";
@@ -358,6 +371,8 @@
       subActions.append(countLink);
     }
     const quickFeedback = el("div", "card-feedback-actions");
+    quickFeedback.setAttribute("role", "group");
+    quickFeedback.setAttribute("aria-label", "Report invite code experience");
     for (const [outcome, text, iconName] of [
       ["worked", "Worked for me", "fa-regular fa-thumbs-up"],
       ["failed", "Didn't work", "fa-regular fa-thumbs-down"]
@@ -371,10 +386,12 @@
         "Review a prepared success report, then copy and comment on the original Issue." :
         "Review a prepared failure report, then copy and comment on the original Issue.";
       link.setAttribute("aria-label", text + " — report Muse invite code " + item.code + " on GitHub");
-      link.append(icon(iconName), document.createTextNode(" " + text));
+      link.append(icon(iconName));
       quickFeedback.append(link);
     }
-    actions.append(primaryActions, quickFeedback, subActions);
+    const utilityBar = el("div", "card-utility-bar");
+    utilityBar.append(quickFeedback, subActions);
+    actions.append(primaryActions, utilityBar);
     card.append(head, contributor, info, actions);
     updateCopiedCard(card);
     return card;
