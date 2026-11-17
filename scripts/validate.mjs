@@ -5,7 +5,7 @@ import { parsePublicSource } from "./source-platform.mjs";
 import { readCatalog } from "./catalog.mjs";
 
 const statuses = new Set(["unverified", "reported-working", "reported-not-working"]);
-const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "reportedRemaining", "usageReportedAt", "submittedById", "featured", "ownerConfirmed", "feedbackIssueNumber"]);
+const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "reportedRemaining", "usageReportedAt", "quotaUpdateCount", "submittedById", "featured", "ownerConfirmed", "feedbackIssueNumber"]);
 
 function validDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -93,6 +93,12 @@ export function validateCatalog(data) {
           errors.push(at + ": reportedRemaining must be an integer from 0 to 1000.");
         }
       } else errors.push(at + ": usageReportedAt requires a reported count.");
+    }
+    // Number of accepted revisions to an existing reported quota, not clicks or a Muse balance.
+    if (item.quotaUpdateCount !== undefined &&
+        (!Number.isSafeInteger(item.quotaUpdateCount) || item.quotaUpdateCount < 1 ||
+         item.quotaUpdateCount > 9999 || !usagePresent)) {
+      errors.push(at + ": quotaUpdateCount must be 1–9999 and require a dated reported quota.");
     }
     if (item.submittedById !== undefined && (!Number.isSafeInteger(item.submittedById) || item.submittedById <= 0)) {
       errors.push(at + ": submittedById must be a positive GitHub numeric ID.");

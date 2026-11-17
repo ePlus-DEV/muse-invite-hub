@@ -9,6 +9,7 @@ import { feedbackCodeForIssue } from "./reopen-code-feedback.mjs";
 import { REPO, withCanonicalIssueRefs } from "./code-issue-map.mjs";
 import { listedPlatform } from "./source-platform.mjs";
 import { readCatalog, fetchGitHubCatalog, changedRecord } from "./catalog.mjs";
+import { addReviewedFeedback, ledgerPath, parseReviewableFeedback } from "./feedback-ledger.mjs";
 
 const CODE = /^[A-Z0-9]{6}$/;
 const API = "https://api.github.com/repos/" + REPO + "/";
@@ -80,10 +81,14 @@ function narrativeOwnerCount(issue, comment, catalog, code, item) {
   }
   const data = structuredClone(catalog);
   const target = data.find(entry => entry.code === code);
+  const hadSnapshot = typeof target.usageReportedAt === "string" &&
+    [target.reportedCapacity,target.reportedUses,target.reportedRemaining]
+      .some(value => value !== undefined);
   delete target.reportedRemaining;
   target.reportedCapacity = total;
   target.reportedUses = used;
   target.usageReportedAt = date;
+  if (hadSnapshot) target.quotaUpdateCount = (target.quotaUpdateCount || 0) + 1;
   return {
     outcome:"proposal",kind:"count",code,action:"review owner-reported count",data,
     branch:"auto/comment-"+issue.number+"-"+comment.id+"-count",
@@ -220,7 +225,22 @@ export async function proposeCommentDraft({
   if(comment.issue_url?.split("/").at(-1)!==String(issueNumber) || issue.pull_request) {
     return {outcome:"ignored",reason:"Comment does not belong to a canonical Issue"};
   }
-  const planned=planCommentProposal(issue,comment,entries);
+  const eligible=parseReviewableFeedback(issue,comment,entries);
+  // Even when a subjective report does not change the current catalog status
+  // (same outcome, an older report or a negative owner claim), it deserves a
+  // review-only JSON ledger proposal, not an invisible uncounted comment.
+  const proposalForReport=(catalog,change)=>({
+    outcome:"proposal",kind:"feedback",code:eligible.code,
+    branch:"auto/comment-"+issue.number+"-"+comment.id+"-feedback",
+    data:catalog,reporter:comment.user.login,
+    action:"review community experience for persistent feedback ledger",
+    notice:"Review the original comment before merging. This records a self-reported experience, not a Muse-verified redemption."+
+      (change?.reason ? " Status was not changed: "+change.reason : "")
+  });
+  let planned=planCommentProposal(issue,comment,entries);
+  if(eligible && planned.outcome!=="proposal") {
+    planned=proposalForReport(entries,planned);
+  }
   if(planned.outcome!=="proposal") {
     if(planned.outcome==="needs-review") {
       await notifyReviewRequired(issueNumber,commentId,planned.reason,token);
@@ -238,7 +258,11 @@ export async function proposeCommentDraft({
   const mainSha=ref.object.sha;
   const mainCatalog=withCanonicalIssueRefs(await fetchGitHubCatalog(
     (path,allow404=false)=>api("GET",path,token,undefined,allow404),mainSha),roots);
-  const current=planCommentProposal(issue,comment,mainCatalog);
+  const mainReport=parseReviewableFeedback(issue,comment,mainCatalog);
+  let current=planCommentProposal(issue,comment,mainCatalog);
+  if(mainReport && current.outcome!=="proposal") {
+    current=proposalForReport(mainCatalog,current);
+  }
   if(current.outcome!=="proposal") {
     if(current.outcome==="needs-review") {
       await notifyReviewRequired(issueNumber,commentId,current.reason,token);
@@ -259,12 +283,33 @@ export async function proposeCommentDraft({
   const existingBranch=await api("GET","git/ref/heads/"+branch.split("/").map(encodeURIComponent).join("/"),token,undefined,true);
   if(existingBranch)return {outcome:"needs-review",code,reason:"Previous proposal branch exists; review before retry: "+branch};
   const parent=await api("GET","git/commits/"+mainSha,token);
-  const record=changedRecord(mainCatalog,current.data,code);
-  const blob=await api("POST","git/blobs",token,{
-    content:record.content,encoding:"utf-8"
-  });
+  const entriesToCommit=[];
+  const addFile=async(path,content)=>{
+    const blob=await api("POST","git/blobs",token,{content,encoding:"utf-8"});
+    entriesToCommit.push({path,mode:"100644",type:"blob",sha:blob.sha});
+  };
+  if(kind==="feedback") {
+    // This JSON update is part of the exact Draft PR reviewed by a maintainer.
+    // The count only changes after merge; a page build never recounts comments.
+    if(!mainReport)throw Error("Cannot record an unvalidated feedback comment");
+    const path=ledgerPath(code);
+    const published=await api("GET","contents/"+path+"?ref="+mainSha,token,undefined,true);
+    if(published && published.encoding!=="base64")throw Error("Unexpected reviewed ledger encoding");
+    const previous=published ? JSON.parse(Buffer.from(
+      published.content.replace(/\s/g,""),"base64").toString("utf8")) : null;
+    const updated=addReviewedFeedback(previous,mainReport);
+    if(!updated.changed) return {outcome:updated.reason,kind,code};
+    await addFile(path,JSON.stringify(updated.ledger,null,2)+"\n");
+  }
+  // A second user's same-outcome report changes the ledger, even if it does
+  // not change catalog status. First reports can update both files atomically.
+  if(JSON.stringify(mainCatalog)!==JSON.stringify(current.data)) {
+    const record=changedRecord(mainCatalog,current.data,code);
+    await addFile(record.path,record.content);
+  }
+  if(!entriesToCommit.length)throw Error("No reviewed feedback or catalog change to commit");
   const tree=await api("POST","git/trees",token,{base_tree:parent.tree.sha,
-    tree:[{path:record.path,mode:"100644",type:"blob",sha:blob.sha}]});
+    tree:entriesToCommit});
   const commit=await api("POST","git/commits",token,{
     message:"data: review "+code+" community "+kind+" (comment "+commentId+")",
     tree:tree.sha,parents:[mainSha]});
@@ -284,7 +329,7 @@ export async function proposeCommentDraft({
       "- [ ] Verify ownership before accepting any quota claim",
       "- [ ] If the original owner report does not explicitly confirm its source, request confirmation from the owner's own Muse invite screen before merge",
       "- [ ] Check CI and preview",
-      "- [ ] Review the resulting catalog diff",
+      "- [ ] Review the resulting catalog diff and per-code feedback JSON ledger",
       "",
       "No auto-merge and no automatic Issue closure. The original Issue stays available for discussion."
     ].join("\n")

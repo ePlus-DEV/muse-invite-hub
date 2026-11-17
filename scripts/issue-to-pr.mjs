@@ -163,8 +163,11 @@ function updateQuota(target, quota, date) {
   if (target.usageReportedAt && target.usageReportedAt > date) return "stale";
   const keys=["reportedCapacity","reportedUses","reportedRemaining","usageReportedAt"];
   if (keys.every(key=>target[key]===quota[key])) return "duplicate";
+  const hadSnapshot = typeof target.usageReportedAt === "string" &&
+    keys.slice(0,3).some(key => target[key] !== undefined);
   for (const key of keys) delete target[key];
   Object.assign(target,quota);
+  if (hadSnapshot) target.quotaUpdateCount = (target.quotaUpdateCount || 0) + 1;
   return "updated";
 }
 function rememberOwnerId(target,issue) {

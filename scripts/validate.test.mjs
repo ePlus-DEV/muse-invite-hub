@@ -47,6 +47,18 @@ test("undated, invalid, or exaggerated usage claims are rejected", () => {
   assert.ok(validateCatalog([{ ...sample(), reportedUses: -1, reportedCapacity: 30, usageReportedAt: "2026-11-11" }]).some(e => e.includes("non-negative")));
 });
 
+test("quota revision badge requires a positive real count and a dated quota", () => {
+  const published={...sample(), reportedCapacity:30,reportedUses:7,
+    usageReportedAt:"2026-11-15",quotaUpdateCount:1};
+  assert.deepEqual(validateCatalog([published]),[]);
+  for(const value of [0,-1,1.5,"2",null,10000]) {
+    assert.ok(validateCatalog([{...published,quotaUpdateCount:value}])
+      .some(error=>error.includes("quotaUpdateCount")),String(value));
+  }
+  assert.ok(validateCatalog([{...sample(),quotaUpdateCount:1}])
+    .some(error=>error.includes("quotaUpdateCount")));
+});
+
 test("remaining-only reports with a date and GitHub numeric owner ID are supported", () => {
   assert.deepEqual(validateCatalog([{...sample(),reportedRemaining:17,usageReportedAt:"2026-11-11",submittedById:316039127}]),[]);
   assert.ok(validateCatalog([{...sample(),reportedRemaining:17}]).some(e=>e.includes("usageReportedAt")));
