@@ -26,8 +26,8 @@ test("home, country map and generated details share canonical, identical navigat
     assert.match(actual, /id="site-nav" aria-label="Main navigation"/);
     assert.match(actual, /aria-controls="site-nav"[^>]*aria-expanded="false"|aria-expanded="false"[^>]*aria-controls="site-nav"/);
     assert.match(actual, /Share code<\/a>/);
-    assert.match(actual, new RegExp(`href="${current === "home" ? "#contribute" : prefix + "#contribute"}"`));
-    assert.doesNotMatch(actual,/nav-share" href="https:\/\/github\.com/);
+    assert.match(actual, /nav-share" href="https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/new\?template=share-code\.yml" data-contribute-trigger/);
+    assert.match(actual, /nav-mobile-share" href="https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/new\?template=share-code\.yml" data-contribute-trigger/);
     assert.match(actual, /<i class="fa-solid fa-house" aria-hidden="true"><\/i> Home/);
     assert.match(actual, /<i class="fa-regular fa-circle-question" aria-hidden="true"><\/i> About/);
     assert.match(html, /assets\/site-ui\.js" defer/);
