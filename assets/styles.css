@@ -606,6 +606,44 @@ html.is-page-loading body>.site-footer{display:none!important}
 @media(max-width:350px){.detail-action-row{grid-template-columns:1fr}}
 
 
+/* Single-invite detail layout: one visible code/H1, compact inline guidance.
+   This is presentational only; canonical/metadata/JSON-LD stay server-rendered. */
+.detail-page{padding-top:30px;padding-bottom:34px}
+.detail-breadcrumb{margin-bottom:24px}
+.detail-layout{align-items:start;gap:22px}
+.detail-hero-unified{padding:clamp(22px,2.6vw,32px);border-radius:22px;background:linear-gradient(133deg,#eef5ff 0%,#fff 85%)}
+.detail-hero-unified::after{top:78px;right:12px;transform:rotate(12deg);font-size:150px;color:rgba(0,100,255,.045)}
+.detail-hero-unified .detail-code-heading{min-height:44px}
+.detail-hero-unified h1{margin:16px 0 22px;font-size:clamp(42px,5vw,59px);letter-spacing:-1.4px;line-height:1.08}
+.detail-hero-unified .detail-h1-prefix{display:block;color:var(--muted);font-size:14px;letter-spacing:0;font-weight:750;line-height:1.4;margin-bottom:6px}
+.detail-hero-unified .detail-code-text{display:block;color:var(--ink);font-weight:850;letter-spacing:1.2px;white-space:normal;overflow-wrap:anywhere}
+.detail-hero-unified .detail-action-row{gap:9px}
+.detail-hero-unified .detail-action-row .button{min-height:44px;padding:10px 14px}
+.detail-hero-unified .detail-instructions{margin-top:25px;padding:19px 0 0;border:0;border-top:1px solid var(--blue-line);border-radius:0;background:transparent}
+.detail-hero-unified .detail-instructions h2{margin:0 0 13px;font-size:15px;letter-spacing:-.2px;color:var(--ink)}
+.detail-hero-unified .detail-instructions ol{list-style:none;counter-reset:invite-step;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:0;margin:0;line-height:1.6}
+.detail-hero-unified .detail-instructions li{counter-increment:invite-step;display:flex;align-items:flex-start;gap:9px;padding:0;margin:0;color:var(--muted);font-size:12.5px;min-width:0}
+.detail-hero-unified .detail-instructions li::before{content:counter(invite-step);display:grid;place-items:center;flex:0 0 auto;width:24px;height:24px;border-radius:8px;background:var(--blue-soft);border:1px solid var(--blue-line);color:var(--blue);font-weight:850;font-size:12px}
+.detail-hero-unified .detail-instructions strong{color:var(--ink)}
+.detail-primary>.availability-section{margin:17px 0 0}
+.detail-side{gap:14px}
+.detail-side>.detail-info-card{padding:21px;border-radius:18px}
+.detail-meta div{padding:10px 0;gap:4px}
+@media(max-width:880px){.detail-layout{gap:18px}}
+@media(max-width:560px){
+  .detail-page{padding-top:24px}
+  .detail-breadcrumb{margin-bottom:17px}
+  .detail-hero-unified{padding:21px 18px;border-radius:18px}
+  .detail-hero-unified::after{top:85px;right:-8px;font-size:112px}
+  .detail-hero-unified h1{font-size:clamp(38px,10vw,50px);margin:14px 0 19px}
+  .detail-hero-unified .detail-h1-prefix{font-size:13px}
+  .detail-hero-unified .detail-action-row .button{padding:9px 7px;font-size:12px}
+  .detail-hero-unified .detail-instructions{margin-top:22px}
+  .detail-hero-unified .detail-instructions ol{grid-template-columns:1fr;gap:10px}
+  .detail-side>.detail-info-card{padding:19px}
+}
+@media(max-width:350px){.detail-hero-unified h1{font-size:36px}}
+
 /* Link from the existing sourced market disclosure to its full map page. */
 .availability-map-link{margin:14px 0 4px}
 .availability-map-link .button{font-size:12px;padding:9px 13px;min-height:40px}
