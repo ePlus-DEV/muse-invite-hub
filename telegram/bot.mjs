@@ -112,12 +112,15 @@ export function parseUpdate(update) {
     const chat=message.chat;
     if (!Number.isSafeInteger(chat?.id)) return null;
     if (chat.type!=="private") return {type:"private-only",chatId:chat.id,updateId:update.update_id};
+    // Telegram private-chat commands must be from the private-chat owner.
+    if (!Number.isSafeInteger(message.from?.id) || message.from.id!==chat.id) return null;
     return {...parseCommand(message.text),chatId:chat.id,updateId:update.update_id,
       ...(typeof message.from?.language_code==="string"?{telegramLanguage:message.from.language_code}:{}),
       telegramUsername:publicUsername(message.from?.username)};
   }
   const callback=update.callback_query;
   if (!callback || typeof callback.id!=="string" ||
+      callback.from?.is_bot===true ||
       !Number.isSafeInteger(callback.from?.id) ||
       callback.message?.chat?.type!=="private" ||
       callback.message.chat.id!==callback.from.id) return null;

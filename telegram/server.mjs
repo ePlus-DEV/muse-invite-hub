@@ -10,6 +10,7 @@ import { resolveInput, handleInteractive } from "./conversation.mjs";
 import { cleanProfile, syncTelegramLocale } from "./profiles.mjs";
 import { tr } from "./i18n.mjs";
 import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus, browseCodes } from "./github.mjs";
+import { recentWriteEvents, writeDecision } from "./write-limit.mjs";
 
 const SITE="https://muse.eplus.dev";
 const MAX_BODY=32*1024;
@@ -51,8 +52,20 @@ export function createTelegramApp({
   }
   const handled=new Set(processed);
   const profiles=fileProfiles(dataDir);
-  const strikes=new Map();
-  const ratedUpdates=new Set();
+  // Abuse budgets live in a separate private file so /delete_data cannot
+  // reset spam protection; only non-public numeric chat/update IDs are stored.
+  const limitPath=join(dataDir,"write-limits.json");
+  let writeLimits=Object.create(null);
+  if(existsSync(limitPath)){
+    const parsed=JSON.parse(readFileSync(limitPath,"utf8"));
+    if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))
+      throw Error("Corrupt Telegram anti-spam state");
+    for(const [id,history] of Object.entries(parsed)){
+      if(id!=="_global_submit"&&!/^[1-9][0-9]*$/.test(id))
+        throw Error("Corrupt Telegram anti-spam state key");
+      writeLimits[id]=recentWriteEvents(history);
+    }
+  }
   const notifiedFailures=new Set();
   let queue=Promise.resolve();
   const call=telegramApi || (async (method,payload)=>{
@@ -82,19 +95,32 @@ export function createTelegramApp({
       chat_id:chatId,text,disable_web_page_preview:true,reply_markup:replyKeyboard(language,role)
     });
   }
-  function allowWrite(chatId,updateId) {
-    if(ratedUpdates.has(updateId))return true; // A retry of one Telegram update is not a new submission.
+  function allowWrite(chatId,updateId,kind,code) {
     const now=Date.now();
-    const recent=(strikes.get(chatId)||[]).filter(value=>now-value<3600000);
-    if(recent.length>=8){strikes.set(chatId,recent);return false;}
-    recent.push(now);
-    strikes.set(chatId,recent);
-    if(Number.isSafeInteger(updateId)) {
-      ratedUpdates.add(updateId);
-      if(ratedUpdates.size>1000)ratedUpdates.delete(ratedUpdates.values().next().value);
+    const key=String(chatId);
+    const personal=writeDecision(writeLimits[key]||[],{kind,updateId,code,now,scope:"chat"});
+    if(!personal.allowed)return false;
+    if(personal.retry)return true;
+    let global=null;
+    if(kind==="submit"){
+      global=writeDecision(writeLimits._global_submit||[],
+        {kind,updateId,now,scope:"global"});
+      if(!global.allowed)return false;
     }
+    writeLimits[key]=personal.history;
+    if(global)writeLimits._global_submit=global.history;
+    // Keep only active, recent chat budgets to bound private disk usage.
+    for(const [id,records] of Object.entries(writeLimits)){
+      const fresh=recentWriteEvents(records,now);
+      if(!fresh.length)delete writeLimits[id];
+      else writeLimits[id]=fresh;
+    }
+    const temp=limitPath+".tmp";
+    writeFileSync(temp,JSON.stringify(writeLimits),{mode:0o600});
+    renameSync(temp,limitPath);
     return true;
   }
+
   async function handle(update){
     let action=parseUpdate(update);
     if(!action)return;
@@ -126,7 +152,7 @@ export function createTelegramApp({
       }
       return await handleLegacy({
         action,profiles,send,complete,services,githubToken,
-        allowWrite:async id=>allowWrite(id,action.updateId)
+        allowWrite:async (id,code)=>allowWrite(id,action.updateId,action.type,code)
       });
     } catch(error) {
       if(action.callbackId&&["submit","report"].includes(action.type)&&

@@ -40,6 +40,14 @@ test("Telegram commands accept only public code patterns and known report outcom
     text:"/submit CODE11"}}).type,"private-only");
   assert.equal(parseUpdate({update_id:2,message:{chat:{id:123,type:"private"},from:{is_bot:true},
     text:"/submit CODE11"}}),null);
+  assert.equal(parseUpdate({update_id:5,message:{
+    chat:{id:42,type:"private"},
+    from:{id:99,is_bot:false,username:"alice_dev"},text:"/submit CODE11"
+  }}),null,"A private chat message must come from the chat owner");
+  assert.equal(parseUpdate({update_id:6,callback_query:{
+    id:"cb",from:{id:42,is_bot:true},message:{chat:{id:42,type:"private"}},
+    data:"t:submit:CODE11"
+  }}),null,"Bot callbacks cannot initiate public GitHub writes");
   assert.equal(parseUpdate({update_id:3,callback_query:{
     id:"callback",from:{id:42},message:{chat:{id:43,type:"private"}},data:"t:submit:CODE11"
   }}),null,"A callback from another account cannot submit as the private-chat owner");
@@ -126,6 +134,30 @@ test("submit and report are explicitly confirmed, then sent to GitHub once",asyn
     await new Promise(resolve=>restarted.close(resolve));
   });
 });
+test("OCI anti-spam limits persist across service restarts and profile deletion",async()=>{
+  await withApp(async({post,dir,options,calls,sent})=>{
+    for(let i=0;i<3;i++){
+      assert.equal((await post(callback(700+i,"t:submit:CODE1"+i))).status,200);
+    }
+    assert.equal(calls.submit.length,3);
+    assert.equal((await post(message(705,"/delete_data"))).status,200);
+    const saved=JSON.parse(readFileSync(join(dir,"write-limits.json"),"utf8"));
+    assert.equal(saved["42"].length,3);
+    // A new process loads the private limits instead of resetting them.
+    const restarted=createTelegramApp(options);
+    await new Promise(resolve=>restarted.listen(0,"127.0.0.1",resolve));
+    const response=await fetch("http://127.0.0.1:"+restarted.address().port+"/telegram/webhook",{
+      method:"POST",headers:{"Content-Type":"application/json",
+        "X-Telegram-Bot-Api-Secret-Token":secret},
+      body:JSON.stringify(callback(706,"t:submit:CODE14"))
+    });
+    assert.equal(response.status,200);
+    assert.equal(calls.submit.length,3,"Restart must not bypass daily quota");
+    assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/Too many submissions/);
+    await new Promise(resolve=>restarted.close(resolve));
+  });
+});
+
 test("code status and privacy are informational in the Node webhook",async()=>{
   await withApp(async({post,sent,calls})=>{
     assert.equal((await post(message(30,"/status DPNIHH"))).status,200);

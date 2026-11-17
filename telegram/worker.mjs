@@ -16,13 +16,11 @@ import { resolveInput, handleInteractive } from "./conversation.mjs";
 import { makeKvProfiles, syncTelegramLocale } from "./profiles.mjs";
 import { tr } from "./i18n.mjs";
 import { listRecentCodes, submitNewCode, submitFeedback, getCodeStatus, browseCodes } from "./github.mjs";
+import { writeDecision, WRITE_DAY_MS } from "./write-limit.mjs";
 
 const SITE = "https://muse.eplus.dev";
 const MAX_BODY = 32 * 1024;
 const DEDUP_TTL_SECONDS = 7 * 24 * 3600;
-const RATE_WINDOW_MS = 3600000;
-const RATE_MAX_WRITES = 8;
-
 async function constantTimeEqual(actual, expected) {
   if (typeof actual !== "string" || typeof expected !== "string") return false;
   const encoder = new TextEncoder();
@@ -50,22 +48,40 @@ export function createKvState(kv) {
     async markFailureNotified(updateId) {
       await kv.put("fail-notice:" + updateId, "1", { expirationTtl: DEDUP_TTL_SECONDS });
     },
-    async allowWrite(chatId, updateId) {
-      // Telegram can retry the SAME update after an upstream 503. Count it only once.
+    async allowWrite(chatId, updateId, kind, code) {
+      // A retry must not consume a second slot, even after an upstream 503.
       const writeKey = Number.isSafeInteger(updateId) ? "write-attempt:" + updateId : null;
       if (writeKey && (await kv.get(writeKey)) !== null) return true;
       const key = "rl:" + chatId;
       const now = Date.now();
-      let recent = [];
+      // Fail closed if private rate-limit state is malformed or temporarily
+      // unreadable; treating KV errors as an empty budget enables spam.
+      let personal;
       try {
-        const raw = await kv.get(key);
-        const parsed = raw ? JSON.parse(raw) : [];
-        if (Array.isArray(parsed)) recent = parsed.filter(v => Number.isFinite(v) && now - v < RATE_WINDOW_MS);
-      } catch { recent = []; }
-      if (recent.length >= RATE_MAX_WRITES) return false;
-      recent.push(now);
-      await kv.put(key, JSON.stringify(recent), { expirationTtl: RATE_WINDOW_MS / 1000 });
-      if (writeKey) await kv.put(writeKey, "1", { expirationTtl: DEDUP_TTL_SECONDS });
+        const raw=await kv.get(key);
+        personal=writeDecision(raw===null?null:JSON.parse(raw),
+          {kind,updateId,code,now,scope:"chat"});
+      } catch {
+        return false;
+      }
+      if(!personal.allowed)return false;
+      let global=null;
+      if(kind==="submit"){
+        try{
+          const raw=await kv.get("rl:global:submit");
+          global=writeDecision(raw===null?null:JSON.parse(raw),
+            {kind,updateId,now,scope:"global"});
+        }catch{
+          return false;
+        }
+        if(!global.allowed)return false;
+      }
+      const ttl=WRITE_DAY_MS/1000;
+      // Telegram webhook registration requests max_connections=1. KV is
+      // eventually consistent (not a transaction); global cap is best-effort.
+      if(global)await kv.put("rl:global:submit",JSON.stringify(global.history),{expirationTtl:ttl});
+      await kv.put(key,JSON.stringify(personal.history),{expirationTtl:ttl});
+      if(writeKey)await kv.put(writeKey,"1",{expirationTtl:DEDUP_TTL_SECONDS});
       return true;
     }
   };
@@ -129,7 +145,7 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
       }
       return await handleLegacy({
         action,profiles,send,complete,services,githubToken,
-        allowWrite:id=>state.allowWrite(id,action.updateId)
+        allowWrite:(id,code)=>state.allowWrite(id,action.updateId,action.type,code)
       });
     } catch(error) {
       if(action.callbackId&&["submit","report"].includes(action.type)) {
