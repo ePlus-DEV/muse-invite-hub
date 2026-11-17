@@ -28,6 +28,8 @@
   let codes = [];
   let loadFailed = false;
   let codeIssueMap = {};
+  let feedbackCounts = null;
+  let quotaUpdateBaselines = {};
   function feedbackIssue(code, outcome = "other") {
     const item = codes.find(entry => entry.code === code);
     const number = features.issueNumberFor(codeIssueMap, code) ??
@@ -362,10 +364,31 @@
       const countLink = el("a", "card-utility-link card-count-link");
       countLink.setAttribute("aria-label", "Update owner invite count for code " + item.code);
       countLink.append(icon("fa-solid fa-arrow-rotate-right"));
+      // Show only documented, accepted quota revisions; not visits or click counts.
+      // Documented pre-tracking revisions are in a trusted sidecar so the
+      // public preview catalog remains compatible with main's schema.
+      // Future approved revisions are counted separately in the record.
+      const tracked = Number.isSafeInteger(item.quotaUpdateCount) &&
+        item.quotaUpdateCount > 0 ? item.quotaUpdateCount : 0;
+      const baseline = Number.isSafeInteger(quotaUpdateBaselines[item.code]) &&
+        quotaUpdateBaselines[item.code] > 0 ? quotaUpdateBaselines[item.code] : 0;
+      const updates = tracked + baseline;
+      if (Number.isSafeInteger(updates) && updates > 0) {
+        const counter = el("span", "card-count-updates", updates > 99 ? "99+" : String(updates));
+        counter.setAttribute("aria-hidden", "true");
+        countLink.append(counter);
+        countLink.setAttribute("aria-label", "Update owner invite count for code " +
+          item.code + " — " + updates + " recorded quota " +
+          (updates === 1 ? "update" : "updates"));
+      }
       countLink.href = feedbackIssue(item.code, "count");
       countLink.target = "_blank";
       countLink.rel = "noopener noreferrer";
-      countLink.dataset.tooltip = "For this code's verified GitHub owner: report a dated Muse quota snapshot on the same Issue.";
+      countLink.dataset.tooltip = "For the original GitHub owner: report a dated quota snapshot on the same Issue." +
+        (Number.isSafeInteger(updates) && updates > 0
+          ? " " + updates + " accepted quota " + (updates === 1 ? "update" : "updates") +
+            " recorded since the first report."
+          : " No accepted quota revisions are recorded yet.");
       countLink.addEventListener("click", event => prepareFeedback(event, item, "count"));
       subActions.append(countLink);
     }
@@ -386,6 +409,21 @@
         "Review a prepared failure report, then copy and comment on the original Issue.";
       link.setAttribute("aria-label", text + " — report Muse invite code " + item.code + " on GitHub");
       link.append(icon(iconName));
+      const summary = feedbackCounts?.[item.code];
+      const total = summary?.[outcome];
+      if (Number.isSafeInteger(total) && total >= 0) {
+        const counter = el("span", "card-feedback-count", total > 999 ? "999+" : String(total));
+        counter.setAttribute("aria-hidden", "true");
+        link.append(counter);
+        link.classList.add("has-count");
+        const description = total + " community " +
+          (total === 1 ? "report" : "reports") + " of " +
+          (outcome === "worked" ? "success" : "failure");
+        link.dataset.tooltip += " " + description +
+          " in the last published GitHub snapshot; not live or independently verified by Muse.";
+        link.setAttribute("aria-label", text + " — " + description +
+          " for Muse invite code " + item.code);
+      }
       quickFeedback.append(link);
     }
     const utilityBar = el("div", "card-utility-bar");
@@ -453,6 +491,32 @@
       } catch (error) {
         // Use the repository Issue list, never an extra feedback Issue Form.
         console.warn("Canonical issue links unavailable:", error);
+      }
+      try {
+        const baselineResponse = await fetch("./data/quota-update-baseline.json",
+          {cache:"no-store",signal:controller.signal});
+        if (!baselineResponse.ok) throw Error("Quota history unavailable");
+        const baseline = await baselineResponse.json();
+        if (baseline && !Array.isArray(baseline) && typeof baseline === "object") {
+          quotaUpdateBaselines = baseline;
+        }
+      } catch {
+        // Historical count missing: show only catalog-tracked updates.
+        quotaUpdateBaselines = {};
+      }
+      try {
+        const feedbackResponse = await fetch("./data/feedback-counts.json",
+          {cache:"no-store",signal:controller.signal});
+        if (!feedbackResponse.ok) throw Error("Feedback totals unavailable");
+        const snapshot = await feedbackResponse.json();
+        if (snapshot?.source === "reviewed-github-feedback" && snapshot.codes &&
+            !Array.isArray(snapshot.codes) && typeof snapshot.codes === "object" &&
+            Number.isFinite(Date.parse(snapshot.generatedAt || ""))) {
+          feedbackCounts = snapshot.codes;
+        }
+      } catch {
+        // Missing/incomplete GitHub snapshots must not be rendered as fake zero votes.
+        feedbackCounts = null;
       }
     } catch (error) {
       console.error("Could not load invite directory:", error);

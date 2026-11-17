@@ -6,6 +6,7 @@ import { generateSite } from "./site-pages.mjs";
 import { syncCodeIssueMap, validIssueMap } from "./code-issue-map.mjs";
 import { readCatalog } from "./catalog.mjs";
 import { validateCatalog } from "./validate.mjs";
+import { summarizeApprovedFeedback, readReviewedFeedback, validateFeedbackDirectory } from "./feedback-ledger.mjs";
 
 const REPO = process.env.GITHUB_REPOSITORY;
 const ORIGIN = "https://muse.eplus.dev";
@@ -92,6 +93,17 @@ if (!readonly && !validIssueMap(issueMap, code)) {
 }
 writeFileSync(join(output, "data", "code-issues.json"), JSON.stringify(issueMap, null, 2) + "\n");
 console.log("Mapped " + code.length + " published invite codes to canonical GitHub Issues.");
+// Only previously reviewed/merged JSON is eligible for published counts.
+// No repository-wide GitHub comment scan, token, or repeated recount required.
+validateFeedbackDirectory();
+const summary = summarizeApprovedFeedback(
+  code.map(item=>({...item,feedbackIssueNumber:issueMap[item.code]})),
+  entry=>readReviewedFeedback(entry),
+  new Date().toISOString()
+);
+writeFileSync(join(output,"data","feedback-counts.json"),
+  JSON.stringify(summary,null,2) + "\n");
+console.log("Published reviewed feedback from local per-code JSON records.");
 const productionPages = generateSite(output);
 console.log("Generated " + productionPages.created + " static invite detail pages and " + productionPages.indexed + " indexable entries.");
 
@@ -169,6 +181,9 @@ for (const pr of (await listOpenPRs()).slice(0, MAX_PREVIEWS)) {
     // codes only. Unmerged codes never create Issues or gain false mappings.
     copyFileSync(join(output, "data", "code-issues.json"),
       join(dest, "data", "code-issues.json"));
+    const feedbackPath = join(output,"data","feedback-counts.json");
+    if (existsSync(feedbackPath)) copyFileSync(feedbackPath,
+      join(dest,"data","feedback-counts.json"));
     record.detail_pages = built.detail_pages;
     // Parse JavaScript but never execute scripts from the untrusted PR ref.
     const syntax = spawnSync(process.execPath, ["--check", join(dest, "assets/app.js")],
