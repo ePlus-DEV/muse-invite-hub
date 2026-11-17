@@ -42,7 +42,10 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /"BreadcrumbList"/);
   assert.match(html, /"WebPage"/);
   assert.match(html, /href="\.\.\/\.\.\/assets\/styles.css"/);
-  assert.match(html, /href="https:\/\/muse.ai\/join"/);
+  assert.doesNotMatch(html, /href="https:\/\/muse.ai\/join"/);
+  assert.doesNotMatch(html, />Open Muse <i/);
+  assert.equal((html.match(/class="detail-action-row"/g) || []).length, 1);
+  assert.equal((html.match(/href="https:\/\/muse.ai\/invite\/DPNIHH"/g) || []).length, 1);
   assert.match(html, /href="https:\/\/muse.ai\/invite\/DPNIHH"/);
   assert.match(html, /aria-label="Open Muse invite link for code DPNIHH"/);
   assert.doesNotMatch(html, /Muse has verified this code/);
