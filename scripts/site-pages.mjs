@@ -192,13 +192,13 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '            <div class="detail-stat"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i><span class="detail-stat-body"><strong class="detail-stat-updates">' + escapeHtml(updateLabel) + '</strong><span class="detail-stat-label">' + (totalUpdates > 0 ? 'Quota updated' : 'No recorded updates') + '</span></span></div>' +
     '          </div>' +
     '        </div>' + notes +
-    '        <details class="detail-instructions detail-mobile-fold" open><summary><i class="fa-solid fa-book-open" aria-hidden="true"></i><span id="how-to-redeem">How to use this code</span><i class="fa-solid fa-chevron-down detail-fold-chevron" aria-hidden="true"></i></summary>' +
+    '        <details class="detail-instructions detail-mobile-fold" open><summary><i class="fa-solid fa-book-open" aria-hidden="true"></i><h2 id="how-to-redeem">How to use this code</h2><i class="fa-solid fa-chevron-down detail-fold-chevron" aria-hidden="true"></i></summary>' +
     '          <div class="detail-fold-body"><ol><li>Select <strong>Open invite</strong> above to visit Muse with this code.</li>' +
     '          <li>Follow Muse\'s instructions and check eligibility before redeeming.</li></ol></div>' +
     '        </details>' +
     '      </section>' +
     '      <aside class="detail-side" aria-label="Invite information">' +
-    '        <details class="detail-info-card detail-listing detail-mobile-fold" open><summary><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Code details</span><i class="fa-solid fa-chevron-down detail-fold-chevron" aria-hidden="true"></i></summary>' +
+    '        <details class="detail-info-card detail-listing detail-mobile-fold" open><summary><i class="fa-solid fa-circle-info" aria-hidden="true"></i><h2>Code details</h2><i class="fa-solid fa-chevron-down detail-fold-chevron" aria-hidden="true"></i></summary>' +
     '          <div class="detail-fold-body"><dl class="detail-meta"><div><dt>Contributor</dt><dd>' + escapeHtml(author) + '</dd></div>' +
     '            <div><dt>Source</dt><dd>' + sourceLink + '</dd></div>' +
     '            <div><dt>Listed</dt><dd>' + escapeHtml(dateText(item.addedAt)) + '</dd></div>' +
