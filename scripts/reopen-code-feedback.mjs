@@ -147,7 +147,8 @@ export async function reopenOnFeedback({
   if (comment.issue_url?.split("/").at(-1) !== String(issueNumber)) {
     return {outcome:"ignored",reason:"Comment does not belong to this Issue."};
   }
-  const human=comment?.user?.login && comment.user.type!=="Bot" &&
+  const human=comment?.user?.login && Number.isSafeInteger(comment.user.id) &&
+    comment.user.id>0 && comment.user.type!=="Bot" &&
     !comment.user.login.endsWith("[bot]") && comment.user.login!=="eplus-bot";
   const foreign=human ? unrelatedReferralCode(comment.body,issueCodes(issue)) : null;
   if (foreign && feedbackCodeForIssue(issue,entries)) {
