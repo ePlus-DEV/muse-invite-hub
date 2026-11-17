@@ -48,6 +48,31 @@ test("GitHub Issue Forms are parsed by headings, not arbitrary user code",()=>{
   assert.equal(f["Uses so far (optional; self-reported)"],"");
   assert.equal(f["Remaining invites (optional; self-reported)"],"");
 });
+test("Issue #219 Spanish Muse referral text produces an unverified new-code proposal",()=>{
+  const text=[
+    "Echa un vistazo a Muse, tu agente de IA personal. Canjea mi código en la configuración dentro de las 48 horas posteriores a unirte.",
+    "Código: 4WEZN6",
+    "https://muse.ai/join"
+  ].join("\n");
+  const body=[
+    "### Invite code","",text,"",
+    "### Code source","","GitHub (my own code)","",
+    "### Contributor checklist","",
+    "- [x] I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
+    "- [x] This code is not a password, 2FA code, session token or private credential."
+  ].join("\n");
+  const p=planIssueChange(issue(219,"[Invite] Código: 4WEZN6",body,"magandayam"),[item]);
+  assert.equal(p.outcome,"proposal");
+  assert.equal(p.branch,"auto/issue-219-invite");
+  assert.equal(p.code,"4WEZN6");
+  const added=p.data.find(row=>row.code==="4WEZN6");
+  assert.equal(added.status,"unverified");
+  assert.equal(added.submittedBy,"magandayam");
+  assert.equal(added.reportedCapacity,undefined);
+  assert.equal(added.reportedUses,undefined);
+  assert.deepEqual(validateCatalog(p.data),[]);
+});
+
 test("new invited code becomes an unverified draft proposal, never 30 remaining by assumption",()=>{
   const old=[item];
   const p=planIssueChange(issue(20,"[Invite]",share),old);

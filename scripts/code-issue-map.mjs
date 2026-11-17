@@ -13,18 +13,16 @@ export function parseInviteCodes(value) {
     new Set(tokens).size === tokens.length;
   if (valid) return tokens;
 
-  // Some users paste Muse's full referral message into the Code field,
-  // with one standalone "Code: ABC123" line. Accept that explicit label,
-  // never guess a code by searching arbitrary promotional text. Multiple
-  // labelled codes and malformed labels remain invalid instead of selecting
-  // one silently. The original Issue consent/source checks still apply.
+  // Full Muse referral messages may include a standalone Spanish "Código:"
+  // line. Accept exactly one explicit label, not arbitrary 6-character tokens
+  // from promotional text or links. Preserve consent/source validation.
   const labelled=input.split(/\r?\n/).filter(line =>
-    /^\s*(?:Invite\s+code|Code)\s*:/i.test(line));
+    /^\s*(?:Invite\s+code|Code|C[oó]digo)\s*:/iu.test(line));
   if (labelled.length === 1) {
-    const exact=/^\s*(?:Invite\s+code|Code)\s*:\s*([A-Z0-9]{6})\s*$/i.exec(labelled[0]);
+    const exact=/^\s*(?:Invite\s+code|Code|C[oó]digo)\s*:\s*([A-Z0-9]{6})\s*$/iu.exec(labelled[0]);
     if (exact) return [exact[1].toUpperCase()];
   }
-  throw Error("Invite code must contain 1–10 distinct 6-character codes (letters A–Z or digits 0–9; no hyphens), separated by whitespace, commas or semicolons; or a single standalone 'Code: ABC123' line in a pasted referral message.");
+  throw Error("Invite code must contain 1–10 distinct 6-character codes (letters A–Z or digits 0–9; no hyphens), separated by whitespace, commas or semicolons; or a single standalone 'Code: ABC123' / 'Código: ABC123' line in a pasted referral message.");
 }
 
 
