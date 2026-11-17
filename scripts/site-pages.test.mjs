@@ -52,9 +52,10 @@ test("confirmed owner card and non-owner detail keep verification meanings separ
   const css = readFileSync(new URL("../assets/styles.css", import.meta.url), "utf8");
   assert.match(app, /ownerConfirmed \? "Verified Owner" : featured \? "Featured"/);
   assert.match(app, /status-owner-verified/);
-  assert.match(app, /Muse redemption not independently confirmed/);
+  assert.match(app, /Owner-confirmed by ePlus.DEV\. Muse redemption has not been independently confirmed/);
   assert.match(css, /\.status-owner-verified\{/);
-  assert.match(css, /\.card-redemption\{/);
+  assert.match(css, /\.card-status-row\{display:flex/);
+  assert.doesNotMatch(css, /\.card-redemption\{/);
   const communityHtml = renderDetailPage(community());
   assert.match(communityHtml, /href="https:\/\/muse.ai\/invite\/TEST42"/);
   assert.doesNotMatch(communityHtml, /Verified Owner \(ePlus\.DEV\)/);
@@ -190,7 +191,7 @@ test("directory redesign preserves SEO, GA4, a single featured listing and verif
   assert.doesNotMatch(home, /id="featured-invite"/);
   assert.match(app, /new Set\(codes\.map/);
   assert.match(app, /ownerConfirmed/);
-  assert.match(app, /Muse redemption not independently confirmed/);
+  assert.match(app, /Owner-confirmed by ePlus.DEV\. Muse redemption has not been independently confirmed/);
   assert.match(app, /visible\.slice\(0, displayLimit\)/);
   assert.match(renderDetailPage(owner()), /G-N1MZ8YLNLJ/);
 });
