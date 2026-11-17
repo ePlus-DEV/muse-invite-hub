@@ -19,7 +19,7 @@ test("all site page layouts retain current design and render the same native sha
   for (const [html,prefix] of variants) {
     assert.equal((html.match(/id="contribute"/g)||[]).length,1);
     assert.ok(html.includes(renderContributionDialog(prefix)));
-    assert.match(html, /https:\/\/t\.me\/share\/url\?url=/);
+    assert.match(html, /https:\/\/t\.me\/muse_invite_hub_bot/);
     assert.match(html,/<dialog id="contribute" class="contribute-dialog"/);
     assert.match(html,/<a[^>]+data-contribute-trigger aria-haspopup="dialog"/);
     assert.match(html,new RegExp('href="'+shareUrl.replaceAll("?","\\?")+'"'));
@@ -38,14 +38,14 @@ test("modal is styled only with current brand tokens and phone-sized cards",()=>
   assert.match(style,/\.detail-hero-unified \.detail-stats\{/);
   assert.doesNotMatch(style,/\.hero-telegram-link\{/);
 });
-test("three source choices use genuine links; do not assert unverified Telegram bot",()=>{
+test("Telegram contribution opens the configured bot directly, never a share picker or guide",()=>{
   const html=renderContributionDialog("../../");
   assert.match(html,/Telegram/);
   assert.match(html,/GitHub form/);
   assert.match(html,/Give code feedback/);
-  assert.match(html, /href="https:\/\/t\.me\/share\/url\?url=https%3A%2F%2Fmuse\.eplus\.dev%2F"/);
+  assert.match(html, /href="https:\/\/t\.me\/muse_invite_hub_bot"/);
   assert.match(html, /Open Telegram/);
-  assert.doesNotMatch(html, /TELEGRAM_BOT_GUIDE\.md/);
+  assert.doesNotMatch(html, /TELEGRAM_BOT_GUIDE\.md|t\.me\/share\/url/);
   assert.match(html,/href="\.\.\/\.\.\/#codes"/);
   assert.match(html,/src="\.\.\/\.\.\/assets\/contribute-qr\.svg"/);
   assert.throws(()=>renderContributionDialog("../../../"),/Unexpected page path/);
@@ -102,7 +102,7 @@ test("preview detail uses only safe static modal and relative assets, no old pag
   assert.equal(detailPreview.appended,1);
   assert.match(detailPreview.html(),/src="\.\.\/\.\.\/assets\/contribute-qr\.svg"/);
   assert.match(detailPreview.html(),/href="\.\.\/\.\.\/#codes"/);
-  assert.match(detailPreview.html(), /https:\/\/t\.me\/share\/url\?url=/);
+  assert.match(detailPreview.html(), /https:\/\/t\.me\/muse_invite_hub_bot/);
   detailPreview.links[0].handlers.click({preventDefault(){}});
   assert.equal(detailPreview.dialog.open,true);
   const countryPreview=simulate({legacy:true,path:"/pr-preview/pr-239/countries/"});
