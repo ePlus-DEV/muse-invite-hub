@@ -59,7 +59,8 @@ test("production and PR previews are stamped with their own local assets", () =>
     mkdirSync(join(preview,"assets"),{recursive:true});
     writeFileSync(join(preview,"assets","styles.css"),"new branch styles");
     const previewHtml='<link href="./assets/styles.css">'+
-      '<meta property="og:image" content="https://muse.eplus.dev/pr-preview/pr-72/assets/social-preview.png">';
+      '<meta property="og:image" content="https://muse.eplus.dev/pr-preview/pr-72/assets/social-preview.png">'+
+      '<meta property="og:image:secure_url" content="https://muse.eplus.dev/assets/social-preview.png">';
     writeFileSync(join(preview,"index.html"),previewHtml);
     writeFileSync(join(preview,"assets","social-preview.png"),"preview OG");
     assert.equal(stampSiteAssets(preview),1);
@@ -68,6 +69,8 @@ test("production and PR previews are stamped with their own local assets", () =>
     assert.match(readFileSync(join(preview,"index.html"),"utf8"),
       new RegExp('social-preview\\.png\\?v='+digest("preview OG")));
     assert.notEqual(digest("new branch styles"),digest(f.contents["styles.css"]));
+    assert.match(readFileSync(join(preview,"index.html"),"utf8"),
+      /content="https:\\/\\/muse\\.eplus\\.dev\\/assets\\/social-preview\\.png"/);
   } finally { f.cleanup(); }
 });
 
