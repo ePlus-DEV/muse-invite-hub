@@ -68,8 +68,8 @@ test("homepage copied state keeps the same card geometry and syncs storage event
     copy.indexOf("features.rememberCopiedCode(window.localStorage, value)"));
   assert.match(copy,/else copiedCodes\.add\(value\)/);
   assert.match(copy,/syncCopiedCards\(\)/);
-  assert.match(css,/\.card-primary-actions\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.match(css,/\.code-card-copied:not\(\.code-card-featured\) \.card-copy i\{color:var\(--green\)\}/);
+  assert.match(css,/\.card-primary-actions\{display:grid;grid-template-columns:1\.12fr 1fr/);
+  assert.match(css,/\.code-card-copied:not\(\.code-card-featured\) \.card-copy\{background:#e4f7ed/);
   assert.doesNotMatch(css,/\.code-card\.code-card-copied\{/);
   assert.doesNotMatch(css,/\.code-card-copied \.card-copy,/);
   assert.doesNotMatch(css,/\.card-facts \.card-copy-note/);
