@@ -1,5 +1,5 @@
 /* GitHub is the only review queue; Telegram identity never becomes code ownership. */
-import { CODE_PATTERN } from "./bot.mjs";
+import { CODE_PATTERN, TELEGRAM_USERNAME } from "./bot.mjs";
 
 const REPO="ePlus-DEV/muse-invite-hub";
 const API="https://api.github.com/repos/"+REPO+"/";
@@ -117,8 +117,9 @@ async function findExistingTelegramSubmission(code,token) {
   }
   throw Error("Issue scan exceeded safe pagination limit");
 }
-export async function submitNewCode(code,updateId,token) {
-  if(!CODE_PATTERN.test(code)||!Number.isSafeInteger(updateId))throw Error("Invalid public contribution");
+export async function submitNewCode(code,updateId,token,username) {
+  if(!CODE_PATTERN.test(code)||!Number.isSafeInteger(updateId)||
+      !TELEGRAM_USERNAME.test(username||""))throw Error("Invalid public contribution identity");
   const existing=(await publishedCatalog()).find(item=>item.code===code);
   if(existing)return {kind:"listed",url:SITE+"/codes/"+encodeURIComponent(code)+"/"};
   const prior=await findExistingTelegramSubmission(code,token);
@@ -129,28 +130,55 @@ export async function submitNewCode(code,updateId,token) {
     title:"[Telegram submission] "+code,
     body:[
       "<!-- muse-telegram-submission:"+code+" -->",
-      "## New community invite reported via Telegram",
+      "### Invite code",
       "",
-      "Invite code: **"+code+"**",
+      code,
       "",
-      "Source evidence: **Not supplied by Telegram; manual review required.**",
+      "### Code source",
       "",
-      "This report came from Telegram. The sender's GitHub identity, code ownership,",
-      "Muse eligibility, redemption and remaining quota are **not verified**.",
+      "Telegram (community code shared through bot)",
       "",
-      "A maintainer must check the code and attribution before opening a",
-      "review-only data Draft PR. Do not auto-publish this bot-authored Issue.",
+      "### Social post or profile URL (required for Threads, X or Facebook)",
       "",
-      "Do not request or publish Telegram usernames, private screenshots or secrets.",
+      "_Not applicable: Telegram contributor, no source post supplied_",
+      "",
+      "### Public confirmation or context (optional)",
+      "",
+      "https://t.me/"+username+" (Telegram profile only, not source-post evidence)",
+      "",
+      "### Uses so far (optional; self-reported)",
+      "",
+      "_Not reported_",
+      "",
+      "### Invite limit (optional; self-reported)",
+      "",
+      "_Not reported_",
+      "",
+      "### Remaining invites (optional; self-reported)",
+      "",
+      "_Not reported_",
+      "",
+      "### Notes (optional)",
+      "",
+      "Reported from Telegram for human review only. Not proof of code ownership, redemption, eligibility, or remaining invitations.",
+      "",
+      "### Telegram contributor",
+      "",
+      "@"+username+" (Telegram sender, public attribution accepted during confirmation)",
+      "",
+      "### Contributor checklist",
+      "",
+      "- [x] I am authorized to share this code publicly; I understand this Issue is public.",
+      "- [x] This code is not a password, 2FA code, session token or private credential.",
       "",
       "### Maintainer review checklist",
-      "- [ ] Check whether the code is a genuine public invite, not a test/placeholder.",
-      "- [ ] Establish a legitimate public source or sharing permission; do not infer ownership from the GitHub Issue author.",
-      "- [ ] Check for duplicate codes, attribution conflicts and prior discussions.",
-      "- [ ] Only after review, prepare a **review-only Draft PR** with status `unverified`.",
-      "- [ ] After verified live publication, comment the canonical detail link before closing this Issue.",
       "",
-      "If source evidence is missing, request only a **public original-post URL** or other non-sensitive evidence."
+      "- [ ] Check genuine public code and sharing permission; profile URL alone is not evidence.",
+      "- [ ] Check duplicates, previous discussions and attribution conflicts.",
+      "- [ ] Only after independent review, prepare a review-only Draft PR (status: unverified).",
+      "- [ ] After live publication, comment the canonical detail link before closing this Issue.",
+      "",
+      "GitHub Issue author is the bot, NOT the Telegram contributor. Telegram ID stays private.",
     ].join("\n")
   });
   return {kind:"submitted",url:issue.html_url};
