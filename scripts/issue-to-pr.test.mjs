@@ -42,23 +42,34 @@ const issue=(number,title,body,login="YHresearcher")=>({
   number,title,body,user:{login},state:"open",created_at:date,updated_at:date
 });
 const telegramBody=(code="ABC123",handle="alice_dev") => [
-  "<!-- muse-telegram-submission:"+code+" -->",
   "### Invite code","",code,"",
   "### Code source","","Telegram (community code shared through bot)","",
-  "### Social post or profile URL (required for Threads, X or Facebook)","","_Not applicable: Telegram contributor, no source post supplied_","",
-  "### Public confirmation or context (optional)","","https://t.me/"+handle+" (Telegram profile only, not source-post evidence)","",
-  "### Uses so far (optional; self-reported)","","_Not reported_","",
-  "### Invite limit (optional; self-reported)","","_Not reported_","",
-  "### Remaining invites (optional; self-reported)","","_Not reported_","",
-  "### Notes (optional)","","Reported from Telegram for human review only.","",
-  "### Telegram contributor","","@"+handle+" (Telegram sender, public attribution accepted during confirmation)","",
+  "### Social post or profile URL (required for Threads, X or Facebook)","","_No response_","",
+  "### Public confirmation or context (optional)","","https://t.me/"+handle,"",
+  "### Uses so far (optional; self-reported)","","_No response_","",
+  "### Invite limit (optional; self-reported)","","_No response_","",
+  "### Remaining invites (optional; self-reported)","","_No response_","",
+  "### Notes (optional)","","Submitted via Telegram by @"+handle+
+    ". Human review required; public profile is not proof of code ownership, redemption or quota.","",
   "### Contributor checklist","",
   "- [x] I am authorized to share this code publicly; I understand this Issue is public.",
-  "- [x] This code is not a password, 2FA code, session token or private credential."
+  "- [x] This code is not a password, 2FA code, session token or private credential.","",
+  "<!-- muse-telegram-submission:"+code+" -->"
 ].join("\n");
 
-test("verified structured Telegram Issue produces only an attributed, unverified human-review Draft PR",()=>{
-  const source=issue(230,"[Telegram submission] ABC123",telegramBody("ABC123","hoang_it"),"hoangsvit");
+test("Telegram and GitHub use the exact same Share Code Issue Form headings and consent wording",()=>{
+  const form=readFileSync(new URL("../.github/ISSUE_TEMPLATE/share-code.yml",import.meta.url),"utf8");
+  const labels=[...form.matchAll(/^\s{8}label: (.+)$/gm)].map(match=>match[1].replace(/^"|"$/g,""));
+  const body=telegramBody();
+  const headings=[...body.matchAll(/^### (.+)$/gm)].map(match=>match[1]);
+  assert.deepEqual(headings,labels);
+  assert.match(form,/I am authorized to share this code publicly; I understand this Issue is public\./);
+  assert.equal(readIssueFields(body)["Code source"],"Telegram (community code shared through bot)");
+  assert.equal(hasRequiredInviteConfirmations(body),true);
+});
+
+test("Telegram [Invite] Issue creates only a source-attributed, unverified human-review Draft PR",()=>{
+  const source=issue(230,"[Invite] ABC123",telegramBody("ABC123","hoang_it"),"hoangsvit");
   const proposal=planIssueChange(source,[item]);
   assert.equal(proposal.outcome,"proposal");
   assert.equal(proposal.branch,"auto/issue-230-invite");
@@ -77,26 +88,45 @@ test("verified structured Telegram Issue produces only an attributed, unverified
   assert.equal(isAutoPublishableNewSocialInvite(source,proposal),false);
 });
 
-test("Telegram submissions reject forged, missing or inconsistent identity and quota claims",()=>{
+test("Telegram submissions reject mismatched identity, missing consent and owner quota claims",()=>{
   const body=telegramBody();
-  const original=issue(231,"[Telegram submission] ABC123",body,"hoangsvit");
+  const original=issue(231,"[Invite] ABC123",body,"hoangsvit");
   for(const submitted of [
-    {...original,title:"[Telegram submission] DEF456"},
+    {...original,title:"[Invite] DEF456"},
     {...original,body:body.replace("<!-- muse-telegram-submission:ABC123 -->","")},
     {...original,body:body.replace("@alice_dev","@someone_else")},
     {...original,body:body.replace("https://t.me/alice_dev","https://t.me/other_user")},
     {...original,body:body.replace("- [x] I am authorized","- [ ] I am authorized")},
     {...original,body:body.replace("### Code source\n\nTelegram","### Code source\n\nGitHub")},
-    {...original,body:body.replace("### Remaining invites (optional; self-reported)\n\n_Not reported_","### Remaining invites (optional; self-reported)\n\n30")},
+    {...original,body:body.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+      "### Remaining invites (optional; self-reported)\n\n30")},
     {...original,user:{login:"unrelated-reporter"}}
   ]){
     const plan=planIssueChange(submitted,[item]);
-    assert.notEqual(plan.outcome,"proposal");
+    assert.notEqual(plan.outcome,"proposal",JSON.stringify(submitted).slice(0,160));
   }
   const published=[item,{id:"already-listed",code:"ABC123",status:"unverified",addedAt:"2026-11-11",sourceUrl:"https://t.me/alice_dev"}];
   assert.equal(planIssueChange(original,published).outcome,"needs-review");
   const general=issue(232,"[Invite] ABC123",body.replace("<!-- muse-telegram-submission:ABC123 -->",""),"hoangsvit");
   assert.equal(planIssueChange(general,[item]).outcome,"needs-review");
+});
+
+test("older [Telegram submission] issues retain backwards-compatible review-only parsing",()=>{
+  const body=[
+    "<!-- muse-telegram-submission:ABC123 -->",
+    "### Invite code","","ABC123","",
+    "### Code source","","Telegram (community code shared through bot)","",
+    "### Public confirmation or context (optional)","","https://t.me/alice_dev (Telegram profile only, not source-post evidence)","",
+    "### Telegram contributor","","@alice_dev (Telegram sender, public attribution accepted during confirmation)","",
+    "### Contributor checklist","",
+    "- [x] I am authorized to share this code publicly; I understand this Issue is public.",
+    "- [x] This code is not a password, 2FA code, session token or private credential."
+  ].join("\n");
+  const source=issue(230,"[Telegram submission] ABC123",body,"hoangsvit");
+  const proposal=planIssueChange(source,[item]);
+  assert.equal(proposal.outcome,"proposal");
+  assert.equal(proposal.data.find(x=>x.code==="ABC123").sourceUrl,"https://t.me/alice_dev");
+  assert.equal(isAutoPublishableNewGithubInvite(source,proposal),false);
 });
 
 test("GitHub Issue Forms are parsed by headings, not arbitrary user code",()=>{
