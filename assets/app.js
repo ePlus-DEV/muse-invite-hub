@@ -72,9 +72,7 @@
       : "Copy this code. Copying does not redeem it in Muse.";
     button.setAttribute("aria-label",
       (copied ? "Copy again Muse invite code " : "Copy Muse invite code ") + code);
-    const label = copied
-      ? (card.classList.contains("code-card-featured") ? " Copy again" : " Copied")
-      : " Copy code";
+    const label = copied ? " Copied" : " Copy code";
     button.replaceChildren(icon(copied ? "fa-solid fa-check" : "fa-regular fa-copy"),
       document.createTextNode(label));
   }
