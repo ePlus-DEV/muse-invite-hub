@@ -146,6 +146,22 @@ test("reject malformed and impersonating X or Facebook source URLs", () => {
   }
 });
 
+test("Telegram profile attribution is supported without proving public-code ownership",()=>{
+  const profile="https://t.me/alice_dev";
+  const post="https://t.me/alice_dev/123456";
+  assert.equal(parsePublicSource(profile).platform,"Telegram");
+  assert.equal(parsePublicSource(profile).handle,"alice_dev");
+  assert.equal(parsePublicSource(profile).post,false);
+  assert.equal(parsePublicSource(post).post,true);
+  assert.deepEqual(validateCatalog([{id:"tg-source",code:"TG1234",status:"unverified",
+    addedAt:"2026-11-17",feedbackIssueNumber:228,sourceUrl:profile}]),[]);
+  assert.ok(validateCatalog([{id:"tg-source",code:"TG1234",status:"unverified",
+    addedAt:"2026-11-17",sourceUrl:profile,submittedBy:"alice-dev"}])
+    .some(e=>e.includes("must not reuse a GitHub owner identity")));
+  assert.equal(parsePublicSource("https://t.me/+privateInvite"),null);
+  assert.equal(parsePublicSource("https://t.me/share/url?url=https://bad.invalid"),null);
+});
+
 test("social parser differentiates identical handles across networks", () => {
   const links = [
     ["https://www.threads.com/@sameperson/post/example", "Threads", "threads"],
