@@ -95,7 +95,8 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
   const social = parsePublicSource(item.sourceUrl);
   const platform = social?.platform || "GitHub";
   const handle = social?.handle || item.submittedBy;
-  const author = handle ? "@" + handle : "Community contributor";
+  const author = social?.group ? "Group: " + social.handle :
+    handle ? "@" + handle : "Community contributor";
   const sourceUrl = social?.url || (handle ? "https://github.com/" + encodeURIComponent(handle) : null);
   const sourceLink = sourceUrl
     ? '<a href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener noreferrer">' +
