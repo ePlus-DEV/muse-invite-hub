@@ -496,6 +496,29 @@ test("issue #240 Facebook group post produces an unverified human-review proposa
     "group links cannot prove the post author and must stay in a review-only Draft PR");
 });
 
+test("reprocessing Issue #240 after its reviewed merge is already-listed, not rejected", () => {
+  const url="https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/";
+  const body=updatedShare("Facebook (public code I found)",url).replace("18I70N","FT4SHN")
+    .replace("I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
+      "I am authorized to share this code publicly; I understand this Issue is public.");
+  const original=issue(240,"[Invite] FT4SHN",body,"gary2222hub");
+  const published={
+    id:"community-issue-240",code:"FT4SHN",status:"unverified",
+    addedAt:"2026-11-17",feedbackIssueNumber:240,sourceUrl:url
+  };
+  const replay=planIssueChange(original,[item,published]);
+  assert.equal(replay.outcome,"already-published");
+  assert.match(replay.reason,/already in the main catalog/);
+  // A new reporter, changed source, or owner-only quota claim is not a replay.
+  assert.equal(planIssueChange(issue(241,"[Invite] FT4SHN",body,"other"),[item,published]).outcome,"needs-review");
+  const changed=body.replace(url,"https://www.facebook.com/groups/referralcodeshare/posts/1169239249161107/");
+  assert.equal(planIssueChange({...original,body:changed},[item,published]).outcome,"needs-review");
+  const quota=body.replace("### Remaining invites (optional; self-reported)\\n\\n_No response_",
+    "### Remaining invites (optional; self-reported)\\n\\n3");
+  assert.equal(planIssueChange({...original,body:quota},[item,published]).outcome,"needs-review");
+  assert.equal(isAutoPublishableNewSocialInvite(original,replay),false);
+});
+
 test("reject wrong social source, profile-only links and third-party quota claims", () => {
   const link = "https://x.com/sameperson/status/1234567890";
   const xBody = updatedShare("X (Twitter) (public code I found)",link);
