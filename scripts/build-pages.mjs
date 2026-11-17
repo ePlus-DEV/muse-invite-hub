@@ -100,7 +100,7 @@ try {
     api("repos/" + REPO + "/issues/comments?per_page=100&sort=created&direction=desc&page=" + page));
   const summary = summarizeFeedback(code,issueMap,comments,new Date().toISOString());
   writeFileSync(join(output,"data","feedback-counts.json"),
-    JSON.stringify(summary,null,2) + "\\n");
+    JSON.stringify(summary,null,2) + "\n");
   console.log("Compiled community report counts from " + comments.length +
     " GitHub comments (deduplicated by account and code).");
 } catch (error) {
