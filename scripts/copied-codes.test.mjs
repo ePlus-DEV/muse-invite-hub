@@ -81,7 +81,7 @@ test("homepage copied state keeps the same card geometry and syncs storage event
   assert.doesNotMatch(css,/\.card-facts \.card-copy-note/);
 });
 
-function detailHarness({ copied=false, failCopy=false }={}) {
+function detailHarness({ copied=false, failCopy=false, legacy=false }={}) {
   const copiedValue=copied?JSON.stringify(["DPNIHH"]):null;
   const storage=memoryStore(copiedValue?{[features.COPIED_STORAGE_KEY]:copiedValue}:{});
   const listeners=new Map(),events=new Map(),scheduled=[];
@@ -103,6 +103,33 @@ function detailHarness({ copied=false, failCopy=false }={}) {
   };
   const after=[];
   const actions={after:node=>after.push(node)};
+  const legacyRemoved=[];
+  const removable = (selector, textContent="") => ({
+    textContent,
+    remove(){ legacyRemoved.push(selector); }
+  });
+  const ownerRow={querySelector:name=>name==="dt"?{textContent:"Code owner"}:null,
+    remove(){legacyRemoved.push("owner-row");}};
+  const sourceRow={querySelector:name=>name==="dt"?{textContent:"Source"}:null,
+    remove(){legacyRemoved.push("source-row");}};
+  const steps=["Copy the invitation code", "Open Muse", "Enter the code"].map((text,index)=>({
+    textContent:text,remove(){legacyRemoved.push("step-"+index);}
+  }));
+  const legacyElements=legacy?{
+    '.detail-action-row a[href="https://muse.ai/join"]':removable("open-muse"),
+    ".detail-lead":removable("lead"),
+    ".detail-caution":removable("caution"),
+    ".detail-code-heading .detail-owner":removable("heading-owner"),
+    ".detail-info-card .detail-caption":removable("repeated-quota"),
+    ".detail-primary > .section-kicker":{textContent:"MUSE INVITE · VERIFIED OWNER"},
+    ".detail-status":{textContent:"Verified Owner",title:""},
+    ".detail-note":removable("owner-note",
+      "Owner-confirmed invitation from ePlus.DEV. Muse redemption availability has not been independently checked."),
+    ".detail-meta":{querySelectorAll:()=>[ownerRow,sourceRow]},
+    ".detail-instructions":{querySelector:name=>name==="ol"?{
+      querySelectorAll:()=>steps
+    }:name==="p"?removable("extra-instructions"):null}
+  }:{};
   const document={
     getElementById:id=>({
       "detail-copy":button,"detail-code":{textContent:"DPNIHH"},
@@ -110,7 +137,8 @@ function detailHarness({ copied=false, failCopy=false }={}) {
     })[id]||null,
     querySelector:selector=>({
       ".detail-code-panel":panel,
-      ".detail-action-row":actions
+      ".detail-action-row":actions,
+      ...legacyElements
     })[selector]||null,
     querySelectorAll:()=>[],
     createElement:tag=>({tag,hidden:false,textContent:""})
@@ -136,8 +164,22 @@ function detailHarness({ copied=false, failCopy=false }={}) {
     // Leave ancillary async Issue lookup pending; copy bindings must work immediately.
     fetch:()=>new Promise(()=>{})
   });
-  return {storage,window,panel,button,label,icon,after,events,listeners,scheduled};
+  return {storage,window,panel,button,label,icon,after,events,listeners,scheduled,legacyRemoved,legacyElements,steps};
 }
+
+test("legacy main-generated PR detail preview hides duplicate actions without losing source", () => {
+  const page=detailHarness({legacy:true});
+  for(const name of ["open-muse","lead","caution","heading-owner","repeated-quota",
+    "owner-note","owner-row","step-2","extra-instructions"]) {
+    assert.ok(page.legacyRemoved.includes(name), "Expected redundant content removed: "+name);
+  }
+  assert.ok(!page.legacyRemoved.includes("source-row"),"Source attribution must be preserved");
+  assert.equal(page.legacyElements[".detail-primary > .section-kicker"].textContent,"MUSE INVITE");
+  assert.match(page.legacyElements[".detail-status"].title,/Muse redemption is not verified/);
+  assert.match(page.steps[0].textContent,/Open invite/);
+  assert.match(page.steps[1].textContent,/eligibility/);
+  assert.equal(page.label.textContent,"Copy invite code","Copy action must remain functional");
+});
 
 test("detail copied tint and Copy again survive reload and copy success", async () => {
   const browser=detailHarness({copied:true});
