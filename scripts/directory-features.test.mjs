@@ -385,6 +385,26 @@ test("editable feedback dialog prepares a report and reuses the linked Issue wit
   assert.doesNotMatch(feedbackSection, /issues\/new\?/);
 });
 
+test("copied GitHub comments cannot become a code: URL on iOS Safari", () => {
+  for (const outcome of ["worked", "failed", "other", "count"]) {
+    const report = features.feedbackComment("DPNIHH", outcome);
+    assert.match(report, /^## Muse invite report\n\nCode: DPNIHH\n/);
+    assert.doesNotMatch(report, /^[A-Za-z][A-Za-z0-9+.-]*:/);
+    assert.match(report, /^Code: DPNIHH$/m, "Keep the bot-readable Code field");
+    assert.equal(features.clipboardSafeReport(report), report);
+  }
+  const edited = "Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 20";
+  const safe = features.clipboardSafeReport(edited);
+  assert.match(safe, /^## Muse invite report\n\nCode: DPNIHH\n/);
+  assert.equal(features.clipboardSafeReport(safe), safe);
+  assert.doesNotMatch(safe, /code:%20|%0A/i);
+  assert.equal(features.clipboardSafeReport(""), "");
+  assert.equal(features.clipboardSafeReport("## Custom heading\n\nCode: DPNIHH"),
+    "## Custom heading\n\nCode: DPNIHH");
+  const helper = read("assets/directory-features.js");
+  assert.match(helper, /text = clipboardSafeReport\(text\);\s*textarea.value = text;/);
+});
+
 test("owner-count comment requires real, consistent figures before Safari copy", () => {
   const template = features.feedbackComment("DPNIHH", "count");
   const blank = features.prepareOwnerCountComment(template);
@@ -427,7 +447,7 @@ test("owner-count comment requires real, consistent figures before Safari copy",
 
 test("guided mobile owner count fields generate the canonical GitHub report", () => {
   const report = features.ownerCountComment("DPNIHH", "3", "", "");
-  assert.match(report, /^Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 3/m);
+  assert.match(report, /^## Muse invite report\n\nCode: DPNIHH\nUpdate type: Owner count\nRemaining invites: 3/m);
   const preparedRemaining = features.prepareOwnerCountComment(report);
   assert.equal(preparedRemaining.error, undefined);
   assert.match(preparedRemaining.text, /Remaining invites: 3/);
