@@ -362,10 +362,24 @@
       const countLink = el("a", "card-utility-link card-count-link");
       countLink.setAttribute("aria-label", "Update owner invite count for code " + item.code);
       countLink.append(icon("fa-solid fa-arrow-rotate-right"));
+      // Show only documented, accepted quota revisions; not visits or click counts.
+      const updates = item.quotaUpdateCount;
+      if (Number.isSafeInteger(updates) && updates > 0) {
+        const counter = el("span", "card-count-updates", updates > 99 ? "99+" : String(updates));
+        counter.setAttribute("aria-hidden", "true");
+        countLink.append(counter);
+        countLink.setAttribute("aria-label", "Update owner invite count for code " +
+          item.code + " — " + updates + " recorded quota " +
+          (updates === 1 ? "update" : "updates"));
+      }
       countLink.href = feedbackIssue(item.code, "count");
       countLink.target = "_blank";
       countLink.rel = "noopener noreferrer";
-      countLink.dataset.tooltip = "For this code's verified GitHub owner: report a dated Muse quota snapshot on the same Issue.";
+      countLink.dataset.tooltip = "For the original GitHub owner: report a dated quota snapshot on the same Issue." +
+        (Number.isSafeInteger(updates) && updates > 0
+          ? " " + updates + " accepted quota " + (updates === 1 ? "update" : "updates") +
+            " recorded since the first report."
+          : " No accepted quota revisions are recorded yet.");
       countLink.addEventListener("click", event => prepareFeedback(event, item, "count"));
       subActions.append(countLink);
     }
