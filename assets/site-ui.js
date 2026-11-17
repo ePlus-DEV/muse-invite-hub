@@ -54,7 +54,7 @@
       const prefix = path.includes("/codes/") ? "../../" :
         path.includes("/countries/") ? "../" : "./";
       const github = "https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml";
-      const telegram = "https://t.me/share/url?url=https%3A%2F%2Fmuse.eplus.dev%2F";
+      const telegram = "https://t.me/muse_invite_hub_bot";
       const template = document.createElement("template");
       template.innerHTML = `  <dialog id="contribute" class="contribute-dialog" aria-labelledby="contribute-title" aria-describedby="contribute-intro">
     <div class="contribute-dialog-head">
@@ -66,7 +66,7 @@
       <div class="contribute-dialog-options">
         <a class="contribute-option contribute-option-telegram" href="${telegram}" target="_blank" rel="noopener noreferrer">
           <i class="fa-brands fa-telegram" aria-hidden="true"></i>
-          <span><strong>Telegram <small>Mobile-friendly</small></strong><span>Open Telegram, choose your trusted bot chat, then use /submit or /report. No GitHub sign-in.</span><em>Open Telegram</em></span>
+          <span><strong>Telegram <small>Mobile-friendly</small></strong><span>Open the Muse Invite Hub bot directly to submit a public code or report feedback. No GitHub sign-in.</span><em>Open Telegram</em></span>
           <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
         </a>
         <a class="contribute-option" href="${github}" target="_blank" rel="noopener noreferrer">
@@ -83,10 +83,10 @@
       <div class="contribute-dialog-qr">
         <img src="${prefix}assets/contribute-qr.svg" width="154" height="154" alt="QR code to open the contribution choices on muse.eplus.dev" loading="lazy">
         <strong>Scan with your phone</strong>
-        <p>Opens this same choice menu. QR does not open an unverified Telegram account.</p>
+        <p>Opens this choice menu on your phone. Select Telegram to chat with our bot.</p>
       </div>
     </div>
-    <p class="contribute-dialog-safety"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Telegram needs consent to publish your public @username. Submissions require review; code validity is not guaranteed. A verified public bot link has not yet been published.</p>
+    <p class="contribute-dialog-safety"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Telegram requires your consent before publishing your public @username. Submissions require review; invite code validity is not guaranteed.</p>
   </dialog>`;
       shareDialog = template.content?.firstElementChild || null;
       if (shareDialog) document.body.append(shareDialog);
