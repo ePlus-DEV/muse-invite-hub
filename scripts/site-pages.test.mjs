@@ -46,9 +46,16 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   const actionsAtHero=html.indexOf('class="detail-action-row"');
   const instructionsAtHero=html.indexOf('class="detail-instructions"');
   const marketAt=html.indexOf('class="availability-section detail-market-section"');
-  assert.ok(heroStart < heading && heading < actionsAtHero &&
-    actionsAtHero < instructionsAtHero && instructionsAtHero < marketAt,
-    "Actions and concise guidance should share the hero before market disclosure");
+  const availabilityAt=html.indexOf('class="detail-availability-inline"');
+  const sidebarAt=html.indexOf('class="detail-side"');
+  assert.ok(heroStart < heading && heading < availabilityAt &&
+    availabilityAt < actionsAtHero && actionsAtHero < instructionsAtHero &&
+    instructionsAtHero < marketAt && marketAt < sidebarAt,
+    "Single hero must contain code and reported availability before actions and guidance");
+  assert.equal((html.match(/REPORTED AVAILABILITY/g)||[]).length,1,
+    "Don't duplicate the reported quota across the hero and the sidebar");
+  assert.equal((html.match(/class="detail-slots-number"/g)||[]).length,1);
+  assert.doesNotMatch(html.slice(sidebarAt),/REPORTED AVAILABILITY/);
   assert.match(html, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
   assert.doesNotMatch(html, /<dt>Redemption status<\/dt><dd>Unverified/);
   assert.match(html, /3 \/ 30/);
@@ -110,6 +117,28 @@ test("detail visual restructure keeps SEO metadata, readable links and structure
   assert.doesNotMatch(preview,/rel="canonical"/);
   assert.equal((preview.match(/<h1\b/g)||[]).length,1);
   assert.match(generateSitemap([item]), /\/codes\/DPNIHH\//);
+});
+
+test("unreported community codes keep the single availability block in the invite hero", () => {
+  const html=renderDetailPage(community());
+  const hero=html.indexOf('class="detail-identity-row"');
+  const empty=html.indexOf('class="detail-slots-number">Not reported');
+  const actions=html.indexOf('class="detail-action-row"');
+  assert.ok(hero>0 && empty>hero && empty<actions);
+  assert.equal((html.match(/class="detail-slots-number"/g)||[]).length,1);
+  assert.match(html,/No confirmed remaining-slot data/);
+  assert.match(html,/id="detail-title"/);
+});
+
+test("responsive report layout keeps full-width readable how-to and existing SEO contract", () => {
+  const css=readFileSync(new URL("../assets/styles.css",import.meta.url),"utf8");
+  const js=readFileSync(new URL("../assets/detail.js",import.meta.url),"utf8");
+  assert.match(css,/\.detail-hero-unified \.detail-identity-row\{display:grid;grid-template-columns:minmax\(0,1fr\) minmax\(166px,195px\)/);
+  assert.match(css,/\.detail-hero-unified \.detail-instructions ol\{grid-template-columns:1fr/);
+  assert.match(css,/@media\(max-width:600px\)\{[\s\S]*?\.detail-hero-unified \.detail-identity-row\{grid-template-columns:1fr/);
+  assert.match(js,/reportCard\?\.querySelector\?\.\("\.detail-slots-number"\)/);
+  assert.match(js,/identityRow\.append\(title, reportCard\)/);
+  assert.match(js,/reportCard\.classList\.remove\("detail-info-card"\)/);
 });
 
 test("confirmed owner card and non-owner detail keep verification meanings separate", () => {
