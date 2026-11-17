@@ -193,8 +193,11 @@ test("quick feedback links to existing canonical Issue and suggests editable com
 });
 
 test("homepage and detail load helpers before existing scripts without altering SEO", () => {
-  const homeHelper = home.indexOf('src="./assets/directory-features.js"');
-  const homeApp = home.indexOf('src="./assets/app.js"');
+  // Versioned preview assets avoid browser caching an earlier card layout.
+  const homeHelper = home.indexOf('src="./assets/directory-features.js?v=20261117-pr248-alignment"');
+  const homeApp = home.indexOf('src="./assets/app.js?v=20261117-pr248-alignment"');
+  assert.match(home, /href="\.\/assets\/styles\.css\?v=20261117-pr248-alignment"/);
+  assert.match(home, /src="\.\/assets\/site-ui\.js\?v=20261117-pr248-alignment"/);
   assert.ok(homeHelper > 0 && homeApp > homeHelper);
   assert.match(home, /<title>Muse Invite Hub — Share the spark<\/title>/);
   assert.match(home, /rel="canonical" href="https:\/\/muse\.eplus\.dev\/"/);
