@@ -227,17 +227,17 @@ test("quick feedback links to existing canonical Issue and suggests editable com
 });
 
 test("homepage and detail load helpers before existing scripts without altering SEO", () => {
-  // Versioned preview assets avoid browser caching an earlier card layout.
-  const homeHelper = home.indexOf('src="./assets/directory-features.js?v=20261117-pr251-reports"');
-  const homeApp = home.indexOf('src="./assets/app.js?v=20261117-pr251-reports"');
-  assert.match(home, /href="\.\/assets\/styles\.css\?v=20261117-pr251-reports"/);
-  assert.match(home, /src="\.\/assets\/site-ui\.js\?v=20261117-pr251-reports"/);
+  // Source templates remain stable; the Pages build appends content-derived versions.
+  const homeHelper = home.indexOf('src="./assets/directory-features.js"');
+  const homeApp = home.indexOf('src="./assets/app.js"');
+  assert.match(home, /href="\.\/assets\/styles\.css\"/);
+  assert.match(home, /src="\.\/assets\/site-ui\.js\"/);
   assert.ok(homeHelper > 0 && homeApp > homeHelper);
   assert.match(home, /<title>Muse Invite Hub — Share the spark<\/title>/);
   assert.match(home, /rel="canonical" href="https:\/\/muse\.eplus\.dev\/"/);
   const detail = renderDetailPage(owner);
   assert.ok(detail.indexOf('src="../../assets/directory-features.js"') <
-    detail.indexOf('src="../../assets/detail.js?v=20261117-pr251-reports"'));
+    detail.indexOf('src="../../assets/detail.js"'));
   assert.match(detail, /id="detail-save" type="button" aria-pressed="false" hidden/);
   assert.match(detail, /data-feedback-outcome="worked"/);
   assert.match(detail, /data-feedback-outcome="failed"/);
