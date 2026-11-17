@@ -32,7 +32,8 @@ For a complete generated site before merging, download the muse-invite-hub-pr-pr
 The published catalog is [data/invites.json](../data/invites.json). Codes are unique across every source platform.
 
 - GitHub entries use the submittedBy field. This identifies a GitHub account only.
-- Public Threads, X (Twitter) and Facebook entries use validated HTTPS sourceUrl links instead of GitHub owner fields. Example original-post formats: https://www.threads.com/@handle/post/ID, https://x.com/handle/status/123456789 and https://www.facebook.com/handle/posts/ID.
+- Public Threads, X (Twitter), Facebook and consented Telegram entries use validated HTTPS sourceUrl links instead of GitHub owner fields. Example original-post formats: https://www.threads.com/@handle/post/ID, https://x.com/handle/status/123456789 and https://www.facebook.com/handle/posts/ID.
+- Telegram community submissions require a real public @username from a private Telegram bot update, explicit consent to publish the handle/profile and a human source/permission review. After review a Telegram listing may use `sourceUrl: "https://t.me/username"` (profile link, not proof of ownership) without GitHub `submittedBy` or `submittedById`. Numeric Telegram IDs never enter public records.
 - The UI derives the source platform and handle from those public URLs. Automated Issue submissions require original post links; profiles, ambiguous sources and Facebook share-shortlinks need manual review. A GitHub reporter is not automatically the owner of a social account with the same handle.
 - Codes carry community statuses such as unverified, reported-working and reported-not-working. These are not official Muse validation. Threads demo codes 18I70N and XZ4PV6 were user-supplied; their profile links alone do not independently prove the code was posted or works.
 
