@@ -197,7 +197,7 @@ test("contribution hub offers Telegram first, GitHub and feedback with an honest
   assert.match(section,/src="\.\/assets\/contribute-qr\.svg"/);
   assert.match(section,/QR opens this page, not an unverified Telegram account/);
   assert.match(section,/href="https:\/\/muse\.eplus\.dev\/#contribute"/);
-  assert.match(home,/href="#contribute">Share your code<\/a>/);
+  assert.match(home,/href="#contribute"><i class="fa-solid fa-plus" aria-hidden="true"><\/i> Share your code<\/a>/);
   assert.match(home,/href="#contribute">Share a code<\/a>/);
   assert.match(home,/href="#contribute">choose how to share<\/a>/);
   assert.match(home,/href="\.\/#contribute">Contribute<\/a>/);
@@ -210,7 +210,7 @@ test("contribution hub offers Telegram first, GitHub and feedback with an honest
   const svg=read("assets/contribute-qr.svg");
   assert.match(svg,/<svg[^>]*viewBox="0 0 37 37"/);
   assert.match(svg,/<path fill="#152742" d="M4 4h7v1H4z/);
-  assert.doesNotMatch(svg,/<script|<foreignObject|https?:/i);
+  assert.doesNotMatch(svg,/<script|<foreignObject|<image\b|href="https?:/i);
   assert.match(readme,/docs\/TELEGRAM_BOT_GUIDE\.md/);
   assert.match(contributing,/docs\/TELEGRAM_BOT_GUIDE\.md/);
   assert.match(css,/\.contribute-grid\{display:grid/);
