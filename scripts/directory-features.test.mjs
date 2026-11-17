@@ -93,7 +93,7 @@ test("feedback report counts render only from the trusted published GitHub snaps
   assert.match(css,/\.card-quick-feedback\.has-count\{width:50px/);
   assert.match(css,/\.detail-feedback-count\{padding:2px 6px/);
   assert.match(detailJs,/fetch\("\.\.\/\.\.\/data\/feedback-counts\.json"/);
-  assert.match(detailJs,/snapshot\?\.source !== "github-issue-comments"/);
+  assert.match(detailJs,/snapshot\?\.source !== "reviewed-github-feedback"/);
 });
 
 test("compact card controls have smaller desktop proportions without shrinking mobile targets", () => {
