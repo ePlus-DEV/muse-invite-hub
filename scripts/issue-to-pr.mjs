@@ -399,6 +399,17 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
           reason:"The submitted code and source are already in the main catalog from this Issue."};
       }
       const canonicalIssueNumber=originalIssueNumber(existing);
+      // Different-source submissions are duplicates only when they do not
+      // attempt to supply owner-only quota figures. Never discard claims
+      // needing human validation by silently closing their Issues.
+      const hasQuotaClaim=["Invite limit (optional; self-reported)",
+        "Uses so far (optional; self-reported)",
+        "Remaining invites (optional; self-reported)"].some(label=>field(f,label).trim());
+      if (!socialSubmission && hasQuotaClaim &&
+          (parsePublicSource(existing.sourceUrl) || !ownerMatches(existing,issue))) {
+        return {outcome:"needs-review",kind,code,
+          reason:"A different source or owner reported quota numbers; manual review is required."};
+      }
       if (socialSubmission || parsePublicSource(existing.sourceUrl) || !ownerMatches(existing,issue)) {
         // A second submission of an existing CODE does not replace attribution
         // or ownership. Give its author the existing listing/Issue link and
