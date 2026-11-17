@@ -33,8 +33,10 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /rel="canonical" href="https:\/\/muse.eplus.dev\/codes\/DPNIHH\/"/);
   assert.match(html, /<meta name="robots" content="index,follow">/);
   assert.match(html, /Verified Owner/);
-  assert.match(html, /<dt>Code owner<\/dt><dd><span class="detail-owner-confirmed"/);
-  assert.match(html, /Verified Owner \(ePlus\.DEV\)/);
+  assert.doesNotMatch(html, /<dt>Code owner<\/dt>/);
+  assert.doesNotMatch(html, /class="detail-lead"|class="detail-caution"|class="detail-owner"/);
+  assert.match(html, /<span class="detail-status" title="Ownership confirmed by ePlus.DEV; Muse redemption is not verified."/);
+  assert.match(html, /<p class="section-kicker">MUSE INVITE<\/p>/);
   assert.match(html, /<dt>Muse redemption<\/dt><dd>Not independently confirmed by Muse/);
   assert.doesNotMatch(html, /<dt>Redemption status<\/dt><dd>Unverified/);
   assert.match(html, /3 \/ 30/);
@@ -51,6 +53,11 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.equal((html.match(/href="https:\/\/muse.ai\/invite\/DPNIHH"/g) || []).length, 1);
   assert.match(html, /href="https:\/\/muse.ai\/invite\/DPNIHH"/);
   assert.match(html, /aria-label="Open Muse invite link for code DPNIHH"/);
+  assert.doesNotMatch(html, /<p class="detail-caption">These figures are dated/);
+  assert.doesNotMatch(html, /Owner-confirmed; redemption is not independently tested/);
+  assert.match(html, /Select <strong>Open invite<\/strong> above to visit Muse with this code/);
+  assert.doesNotMatch(html, /<li>Copy the invitation code shown above/);
+  assert.doesNotMatch(html, /Ownership confirmation does not mean the code/);
   assert.doesNotMatch(html, /Muse has verified this code/);
 });
 test("confirmed owner card and non-owner detail keep verification meanings separate", () => {
