@@ -40,6 +40,14 @@ test("Telegram commands accept only public code patterns and known report outcom
     text:"/submit CODE11"}}).type,"private-only");
   assert.equal(parseUpdate({update_id:2,message:{chat:{id:123,type:"private"},from:{is_bot:true},
     text:"/submit CODE11"}}),null);
+  assert.equal(parseUpdate({update_id:5,message:{
+    chat:{id:42,type:"private"},
+    from:{id:99,is_bot:false,username:"alice_dev"},text:"/submit CODE11"
+  }}),null,"A private chat message must come from the chat owner");
+  assert.equal(parseUpdate({update_id:6,callback_query:{
+    id:"cb",from:{id:42,is_bot:true},message:{chat:{id:42,type:"private"}},
+    data:"t:submit:CODE11"
+  }}),null,"Bot callbacks cannot initiate public GitHub writes");
   assert.equal(parseUpdate({update_id:3,callback_query:{
     id:"callback",from:{id:42},message:{chat:{id:43,type:"private"}},data:"t:submit:CODE11"
   }}),null,"A callback from another account cannot submit as the private-chat owner");
