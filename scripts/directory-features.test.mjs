@@ -31,6 +31,13 @@ test("direct Muse invitation links use validated codes and safe new-tab navigati
   assert.match(read("assets/styles.css"), /\.card-primary-actions\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
 
+test("Facebook group sources render as group references, never @person attribution", () => {
+  assert.match(app,/group = Boolean\(found\)/);
+  assert.match(app,/\(source\.group \? "Group: " : "@"\)/);
+  assert.match(detailJs,/\(group \? "Group: " : "@"\)/);
+  assert.match(app,/View Facebook group post in/);
+});
+
 test("saved codes parse safely and remain scoped to the browser", () => {
   assert.equal(features.STORAGE_KEY, "muse-invite-hub:saved-codes:v1");
   assert.deepEqual(features.parseSaved(null), []);
