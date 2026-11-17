@@ -108,11 +108,11 @@ test("contributor with stable GitHub ID may report usage of original code",()=>{
 
 test("Issue #204 narrative owner update becomes a review-only proposal, not an ignored comment",()=>{
   const root={number:204,state:"open",title:"[Invite] YKDCA9",
-    body:"### Invite code\\n\\nYKDCA9\\n\\n### Code source\\n\\nGitHub (my own code)\\n\\n### Contributor checklist\\n\\n- [x] agreed"};
+    body:"### Invite code\n\nYKDCA9\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [x] agreed"};
   const published={id:"community-issue-204",code:"YKDCA9",status:"unverified",
     addedAt:"2026-11-16",submittedBy:"JackChong1",submittedById:123796417,
     feedbackIssueNumber:204};
-  const body="Owner count update — YKDCA9\\n\\n- Total invites: 30\\n- Remaining invites: 29\\n- Used invites: 1\\n\\n"+
+  const body="Owner count update — YKDCA9\n\n- Total invites: 30\n- Remaining invites: 29\n- Used invites: 1\n\n"+
     "I am the owner of this invite code. One friend redeemed the code on 2026-11-16, so 29 uses remain.";
   const report=member(body,{id:6934787451,
     created_at:"2026-11-17T01:20:21Z",
@@ -134,19 +134,19 @@ test("Issue #204 narrative owner update becomes a review-only proposal, not an i
 
 test("narrative owner count rejects mistaken, forged, ambiguous and inconsistent reports",()=>{
   const root={number:204,state:"open",title:"[Invite] YKDCA9",
-    body:"### Invite code\\n\\nYKDCA9\\n\\n### Code source\\n\\nGitHub (my own code)\\n\\n### Contributor checklist\\n\\n- [x] agreed"};
+    body:"### Invite code\n\nYKDCA9\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [x] agreed"};
   const published={id:"community-issue-204",code:"YKDCA9",status:"unverified",
     addedAt:"2026-11-16",submittedBy:"JackChong1",
     submittedById:123796417,feedbackIssueNumber:204};
   const owner={login:"JackChong1",type:"User",id:123796417};
-  const body="Owner count update — YKDCA9\\n- Total invites: 30\\n- Remaining invites: 29\\n- Used invites: 1\\nI am the owner of this invite code.";
+  const body="Owner count update — YKDCA9\n- Total invites: 30\n- Remaining invites: 29\n- Used invites: 1\nI am the owner of this invite code.";
   const proposed=(commentBody,user=owner,entry=published)=>
     planCommentProposal(root,member(commentBody,{id:6934787451,created_at:"2026-11-17T01:20:21Z",user}),[entry]);
   assert.equal(proposed(body,{...owner,id:222}).outcome,"needs-review");
   assert.equal(proposed(body.replace("YKDCA9","OTHER1")).outcome,"needs-review");
   assert.equal(proposed(body.replace("29","28")).outcome,"needs-review");
   assert.equal(proposed(body.replace("- Used invites: 1","")).outcome,"needs-review");
-  assert.equal(proposed(body.replace("- Used invites: 1","- Used invites: 1\\n- Used invites: 1")).outcome,"needs-review");
+  assert.equal(proposed(body.replace("- Used invites: 1","- Used invites: 1\n- Used invites: 1")).outcome,"needs-review");
   assert.equal(proposed(body.replace("- Used invites: 1","- Used invites: many")).outcome,"needs-review");
   assert.equal(proposed(body.replace("I am the owner of this invite code.","")).outcome,"needs-review");
   assert.equal(proposed(body,owner,{...published,sourceUrl:"https://www.threads.com/@source/post/123"}).outcome,"needs-review");
