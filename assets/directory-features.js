@@ -99,6 +99,7 @@
       a.code.localeCompare(b.code);
   }
 
+  const COPY_REPORT_HEADING = "## Muse invite report";
   const FEEDBACK_CHOICES = {
     worked: "Muse accepted my code",
     failed: "Muse rejected or could not redeem my code",
@@ -110,14 +111,24 @@
     if (!CODE_PATTERN.test(code)) throw Error("Invalid public invite code");
     if (!Object.hasOwn(FEEDBACK_CHOICES, outcome)) throw Error("Invalid feedback option");
     if (outcome === "count") {
-      return "Code: " + code + "\nUpdate type: Owner count" +
+      return COPY_REPORT_HEADING + "\n\nCode: " + code + "\nUpdate type: Owner count" +
         "\nRemaining invites: [enter actual number or leave blank]" +
         "\nTotal invites: [optional]" +
         "\nUsed invites: [optional]" +
         "\nOwner confirmation: [confirm this report below]";
     }
-    return "Code: " + code + "\nResult: " + FEEDBACK_CHOICES[outcome] +
+    return COPY_REPORT_HEADING + "\n\nCode: " + code + "\nResult: " + FEEDBACK_CHOICES[outcome] +
       "\nWhen I tried: [add date]\nDetails: [add non-sensitive context]";
+  }
+
+  // On iOS Safari a copied comment starting with "Code:" can be treated as
+  // a custom code: URL and pasted as "code:%20...%0A...". Never put a
+  // URI-scheme-looking label at the start of copied plain text, even if a
+  // contributor removed the generated Markdown heading in the editor.
+  function clipboardSafeReport(text) {
+    const value = String(text || "").trim();
+    return /^[A-Za-z][A-Za-z0-9+.-]*:/.test(value) ?
+      COPY_REPORT_HEADING + "\n\n" + value : value;
   }
 
   function quickFeedbackUrl(code, outcome, issueNumber) {
@@ -350,6 +361,8 @@
         textarea.focus();
         return;
       }
+      text = clipboardSafeReport(text);
+      textarea.value = text;
       let copied = false;
       try {
         if (navigator.clipboard && window.isSecureContext) {
@@ -550,5 +563,5 @@
 
   return { STORAGE_KEY, COPIED_STORAGE_KEY, MAX_SAVED, tokenPotential, parseSaved, parseCopied,
     rememberCopiedCode, museInviteUrl, activityDate, compareCodes, quickFeedbackUrl,
-    feedbackComment, ownerCountComment, prepareOwnerCountComment, issueNumberFor, openFeedbackDialog, enableTooltips };
+    feedbackComment, ownerCountComment, prepareOwnerCountComment, clipboardSafeReport, issueNumberFor, openFeedbackDialog, enableTooltips };
 });
