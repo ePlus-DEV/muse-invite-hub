@@ -214,7 +214,7 @@ test("comment intake auto-creates only unverified tracking Issues, never an invi
       } else if(method==="POST" && path==="issues/55/comments"){
         const body=JSON.parse(options.body).body;
         assert.match(body,/<!-- muse-unrelated-referral:6935502783 -->/);
-        assert.match(body,/Share Code form/);
+        assert.match(body,published?/already listed/:/Share Code form/);
         comments.push({user:{login:"github-actions[bot]"},body});
         value={id:999};
       }else throw Error("Unexpected mock request "+method+" "+path+url.search);
