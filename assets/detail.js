@@ -45,6 +45,18 @@
     instructions?.querySelector?.("p")?.remove?.();
   }
   normalizeLegacyDetail();
+  // Privileged PR previews generate their HTML using trusted main: put the
+  // existing Save control in the header and make Open invite the first CTA in
+  // keyboard as well as visual order. The production generator already does so.
+  const cardHeading = document.querySelector(".detail-code-heading");
+  if (cardHeading && detailSave && detailSave.parentElement !== cardHeading &&
+      typeof cardHeading.append === "function") cardHeading.append(detailSave);
+  const inviteActions = document.querySelector(".detail-action-row");
+  const openInvite = inviteActions?.querySelector?.('a[href^="https://muse.ai/invite/"]');
+  if (openInvite && typeof inviteActions.insertBefore === "function" &&
+      openInvite.nextElementSibling !== button) {
+    inviteActions.insertBefore(openInvite,button);
+  }
   // The trusted PR preview renderer can still use old main HTML. Align DOM focus
   // order with the new visual order: redemption choices before secondary actions.
   const feedbackCard = document.querySelector(".detail-feedback");
