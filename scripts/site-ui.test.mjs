@@ -84,7 +84,7 @@ test("About has a visible target, expandable instructions, and a deep-link route
   const detail = renderDetailPage(sample);
   assert.match(detail, /href="\.\.\/\.\.\/#about"/);
   assert.match(detail, /src="\.\.\/\.\.\/assets\/site-ui.js" defer/);
-  assert.match(home, /src="\.\/assets\/site-ui.js" defer/);
+  assert.match(home, /src="\.\/assets\/site-ui.js\?v=20261117-pr248-alignment" defer/);
 });
 
 test("About opens when directly loaded with #about, then scrolls after full-page skeleton clears", () => {
