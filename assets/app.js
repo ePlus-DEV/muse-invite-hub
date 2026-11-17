@@ -349,7 +349,7 @@
     details.dataset.tooltip = "See the source, report date and details for this code.";
     details.setAttribute("aria-label", "View details for Muse invite code " + item.code);
     details.href = "./codes/" + encodeURIComponent(item.code) + "/";
-    details.append(icon("fa-regular fa-circle-info"));
+    details.append(icon("fa-solid fa-circle-info"));
     const report = el("a", "card-utility-link card-feedback-link");
     report.setAttribute("aria-label", "Give feedback on Muse invite code " + item.code);
     report.append(icon("fa-regular fa-comment-dots"));
