@@ -296,10 +296,10 @@ export async function proposeCommentDraft({
     const published=await api("GET","contents/"+path+"?ref="+mainSha,token,undefined,true);
     if(published && published.encoding!=="base64")throw Error("Unexpected reviewed ledger encoding");
     const previous=published ? JSON.parse(Buffer.from(
-      published.content.replace(/\\s/g,""),"base64").toString("utf8")) : null;
+      published.content.replace(/\s/g,""),"base64").toString("utf8")) : null;
     const updated=addReviewedFeedback(previous,mainReport);
     if(!updated.changed) return {outcome:updated.reason,kind,code};
-    await addFile(path,JSON.stringify(updated.ledger,null,2)+"\\n");
+    await addFile(path,JSON.stringify(updated.ledger,null,2)+"\n");
   }
   // A second user's same-outcome report changes the ledger, even if it does
   // not change catalog status. First reports can update both files atomically.
