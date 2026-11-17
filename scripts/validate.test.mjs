@@ -112,6 +112,7 @@ test("X and Facebook public provenance URLs validate without claiming GitHub own
     "https://x.com/example_handle/status/1234567890123456789",
     "https://twitter.com/example_handle/status/1234567890123456789",
     "https://www.facebook.com/example.user/posts/pfbid0123456789",
+    "https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/",
     "https://www.facebook.com/example.user"
   ]) {
     const entry = {...sample(), submittedBy:undefined, sourceUrl:url};
@@ -121,6 +122,24 @@ test("X and Facebook public provenance URLs validate without claiming GitHub own
     assert.ok(validateCatalog([{...entry, featured:true, ownerConfirmed:true}]).length > 0);
   }
 });
+test("Facebook group post permalinks identify groups, not individual authors", () => {
+  const url="https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/";
+  assert.deepEqual(parsePublicSource(url),{
+    platform:"Facebook",key:"facebook",handle:"referralcodeshare",
+    url,post:true,group:true
+  });
+  for (const invalid of [
+    "https://www.facebook.com/groups/referralcodeshare/",
+    "https://www.facebook.com/groups/referralcodeshare/posts/",
+    "https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/?foo=bar",
+    "https://www.facebook.com/groups/referralcodeshare/posts/not-a-number/",
+    "https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/extra",
+    "https://www.facebook.com.evil.test/groups/referralcodeshare/posts/1169239249161106/"
+  ]) {
+    assert.equal(parsePublicSource(invalid),null,invalid);
+  }
+});
+
 test("reject malformed and impersonating X or Facebook source URLs", () => {
   for (const url of [
     "https://x.com.evil.invalid/someone/status/123456789",
