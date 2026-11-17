@@ -527,7 +527,7 @@ test("a duplicate invite shows only actual published detail and canonical Issue 
   assert.match(comment,/https:\/\/muse\.eplus\.dev\/codes\/FT4SHN\//);
   assert.match(comment,/https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/240/);
   assert.match(comment,/Closing this duplicate/);
-  assert.doesNotMatch(comment,/verified redemption/i);
+  assert.match(comment,/does \\*\\*not\\*\\* mean Muse has verified redemption/);
   const original=resolvedInviteComment({codes:["FT4SHN"],liveCodes:["FT4SHN"],canonical:true});
   assert.match(original,/original contribution has been published/);
   assert.doesNotMatch(original,/Original discussion/);
