@@ -110,6 +110,24 @@
     if (title.parentElement !== hero && typeof cardHeading.after === "function") {
       cardHeading.after(title);
     }
+    // The main-based preview can still place Reported Availability in a
+    // separate sidebar card. Keep its actual value and timestamp, and move
+    // that single real card beside the invite H1 (never clone or fake it).
+    const reportCard = document.querySelector(".detail-side > .detail-info-card:first-child");
+    if (reportCard?.querySelector?.(".detail-slots-number") &&
+        !hero.querySelector?.(".detail-identity-row") &&
+        typeof document.createElement === "function") {
+      const identityRow = document.createElement("div");
+      identityRow.className = "detail-identity-row";
+      reportCard.classList.remove("detail-info-card");
+      reportCard.classList.add("detail-availability-inline");
+      reportCard.setAttribute?.("role", "group");
+      reportCard.setAttribute?.("aria-label", "Community-reported remaining invitation slots");
+      if (typeof title.before === "function" && typeof identityRow.append === "function") {
+        title.before(identityRow);
+        identityRow.append(title, reportCard);
+      }
+    }
     if (guidance && guidance.parentElement !== hero &&
         typeof hero.append === "function") hero.append(guidance);
     document.querySelector(".detail-primary > .section-kicker")?.remove?.();
