@@ -47,7 +47,7 @@
 
     // Preserve the new site UI. Trusted-main detail previews may lack the
     // static contribution dialog; create the same safe, static HTML there.
-    const shareLinks = document.querySelectorAll("[data-contribute-trigger], .nav-share, .nav-mobile-share");
+    const shareLinks = document.querySelectorAll?.("[data-contribute-trigger], .nav-share, .nav-mobile-share") || [];
     let shareDialog = document.getElementById("contribute");
     if (!shareDialog && shareLinks.length && document.createElement && document.body) {
       const path = window.location.pathname || "";
