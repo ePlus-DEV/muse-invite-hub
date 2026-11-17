@@ -235,6 +235,10 @@
         found = /^\/([A-Za-z0-9_]{1,15})(?:\/status\/[0-9]{5,25})?\/?$/.exec(path);
         if (found && ["i","home","search","explore","intent","share","settings","messages"].includes(found[1].toLowerCase())) return null;
         [platform,key,iconName] = ["X (Twitter)","x","fa-brands fa-x-twitter"];
+      } else if (["t.me","www.t.me"].includes(host)) {
+        found = /^\/([A-Za-z][A-Za-z0-9_]{4,31})(?:\/[1-9][0-9]{0,18})?\/?$/.exec(path);
+        if (found && ["share","joinchat","login","addstickers","proxy","socks","addemoji"].includes(found[1].toLowerCase())) return null;
+        [platform,key,iconName] = ["Telegram","telegram","fa-brands fa-telegram"];
       } else if (["facebook.com","www.facebook.com","m.facebook.com"].includes(host)) {
         found = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/[A-Za-z0-9_-]{4,120})?\/?$/.exec(path);
         if (found && ["share","groups","watch","reel","reels","events","marketplace","people","pages","profile.php","permalink.php","photo.php","login"].includes(found[1].toLowerCase())) return null;

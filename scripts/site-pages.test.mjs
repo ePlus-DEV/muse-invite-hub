@@ -209,10 +209,12 @@ test("Threads codes retain attribution and are included in the production sitema
   assert.match(generateSitemap([owner(), entry]), /codes\/XZ4PV6/);
   const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const app = readFileSync(new URL("../assets/app.js", import.meta.url), "utf8");
-  assert.equal((home.match(/class="source-filter(?: is-active)?"/g) || []).length, 5);
+  assert.equal((home.match(/class="source-filter(?: is-active)?"/g) || []).length, 6);
   assert.match(home, /data-source="x"/);
   assert.match(home, /data-source="facebook"/);
   assert.match(home, /data-source="threads"/);
+  assert.match(home, /data-source="telegram"/);
+  assert.match(app, /"Telegram","telegram","fa-brands fa-telegram"/);
   assert.match(app, /sourceInfo\(item\)\.handle/);
   assert.match(app, /sourceFilter === "all"/);
   assert.match(app, /render\(true\)/);

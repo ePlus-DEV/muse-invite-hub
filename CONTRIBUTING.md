@@ -11,12 +11,14 @@ Each accepted code contribution is stored as an independent reviewed JSON record
 ## Share a public invite code
 
 1. Open [Share a Muse invite code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml).
-2. Select **GitHub (my own code)** if you own the code, or **Threads**, **X (Twitter)** or **Facebook** if you found a public code posted by another person.
+2. Select **GitHub (my own code)** if you own the code, or **Threads**, **X (Twitter)** or **Facebook** if you found a public code posted by another person. **Telegram** is also supported as a human-reviewed community source; use the private Telegram bot to attribute your own contribution.
 3. Enter a public code (exactly 6 letters (A–Z) or digits (0–9), without hyphens (lowercase is normalized)). For social submissions include the **original public post URL** (`threads.com/@user/post/ID`, `x.com/user/status/123456789` or `facebook.com/user/posts/ID`). A profile-only, Facebook share-shortlink or ambiguous URL is held for manual review. The handle in the post URL is the social source, **not** the reporter's GitHub account.
 4. Enter quota figures **only for your own GitHub-owned code** from your Muse account; never infer them from a social post. Add optional non-sensitive notes.
 5. Check both public sharing/privacy confirmations, then submit.
 
 For GitHub-owned codes only: if your code is already listed under the same GitHub username, resubmitting an updated count (including a remaining-only number) can prepare an **update Draft PR**, not a duplicate listing. If a code is already listed from Threads, or someone files it under a different source, the bot will request manual review rather than replace the attribution or update the quota automatically. Existing listing IDs, contributor attribution and original listing dates are preserved. Numeric GitHub IDs help protect subsequent updates from username reuse. Actions checks the code and duplicates. **For a new GitHub-owned code with both confirmations checked**, the bot creates a Ready PR and can automatically merge it **only after** CI passes and a trusted workflow re-checks the current Issue, all generated JSON files and duplicate codes. Accepted codes are shown as `unverified` (community-submitted, not redemption-verified). **Public Threads/X/Facebook sources, updates to existing codes, incomplete or ambiguous Issues and feedback** still create review-only Draft PRs and require maintainer review. Total quota alone never implies all invites remain.
+
+**Telegram submissions:** the native Telegram bot requires a public `@username` obtained from the Telegram update and explicit consent before the username/profile appears in a public GitHub Issue. The Issue uses all standard Share Code headings and retains its `[Telegram submission]` title to prevent GitHub-owner misattribution. The GitHub author is the bot, not the contributor. After human review, an accepted Telegram code is stored with a validated `https://t.me/username` `sourceUrl` and the original GitHub feedback Issue number; it remains `unverified`. A profile URL is not proof of ownership or redemption. A public Telegram post link can also be retained after verification. Private numeric user/chat IDs are never written into the catalog. Neither Telegram submissions nor their owner-count claims are automatically merged.
 
 ## Conditional auto-merge policy
 
@@ -56,7 +58,7 @@ Existing issues remain associated with their original code even after merging. F
 
 If you own a listed GitHub-source invite code, find it in [the directory](https://muse.eplus.dev/#codes), click **Update count**, and review the prepared owner-report comment. Enter numbers shown in **your Muse Invite screen**, check the explicit ownership confirmation, click **Copy comment**, and post it on **the code's existing Issue**. The bot verifies your GitHub account against the original listed owner and proposes a **Draft PR** only if the figures are consistent. This does **not** create another Issue.
 
-For Threads, X or Facebook source listings, a GitHub username alone cannot establish ownership; please add evidence as a comment on the linked code Issue for manual maintainer review. The old Update count Issue Form is retained only for backward compatibility, not the preferred workflow.
+For Threads, X, Facebook or Telegram source listings, a GitHub username alone cannot establish ownership; please add evidence as a comment on the linked code Issue for manual maintainer review. The old Update count Issue Form is retained only for backward compatibility, not the preferred workflow.
 
 | Example | Quantity |
 | --- | ---: |

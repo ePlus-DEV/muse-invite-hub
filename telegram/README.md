@@ -91,6 +91,14 @@ Expected health response: {"status":"ok"}. Replace the sample hostname with your
 
 Caddy handles HTTPS certificates and routes only /healthz and /telegram/webhook to the private bot container. Port 3000 is not publicly published. Bot update deduplication state is stored in telegram/state; TLS data is stored in persistent named volumes.
 
+## Contributor attribution and Share Code form compatibility
+
+A new code submission requires a public Telegram `@username` from the Telegram update, not text claimed by a chat user. The sender must explicitly agree in Telegram to publish their `@username` and public profile URL, and confirm their right to share a public, non-secret code. If no username is configured, the bot does not submit an Issue.
+
+The resulting public `[Telegram submission]` Issue uses the standard Share Code headings (`### Invite code`, `### Code source`, `### Contributor checklist`, optional metadata), plus `### Telegram contributor`. Only the consented public username appears; the numeric user/chat ID and private associations remain in protected runtime state. A Telegram profile URL is **not** proof of code ownership or a public source post.
+
+The trusted Issue-to-PR pipeline deliberately excludes these bot-authored Issues, despite their standard headings: Telegram submissions need maintainer review of permission, source and duplicates, then a separate review-only Draft PR. No automatic publication, GitHub owner identity or owner-quota privilege is inferred.
+
 ## 6. Register Telegram webhook after HTTPS works
 
 No token appears in the command line: run the registration script **inside the existing private container**, where environment variables are already loaded:

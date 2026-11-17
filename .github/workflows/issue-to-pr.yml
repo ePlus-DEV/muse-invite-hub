@@ -27,6 +27,8 @@ jobs:
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event.issue.pull_request == null &&
+       !startsWith(github.event.issue.title, '[Telegram submission]') &&
+       !contains(github.event.issue.body, 'muse-telegram-submission:') &&
        (startsWith(github.event.issue.title, '[Invite]') ||
         startsWith(github.event.issue.title, '[Count update]') ||
         startsWith(github.event.issue.title, '[Code feedback]') ||

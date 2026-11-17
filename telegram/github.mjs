@@ -1,5 +1,5 @@
 /* GitHub is the only review queue; Telegram identity never becomes code ownership. */
-import { CODE_PATTERN } from "./bot.mjs";
+import { CODE_PATTERN, TELEGRAM_USERNAME } from "./bot.mjs";
 
 const REPO="ePlus-DEV/muse-invite-hub";
 const API="https://api.github.com/repos/"+REPO+"/";
@@ -66,11 +66,13 @@ export async function browseCodes({query="",newest=false,limit=5,offset=0}={}) {
           if(["threads.com","www.threads.com","threads.net","www.threads.net"].includes(host))platform="Threads";
           else if(["x.com","www.x.com","twitter.com","www.twitter.com"].includes(host))platform="X";
           else if(["facebook.com","www.facebook.com","m.facebook.com"].includes(host))platform="Facebook";
+          else if(["t.me","www.t.me"].includes(host))platform="Telegram";
         } catch { /* Ignore malformed catalog provenance. */ }
       }
       return {code:row.code,status:row.status,remaining:dated?remaining:null,
         usageReportedAt:dated?row.usageReportedAt:null,platform,
-        submittedBy:typeof row.submittedBy==="string"?row.submittedBy.slice(0,80):null,
+        submittedBy:typeof row.submittedBy==="string"?row.submittedBy.slice(0,80):
+          platform==="Telegram"?new URL(row.sourceUrl).pathname.split("/")[1]||null:null,
         addedAt:/^\d{4}-\d{2}-\d{2}$/.test(row.addedAt||"")?row.addedAt:null};
     });
 }
@@ -117,29 +119,68 @@ async function findExistingTelegramSubmission(code,token) {
   }
   throw Error("Issue scan exceeded safe pagination limit");
 }
-export async function submitNewCode(code,updateId,token) {
-  if(!CODE_PATTERN.test(code)||!Number.isSafeInteger(updateId))throw Error("Invalid public contribution");
+export async function submitNewCode(code,updateId,token,username) {
+  if(!CODE_PATTERN.test(code)||!Number.isSafeInteger(updateId)||
+      !TELEGRAM_USERNAME.test(username||""))throw Error("Invalid public contribution identity");
   const existing=(await publishedCatalog()).find(item=>item.code===code);
   if(existing)return {kind:"listed",url:SITE+"/codes/"+encodeURIComponent(code)+"/"};
   const prior=await findExistingTelegramSubmission(code,token);
-  if(prior)return {kind:"pending",url:prior.html_url};
+  if(prior)return {kind:prior.state==="open"?"pending":"closed",url:prior.html_url};
   // Deliberately NOT [Invite]: that workflow assumes issue.user is the GitHub
   // owner, but here the actor is the service bot. Human review is mandatory.
   const issue=await github("issues",token,"POST",{
     title:"[Telegram submission] "+code,
     body:[
       "<!-- muse-telegram-submission:"+code+" -->",
-      "## New community invite reported via Telegram",
+      "### Invite code",
       "",
-      "Invite code: **"+code+"**",
+      code,
       "",
-      "This report came from Telegram. The sender's GitHub identity, code ownership,",
-      "Muse eligibility, redemption and remaining quota are **not verified**.",
+      "### Code source",
       "",
-      "A maintainer must check the code and attribution before opening a",
-      "review-only data Draft PR. Do not auto-publish this bot-authored Issue.",
+      "Telegram (community code shared through bot)",
       "",
-      "Do not request or publish Telegram usernames, private screenshots or secrets."
+      "### Social post or profile URL (required for Threads, X or Facebook)",
+      "",
+      "_Not applicable: Telegram contributor, no source post supplied_",
+      "",
+      "### Public confirmation or context (optional)",
+      "",
+      "https://t.me/"+username+" (Telegram profile only, not source-post evidence)",
+      "",
+      "### Uses so far (optional; self-reported)",
+      "",
+      "_Not reported_",
+      "",
+      "### Invite limit (optional; self-reported)",
+      "",
+      "_Not reported_",
+      "",
+      "### Remaining invites (optional; self-reported)",
+      "",
+      "_Not reported_",
+      "",
+      "### Notes (optional)",
+      "",
+      "Reported from Telegram for human review only. Not proof of code ownership, redemption, eligibility, or remaining invitations.",
+      "",
+      "### Telegram contributor",
+      "",
+      "@"+username+" (Telegram sender, public attribution accepted during confirmation)",
+      "",
+      "### Contributor checklist",
+      "",
+      "- [x] I am authorized to share this code publicly; I understand this Issue is public.",
+      "- [x] This code is not a password, 2FA code, session token or private credential.",
+      "",
+      "### Maintainer review checklist",
+      "",
+      "- [ ] Check genuine public code and sharing permission; profile URL alone is not evidence.",
+      "- [ ] Check duplicates, previous discussions and attribution conflicts.",
+      "- [ ] Only after independent review, prepare a review-only Draft PR (status: unverified).",
+      "- [ ] After live publication, comment the canonical detail link before closing this Issue.",
+      "",
+      "GitHub Issue author is the bot, NOT the Telegram contributor. Telegram ID stays private.",
     ].join("\n")
   });
   return {kind:"submitted",url:issue.html_url};

@@ -41,6 +41,27 @@ const community={
 const issue=(number,title,body,login="YHresearcher")=>({
   number,title,body,user:{login},state:"open",created_at:date,updated_at:date
 });
+test("Bot-authored Telegram Issue with canonical form fields never becomes GitHub-owner PR",()=>{
+  const body=[
+    "<!-- muse-telegram-submission:ABC123 -->",
+    "### Invite code","","ABC123","",
+    "### Code source","","Telegram (community code shared through bot)","",
+    "### Telegram contributor","","@alice_dev","",
+    "### Contributor checklist","",
+    "- [x] I am authorized to share this code publicly; I understand this Issue is public.",
+    "- [x] This code is not a password, 2FA code, session token or private credential."
+  ].join("\n");
+  assert.equal(hasRequiredInviteConfirmations(body),true);
+  const telegramIssue=issue(228,"[Telegram submission] ABC123",body,"hoangsvit");
+  const blocked=planIssueChange(telegramIssue,[item]);
+  assert.equal(blocked.outcome,"unsupported");
+  assert.match(blocked.reason,/Telegram submissions require human review/);
+  const noMarker=issue(230,"[Invite] ABC123",body.replace("<!-- muse-telegram-submission:ABC123 -->",""),"hoangsvit");
+  const needsReview=planIssueChange(noMarker,[item]);
+  assert.equal(needsReview.outcome,"needs-review");
+  assert.match(needsReview.reason,/Telegram reports require/);
+});
+
 test("GitHub Issue Forms are parsed by headings, not arbitrary user code",()=>{
   const f=readIssueFields(share);
   assert.equal(f["Invite code"],"PNSMZZ");

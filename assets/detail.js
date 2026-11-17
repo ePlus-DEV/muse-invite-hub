@@ -145,6 +145,10 @@
         match = /^\/([A-Za-z0-9_]{1,15})(?:\/status\/[0-9]{5,25})?\/?$/.exec(path);
         if (match && ["i","home","search","explore","intent","share","settings","messages"].includes(match[1].toLowerCase())) return;
         platform = "X (Twitter)";
+      } else if (["t.me","www.t.me"].includes(host)) {
+        match = /^\/([A-Za-z][A-Za-z0-9_]{4,31})(?:\/[1-9][0-9]{0,18})?\/?$/.exec(path);
+        if (match && ["share","joinchat","login","addstickers","proxy","socks","addemoji"].includes(match[1].toLowerCase())) return;
+        platform = "Telegram";
       } else if (["facebook.com","www.facebook.com","m.facebook.com"].includes(host)) {
         match = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/[A-Za-z0-9_-]{4,120})?\/?$/.exec(path);
         if (match && ["share","groups","watch","reel","reels","events","marketplace","people","pages","profile.php","permalink.php","photo.php","login"].includes(match[1].toLowerCase())) return;

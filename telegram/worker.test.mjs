@@ -46,8 +46,8 @@ const webhook = (update, override = {}) => new Request("https://bot.example.com/
   headers: { "Content-Type": "application/json", "X-Telegram-Bot-Api-Secret-Token": secret, ...override },
   body: typeof update === "string" ? update : JSON.stringify(update)
 });
-const message = (id, text) => ({ update_id: id, message: { text, from: { id: 42, is_bot: false }, chat: { id: 42, type: "private" } } });
-const callback = (id, data) => ({ update_id: id, callback_query: { id: "cb-" + id, data, from: { id: 42 }, message: { message_id: id+100, chat: { id: 42, type: "private" } } } });
+const message = (id, text) => ({ update_id: id, message: { text, from: { id: 42, is_bot: false, username: "alice_dev" }, chat: { id: 42, type: "private" } } });
+const callback = (id, data) => ({ update_id: id, callback_query: { id: "cb-" + id, data, from: { id: 42, username: "alice_dev" }, message: { message_id: id+100, chat: { id: 42, type: "private" } } } });
 
 test("worker checks method, path, JSON and constant-time shared secret", async () => {
   const env = makeEnv();
@@ -76,7 +76,7 @@ test("submit and report are explicitly confirmed, then sent to GitHub once", asy
   assert.match(sent.at(-1).payload.text, /PUBLIC GitHub Issue/);
   assert.equal((await handleWebhookRequest(webhook(callback(11, "t:submit:TEST42")), env, deps)).status, 200);
   assert.equal(calls.submit.length, 1);
-  assert.deepEqual(calls.submit[0], ["TEST42", 11, "issue-token-test"]);
+  assert.deepEqual(calls.submit[0], ["TEST42", 11, "issue-token-test", "alice_dev"]);
   assert.equal(sent.at(-1).name,"editMessageReplyMarkup");
   assert.deepEqual(sent.at(-1).payload.reply_markup,{inline_keyboard:[]});
   assert.equal((await handleWebhookRequest(webhook(callback(11, "t:submit:TEST42")), env, deps)).status, 200);
@@ -88,6 +88,35 @@ test("submit and report are explicitly confirmed, then sent to GitHub once", asy
   assert.deepEqual(calls.report[0], ["DPNIHH", "worked", 13, "issue-token-test"]);
   const state = createKvState(env.BOT_STATE);
   for (const id of [10, 11, 12, 13]) assert.equal(await state.has(id), true);
+});
+
+test("closed Telegram contribution Issues are not reported as pending",async()=>{
+  const env=makeEnv();
+  const {deps,sent}=makeDeps({
+    submitNewCode:async()=>({kind:"closed",url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/43"})
+  });
+  assert.equal((await handleWebhookRequest(webhook(message(270,"/submit CLOSED")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(callback(271,"t:submit:CLOSED")),env,deps)).status,200);
+  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/previous Issue.*closed/i);
+  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/issues\/43/);
+});
+
+test("Worker blocks non-attributed public code submissions before GitHub writes",async()=>{
+  const env=makeEnv();
+  const {deps,sent,calls}=makeDeps();
+  const noUser=message(850,"/submit ABC123");
+  delete noUser.message.from.username;
+  assert.equal((await handleWebhookRequest(webhook(noUser),env,deps)).status,200);
+  assert.match(sent.at(-1).payload.text,/set a public Telegram @username/);
+  assert.equal(calls.submit.length,0);
+  const noUserConfirm=callback(851,"t:submit:ABC123");
+  delete noUserConfirm.callback_query.from.username;
+  assert.equal((await handleWebhookRequest(webhook(noUserConfirm),env,deps)).status,200);
+  assert.equal(calls.submit.length,0);
+  assert.equal((await handleWebhookRequest(webhook(message(852,"/submit ABC123")),env,deps)).status,200);
+  assert.match(sent.at(-1).payload.text,/@alice_dev/);
+  assert.equal((await handleWebhookRequest(webhook(callback(853,"t:submit:ABC123")),env,deps)).status,200);
+  assert.deepEqual(calls.submit[0],["ABC123",853,"issue-token-test","alice_dev"]);
 });
 
 test("Worker Refresh fetches current catalog and has no public write side effects",async()=>{
