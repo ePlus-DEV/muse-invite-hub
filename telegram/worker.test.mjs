@@ -252,14 +252,38 @@ test("feedback failures explain uncertain status without posting duplicate repor
   assert.equal(await env.BOT_STATE.get("upd:242"),null);
 });
 
-test("per-chat write rate limit allows 8 writes per hour, then refuses", async () => {
+test("per-chat write rate limit allows 8 reports per hour, then refuses", async () => {
   const env = makeEnv();
   const { deps, sent } = makeDeps();
   for (let i = 0; i < 8; i++) {
-    assert.equal((await handleWebhookRequest(webhook(callback(100 + i, "t:submit:CODE12")), env, deps)).status, 200);
+    assert.equal((await handleWebhookRequest(webhook(callback(100 + i, "t:report:DPNIHH:worked")), env, deps)).status, 200);
   }
-  assert.equal((await handleWebhookRequest(webhook(callback(200, "t:submit:CODE12")), env, deps)).status, 200);
-  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text, /Too many submissions/);
+  assert.equal((await handleWebhookRequest(webhook(callback(200, "t:report:DPNIHH:worked")), env, deps)).status, 200);
+  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text, /Too many reports/);
+});
+
+test("a single Telegram chat can submit at most three new codes per 24 hours", async () => {
+  const env=makeEnv();
+  const {deps,calls,sent}=makeDeps();
+  for(let i=0;i<3;i++){
+    assert.equal((await handleWebhookRequest(
+      webhook(callback(420+i,"t:submit:CODE1"+i)),env,deps)).status,200);
+  }
+  assert.equal(calls.submit.length,3);
+  assert.equal((await handleWebhookRequest(webhook(callback(424,"t:submit:CODE14")),env,deps)).status,200);
+  assert.equal(calls.submit.length,3);
+  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/Too many submissions/);
+  assert.equal(JSON.parse(await env.BOT_STATE.get("rl:42")).length,3);
+});
+
+test("corrupt KV rate-limit state cannot silently reset anti-spam budget",async()=>{
+  const env=makeEnv();
+  await env.BOT_STATE.put("rl:42","{bad-json");
+  const {deps,calls,sent}=makeDeps();
+  assert.equal((await handleWebhookRequest(
+    webhook(callback(425,"t:submit:CODE15")),env,deps)).status,200);
+  assert.equal(calls.submit.length,0);
+  assert.match(sent.findLast(x=>x.name==="sendMessage").payload.text,/Too many submissions/);
 });
 
 test("worker sources keep secrets out of the repository and reuse the review-only GitHub flow", () => {
