@@ -82,7 +82,7 @@ body:
     attributes:
       label: Contributor checklist
       options:
-        - label: "I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public."
+        - label: "I am authorized to share this code publicly; I understand this Issue is public."
           required: true
         - label: "This code is not a password, 2FA code, session token or private credential."
           required: true
