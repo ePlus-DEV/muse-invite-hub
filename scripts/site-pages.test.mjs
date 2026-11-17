@@ -123,7 +123,8 @@ test("detail visual restructure keeps SEO metadata, readable links and structure
     e.itemListElement.length===3));
   assert.match(html, /href="\.\.\/\.\.\/#codes"/);
   assert.match(html, /href="https:\/\/muse.ai\/invite\/DPNIHH"/);
-  assert.match(html, /<span id="how-to-redeem">How to use this code<\/span>/);
+  assert.match(html, /<h2 id="how-to-redeem">How to use this code<\/h2>/);
+  assert.match(html, /<h2>Code details<\/h2>/);
   assert.match(preview,/noindex,nofollow,noarchive/);
   assert.doesNotMatch(preview,/rel="canonical"/);
   assert.equal((preview.match(/<h1\b/g)||[]).length,1);
