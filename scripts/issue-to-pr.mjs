@@ -371,6 +371,17 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
         reason:"Third-party social reports cannot claim owner-only quota numbers."};
     }
     if (existing) {
+      // Replaying the SAME original social submission after its reviewed record
+      // reached main is idempotent, not a cross-platform hijack. Require an
+      // exact canonical Issue, record ID and unchanged validated permalink.
+      // Different Issues or changed sources still require manual review.
+      if (socialSubmission &&
+          existing.id === "community-issue-" + issue.number &&
+          existing.feedbackIssueNumber === issue.number &&
+          existing.sourceUrl === social.url) {
+        return {outcome:"already-published",kind,code,
+          reason:"The submitted code and source are already in the main catalog from this Issue."};
+      }
       if (socialSubmission || parsePublicSource(existing.sourceUrl)) {
         return {outcome:"needs-review",kind,code,
           reason:"The code is already listed. A cross-platform report cannot replace attribution, ownership or quota automatically."};
@@ -758,6 +769,12 @@ export async function runIssueAutomation({
     if(result.outcome==="needs-review"||result.outcome==="duplicate"){
       await comment(issue,token,"No automatic Draft PR was created for this Issue: "+
         result.reason+". A maintainer can review the report manually. No change has been published.");
+    }
+    if(result.outcome==="already-published"){
+      await comment(issue,token,"✅ **Already included in the main catalog:** **"+result.code+
+        "** was recorded from this same Issue and source URL. No duplicate Draft PR "+
+        "is necessary; this is **not a rejection**. The invite remains an unverified "+
+        "community report until its source and redemption are independently checked.");
     }
     if(result.outcome==="already-open"){
       await comment(issue,token,"A [Draft PR]("+result.url+") already exists for this Issue. "+
