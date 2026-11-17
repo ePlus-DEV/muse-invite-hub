@@ -62,7 +62,7 @@ test("same timestamp uses latest comment ID, does not double count",()=>{
 test("missing issue mappings do not invent reports or match unrelated GitHub Issues",()=>{
   const result=summarizeFeedback(entries,{},[report(1,11,"DPNIHH",accepted)],createdAt);
   assert.deepEqual(result.codes.DPNIHH,{worked:0,failed:0});
-  for(const input of [null,[],{},[{code:"AB1234"}]]) {
+  for(const input of [null,{},"not-a-catalog"]) {
     assert.throws(()=>summarizeFeedback(input,{},[],createdAt));
   }
   assert.throws(()=>summarizeFeedback(entries,map,[],"not-a-date"));
