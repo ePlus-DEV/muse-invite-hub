@@ -172,7 +172,8 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     ? ' title="Ownership confirmed by ePlus.DEV; Muse redemption is not verified."'
     : '') + '>' + (item.ownerConfirmed ? '<i class="fa-solid fa-check" aria-hidden="true"></i> ' : '') + escapeHtml(status) + '</span>' +
     '            <button class="detail-save" id="detail-save" type="button" aria-pressed="false" aria-label="Save Muse invite code ' + escapeHtml(item.code) + '" hidden><i class="fa-regular fa-bookmark" aria-hidden="true"></i><span class="detail-save-label sr-only">Save code</span></button></div>' +
-    '          <h1 id="detail-title"><span class="detail-h1-prefix">Invite code</span> <span class="detail-code-text" id="detail-code">' + escapeHtml(item.code) + '</span></h1>' +
+    '          <div class="detail-identity-row"><h1 id="detail-title"><span class="detail-h1-prefix">Invite code</span> <span class="detail-code-text" id="detail-code">' + escapeHtml(item.code) + '</span></h1>' +
+    '            <div class="detail-availability-inline" role="group" aria-label="Community-reported remaining invitation slots"><p class="section-kicker">REPORTED AVAILABILITY</p>' + usage + '</div></div>' +
     '          <div class="detail-action-row"><a class="button button-primary detail-open-invite" href="https://muse.ai/invite/' + encodeURIComponent(item.code) + '" target="_blank" rel="noopener noreferrer" aria-label="Open Muse invite link for code ' + escapeHtml(item.code) + '">Open invite <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>' +
     '            <button class="button button-outlined" type="button" id="detail-copy"><i class="fa-regular fa-copy" aria-hidden="true"></i> <span class="detail-copy-label">Copy invite code</span></button></div>' +
     '          <section class="detail-instructions" aria-labelledby="how-to-redeem"><h2 id="how-to-redeem">How to use this code</h2>' +
@@ -183,8 +184,6 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     renderDetailMarketAvailability() +
     '      </section>' +
     '      <aside class="detail-side" aria-label="Invite information">' +
-    '        <div class="detail-info-card"><p class="section-kicker">REPORTED AVAILABILITY</p>' + usage +
-    '        </div>' +
     '        <div class="detail-info-card"><p class="section-kicker">LISTING DETAILS</p>' +
     '          <dl class="detail-meta"><div><dt>Contributor</dt><dd>' + escapeHtml(author) + '</dd></div>' +
     '            <div><dt>Source</dt><dd>' + sourceLink + '</dd></div>' +
