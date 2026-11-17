@@ -473,6 +473,29 @@ test("X and Facebook public post Issues propose unverified drafts without GitHub
   }
 });
 
+test("issue #240 Facebook group post produces an unverified human-review proposal", () => {
+  const url="https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/";
+  const body=updatedShare("Facebook (public code I found)",url).replace("18I70N","FT4SHN")
+    .replace("I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
+      "I am authorized to share this code publicly; I understand this Issue is public.");
+  const report=issue(240,"[Invite] FT4SHN",body,"gary2222hub");
+  assert.equal(hasRequiredInviteConfirmations(body),true);
+  const proposal=planIssueChange(report,[item]);
+  assert.equal(proposal.outcome,"proposal");
+  assert.equal(proposal.action,"add Facebook source");
+  assert.equal(proposal.branch,"auto/issue-240-invite");
+  const listing=proposal.data.find(entry=>entry.code==="FT4SHN");
+  assert.equal(listing.sourceUrl,url);
+  assert.equal(listing.feedbackIssueNumber,240);
+  assert.equal(listing.submittedBy,undefined);
+  assert.equal(listing.submittedById,undefined);
+  assert.equal(listing.status,"unverified");
+  assert.match(proposal.notice,/not the post author.s identity/i);
+  assert.deepEqual(validateCatalog(proposal.data),[]);
+  assert.equal(isAutoPublishableNewSocialInvite(report,proposal),false,
+    "group links cannot prove the post author and must stay in a review-only Draft PR");
+});
+
 test("reject wrong social source, profile-only links and third-party quota claims", () => {
   const link = "https://x.com/sameperson/status/1234567890";
   const xBody = updatedShare("X (Twitter) (public code I found)",link);
