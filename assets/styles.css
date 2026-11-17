@@ -808,3 +808,33 @@ html.is-page-loading body>.site-footer{display:none!important}
   }
   .detail-hero-unified .detail-note{margin:0 -17px;padding:11px 17px 13px;font-size:11.5px}
 }
+
+/* Modern contribution overlay built on current main design tokens. Never bring
+   old PR layout/CSS into directory, code details or country map. */
+.contribute-dialog{position:fixed;inset:0;box-sizing:border-box;width:min(680px,calc(100vw - 32px));max-width:none;max-height:min(88dvh,780px);margin:auto;padding:25px;border:1px solid var(--blue-line);border-radius:22px;background:var(--surface);color:var(--text);font-family:inherit;box-shadow:0 26px 85px rgba(16,24,40,.25);overflow:auto;overscroll-behavior:contain}
+.contribute-dialog::backdrop{background:rgba(16,24,40,.55);backdrop-filter:blur(4px)}
+.contribute-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.contribute-dialog-head h2{color:var(--ink);font-size:clamp(21px,3vw,27px);line-height:1.2;letter-spacing:-.65px;margin:5px 0 0}
+.contribute-dialog-head .section-kicker{margin:0;color:var(--blue);font-size:10px;font-weight:800;letter-spacing:.08em}
+.contribute-dialog-close{display:grid;place-items:center;flex:none;width:42px;height:42px;min-width:42px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--muted);font-size:17px}
+.contribute-dialog-close:hover,.contribute-dialog-close:focus-visible{color:var(--blue);background:var(--blue-soft);border-color:var(--blue-line)}
+.contribute-dialog-intro{margin:11px 0 18px;font-size:13px;color:var(--muted);line-height:1.6}
+.contribute-dialog-body{display:grid;grid-template-columns:minmax(0,1fr) 162px;gap:14px;align-items:start;min-width:0}
+.contribute-dialog-options{display:grid;gap:10px;min-width:0}
+.contribute-option{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--line);border-radius:14px;background:var(--surface);min-width:0;color:var(--ink);text-decoration:none;transition:background .16s,border-color .16s}
+.contribute-option:hover,.contribute-option:focus-visible{background:var(--blue-soft);border-color:var(--blue-line);color:var(--ink)}
+.contribute-option-telegram{border-color:var(--blue-line);background:#f6faff}
+.contribute-option>i:first-child{display:grid;place-items:center;width:39px;height:39px;min-width:39px;border-radius:12px;background:var(--blue-soft);color:var(--blue);font-size:18px}
+.contribute-option>i:last-child{margin-left:auto;flex:none;color:var(--blue);font-size:12px}
+.contribute-option>span{display:grid;gap:3px;min-width:0;flex:1}
+.contribute-option strong{font-size:13px;font-weight:800;color:var(--ink)}
+.contribute-option strong small{display:inline-block;font-size:10px;color:var(--blue);margin-left:4px;font-weight:750}
+.contribute-option>span>span{font-size:11px;line-height:1.5;color:var(--muted)}
+.contribute-option em{font-size:11px;font-weight:800;font-style:normal;color:var(--blue)}
+.contribute-dialog-qr{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;padding:12px 8px;border:1px solid var(--line);border-radius:14px;background:#f7faff;text-align:center}
+.contribute-dialog-qr img{max-width:100%;height:auto;aspect-ratio:1;object-fit:contain;background:#fff;border-radius:8px}
+.contribute-dialog-qr strong{font-size:12px;font-weight:800;color:var(--ink)}
+.contribute-dialog-qr p{font-size:10px;color:var(--muted);line-height:1.5;margin:0}
+.contribute-dialog-safety{display:flex;gap:9px;align-items:flex-start;margin:17px 0 0;padding-top:13px;border-top:1px solid var(--line);font-size:11px;line-height:1.55;color:var(--muted)}
+.contribute-dialog-safety i{color:var(--blue);flex:none;margin-top:2px}
+@media(max-width:650px){.contribute-dialog{width:calc(100vw - 22px);max-height:calc(100dvh - 30px);padding:18px;border-radius:17px}.contribute-dialog-head h2{font-size:21px}.contribute-dialog-body{grid-template-columns:1fr}.contribute-dialog-qr{display:none}.contribute-option{min-height:73px;padding:12px}.contribute-dialog-intro{margin:10px 0 15px}.contribute-dialog-safety{font-size:10.5px}}
