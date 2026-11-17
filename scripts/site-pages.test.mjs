@@ -43,7 +43,7 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /Not live/);
   assert.match(html, /"BreadcrumbList"/);
   assert.match(html, /"WebPage"/);
-  assert.match(html, /href="\.\.\/\.\.\/assets\/styles.css\?v=20261117-pr251-reports"/);
+  assert.match(html, /href="\.\.\/\.\.\/assets\/styles.css"/);
   const actions = html.match(/<div class="detail-action-row">([\s\S]*?)<\/div>/)?.[1];
   assert.ok(actions, "Detail action row should be present");
   assert.doesNotMatch(actions, /href="https:\/\/muse.ai\/join"/);
@@ -142,7 +142,7 @@ test("preview detail remains noindex despite all production codes being indexabl
   assert.match(html, /noindex,nofollow,noarchive/);
   assert.doesNotMatch(html, /rel="canonical"/);
   assert.match(html, /https:\/\/muse.eplus.dev\/pr-preview\/pr-17\/codes\/DPNIHH\//);
-  assert.match(html, /href="\.\.\/\.\.\/assets\/styles.css\?v=20261117-pr251-reports"/);
+  assert.match(html, /href="\.\.\/\.\.\/assets\/styles.css"/);
 });
 test("unsafe notes and contributor names are escaped in HTML and JSON-LD", () => {
   const item = { ...community(), note: '<img src=x onerror="alert(1)">', submittedBy: '<script>' };
