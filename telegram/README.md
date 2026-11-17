@@ -95,9 +95,9 @@ Caddy handles HTTPS certificates and routes only /healthz and /telegram/webhook 
 
 A new code submission requires a public Telegram `@username` from the Telegram update, not text claimed by a chat user. The sender must explicitly agree in Telegram to publish their `@username` and public profile URL, and confirm their right to share a public, non-secret code. If no username is configured, the bot does not submit an Issue.
 
-The resulting public `[Telegram submission]` Issue uses the standard Share Code headings (`### Invite code`, `### Code source`, `### Contributor checklist`, optional metadata), plus `### Telegram contributor`. Only the consented public username appears; the numeric user/chat ID and private associations remain in protected runtime state. A Telegram profile URL is **not** proof of code ownership or a public source post.
+The resulting public **`[Invite] CODE`** Issue uses the exact standard Share Code headings and section order, without any extra Telegram-only section. `Code source` is Telegram; the consented public profile URL appears under **Public confirmation or context**, with `@username` in **Notes**. An internal marker distinguishes the bot-created Issue from a GitHub-owner submission. Numeric user/chat IDs remain private. A profile URL is **not** proof of code ownership or a public source post.
 
-The trusted Issue-to-PR pipeline deliberately excludes these bot-authored Issues, despite their standard headings: Telegram submissions need maintainer review of permission, source and duplicates, then a separate review-only Draft PR. No automatic publication, GitHub owner identity or owner-quota privilege is inferred.
+The same trusted Issue-to-PR pipeline automatically creates a **review-only Draft PR** from a valid bot-authored Telegram Issue after checking the internal marker, consented username, source, duplicates and permissions. It never attributes the bot's GitHub identity as code owner or auto-publishes a Telegram code; the maintainer must verify validity and sharing permission before approval.
 
 ## 6. Register Telegram webhook after HTTPS works
 
@@ -123,11 +123,11 @@ Test your bot via private chat:
 
 ## 7. Review and privacy rules
 
-**New code:** /submit CODE → explicit public-sharing confirmation → check catalog and open/closed Issues → create ONE [Telegram submission] Issue only if unlisted. This bot-authored Issue is **not** processed as a verified contributor's [Invite] submission. A maintainer reviews attribution, source and privacy, then prepares a data Draft PR. No auto-merge or catalog changes.
+**New code:** `/submit CODE` → explicitly confirm public username and sharing/privacy → check catalog and open/closed Issues → create one standard **`[Invite] CODE`** Issue if unlisted → GitHub Actions creates a review-only **Draft PR** automatically. The bot's GitHub identity is never the code owner. A maintainer reviews identity, permission and source before merge; no automatic publication.
 
 **Existing code feedback:** /report CODE worked|failed → explicit public comment confirmation → append a report to the original canonical GitHub Issue. The existing workflow deliberately **ignores bot-authored comments**, so manual triage is required. No duplicate per-code Issues and no direct catalog status changes.
 
-**Owner count:** /count redirects to the website's verified GitHub owner flow. Telegram username or numeric ID never proves code ownership. The bot does not store Telegram identity in public GitHub Issues.
+**Owner count:** `/count` redirects to the website's verified GitHub owner flow. Telegram username or numeric ID never proves code ownership. Only the explicitly consented public `@username`/profile is included in new-code Issues; numeric Telegram IDs remain private.
 
 Bot update IDs persist to disk across reboots; reports include deduplication markers. Confirmation buttons are removed after the result is delivered, reducing accidental repeat submissions; GitHub markers remain the final safeguard. Temporary processing failures return HTTP 503 for Telegram retries. A minimal per-chat rate limit prevents unbounded public Issue creation.
 

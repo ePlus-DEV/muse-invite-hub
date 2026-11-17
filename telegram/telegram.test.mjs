@@ -151,7 +151,7 @@ test("GitHub code status distinguishes published, pending, closed and unknown",a
         u.includes("/issues?")?[
           {title:"[Telegram submission] TEST42",
             body:"<!-- muse-telegram-submission:TEST42 -->",state:"open",html_url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/42"},
-          {title:"[Telegram submission] CLOSED",
+          {title:"[Invite] CLOSED",
             body:"<!-- muse-telegram-submission:CLOSED -->",state:"closed",html_url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/43"}
         ]:[];
       return new Response(JSON.stringify(value),{status:200});
@@ -195,14 +195,14 @@ test("Telegram contributions keep closed Issues distinct and require human sourc
     const fresh=await submitNewCode("NEW123",81,"test-token","alice_dev");
     assert.equal(fresh.kind,"submitted");
     assert.equal(writes.length,1);
-    assert.equal(writes[0].title,"[Telegram submission] NEW123");
+    assert.equal(writes[0].title,"[Invite] NEW123");
     assert.match(writes[0].body,/### Invite code\n\nNEW123/);
     assert.match(writes[0].body,/### Code source\n\nTelegram \(community code shared through bot\)/);
     assert.match(writes[0].body,/### Contributor checklist\n\n- \[x\]/);
-    assert.match(writes[0].body,/### Telegram contributor\n\n@alice_dev/);
+    assert.match(writes[0].body,/### Notes \(optional\)\n\nSubmitted via Telegram by @alice_dev/);
     assert.match(writes[0].body,/https:\/\/t\.me\/alice_dev/);
-    assert.match(writes[0].body,/Maintainer review checklist/);
-    assert.match(writes[0].body,/review-only Draft PR/);
+    assert.doesNotMatch(writes[0].body,/### Telegram contributor|### Maintainer review checklist/);
+    assert.match(writes[0].body,/<!-- muse-telegram-submission:NEW123 -->/);
     assert.doesNotMatch(writes[0].body,/Telegram chat ID|Telegram user ID|id:42|chat_id/);
   } finally {globalThis.fetch=original;}
 });
@@ -249,8 +249,9 @@ test("deployment sources never embed real credentials or auto-publish third-part
   const server=read("server.mjs");
   const compose=read("compose.yaml");
   const workflow=read("../.github/workflows/telegram-oci-image.yml");
-  assert.match(github,/\[Telegram submission\]/);
-  assert.doesNotMatch(github,/title:"\[Invite\]/);
+  assert.match(github,/title:"\[Invite\] "/);
+  assert.match(github,/muse-telegram-submission:/);
+  assert.match(github,/review-only Draft PR/);
   assert.match(github,/maintainer review only/);
   assert.match(server,/timingSafeEqual/);
   assert.match(server,/MAX_BODY=32\*1024/);

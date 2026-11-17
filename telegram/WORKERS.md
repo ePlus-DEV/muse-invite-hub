@@ -176,7 +176,8 @@ attached later as a Workers custom domain; re-run this step after changing it.
   because doing so writes a public comment.
 
 Review and privacy rules are identical to the OCI deployment (see README.md
-section 7): new codes become `[Telegram submission]` Issues for human review,
+section 7): new codes become standard `[Invite] CODE` Issues with an internal
+Telegram marker, which automatically prepare review-only Draft PRs;
 feedback lands on the canonical Issue, and Telegram identity never proves
 code ownership or authorizes count updates.
 
