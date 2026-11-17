@@ -644,7 +644,7 @@ async function propose(issue,token) {
       "## Automated draft proposal",
     "",
     proposed.action==="add Telegram source"
-      ? "Prepared from consented Telegram contributor "+proposed.notice.split(" ")[2]+" in public Issue #"+issue.number+". GitHub Issue author @"+issue.user.login+" is the bot credential, not the code owner."
+      ? "Prepared from consented Telegram contributor "+readIssueFields(issue.body)["Telegram contributor"]?.split(" ")[0]+" in public Issue #"+issue.number+". GitHub Issue author @"+issue.user.login+" is the bot credential, not the code owner."
       : "Prepared from public Issue #"+issue.number+" by @"+issue.user.login+".",
     (codes.length===1?"Code: **":"Codes: **")+codesLabel+"**. Change: **"+proposed.action+"**.",
     "",
