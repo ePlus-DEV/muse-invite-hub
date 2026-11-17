@@ -38,7 +38,8 @@ export async function handleLegacy({action,profiles,send,complete,services,githu
     case "usage-submit":return send(chatId,msg("usageSubmit"));
     case "usage-report":return send(chatId,msg("usageReport"));
     case "confirm-submit":
-      return send(chatId,msg("confirmSubmit",{code}),[
+      if(!action.telegramUsername)return send(chatId,msg("submitNeedsUsername"));
+      return send(chatId,msg("confirmSubmit",{code,user:"@"+action.telegramUsername}),[
         [{text:msg("confirmSubmission"),data:"t:submit:"+code}],
         [{text:msg("cancel"),data:"t:cancel"},
          {text:msg("backMenu"),data:"t:home"}]
@@ -53,8 +54,9 @@ export async function handleLegacy({action,profiles,send,complete,services,githu
       ]);
     case "cancel":return complete(msg("cancelled"));
     case "submit": {
+      if(!action.telegramUsername)return complete(msg("submitNeedsUsername"));
       if(!await allowWrite(chatId))return complete(msg("rateSubmit"));
-      const outcome=await services.submitNewCode(code,updateId,githubToken);
+      const outcome=await services.submitNewCode(code,updateId,githubToken,action.telegramUsername);
       if(outcome.kind==="submitted"&&ISSUE.test(outcome.url||"")){
         await mutateProfile(profiles,chatId,p=>{
           if(!p.submitted.some(x=>x.code===code))p.submitted.push({code,url:outcome.url});
