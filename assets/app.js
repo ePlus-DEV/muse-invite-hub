@@ -277,21 +277,18 @@
       ? "Owner-confirmed by ePlus.DEV. Muse redemption has not been independently confirmed."
       : status.description;
     if (ownerConfirmed) badge.prepend(icon("fa-solid fa-circle-check"));
-    // Featured labels sit above the code; ordinary status stays in its header.
-    if (featured) {
-      const featuredLabel = el("div", "card-featured-label");
-      featuredLabel.append(badge);
-      card.append(featuredLabel);
-    }
+    // Every card uses exactly the same hierarchy: status, code, source, facts, actions.
+    // A verified owner is not proof that Muse accepts the invite.
+    const statusRow = el("div", "card-status-row");
     const headActions = el("div", "card-head-actions");
     const saveButton = el("button", "card-save");
     saveButton.type = "button";
     saveButton.dataset.code = item.code;
     updateSaveButton(saveButton);
     saveButton.addEventListener("click", () => toggleSaved(item.code));
-    if (featured) headActions.append(saveButton);
-    else headActions.append(badge, saveButton);
-    head.append(name, headActions);
+    headActions.append(saveButton);
+    statusRow.append(badge, headActions);
+    head.append(name);
     const contributor = el("div", "card-contributor");
     const source = sourceInfo(item);
     const sourceTag = el("span", "card-source" + (source.key === "github" ? "" : " card-source-" + source.key));
@@ -305,32 +302,33 @@
       author.setAttribute("aria-label", source.group
         ? "View Facebook group post in " + source.handle
         : "View " + source.platform + " profile of " + source.handle);
+      author.title = source.group
+        ? "Facebook group post: " + source.handle
+        : source.platform + " source: " + source.handle;
       contributor.append(author);
     } else {
-      contributor.append(el("span", "", "Community contributor"));
+      contributor.append(el("span", "card-author", "Community contributor"));
     }
     const info = el("div", "card-facts");
     const remaining = reportedRemaining(item);
     const amount = el("p", "card-availability");
+    const availability = remaining
+      ? remaining.remaining.toLocaleString("en-US") +
+          (remaining.total === null ? "" : " / " + remaining.total.toLocaleString("en-US")) +
+          " remaining · reported"
+      : "Not reported";
+    amount.title = remaining
+      ? "Community count reported " + remaining.date + ". Not live Muse availability."
+      : "No dated invite quota has been reported for this code.";
+    amount.setAttribute("aria-label", "Availability: " + availability +
+      (remaining ? ", as of " + remaining.date + ", not live" : ""));
     amount.append(icon("fa-solid fa-chart-simple"));
-    amount.append(document.createTextNode(remaining
-      ? " " + remaining.remaining.toLocaleString("en-US") +
-          (remaining.total === null ? "" : " of " + remaining.total.toLocaleString("en-US")) +
-          " remaining (reported)"
-      : " Availability not reported"));
+    amount.append(document.createTextNode(" Availability: " + availability));
     info.append(amount);
     const date = el("p", "card-date");
     date.append(icon("fa-regular fa-clock"));
-    date.append(document.createTextNode(remaining
-      ? " " + remaining.date + " · Not live"
-      : " Listed " + formatDate(item.addedAt)));
+    date.append(document.createTextNode(" Listed: " + formatDate(item.addedAt)));
     info.append(date);
-    if (ownerConfirmed) {
-      const redemption = el("p", "card-redemption");
-      redemption.append(icon("fa-solid fa-circle-info"));
-      redemption.append(document.createTextNode(" Muse redemption not independently confirmed"));
-      info.append(redemption);
-    }
     const actions = el("div", "card-actions");
     const copy = el("button", "card-copy");
     copy.type = "button";
@@ -395,7 +393,7 @@
     const utilityBar = el("div", "card-utility-bar");
     utilityBar.append(quickFeedback, subActions);
     actions.append(primaryActions, utilityBar);
-    card.append(head, contributor, info, actions);
+    card.append(statusRow, head, contributor, info, actions);
     updateCopiedCard(card);
     return card;
   }
