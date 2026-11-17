@@ -50,7 +50,8 @@ test("invite cards use two primary actions with labeled icon-only feedback and u
   assert.match(app, /countLink\.setAttribute\("aria-label", "Update owner invite count for code "/);
   assert.match(app, /link\.setAttribute\("aria-label", text \+ " — report Muse invite code "/);
   assert.match(app, /link\.append\(icon\(iconName\)\)/);
-  assert.match(app,/card\.classList\.contains\("code-card-featured"\) \? " Copy again" : " Copied"/);
+  assert.match(app,/const label = copied \? " Copied" : " Copy code"/);
+  assert.doesNotMatch(app,/card\.classList\.contains\("code-card-featured"\) \? " Copy again"/);
   assert.doesNotMatch(app, /link\.append\(icon\(iconName\), document\.createTextNode/);
   assert.match(app, /if \(item\.submittedBy && !item\.sourceUrl\)/);
   assert.match(css, /\.card-utility-bar\{display:flex;align-items:center;justify-content:space-between/);
@@ -112,7 +113,8 @@ test("invite card colors follow a single brand-blue palette without fake success
     assert.doesNotMatch(css,new RegExp("\\.card-source-"+platform+"\\{"),
       "platform "+platform+" must not create a competing color scheme");
   }
-  assert.match(css,/\.code-card-copied:not\(\.code-card-featured\) \.card-copy\{background:var\(--blue-soft\);border-color:var\(--blue-line\);color:var\(--blue\)\}/);
+  assert.match(css,/\.code-card-copied \.card-copy\{background:var\(--blue-soft\);border-color:var\(--blue-line\);color:var\(--blue\)\}/);
+  assert.doesNotMatch(css,/\.code-card-copied:not\(\.code-card-featured\)/);
   assert.match(css,/\.card-quick-feedback\{[^}]*background:var\(--blue-soft\);color:var\(--blue\)/);
   assert.match(css,/\.card-quick-worked i\{color:var\(--green\)\}/);
   assert.match(css,/\.card-quick-failed i\{color:var\(--red\)\}/);
