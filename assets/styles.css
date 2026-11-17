@@ -708,6 +708,7 @@ html.is-page-loading body>.site-footer{display:none!important}
 .detail-instructions.detail-mobile-fold{padding:20px 22px 22px;margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:19px;box-shadow:var(--shadow-sm)}
 .detail-mobile-fold>summary{display:flex;align-items:center;gap:10px;list-style:none;cursor:pointer;color:var(--ink);font-weight:800;font-size:17px;line-height:1.4}
 .detail-mobile-fold>summary::-webkit-details-marker{display:none}
+.detail-mobile-fold>summary h2{margin:0;color:inherit;font:inherit;letter-spacing:inherit;line-height:inherit}
 .detail-mobile-fold>summary>i:first-child{color:var(--blue);font-size:17px}
 .detail-mobile-fold .detail-fold-chevron{display:none;margin-left:auto;color:var(--blue);font-size:12px}
 .detail-mobile-fold>.detail-fold-body{padding-top:17px}
