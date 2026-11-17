@@ -81,8 +81,9 @@ export async function probeProduction({ origin = ORIGIN, get = fetch, nonce = "c
       throw new Error(path + ": missing detail canonical");
     }
     if (html.includes('content="noindex')) throw new Error(path + ": incorrectly marked noindex");
-    if (!html.includes('href="../../assets/styles.css"') ||
-        !html.includes('src="../../assets/detail.js"')) {
+    // Detail assets are relative to /codes/<code>/ and may include a cache-busting query.
+    if (!/href="\.\.\/\.\.\/assets\/styles\.css(?:\?[^"]+)?"/.test(html) ||
+        !/src="\.\.\/\.\.\/assets\/detail\.js(?:\?[^"]+)?"/.test(html)) {
       throw new Error(path + ": broken relative asset references");
     }
     if (!html.includes("BreadcrumbList")) throw new Error(path + ": missing detail structured data");
