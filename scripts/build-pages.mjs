@@ -6,7 +6,7 @@ import { generateSite } from "./site-pages.mjs";
 import { syncCodeIssueMap, validIssueMap } from "./code-issue-map.mjs";
 import { readCatalog } from "./catalog.mjs";
 import { validateCatalog } from "./validate.mjs";
-import { fetchAllFeedbackComments, summarizeFeedback } from "./feedback-counts.mjs";
+import { summarizeApprovedFeedback, readReviewedFeedback, validateFeedbackDirectory } from "./feedback-ledger.mjs";
 
 const REPO = process.env.GITHUB_REPOSITORY;
 const ORIGIN = "https://muse.eplus.dev";
@@ -93,20 +93,17 @@ if (!readonly && !validIssueMap(issueMap, code)) {
 }
 writeFileSync(join(output, "data", "code-issues.json"), JSON.stringify(issueMap, null, 2) + "\n");
 console.log("Mapped " + code.length + " published invite codes to canonical GitHub Issues.");
-// A single paginated repository-wide read avoids one request per listing.
-// Incomplete API results must never be displayed as zero reports.
-try {
-  const comments = await fetchAllFeedbackComments(page =>
-    api("repos/" + REPO + "/issues/comments?per_page=100&sort=created&direction=desc&page=" + page));
-  const summary = summarizeFeedback(code,issueMap,comments,new Date().toISOString());
-  writeFileSync(join(output,"data","feedback-counts.json"),
-    JSON.stringify(summary,null,2) + "\n");
-  console.log("Compiled community report counts from " + comments.length +
-    " GitHub comments (deduplicated by account and code).");
-} catch (error) {
-  console.warn("Feedback report counts unavailable; omitting numbers, never inventing zeros: " +
-    String(error.message).slice(0,180));
-}
+// Only previously reviewed/merged JSON is eligible for published counts.
+// No repository-wide GitHub comment scan, token, or repeated recount required.
+validateFeedbackDirectory();
+const summary = summarizeApprovedFeedback(
+  code.map(item=>({...item,feedbackIssueNumber:issueMap[item.code]})),
+  entry=>readReviewedFeedback(entry),
+  new Date().toISOString()
+);
+writeFileSync(join(output,"data","feedback-counts.json"),
+  JSON.stringify(summary,null,2) + "\n");
+console.log("Published reviewed feedback from local per-code JSON records.");
 const productionPages = generateSite(output);
 console.log("Generated " + productionPages.created + " static invite detail pages and " + productionPages.indexed + " indexable entries.");
 
