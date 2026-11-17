@@ -127,6 +127,15 @@ test("Issue #204 narrative owner update becomes a review-only proposal, not an i
   assert.equal(p.data[0].status,"unverified");
   assert.equal(p.data[0].feedbackIssueNumber,204);
   assert.equal(published.reportedUses,undefined);
+  assert.equal(p.data[0].quotaUpdateCount,undefined,
+    "A first owner snapshot is not a revision");
+  const withPrevious={...published,reportedCapacity:30,reportedUses:2,
+    usageReportedAt:"2026-11-16",quotaUpdateCount:2};
+  const next=planCommentProposal(root,report,[withPrevious]);
+  assert.equal(next.outcome,"proposal");
+  assert.equal(next.data[0].quotaUpdateCount,3);
+  assert.equal(withPrevious.quotaUpdateCount,2,"Do not mutate existing data");
+  assert.equal(planCommentProposal(root,report,next.data).outcome,"duplicate");
   assert.match(p.notice,/does NOT explicitly say/);
   assert.doesNotMatch(report.body,/Owner confirmation:/);
   assert.equal(planCommentProposal(root,report,p.data).outcome,"duplicate");
