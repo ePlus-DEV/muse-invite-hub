@@ -28,7 +28,7 @@ test("home, country map and generated details share canonical, identical navigat
     assert.match(actual, /Share code<\/a>/);
     assert.match(actual, /<i class="fa-solid fa-house" aria-hidden="true"><\/i> Home/);
     assert.match(actual, /<i class="fa-regular fa-circle-question" aria-hidden="true"><\/i> About/);
-    assert.match(html, /assets\/site-ui\.js" defer/);
+    assert.match(html, /assets\/site-ui\.js(?:\?v=[A-Za-z0-9-]+)?" defer/);
   }
   const primary = variants.map(({html}) => html.match(/<nav class="nav-links"[\s\S]*?<\/nav>/)?.[0]);
   const visibleLabels = menu => [...menu.matchAll(/<\/i>\s*(Home|Country map|About|GitHub|Share code)<\/a>/g)].map(m => m[1]);
