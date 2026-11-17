@@ -137,7 +137,7 @@
       const url = new URL(entry.sourceUrl);
       if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) return;
       const host = url.hostname.toLowerCase(), path = url.pathname;
-      let match, platform;
+      let match, platform, group = false;
       if (["threads.com","www.threads.com"].includes(host)) {
         match = /^\/@([A-Za-z0-9_.]{1,30})(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.exec(path);
         platform = "Threads";
@@ -150,12 +150,14 @@
         if (match && ["share","joinchat","login","addstickers","proxy","socks","addemoji"].includes(match[1].toLowerCase())) return;
         platform = "Telegram";
       } else if (["facebook.com","www.facebook.com","m.facebook.com"].includes(host)) {
-        match = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/[A-Za-z0-9_-]{4,120})?\/?$/.exec(path);
+        match = /^\/groups\/([A-Za-z0-9][A-Za-z0-9._-]{1,79})\/posts\/([1-9][0-9]{9,24})\/?$/.exec(path);
+        group = Boolean(match);
+        if (!group) match = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/[A-Za-z0-9_-]{4,120})?\/?$/.exec(path);
         if (match && ["share","groups","watch","reel","reels","events","marketplace","people","pages","profile.php","permalink.php","photo.php","login"].includes(match[1].toLowerCase())) return;
         platform = "Facebook";
       }
       if (!match) return;
-      const handle = "@" + match[1];
+      const handle = (group ? "Group: " : "@") + match[1];
       const owner = document.querySelector(".detail-owner");
       if (owner) owner.textContent = handle;
       const meta = document.querySelector(".detail-meta");
