@@ -98,8 +98,8 @@ button{cursor:pointer}
 .code-card{min-width:0;min-height:300px;background:rgba(255,255,255,.98);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:11px;box-shadow:var(--shadow-sm);transition:border-color .16s,box-shadow .16s,transform .16s}
 .code-card:hover{border-color:#a9c8ff;box-shadow:var(--shadow-md);transform:translateY(-2px)}
 .code-card-featured{border:1.5px solid #87baff;background:linear-gradient(160deg,#f0f6ff,#fff 78%)}
-.card-featured-label{display:flex;align-items:center;min-height:24px;margin-bottom:-5px}
-.card-topline{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:36px}
+.card-status-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:34px}
+.card-topline{display:flex;align-items:center;min-height:34px}
 .code-value{font-size:25px;line-height:1.2;letter-spacing:.15px;font-weight:900;margin:0;min-width:0;overflow-wrap:anywhere;color:var(--ink)}
 .code-link:hover{color:var(--blue);text-decoration:underline;text-underline-offset:3px}
 .status-badge{flex:none;padding:6px 8px;border-radius:999px;font-size:10px;white-space:nowrap;font-weight:800;background:#edf0f4;color:var(--muted)}
@@ -107,20 +107,18 @@ button{cursor:pointer}
 .status-owner-verified{display:inline-flex;align-items:center;gap:5px;color:#0057dd;background:var(--blue-soft);border:1px solid var(--blue-line)}
 .status-reported-working{color:var(--green);background:var(--green-bg)}
 .status-reported-not-working{color:var(--red);background:var(--red-bg)}
-.card-contributor{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;min-width:0;flex-wrap:wrap}
+.card-contributor{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;min-width:0;flex-wrap:nowrap}
 .card-source{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:7px;background:#f2f5fa;color:var(--muted);font-size:10px;font-weight:800;white-space:nowrap}
 .card-source-threads{background:#f1edff;color:#5946a0}
 .card-source-x{background:#eff0f2;color:#1a1a1a}
 .card-source-facebook{background:#e9f2ff;color:#1764cc}
 .card-source-telegram{background:#e8f5ff;color:#167ca7}
 .card-contributor i{color:var(--blue);flex:none}
-.card-author{min-width:0;overflow-wrap:anywhere;color:var(--text);text-decoration:none}
+.card-author{min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);text-decoration:none}
 .card-author:hover{text-decoration:underline;color:var(--blue)}
 .card-facts{display:flex;flex-direction:column;gap:8px;flex:1;min-height:0;padding:4px 0}
 .card-facts p{margin:0;font-size:12px;line-height:1.55;color:var(--muted);display:flex;gap:7px;align-items:flex-start;overflow-wrap:anywhere}
 .card-facts p i{margin-top:3px;flex:none;color:var(--blue)}
-.card-facts .card-owner{color:#0057dd;font-size:10.5px}
-.card-facts .card-redemption{color:var(--muted);font-size:10.5px}
 .card-actions{display:flex;flex-direction:column;gap:9px}
 .card-primary-actions{display:grid;grid-template-columns:1.12fr 1fr;gap:7px}
 .card-primary-actions>*{min-width:0}
@@ -131,7 +129,7 @@ button{cursor:pointer}
 .code-card-copied:not(.code-card-featured) .card-copy{background:#e4f7ed;border-color:#c4ecd8;color:#12794e}
 .code-card-copied:not(.code-card-featured) .card-copy:hover{background:#cff0df;border-color:#a0debe;color:#096c40}
 .card-utility-bar{display:flex;align-items:center;justify-content:space-between;gap:7px;padding-top:10px;border-top:1px solid var(--line)}
-.card-subactions{display:flex;align-items:center;gap:4px;min-width:0}
+.card-subactions{display:grid;grid-template-columns:repeat(3,36px);align-items:center;gap:4px;min-width:0}
 .card-utility-link{width:36px;min-height:36px;display:grid;place-items:center;flex:none;border:1px solid transparent;border-radius:10px;color:#56708e;font-size:15px;text-decoration:none;transition:background .15s,color .15s,border-color .15s}
 .card-utility-link:hover,.card-utility-link:focus-visible{color:var(--blue);background:var(--blue-soft);border-color:var(--blue-line);text-decoration:none}
 .card-utility-link:focus-visible,.card-quick-feedback:focus-visible{outline:3px solid #a9c8ff;outline-offset:2px}
@@ -233,7 +231,7 @@ button{cursor:pointer}
   .card-facts{gap:4px}
   .card-copy,.card-open-invite{min-height:44px;font-size:12px}
   .card-utility-link,.card-quick-feedback{width:44px;min-height:44px}
-  .card-subactions{gap:5px}
+  .card-subactions{grid-template-columns:repeat(3,44px);gap:5px}
   .directory-more .button{width:100%}
   .help-section{margin-top:20px;margin-bottom:36px}
   .footer-main-row{flex-direction:column;align-items:flex-start;gap:13px}
