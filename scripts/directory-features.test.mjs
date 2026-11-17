@@ -62,6 +62,22 @@ test("invite cards use two primary actions with labeled icon-only feedback and u
   assert.doesNotMatch(app, /Reported votes|thumbsUpCount|thumbsDownCount/);
 });
 
+test("quota update badge displays recorded revisions, not click counts", () => {
+  const css=read("assets/styles.css");
+  const published=JSON.parse(read("data/invite-records/eplus-owner-dpnihh.json"));
+  assert.equal(published.code,"DPNIHH");
+  assert.equal(published.quotaUpdateCount,1,
+    "Issue #14 and PR #157 document one approved update after the initial report");
+  assert.match(app,/const updates = item\.quotaUpdateCount/);
+  assert.match(app,/Number\.isSafeInteger\(updates\) && updates > 0/);
+  assert.match(app,/updates > 99 \? "99\+" : String\(updates\)/);
+  assert.match(app,/counter\.setAttribute\("aria-hidden", "true"\)/);
+  assert.match(app,/const counter = el\("span", "card-count-updates"/);
+  assert.match(css,/\.card-count-updates\{[^}]*background:var\(--blue\)/);
+  assert.match(css,/\.card-count-link\{position:relative\}/);
+  assert.match(app,/if \(item\.submittedBy && !item\.sourceUrl\)/);
+});
+
 test("compact card controls have smaller desktop proportions without shrinking mobile targets", () => {
   const css=read("assets/styles.css");
   assert.match(css, /\.code-card\{min-width:0;min-height:300px/);
