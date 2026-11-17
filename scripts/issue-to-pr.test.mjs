@@ -107,6 +107,10 @@ test("Telegram submissions reject mismatched identity, missing consent and owner
   }
   const published=[item,{id:"already-listed",code:"ABC123",status:"unverified",addedAt:"2026-11-11",sourceUrl:"https://t.me/alice_dev"}];
   assert.equal(planIssueChange(original,published).outcome,"already-listed");
+  const sameCanonical={...published[1],id:"community-issue-230",feedbackIssueNumber:230};
+  assert.equal(planIssueChange(original,[item,sameCanonical]).outcome,"already-published");
+  const changedSame={...sameCanonical,sourceUrl:"https://t.me/different_account"};
+  assert.equal(planIssueChange(original,[item,changedSame]).outcome,"needs-review");
   const general=issue(232,"[Invite] ABC123",body.replace("<!-- muse-telegram-submission:ABC123 -->",""),"hoangsvit");
   assert.equal(planIssueChange(general,[item]).outcome,"needs-review");
 });
@@ -546,6 +550,10 @@ test("all-listed multi-code reports resolve as duplicates, mixed batches remain 
   assert.equal(duplicate.outcome,"already-listed");
   assert.deepEqual(duplicate.codes,["ALFA12","BRAVO2"]);
   assert.deepEqual(duplicate.canonicalIssueNumbers,[150,160]);
+  const sameIssueRows=rows.map(row=>row.code==="ALFA12"||row.code==="BRAVO2"
+    ? {...row,feedbackIssueNumber:170} : row);
+  assert.equal(planIssueChange(issue(170,"[Invite]",make("ALFA12, BRAVO2")),
+    sameIssueRows).outcome,"already-published");
   const mixed=planIssueChange(issue(171,"[Invite]",make("ALFA12, NEW123")),rows);
   assert.equal(mixed.outcome,"needs-review");
 });
