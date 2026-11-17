@@ -10,7 +10,7 @@ export function renderSiteHeader({prefix = "./", current = "home"} = {}) {
   }
   const home = prefix;
   const countries = current === "countries" ? "./" : prefix + "countries/";
-  const share = current === "home" ? "#contribute" : prefix + "#contribute";
+  const share = "https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml";
   const active = page => current === page ? ' aria-current="page"' : "";
   const navLink = (href, page, icon, label) =>
     `        <a href="${href}"${active(page)}><i class="${icon}" aria-hidden="true"></i> ${label}</a>`;
@@ -25,9 +25,9 @@ ${navLink(home, "home", "fa-solid fa-house", "Home")}
 ${navLink(countries, "countries", "fa-solid fa-earth-americas", "Country map")}
 ${navLink(current === "home" ? "#about" : prefix + "#about", "about", "fa-regular fa-circle-question", "About")}
         <a href="https://github.com/ePlus-DEV/muse-invite-hub" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github" aria-hidden="true"></i> GitHub</a>
-        <a class="nav-mobile-share" href="${share}"><i class="fa-solid fa-plus" aria-hidden="true"></i> Share code</a>
+        <a class="nav-mobile-share" href="${share}" data-contribute-trigger><i class="fa-solid fa-plus" aria-hidden="true"></i> Share code</a>
       </nav>
-      <a class="button button-primary nav-share" href="${share}"><i class="fa-solid fa-plus" aria-hidden="true"></i> Share code</a>
+      <a class="button button-primary nav-share" href="${share}" data-contribute-trigger><i class="fa-solid fa-plus" aria-hidden="true"></i> Share code</a>
       <button class="nav-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="site-nav"><i class="fa-solid fa-bars" aria-hidden="true"></i></button>
     </div>
   </header>`;
