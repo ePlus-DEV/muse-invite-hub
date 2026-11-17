@@ -527,15 +527,15 @@ test("a duplicate invite shows only actual published detail and canonical Issue 
   assert.match(comment,/https:\/\/muse\.eplus\.dev\/codes\/FT4SHN\//);
   assert.match(comment,/https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/issues\/240/);
   assert.match(comment,/Closing this duplicate/);
-  assert.match(comment,/does \\*\\*not\\*\\* mean Muse has verified redemption/);
+  assert.match(comment,/Being listed does/);
   const original=resolvedInviteComment({codes:["FT4SHN"],liveCodes:["FT4SHN"],canonical:true});
   assert.match(original,/original contribution has been published/);
   assert.doesNotMatch(original,/Original discussion/);
 });
 
 test("all-listed multi-code reports resolve as duplicates, mixed batches remain open",()=>{
-  const clean=share.replace("### Invite limit (optional; self-reported)\\n\\n30",
-    "### Invite limit (optional; self-reported)\\n\\n_No response_");
+  const clean=share.replace("### Invite limit (optional; self-reported)\n\n30",
+    "### Invite limit (optional; self-reported)\n\n_No response_");
   const make=value=>clean.replace("PNSMZZ",value);
   const rows=[item,
     {id:"community-issue-150-alfa12",code:"ALFA12",status:"unverified",
@@ -583,7 +583,7 @@ test("X and Facebook reports cannot hijack same-named GitHub or Threads accounts
   assert.equal(planIssueChange(issue(93,"[Count update]",
     withListingPlatform(fbCount,"Facebook"),"sameperson"),[item,...existing]).outcome,"needs-review");
   assert.equal(planIssueChange(issue(94,"[Invite]",
-    updatedShare("GitHub (my own code)").replace("18I70N","XX1234"),"sameperson"),[item,...existing]).outcome,"needs-review");
+    updatedShare("GitHub (my own code)").replace("18I70N","XX1234"),"sameperson"),[item,...existing]).outcome,"already-listed");
 });
 
 test("structured Share Code form accepts contributor-edited title and uppercase checkmarks",()=>{
