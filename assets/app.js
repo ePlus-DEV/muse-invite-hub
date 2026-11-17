@@ -225,7 +225,7 @@
       const url = new URL(value);
       if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) return null;
       const host = url.hostname.toLowerCase(), path = url.pathname;
-      let found, platform, key, iconName;
+      let found, platform, key, iconName, group = false;
       if (["threads.com", "www.threads.com"].includes(host)) {
         found = /^\/@([A-Za-z0-9_.]{1,30})(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.exec(path);
         [platform,key,iconName] = ["Threads","threads","fa-brands fa-threads"];
@@ -238,11 +238,13 @@
         if (found && ["share","joinchat","login","addstickers","proxy","socks","addemoji"].includes(found[1].toLowerCase())) return null;
         [platform,key,iconName] = ["Telegram","telegram","fa-brands fa-telegram"];
       } else if (["facebook.com","www.facebook.com","m.facebook.com"].includes(host)) {
-        found = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/[A-Za-z0-9_-]{4,120})?\/?$/.exec(path);
+        found = /^\/groups\/([A-Za-z0-9][A-Za-z0-9._-]{1,79})\/posts\/([1-9][0-9]{9,24})\/?$/.exec(path);
+        group = Boolean(found);
+        if (!group) found = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/[A-Za-z0-9_-]{4,120})?\/?$/.exec(path);
         if (found && ["share","groups","watch","reel","reels","events","marketplace","people","pages","profile.php","permalink.php","photo.php","login"].includes(found[1].toLowerCase())) return null;
         [platform,key,iconName] = ["Facebook","facebook","fa-brands fa-facebook-f"];
       }
-      return found ? {platform,key,handle:found[1],url:url.href,icon:iconName} : null;
+      return found ? {platform,key,handle:found[1],url:url.href,icon:iconName,group} : null;
     } catch { return null; }
   }
   function sourceInfo(item) {
@@ -286,11 +288,13 @@
     sourceTag.append(icon(source.icon), document.createTextNode(" " + source.platform));
     contributor.append(sourceTag);
     if (source.handle && source.url) {
-      const author = el("a", "card-author", "@" + source.handle);
+      const author = el("a", "card-author", (source.group ? "Group: " : "@") + source.handle);
       author.href = source.url;
       author.rel = "noopener noreferrer";
       author.target = "_blank";
-      author.setAttribute("aria-label", "View " + source.platform + " profile of " + source.handle);
+      author.setAttribute("aria-label", source.group
+        ? "View Facebook group post in " + source.handle
+        : "View " + source.platform + " profile of " + source.handle);
       contributor.append(author);
     } else {
       contributor.append(el("span", "", "Community contributor"));
