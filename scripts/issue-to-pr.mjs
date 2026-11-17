@@ -225,16 +225,61 @@ function planMultiInvite(issue, current, codes, fields) {
   };
 }
 
+// Telegram Issue authors are the bot credential, never the contributor.
+// Build only review-only Draft PRs from the bot's strict public form and consent.
+export function planTelegramIssue(issue, current) {
+  const title=/^\[Telegram submission\] ([A-Z0-9]{6})$/.exec(String(issue.title||""));
+  const body=String(issue.body||"");
+  const marker=/<!-- muse-telegram-submission:([A-Z0-9]{6}) -->/.exec(body);
+  if(!title || !marker || title[1]!==marker[1])return {outcome:"needs-review",kind:"invite",reason:"Telegram title/marker mismatch; human review required."};
+  if(!["hoangsvit","eplus-bot"].includes(issue.user?.login))return {outcome:"needs-review",kind:"invite",code:title[1],reason:"Unrecognized Telegram bot Issue author."};
+  const fields=readIssueFields(body);
+  const code=title[1];
+  if(field(fields,"Invite code").trim()!==code || field(fields,"Code source").trim()!==TELEGRAM_COMMUNITY)
+    return {outcome:"needs-review",kind:"invite",code,reason:"Telegram code or source field mismatch."};
+  if(!hasRequiredInviteConfirmations(body) ||
+      !field(fields,"Contributor checklist").includes("- [x] I am authorized to share this code publicly; I understand this Issue is public."))
+    return {outcome:"needs-review",kind:"invite",code,reason:"Telegram contributor public-sharing/privacy confirmation is missing."};
+  const who=/^@([A-Za-z][A-Za-z0-9_]{4,31}) \(Telegram sender, public attribution accepted during confirmation\)$/.exec(field(fields,"Telegram contributor").trim());
+  const context=field(fields,"Public confirmation or context (optional)").trim();
+  const url=/^(https:\/\/t\.me\/[A-Za-z][A-Za-z0-9_]{4,31}) \(Telegram profile only, not source-post evidence\)$/.exec(context);
+  const source=url?parsePublicSource(url[1]):null;
+  if(!who || !source || source.platform!=="Telegram" || source.post || source.handle!==who[1])
+    return {outcome:"needs-review",kind:"invite",code,reason:"Missing or mismatched consented Telegram username/profile."};
+  // Telegram identity cannot authorize self-reported owner-only quota fields.
+  for(const label of ["Uses so far (optional; self-reported)","Invite limit (optional; self-reported)","Remaining invites (optional; self-reported)"]) {
+    const value=field(fields,label);
+    if(value && !explicitlyUnreported(value))return {outcome:"needs-review",kind:"invite",code,reason:"Telegram cannot authenticate owner-only quota."};
+  }
+  if(current.some(entry=>entry.code===code))return {outcome:"needs-review",kind:"invite",code,reason:"Code is already published; do not create duplicate listing."};
+  const id="community-issue-"+issue.number;
+  if(current.some(entry=>entry.id===id || entry.feedbackIssueNumber===issue.number))
+    return {outcome:"needs-review",kind:"invite",code,reason:"A catalog record is already associated with this Issue."};
+  const date=reportDate({...issue,updated_at:issue.created_at});
+  const record={id,code,status:"unverified",addedAt:date,
+    feedbackIssueNumber:issue.number,sourceUrl:source.url,
+    note:"Telegram community report in Issue #"+issue.number+"; source ownership, Muse redemption and remaining capacity unverified."};
+  const data=structuredClone(current);
+  const index=data.findIndex(entry=>entry.featured!==true);
+  data.splice(index<0?data.length:index,0,record);
+  const errors=validateCatalog(data);
+  if(errors.length)throw Error("Telegram draft record failed catalog validation: "+errors.join("; "));
+  return {outcome:"proposal",kind:"invite",code,action:"add Telegram source",data,
+    branch:"auto/issue-"+issue.number+"-invite",
+    notice:"Telegram sender @"+source.handle+" supplied a public profile, NOT proof of code ownership or a source post. No owner quotas or Muse redemption have been verified. Manual Draft PR review is mandatory.",
+    summary:summary(issue,code,"review Telegram community report")};
+}
+
 export function planIssueChange(issue, current, {deferValidation=false}={}) {
   if (!Number.isSafeInteger(issue?.number) || issue.number <= 0) throw Error("Invalid Issue number.");
   if (!Array.isArray(current)) throw Error("Expected a catalog array.");
   if (!USER_PATTERN.test(issue.user?.login || "")) throw Error("Invalid contributor username.");
   const title = String(issue.title || "").trim();
-  // Bot-authored Telegram Issues may use normal Issue Form headings but must not
-  // be attributed to their GitHub bot author or converted into automatic PRs.
+  // Match the trusted Telegram contribution route before general Issue Form parsing.
+  // Never interpret the GitHub bot Issue author as the invite owner.
   if (title.startsWith("[Telegram submission]") ||
       String(issue.body||"").includes("<!-- muse-telegram-submission:")) {
-    return {outcome:"unsupported",reason:"Telegram submissions require human review; GitHub bot author is not code owner."};
+    return planTelegramIssue(issue,current);
   }
   const kind = title.startsWith("[Count update]") ? "count" :
     title.startsWith("[Code feedback]") ? "feedback" :
@@ -598,7 +643,9 @@ async function propose(issue,token) {
     autoPublish ? "## Automated community submission — automatic publication after validation" :
       "## Automated draft proposal",
     "",
-    "Prepared from public Issue #"+issue.number+" by @"+issue.user.login+".",
+    proposed.action==="add Telegram source"
+      ? "Prepared from consented Telegram contributor "+proposed.notice.split(" ")[2]+" in public Issue #"+issue.number+". GitHub Issue author @"+issue.user.login+" is the bot credential, not the code owner."
+      : "Prepared from public Issue #"+issue.number+" by @"+issue.user.login+".",
     (codes.length===1?"Code: **":"Codes: **")+codesLabel+"**. Change: **"+proposed.action+"**.",
     "",
     proposed.notice || "All published figures remain dated community/owner reports, never live Muse availability.",
@@ -617,9 +664,11 @@ async function propose(issue,token) {
            "Contributors are responsible for what they submit; visitors must check the original source and code themselves."]
       : ["### Required human checks",
          "- [ ] Verify the submitter, code and any ownership or usage claims",
-         proposed.action.startsWith("add ") && proposed.action.endsWith(" source")
-           ? "- [ ] Open the original public social post and confirm it contains this code and matches the attributed account"
-           : "- [ ] Confirm the original GitHub owner attribution and any account-reported quota",
+         proposed.action==="add Telegram source"
+           ? "- [ ] Verify the Telegram contributor consent, actual public-sharing permission and invite validity; Telegram profile is NOT ownership/source-post proof"
+           : proposed.action.startsWith("add ") && proposed.action.endsWith(" source")
+             ? "- [ ] Open the original public social post and confirm it contains this code and matches the attributed account"
+             : "- [ ] Confirm the original GitHub owner attribution and any account-reported quota",
          "- [ ] Review catalog diff, duplicates and contributor attribution",
          "- [ ] CI and security checks pass",
          "- [ ] Confirm website preview after marking the draft ready",
