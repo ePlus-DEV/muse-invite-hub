@@ -10,7 +10,7 @@ Each accepted code contribution is stored as an independent reviewed JSON record
 
 ## Share a public invite code
 
-For most visitors, start with [**Choose how to contribute**](https://muse.eplus.dev/#contribute): Telegram private bot (no GitHub account needed for submission), the existing GitHub Issue Form, or feedback on a code already published. The desktop QR opens this same website page on your phone; it is **not** a bot link. Telegram bot access still requires a verified existing chat until a public bot handle is published.
+For most visitors, start with [**Choose how to contribute**](https://muse.eplus.dev/#contribute): Telegram private bot (no GitHub account needed for submission), the existing GitHub Issue Form, or feedback on a code already published. The desktop QR opens the same channel-choice dialog on your phone (no scrolling); it is **not** a bot link. Telegram bot access still requires a verified existing chat until a public bot handle is published.
 
 **If using GitHub:**
 
