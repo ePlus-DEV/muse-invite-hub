@@ -221,7 +221,16 @@ test("copy state synchronizes from other tabs and keeps redemption separate", ()
   assert.equal(browser.label.textContent,"Copy invite code");
   const css=read("assets/styles.css"),detail=read("assets/detail.js");
   assert.match(css,/\.detail-code-panel\.detail-code-panel-copied\{/);
-  assert.match(css,/\.detail-code-panel-copied #detail-copy\{/);
+  assert.match(css,/\.detail-code-heading \.detail-save\{display:grid;place-items:center/);
+  assert.match(css,/\.detail-code-heading \.detail-save-label\{position:absolute;width:1px/);
+  assert.match(css,/\.detail-code-heading \.detail-save\[hidden\]\{display:none\}/);
+  assert.match(css,/\.detail-action-row \.detail-open-invite,\.detail-action-row>a\[href\^="https:\/\/muse.ai\/invite\/"\]\{order:1;background:var\(--blue\)/);
+  assert.match(css,/\.detail-action-row #detail-copy\{order:2;background:#fff;color:var\(--blue\)/);
+  assert.match(css,/@media\(max-width:560px\)\{\s*\.detail-action-row\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css,/@media\(max-width:350px\)\{\.detail-action-row\{grid-template-columns:1fr\}\}/);
+  assert.match(detail,/cardHeading\.append\(detailSave\)/);
+  assert.match(detail,/inviteActions\.insertBefore\(openInvite,button\)/);
+    assert.match(css,/\.detail-code-panel-copied #detail-copy\{/);
   assert.match(detail,/copiedNote\.textContent = "Copied on this device"/);
   assert.match(detail,/normalizeLegacyDetail\(\)/);
   assert.match(detail,/\.detail-action-row a\[href="https:\/\/muse.ai\/join"\]/);
