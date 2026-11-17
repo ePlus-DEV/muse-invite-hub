@@ -191,8 +191,12 @@ function planMultiInvite(issue, current, codes, fields) {
       .filter(Number.isSafeInteger))];
     // Multi-code Issues can be resolved as duplicates only when every code is
     // already listed; mixed new/existing batches still require human triage.
-    return {outcome:"already-listed",kind:"invite",code:codes[0],codes,canonicalIssueNumbers,
-      reason:"All submitted invite codes are already included in the catalog."};
+    return {
+      outcome:canonicalIssueNumbers.length===1 && canonicalIssueNumbers[0]===issue.number
+        ? "already-published":"already-listed",
+      kind:"invite",code:codes[0],codes,canonicalIssueNumbers,
+      reason:"All submitted invite codes are already included in the catalog."
+    };
   }
   if (existing.length){
     return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
@@ -268,7 +272,11 @@ export function planTelegramIssue(issue, current) {
   const listed=findCode(current,code);
   if(listed){
     const canonicalIssueNumber=originalIssueNumber(listed);
-    return canonicalIssueNumber===issue.number && listed.sourceUrl===source.url
+    if (canonicalIssueNumber===issue.number && listed.sourceUrl!==source.url){
+      return {outcome:"needs-review",kind:"invite",code,canonicalIssueNumber,
+        reason:"Original Telegram source differs from the catalog; manual review is required."};
+    }
+    return canonicalIssueNumber===issue.number
       ? {outcome:"already-published",kind:"invite",code,canonicalIssueNumber,
           reason:"This original Telegram contribution is already in the catalog."}
       : {outcome:"already-listed",kind:"invite",code,canonicalIssueNumber,
