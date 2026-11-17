@@ -8,7 +8,7 @@ const SITE="https://muse.eplus.dev";
 async function request(url, options={}) {
   const response=await fetch(url,{
     ...options,
-    headers:{"Accept":"application/vnd.github+json",...options.headers},
+    headers:{"Accept":"application/vnd.github+json","User-Agent":"muse-invite-hub-telegram",...options.headers},
     signal:AbortSignal.timeout(12000)
   });
   if(!response.ok)throw Error("Upstream API HTTP "+response.status);
