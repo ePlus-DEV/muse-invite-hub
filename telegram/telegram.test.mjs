@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseCommand, parseUpdate, BOT_COMMANDS, formatCodeStatus } from "./bot.mjs";
-import { getCodeStatus } from "./github.mjs";
+import { getCodeStatus, submitNewCode } from "./github.mjs";
 import { createTelegramApp } from "./server.mjs";
 
 const token="123456789012345678901234567890";
@@ -165,6 +165,41 @@ test("GitHub code status distinguishes published, pending, closed and unknown",a
     assert.match(formatCodeStatus("TEST42",pending),/not published yet/);
     assert.equal((await getCodeStatus("CLOSED","test-token")).kind,"closed");
     assert.equal((await getCodeStatus("UNSEEN","test-token")).kind,"unknown");
+  } finally {globalThis.fetch=original;}
+});
+
+test("Telegram contributions keep closed Issues distinct and require human source review",async()=>{
+  const original=globalThis.fetch;
+  let includeClosed=true;
+  const writes=[];
+  try {
+    globalThis.fetch=async (url,options={})=>{
+      const request=String(url);
+      if(request.includes("/data/invites.json"))return new Response("[]",{status:200});
+      if(request.includes("/issues?"))return new Response(JSON.stringify(includeClosed?[{
+        title:"[Telegram submission] CLOSED",
+        body:"<!-- muse-telegram-submission:CLOSED -->",
+        state:"closed",html_url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/43"
+      }]:[]),{status:200});
+      if(request.endsWith("/issues")&&options.method==="POST"){
+        writes.push(JSON.parse(options.body));
+        return new Response(JSON.stringify({html_url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/229"}),{status:201});
+      }
+      throw Error("Unexpected request: "+request);
+    };
+    const closed=await submitNewCode("CLOSED",80,"test-token");
+    assert.equal(closed.kind,"closed");
+    assert.equal(closed.url,"https://github.com/ePlus-DEV/muse-invite-hub/issues/43");
+    assert.equal(writes.length,0,"Closed duplicate must not create a new Issue");
+    includeClosed=false;
+    const fresh=await submitNewCode("NEW123",81,"test-token");
+    assert.equal(fresh.kind,"submitted");
+    assert.equal(writes.length,1);
+    assert.equal(writes[0].title,"[Telegram submission] NEW123");
+    assert.match(writes[0].body,/Source evidence: \*\*Not supplied by Telegram/);
+    assert.match(writes[0].body,/Maintainer review checklist/);
+    assert.match(writes[0].body,/review-only Draft PR/);
+    assert.doesNotMatch(writes[0].body,/Telegram chat ID|Telegram username:/);
   } finally {globalThis.fetch=original;}
 });
 
