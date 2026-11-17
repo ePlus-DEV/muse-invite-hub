@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { renderDetailPage } from "./site-pages.mjs";
+import { renderContributionDialog } from "./contribution-dialog.mjs";
 
 const read = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 const home = read("index.html");
@@ -31,13 +32,35 @@ function createBrowser({ hash = "", loading = false, reduced = false, readyState
     addEventListener: (type, cb) => topListeners.set(type, cb)
   };
   const link = { addEventListener: (type, cb) => linkListeners.set(type, cb) };
+  const shareLinkCallbacks = [];
+  const dialogCallbacks = new Map();
+  const dialogCloseCallbacks = new Map();
+  const closeButton = {
+    addEventListener: (name,fn) => dialogCloseCallbacks.set(name,fn)
+  };
+  const feedbackLink = {
+    addEventListener: (name,fn) => dialogCloseCallbacks.set("feedback:"+name,fn)
+  };
+  const shareDialog = {
+    open:false,
+    opened:0,closed:0,
+    showModal(){this.open=true;this.opened++;},
+    close(){this.open=false;this.closed++;},
+    querySelector: selector=>selector==="[data-contribute-close]"?closeButton:
+      selector==="[data-contribute-feedback]"?feedbackLink:null,
+    addEventListener:(name,fn)=>dialogCallbacks.set(name,fn)
+  };
+  const shareLinks = Array.from({length:3},()=>({
+    addEventListener:(name,fn)=>{if(name==="click")shareLinkCallbacks.push(fn);}
+  }));
   const footer = { className: "site-footer" };
   const document = {
     readyState,
     documentElement: { classList: { contains: name => name === "is-page-loading" && loadingState } },
-    getElementById: id => id === "about" ? about : id === "back-to-top" ? top : null,
+    getElementById: id => id === "about" ? about : id === "back-to-top" ? top : id === "contribute" ? shareDialog : null,
     querySelector: selector => selector === ".site-footer" ? footer : null,
-    querySelectorAll: selector => selector === 'a[href="#about"]' && !detail ? [link] : [],
+    querySelectorAll: selector => selector === 'a[href="#about"]' && !detail ? [link] :
+      selector === "[data-contribute-trigger]" ? shareLinks : [],
     addEventListener: (type, cb) => listeners.set(type, cb)
   };
   const window = {
@@ -59,7 +82,16 @@ function createBrowser({ hash = "", loading = false, reduced = false, readyState
   runInNewContext(source, { window, document, MutationObserver: MockMutationObserver,
     IntersectionObserver: MockIntersectionObserver });
   return {
-    window, document, disclosure, top, calls,
+    window, document, disclosure, top, calls, shareDialog,
+    clickShare: index => {
+      const state={prevented:false,preventDefault(){this.prevented=true;}};
+      shareLinkCallbacks[index](state);
+      return state;
+    },
+    closeShare: () => dialogCloseCallbacks.get("click")?.(),
+    clickShareBackdrop: () => dialogCallbacks.get("click")?.({target:shareDialog}),
+    clickFeedback: () => dialogCloseCallbacks.get("feedback:click")?.(),
+
     triggerDoc: type => listeners.get(type)?.(),
     triggerWindow: type => windowListeners.get(type)?.(),
     clickAbout: () => linkListeners.get("click")?.(),
@@ -173,48 +205,72 @@ test("Footer layout, links and back-to-top button are shared by home/detail; SEO
   assert.match(css, /\.help-section\{[^}]*scroll-margin-top:90px/);
 });
 
-test("contribution hub offers Telegram first, GitHub and feedback with an honest stable QR",()=>{
-  const detail=renderDetailPage(sample);
-  const countries=read("countries/index.html");
+test("Share code menu opens an accessible modal immediately without page scroll",()=>{
+  const browser=createBrowser();
+  const before=browser.calls.topScrolls.length+browser.calls.aboutScrolls.length;
+  const click=browser.clickShare(0);
+  assert.equal(click.prevented,true,"A click should not follow the anchor");
+  assert.equal(browser.shareDialog.open,true);
+  assert.equal(browser.shareDialog.opened,1);
+  assert.equal(browser.calls.topScrolls.length+browser.calls.aboutScrolls.length,before);
+  browser.clickShare(1);
+  assert.equal(browser.shareDialog.opened,1,"Repeated click must not throw or duplicate modal");
+  browser.closeShare();
+  assert.equal(browser.shareDialog.open,false);
+  browser.clickShare(2);
+  assert.equal(browser.shareDialog.open,true);
+  browser.clickFeedback();
+  assert.equal(browser.shareDialog.open,false,"On-site feedback navigation closes modal");
+  browser.clickShare(0);
+  browser.clickShareBackdrop();
+  assert.equal(browser.shareDialog.open,false,"Backdrop click closes modal");
+});
+
+test("Scanned QR deep link opens choices without scrolling or requiring another click",()=>{
+  const browser=createBrowser({hash:"#contribute"});
+  assert.equal(browser.shareDialog.open,true);
+  assert.equal(browser.shareDialog.opened,1);
+  assert.equal(browser.calls.aboutScrolls.length,0);
+  assert.equal(browser.calls.topScrolls.length,0);
+  browser.closeShare();
+  browser.window.location.hash="#contribute";
+  browser.triggerWindow("hashchange");
+  assert.equal(browser.shareDialog.open,true);
+});
+
+test("Shared contribution dialog has Telegram first, GitHub/feedback and a stable scannable QR",()=>{
+  const detail=renderDetailPage(sample),countries=read("countries/index.html");
   const guide=read("docs/TELEGRAM_BOT_GUIDE.md");
   const readme=read("README.md");
   const contributing=read("CONTRIBUTING.md");
-  const section=home.match(/<section class="contribute-section container" id="contribute"[\s\S]*?<\/section>/)?.[0];
-  assert.ok(section,"Missing multi-channel contribution hub");
-  assert.match(section,/aria-labelledby="contribute-title"/);
-  assert.match(section,/<h2 id="contribute-title">Choose how to contribute<\/h2>/);
-  assert.match(section,/id="telegram-bot"/);
-  assert.match(section,/Share directly in a chat/);
-  assert.match(section,/You do not need a GitHub account to submit through Telegram/);
-  assert.match(section,/href="https:\/\/github\.com\/ePlus-DEV\/muse-invite-hub\/blob\/main\/docs\/TELEGRAM_BOT_GUIDE\.md"/);
-  assert.match(section,/Open Share Code form/);
-  assert.match(section,/Find a code to review/);
-  assert.match(section,/A GitHub account is required/);
-  assert.match(section,/Posting on the linked GitHub Issue requires a GitHub account/);
-  assert.match(section,/href="#codes"/);
-  assert.doesNotMatch(section,/href="https:\/\/t\.me\//,"Do not create a fake direct bot link");
-  assert.match(section,/A verified public bot link has not yet been published/);
-  assert.match(section,/src="\.\/assets\/contribute-qr\.svg"/);
-  assert.match(section,/QR opens this page, not an unverified Telegram account/);
-  assert.match(section,/href="https:\/\/muse\.eplus\.dev\/#contribute"/);
-  assert.match(home,/href="#contribute"><i class="fa-solid fa-plus" aria-hidden="true"><\/i> Share your code<\/a>/);
-  assert.match(home,/href="#contribute">Share a code<\/a>/);
-  assert.match(home,/href="#contribute">choose how to share<\/a>/);
-  assert.match(home,/href="\.\/#contribute">Contribute<\/a>/);
-  assert.match(countries,/href="\.\.\/#contribute">Contribute<\/a>/);
-  assert.match(detail,/href="\.\.\/\.\.\/#contribute">Contribute<\/a>/);
+  for(const [name,html,prefix] of [["home",home,"./"],["countries",countries,"../"],["detail",detail,"../../"]]){
+    const dialog=html.match(/  <dialog id="contribute"[\s\S]*?<\/dialog>/)?.[0];
+    assert.ok(dialog,name+" dialog missing");
+    assert.equal(dialog,renderContributionDialog(prefix),name+" must share same trusted dialog");
+    assert.match(dialog,/aria-labelledby="contribute-title"/);
+    assert.match(dialog,/<h2 id="contribute-title">Choose how to contribute<\/h2>/);
+    assert.match(dialog,/data-contribute-close aria-label="Close contribution choices"/);
+    assert.match(dialog,/contribute-option-telegram/);
+    assert.match(dialog,/No coding needed/);
+    assert.match(dialog,/no GitHub account needed/);
+    assert.match(dialog,/GitHub sign-in required/);
+    assert.match(dialog,/data-contribute-feedback/);
+    assert.match(dialog,/src="[^"]*assets\/contribute-qr\.svg"/);
+    assert.doesNotMatch(dialog,/href="https:\/\/t\.me\//,"No unverified public bot link");
+    assert.match(dialog,/A verified public bot link has not yet been published/);
+    assert.equal((html.match(/id="contribute"/g)||[]).length,1);
+    assert.doesNotMatch(html,/class="contribute-section/,"No long scroll section");
+    assert.match(html,/data-contribute-trigger/);
+  }
   for(const command of ["/submit CODE","/report CODE worked","/status CODE"]){
-    assert.ok(section.includes(command),"Missing Telegram command "+command);
-    assert.ok(guide.includes(command),"Guide differs on "+command);
+    assert.ok(guide.includes(command),"Telegram guide missing "+command);
   }
   const svg=read("assets/contribute-qr.svg");
   assert.match(svg,/<svg[^>]*viewBox="0 0 37 37"/);
-  assert.match(svg,/<path fill="#152742" d="M4 4h7v1H4z/);
   assert.doesNotMatch(svg,/<script|<foreignObject|<image\b|href="https?:/i);
   assert.match(readme,/docs\/TELEGRAM_BOT_GUIDE\.md/);
   assert.match(contributing,/docs\/TELEGRAM_BOT_GUIDE\.md/);
-  assert.match(css,/\.contribute-grid\{display:grid/);
-  assert.match(css,/@media\(max-width:620px\)\{\.contribute-section/);
-  assert.equal((home.match(/id="contribute"/g)||[]).length,1);
+  assert.match(css,/\.contribute-dialog\{color:var\(--text\)/);
+  assert.match(css,/\.contribute-dialog::backdrop/);
   assert.match(home,/<link rel="canonical" href="https:\/\/muse\.eplus\.dev\/"/);
 });
