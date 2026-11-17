@@ -48,13 +48,15 @@ jobs:
           node --check scripts/reopen-code-feedback.mjs
           node --check scripts/feedback-comment-to-pr.mjs
           node --test scripts/code-issue-map.test.mjs scripts/feedback-comment-to-pr.test.mjs
-      - name: Reopen original code Issue after a real comment
+      - name: Handle feedback or delete unrelated referral promotion
+        id: moderation
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
           COMMENT_ID: ${{ github.event.comment.id || inputs.comment_id }}
         run: node scripts/reopen-code-feedback.mjs
       - name: Propose review-only Draft PR for a structured report
+        if: steps.moderation.outputs.deleted != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}

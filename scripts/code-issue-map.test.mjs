@@ -4,7 +4,7 @@ import {
   issueMarker, issueCode, issueCodes, parseInviteCodes, originalIssueNumber, canonicalThreadBody,
   syncCodeIssueMap, validIssueMap, resolveExistingIssue, withCanonicalIssueRefs
 } from "./code-issue-map.mjs";
-import { feedbackCodeForIssue, shouldReopen, unrelatedReferralCode } from "./reopen-code-feedback.mjs";
+import { feedbackCodeForIssue, shouldReopen, unrelatedReferralCode, reopenOnFeedback } from "./reopen-code-feedback.mjs";
 
 const contributor = {id:"community-issue-55",code:"IY56PP"};
 const seeded = {id:"eplus-owner-dpnihh",code:"DPNIHH"};
@@ -164,6 +164,74 @@ test("a different-language referral cannot reopen an unrelated canonical Issue",
     chinese+"\n邀请码：OTHER1",
     "I tried MIN0OF and it failed."
   ]) assert.equal(unrelatedReferralCode(content,["IY56PP"]),null);
+});
+
+test("unrelated code promotions are removed automatically, never converted into submissions",async()=>{
+  const repo="ePlus-DEV/muse-invite-hub";
+  const issue={...oldIssue,state:"closed"};
+  const reporter={login:"Wang-bbb",id:350407184,type:"User"};
+  const promotion={id:6935502783,user:reporter,body:
+    "快来看看你的个人 AI 智能体 Muse 。\n邀请码：MIN0OF\nhttps://muse.ai/join",
+    issue_url:"https://api.github.com/repos/"+repo+"/issues/55"};
+  function mock({comment=promotion,issueState="closed",deleteStatus=204}={}){
+    const events=[];
+    const source={...comment};
+    const original={...issue,state:issueState};
+    async function request(input,options={}){
+      const url=new URL(input);
+      const method=options.method||"GET";
+      const path=url.pathname.replace("/repos/"+repo+"/","");
+      events.push(method+" "+path);
+      let result;
+      if(method==="GET" && path==="issues/55")result=original;
+      else if(method==="GET" && path==="issues/comments/6935502783")result=source;
+      else if(method==="GET" && path==="issues/55/comments")result=[];
+      else if(method==="DELETE" && path==="issues/comments/6935502783"){
+        return {ok:deleteStatus===204,status:deleteStatus};
+      }else if(method==="POST" && path==="issues/55/comments")result={id:15};
+      else if(method==="PATCH" && path==="issues/55")result={state:"open"};
+      else throw Error("Unexpected API "+method+" "+path);
+      return {ok:true,status:200,json:async()=>result};
+    }
+    return {request,events};
+  }
+  async function run(m){
+    return reopenOnFeedback({
+      repository:repo,token:"mock-token",issueNumber:55,
+      commentId:6935502783,catalog:[contributor],request:m.request
+    });
+  }
+  const promotionRun=mock();
+  assert.deepEqual(await run(promotionRun),{
+    outcome:"deleted",issueNumber:55,code:"MIN0OF"
+  });
+  assert.deepEqual(promotionRun.events,[
+    "GET issues/55","GET issues/comments/6935502783",
+    "DELETE issues/comments/6935502783"
+  ]);
+  const oldOpened=mock({issueState:"open"});
+  assert.equal((await run(oldOpened)).outcome,"deleted");
+
+  // Real feedback on the tracked code must never be deleted.
+  const legit=mock({comment:{...promotion,body:"Code: IY56PP\nResult: Muse rejected this code"}});
+  assert.equal((await run(legit)).outcome,"reopened");
+  assert.ok(!legit.events.some(event=>event.startsWith("DELETE ")));
+  for(const body of [
+    "Code: MIN0OF\nResult: Does not work",
+    "邀请码：MIN0OF\nhttps://muse.ai/join\n邀请码：OTHER1",
+    "邀请码：MIN0OF\nhttps://muse.ai/join\nCode: IY56PP",
+    "邀请码：MIN0OF"
+  ]){
+    const x=mock({comment:{...promotion,body}});
+    await run(x);
+    assert.ok(!x.events.some(event=>event.startsWith("DELETE ")));
+  }
+  const bot=mock({comment:{...promotion,user:{login:"eplus-bot",type:"User",id:12}}});
+  assert.equal((await run(bot)).outcome,"ignored");
+  assert.ok(!bot.events.some(event=>event.startsWith("DELETE ")));
+  const noPermission=mock({deleteStatus:403});
+  await assert.rejects(run(noPermission),/DELETE issues\/comments\/6935502783: HTTP 403/);
+  assert.ok(!noPermission.events.some(event=>event.startsWith("POST ")));
 });
 
 test("original Share Code form remains canonical even if its title is edited",()=>{

@@ -1,5 +1,5 @@
 /* Trusted main-only Issue comment handler. Feedback never edits public code status. */
-import { readFileSync } from "node:fs";
+import { readFileSync, appendFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { issueCodes, issueMarker, originalIssueNumber, withCanonicalIssueRefs, REPO } from "./code-issue-map.mjs";
@@ -53,8 +53,8 @@ export function shouldReopen(issue, comment, catalog) {
     !unrelatedReferralCode(comment.body,issueCodes(issue));
 }
 
-async function github(method, path, token, body) {
-  const response = await fetch("https://api.github.com/repos/" + REPO + "/" + path, {
+async function github(method, path, token, body, request=fetch) {
+  const response = await request("https://api.github.com/repos/" + REPO + "/" + path, {
     method,
     headers: {
       Authorization: "Bearer " + token,
@@ -74,6 +74,7 @@ export async function reopenOnFeedback({
   token=process.env.GH_TOKEN,
   issueNumber=Number(process.env.ISSUE_NUMBER),
   commentId=Number(process.env.COMMENT_ID),
+  request=fetch,
   catalog
 } = {}) {
   if (repository !== REPO || !token ||
@@ -81,27 +82,26 @@ export async function reopenOnFeedback({
       !Number.isSafeInteger(commentId) || commentId <= 0) {
     throw Error("Trusted repository, token, issue and comment identifiers required");
   }
+  const api=(method,path,body)=>github(method,path,token,body,request);
   const rawEntries = catalog ?? readCatalog();
   const roots = catalog ? {} : JSON.parse(readFileSync(new URL("../data/code-issues.json", import.meta.url), "utf8"));
   const entries = withCanonicalIssueRefs(rawEntries, roots);
-  const issue = await github("GET", "issues/" + issueNumber, token);
-  const comment = await github("GET", "issues/comments/" + commentId, token);
+  const issue = await api("GET", "issues/" + issueNumber);
+  const comment = await api("GET", "issues/comments/" + commentId);
   if (comment.issue_url?.split("/").at(-1) !== String(issueNumber)) {
     return {outcome:"ignored",reason:"Comment does not belong to this Issue."};
   }
-  const foreign=unrelatedReferralCode(comment.body,issueCodes(issue));
+  // Moderate only unmistakably unrelated referral promotions (single labelled
+  // code + official Muse join URL, excluding the canonical Issue's code).
+  // Delete through trusted main; never reopen the Issue, create a candidate,
+  // assign an arbitrary contributor, or publish a catalog record from a comment.
+  const human=comment?.user?.login && comment.user.type!=="Bot" &&
+    !comment.user.login.endsWith("[bot]") && comment.user.login!=="eplus-bot";
+  const foreign=human ? unrelatedReferralCode(comment.body,issueCodes(issue)) : null;
   if (foreign && feedbackCodeForIssue(issue,entries)) {
-    const marker="<!-- muse-unrelated-referral:"+commentId+" -->";
-    const comments=await github("GET","issues/"+issueNumber+"/comments?per_page=100",token);
-    if (!comments.some(row=>["github-actions[bot]","eplus-bot"].includes(row.user?.login) &&
-        String(row.body||"").includes(marker))) {
-      await github("POST","issues/"+issueNumber+"/comments",token,{body:marker+"\n"+
-        "ℹ️ **"+foreign+"** is a separate invite code, not feedback on this Issue. "+
-        "Please submit it through the [Share Code form](https://github.com/"+REPO+
-        "/issues/new?template=share-code.yml) with the required ownership/public-sharing "+
-        "confirmations. This comment has not been added to the public catalog."});
-    }
-    return {outcome:"redirected",issueNumber,code:foreign};
+    await api("DELETE","issues/comments/"+commentId);
+    console.log("Removed unrelated invite promotion on Issue #"+issueNumber);
+    return {outcome:"deleted",issueNumber,code:foreign};
   }
   if (!shouldReopen(issue, comment, entries)) {
     console.log("No action: not new community feedback on a closed canonical code Issue.");
@@ -113,16 +113,19 @@ export async function reopenOnFeedback({
   const note = ACK_MARKER + "\nNew community feedback for **" + code +
     "** by @" + comment.user.login + " has been received. Reopening this existing " +
     "Issue for maintainer review. A comment is **not** verification by Muse.";
-  const comments = await github("GET", "issues/" + issueNumber + "/comments?per_page=100", token);
+  const comments = await api("GET", "issues/" + issueNumber + "/comments?per_page=100");
   if (!comments.some(x => x.user?.login === "github-actions[bot]" &&
        x.body?.includes(ACK_MARKER))) {
-    await github("POST", "issues/" + issueNumber + "/comments", token, {body:note});
+    await api("POST", "issues/" + issueNumber + "/comments", {body:note});
   }
-  await github("PATCH", "issues/" + issueNumber, token, {state:"open"});
+  await api("PATCH", "issues/" + issueNumber, {state:"open"});
   console.log("Reopened original Issue #" + issueNumber + " for " + code);
   return { outcome:"reopened", issueNumber, code };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  await reopenOnFeedback();
+  const result=await reopenOnFeedback();
+  // The follow-up PR proposer must not fetch a comment removed by moderation.
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT,
+    "deleted="+(result.outcome==="deleted"?"true":"false")+"\n");
 }
