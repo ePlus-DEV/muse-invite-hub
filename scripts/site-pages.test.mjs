@@ -99,6 +99,16 @@ test("detail responsive layout groups feedback actions and stacks long metadata 
   assert.match(social, /class="detail-quick-feedback"/);
 });
 
+test("Facebook group sources are labeled as groups, not code owners", () => {
+  const html=renderDetailPage({
+    ...community(),code:"FT4SHN",
+    sourceUrl:"https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/"
+  });
+  assert.match(html,/Facebook · Group: referralcodeshare/);
+  assert.doesNotMatch(html,/@referralcodeshare/);
+  assert.match(html,/href="https:\/\/www.facebook.com\/groups\/referralcodeshare\/posts\/1169239249161106\/"/);
+});
+
 test("all published invite details, including unverified codes, are indexable and in the sitemap", () => {
   const html = renderDetailPage(community());
   assert.match(html, /<meta name="robots" content="index,follow">/);

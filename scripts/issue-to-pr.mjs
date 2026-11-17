@@ -416,6 +416,9 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
         });
         if (reported) Object.assign(entry,reported);
         else notice="Usage numbers were absent or incomplete; no available-slot count has been guessed.";
+      } else if (social.group) {
+        notice="Facebook group "+social.handle+" is the cited source, NOT the post author's identity or a verified code owner. "+
+          "The submitted group post has not been independently verified; a maintainer must check it manually before publication.";
       } else {
         notice=social.platform+" @"+social.handle+" is the cited public source, NOT the GitHub reporter or a verified code owner. "+
           "This is a contributor-supplied post URL, NOT independently verified; visitors must check it themselves. Do NOT invent availability or redemption results.";
@@ -521,7 +524,9 @@ export function isAutoPublishableNewSocialInvite(issue,proposal) {
   const platform=SUBMISSION_PLATFORMS.get(selected);
   const urlField=field(f,SOCIAL_FIELD).trim() || field(f,THREADS_FIELD).trim();
   const social=parsePublicSource(urlField);
-  if (!social?.post || social.platform!==platform ||
+  // Group permalinks identify the group but cannot establish the post author.
+  // Do not auto-publish them, even when the URL and submitter checklist are valid.
+  if (!social?.post || social.group || social.platform!==platform ||
       proposal.action!=="add "+platform+" source") return false;
   if (["Invite limit (optional; self-reported)","Uses so far (optional; self-reported)",
        "Remaining invites (optional; self-reported)"].some(k=>field(f,k).trim())) return false;
@@ -673,7 +678,7 @@ async function propose(issue,token) {
          proposed.action==="add Telegram source"
            ? "- [ ] Verify the Telegram contributor consent, actual public-sharing permission and invite validity; Telegram profile is NOT ownership/source-post proof"
            : proposed.action.startsWith("add ") && proposed.action.endsWith(" source")
-             ? "- [ ] Open the original public social post and confirm it contains this code and matches the attributed account"
+             ? "- [ ] Open the original public social post and confirm it contains this code; for Facebook groups verify the group/post context without assuming the group is the author"
              : "- [ ] Confirm the original GitHub owner attribution and any account-reported quota",
          "- [ ] Review catalog diff, duplicates and contributor attribution",
          "- [ ] CI and security checks pass",
