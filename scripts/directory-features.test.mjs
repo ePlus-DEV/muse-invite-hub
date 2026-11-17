@@ -60,6 +60,22 @@ test("invite cards use two primary actions with labeled icon-only feedback and u
   assert.doesNotMatch(app, /Reported votes|thumbsUpCount|thumbsDownCount/);
 });
 
+test("compact card controls have smaller desktop proportions without shrinking mobile targets", () => {
+  const css=read("assets/styles.css");
+  assert.match(css, /\.code-card\{min-width:0;min-height:286px/);
+  assert.match(css, /\.card-actions\{display:flex;flex-direction:column;gap:9px\}/);
+  for (const name of ["card-copy", "card-open-invite"]) {
+    const rule=css.match(new RegExp("\\."+name+"\\{([^\\n}]*)\\}"));
+    assert.ok(rule, name+" CSS rule is present");
+    assert.match(rule[1], /min-height:38px/);
+    assert.match(rule[1], /font-size:11\.5px/);
+    assert.match(rule[1], /font-weight:750/);
+    assert.match(rule[1], /border-radius:9px/);
+  }
+  assert.match(css,/\.card-copy,\.card-open-invite\{min-height:44px;font-size:12px\}/);
+  assert.match(css,/\.card-quick-feedback,\.card-utility-link\{min-height:44px;width:44px\}/);
+});
+
 test("saved codes parse safely and remain scoped to the browser", () => {
   assert.equal(features.STORAGE_KEY, "muse-invite-hub:saved-codes:v1");
   assert.deepEqual(features.parseSaved(null), []);
