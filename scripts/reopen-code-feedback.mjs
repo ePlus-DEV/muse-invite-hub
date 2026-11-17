@@ -53,8 +53,8 @@ export function shouldReopen(issue, comment, catalog) {
     !unrelatedReferralCode(comment.body,issueCodes(issue));
 }
 
-async function github(method, path, token, body) {
-  const response = await fetch("https://api.github.com/repos/" + REPO + "/" + path, {
+async function github(method, path, token, body, request=fetch) {
+  const response = await request("https://api.github.com/repos/" + REPO + "/" + path, {
     method,
     headers: {
       Authorization: "Bearer " + token,
@@ -74,6 +74,7 @@ export async function reopenOnFeedback({
   token=process.env.GH_TOKEN,
   issueNumber=Number(process.env.ISSUE_NUMBER),
   commentId=Number(process.env.COMMENT_ID),
+  request=fetch,
   catalog
 } = {}) {
   if (repository !== REPO || !token ||
@@ -81,11 +82,12 @@ export async function reopenOnFeedback({
       !Number.isSafeInteger(commentId) || commentId <= 0) {
     throw Error("Trusted repository, token, issue and comment identifiers required");
   }
+  const api=(method,path,body)=>github(method,path,token,body,request);
   const rawEntries = catalog ?? readCatalog();
   const roots = catalog ? {} : JSON.parse(readFileSync(new URL("../data/code-issues.json", import.meta.url), "utf8"));
   const entries = withCanonicalIssueRefs(rawEntries, roots);
-  const issue = await github("GET", "issues/" + issueNumber, token);
-  const comment = await github("GET", "issues/comments/" + commentId, token);
+  const issue = await api("GET", "issues/" + issueNumber);
+  const comment = await api("GET", "issues/comments/" + commentId);
   if (comment.issue_url?.split("/").at(-1) !== String(issueNumber)) {
     return {outcome:"ignored",reason:"Comment does not belong to this Issue."};
   }
@@ -97,7 +99,7 @@ export async function reopenOnFeedback({
     !comment.user.login.endsWith("[bot]") && comment.user.login!=="eplus-bot";
   const foreign=human ? unrelatedReferralCode(comment.body,issueCodes(issue)) : null;
   if (foreign && feedbackCodeForIssue(issue,entries)) {
-    await github("DELETE","issues/comments/"+commentId,token);
+    await api("DELETE","issues/comments/"+commentId);
     console.log("Removed unrelated invite promotion on Issue #"+issueNumber);
     return {outcome:"deleted",issueNumber,code:foreign};
   }
@@ -111,12 +113,12 @@ export async function reopenOnFeedback({
   const note = ACK_MARKER + "\nNew community feedback for **" + code +
     "** by @" + comment.user.login + " has been received. Reopening this existing " +
     "Issue for maintainer review. A comment is **not** verification by Muse.";
-  const comments = await github("GET", "issues/" + issueNumber + "/comments?per_page=100", token);
+  const comments = await api("GET", "issues/" + issueNumber + "/comments?per_page=100");
   if (!comments.some(x => x.user?.login === "github-actions[bot]" &&
        x.body?.includes(ACK_MARKER))) {
-    await github("POST", "issues/" + issueNumber + "/comments", token, {body:note});
+    await api("POST", "issues/" + issueNumber + "/comments", {body:note});
   }
-  await github("PATCH", "issues/" + issueNumber, token, {state:"open"});
+  await api("PATCH", "issues/" + issueNumber, {state:"open"});
   console.log("Reopened original Issue #" + issueNumber + " for " + code);
   return { outcome:"reopened", issueNumber, code };
 }
