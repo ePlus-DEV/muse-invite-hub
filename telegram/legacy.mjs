@@ -63,7 +63,7 @@ export async function handleLegacy({action,profiles,send,complete,services,githu
         });
       }
       const key={
-        listed:"submitListed",pending:"submitPending",submitted:"submitSubmitted"
+        listed:"submitListed",pending:"submitPending",closed:"submitClosed",submitted:"submitSubmitted"
       }[outcome.kind]||"submitOther";
       return complete(msg(key)+"\n"+outcome.url);
     }
