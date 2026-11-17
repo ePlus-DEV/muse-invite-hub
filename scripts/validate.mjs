@@ -106,7 +106,8 @@ export function validateCatalog(data) {
         const socialHosts = [
           "threads.com", "www.threads.com",
           "x.com", "www.x.com", "twitter.com", "www.twitter.com",
-          "facebook.com", "www.facebook.com", "m.facebook.com"
+          "facebook.com", "www.facebook.com", "m.facebook.com",
+          "t.me", "www.t.me"
         ];
         if (socialHosts.includes(url.hostname.toLowerCase())) {
           const social = parsePublicSource(item.sourceUrl);
