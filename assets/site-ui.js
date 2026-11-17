@@ -44,6 +44,35 @@
       header.classList.add("nav-enhanced");
     }
 
+    // Share code must open choices immediately, never scroll to a lower section.
+    // The href stays a real GitHub form so it still works without JavaScript.
+    const shareDialog = document.getElementById("contribute");
+    if (shareDialog && typeof shareDialog.showModal === "function") {
+      const openShare = event => {
+        event?.preventDefault?.();
+        if (!shareDialog.open) shareDialog.showModal();
+      };
+      document.querySelectorAll("[data-contribute-trigger]").forEach(link => {
+        link.addEventListener("click", openShare);
+      });
+      shareDialog.querySelector("[data-contribute-close]")?.addEventListener("click", () => {
+        shareDialog.close();
+      });
+      // Native <dialog> supports ESC, tab trapping and return focus.
+      shareDialog.addEventListener("click", event => {
+        if (event.target === shareDialog) shareDialog.close();
+      });
+      shareDialog.querySelector("[data-contribute-feedback]")?.addEventListener("click", () => {
+        shareDialog.close();
+      });
+      const openSharedQr = () => {
+        if (window.location.hash === "#contribute") openShare();
+      };
+      window.addEventListener("hashchange", openSharedQr);
+      // A scanned, previously shared QR opens this very dialog on the homepage.
+      openSharedQr();
+    }
+
     // About is an actual disclosure. Opening its contents *before* scrolling
     // fixes both repeated clicks and deep links arriving from code detail pages.
     if (about && aboutDisclosure) {
