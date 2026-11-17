@@ -15,6 +15,38 @@ export const AUTO_MERGE_BLOCK_LABEL = "do-not-merge";
 export const AUTO_MERGE_DEFAULT_AUTHOR = "hoangsvit";
 export const AUTO_MERGE_MAX_DOC_FILES = 15;
 
+
+// A workflow_dispatch created with the built-in GITHUB_TOKEN can leave the
+// follow-up workflow_run auto-merge check without an event. Dispatch fresh CI
+// using the existing independently authenticated eplus-bot token instead.
+// This is strictly for a trusted, previously verified single-Issue bot PR.
+export async function dispatchBotValidation({
+  repository="ePlus-DEV/muse-invite-hub", branch, token, request=fetch
+}) {
+  if (repository!=="ePlus-DEV/muse-invite-hub" ||
+      !/^auto\/issue-[1-9]\d*-invite$/.test(branch||"") || !token) {
+    throw Error("Bot validation dispatch needs the trusted repo, invite branch and bot token.");
+  }
+  const headers={
+    Authorization:"Bearer "+token,
+    Accept:"application/vnd.github+json",
+    "X-GitHub-Api-Version":"2022-11-28"
+  };
+  const identity=await request("https://api.github.com/user",{headers});
+  if(!identity.ok || (await identity.json()).login!=="eplus-bot") {
+    throw Error("Validation dispatch requires an authenticated eplus-bot token.");
+  }
+  const response=await request(
+    "https://api.github.com/repos/"+repository+"/actions/workflows/validate.yml/dispatches",{
+      method:"POST",
+      headers:{...headers,"Content-Type":"application/json"},
+      body:JSON.stringify({ref:branch})
+    });
+  if(response.status!==204) {
+    throw Error("eplus-bot validation dispatch returned HTTP "+response.status);
+  }
+}
+
 // A transient GitHub merge error can arrive after GitHub committed the squash.
 // Never retry the merge blindly; re-read the exact PR/head first.
 export function isTransientMergeError(status) {
