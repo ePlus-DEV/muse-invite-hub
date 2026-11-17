@@ -1,6 +1,6 @@
 # Contribution and feedback flow
 
-This page describes the review and publication rules of Muse Invite Hub. **Eligible new GitHub-owned codes and strict single-code public social-post reports can publish automatically as `unverified`** after guarded checks. Existing-code updates and feedback still require maintainer review. Owner-count comment completion is reconciled by the trusted Pages deployment after an approved merge, while feedback-only discussions remain open. Publishing an entry does **not** verify that Muse will accept the code or that invitations remain.
+This page describes the review and publication rules of Muse Invite Hub. The public [contribution picker](https://muse.eplus.dev/#contribute) prioritizes a Telegram private chat, but keeps GitHub Issue Forms and existing-code feedback accessible; its QR opens the picker, not a Telegram bot. **Eligible new GitHub-owned codes and strict single-code public social-post reports can publish automatically as `unverified`** after guarded checks. Existing-code updates and feedback still require maintainer review. Owner-count comment completion is reconciled by the trusted Pages deployment after an approved merge, while feedback-only discussions remain open. Publishing an entry does **not** verify that Muse will accept the code or that invitations remain.
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for contributor instructions, the [Telegram bot user guide](TELEGRAM_BOT_GUIDE.md) for private-chat commands and attribution, [AGENTS.md](../AGENTS.md) for mandatory rules, and [PROJECT_GUIDE.md](PROJECT_GUIDE.md) for implementation details.
 
@@ -8,7 +8,7 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for contributor instructions, the [Tel
 
 ```mermaid
 flowchart TD
-    A["Visitor on muse.eplus.dev"] --> B{"Is this code already published?"}
+    A["Visitor on muse.eplus.dev / QR contribution page"] --> B{"Is this code already published?"}
     TG["Telegram /submit CODE (confirm public username + permissions)"] --> TGI["Same [Invite] Issue Form with source Telegram and public profile"]
     TGI --> TGD{"Trusted Issue validator: consent, source, duplicates?"}
     TGD -->|"Valid new code"| P
