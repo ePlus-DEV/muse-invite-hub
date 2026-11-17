@@ -13,7 +13,7 @@ body:
     id: invite_code
     attributes:
       label: Invite code
-      description: "Enter 1–10 distinct codes of exactly 6 letters (A–Z) or digits (0–9), without hyphens or spaces within a code. Lowercase letters are normalized. Separate multiple codes by commas, spaces, or new lines. If pasting the complete Muse referral message, include exactly one standalone 'Code: ABC123' line; do not paste ambiguous codes. Never enter login or verification codes. For multiple codes, leave quota/count fields blank because they belong to individual codes."
+      description: "Enter 1–10 distinct codes of exactly 6 letters (A–Z) or digits (0–9), without hyphens or spaces within a code. Lowercase letters are normalized. Separate multiple codes by commas, spaces, or new lines. If pasting the complete Muse referral message, include exactly one standalone 'Code: ABC123' or Spanish 'Código: ABC123' line; do not paste ambiguous codes. Never enter login or verification codes. For multiple codes, leave quota/count fields blank because they belong to individual codes."
       placeholder: "ABC123, DEF456"
     validations:
       required: true
