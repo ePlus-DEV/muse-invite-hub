@@ -214,6 +214,44 @@ test("accept a pasted Muse referral message only when one explicit Code line exi
 });
 
 
+test("Issue #219 Spanish referral paste extracts the single explicit Código code safely",()=>{
+  const pasted=[
+    "Echa un vistazo a Muse, tu agente de IA personal. Canjea mi código en la configuración dentro de las 48 horas posteriores a unirte.",
+    "",
+    "Código: 4WEZN6",
+    "https://muse.ai/join"
+  ].join("\n");
+  assert.deepEqual(parseInviteCodes(pasted),["4WEZN6"]);
+  for (const label of ["Código", "código", "CÓDIGO", "Codigo", "CODIGO"]) {
+    assert.deepEqual(parseInviteCodes(label+": 4wezn6"),["4WEZN6"]);
+  }
+  const issue219={number:219,title:"[Invite] Código: 4WEZN6",state:"open",body:[
+    "### Invite code","",pasted,"",
+    "### Code source","","GitHub (my own code)","",
+    "### Contributor checklist","",
+    "- [x] I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
+    "- [x] This code is not a password, 2FA code, session token or private credential."
+  ].join("\n")};
+  assert.deepEqual(issueCodes(issue219),["4WEZN6"]);
+  assert.equal(issueCode(issue219),"4WEZN6");
+  assert.deepEqual(issueCodes({...issue219,title:"Misleading Title XYZ789"}),["4WEZN6"]);
+});
+
+test("Spanish referral parsing stays fail-closed for ambiguous or malformed labels",()=>{
+  for (const invalid of [
+    "Código: ABC123\nCode: XYZ789",
+    "Código: ABC123\nCódigo: ABC123",
+    "Código: ABC123, XYZ789",
+    "Código: ABC-12",
+    "Código: ABCDE",
+    "Código: ABCDEFG",
+    "Código: ABC123 trailing text",
+    "Mi código es ABC123\nhttps://muse.ai/join",
+    "Code: ABC123\nCódigo: XYZ789",
+    "Código: ABC123\nCódigo: ABCDE"
+  ]) assert.throws(()=>parseInviteCodes(invalid),/Invite code must contain/);
+});
+
 test("Muse invite field uses exactly six letters or digits, with uppercase normalization",()=>{
   assert.deepEqual(parseInviteCodes("ab12c3"),["AB12C3"]);
   assert.deepEqual(parseInviteCodes("ab12c3, DE45F6"),["AB12C3","DE45F6"]);
