@@ -1,6 +1,6 @@
 # Project guide — Muse Invite Hub
 
-This is the technical reference for maintainers. For a short project overview see the [README](../README.md); for Issue Forms, contribution rules and pull requests see [CONTRIBUTING.md](../CONTRIBUTING.md). Security and coding-agent policies live in [SECURITY.md](../SECURITY.md) and [AGENTS.md](../AGENTS.md).
+This is the technical reference for maintainers. For a short project overview see the [README](../README.md); for Issue Forms, contribution rules and pull requests see [CONTRIBUTING.md](../CONTRIBUTING.md). For the Telegram user experience, commands and public attribution see [Telegram bot user guide](TELEGRAM_BOT_GUIDE.md). Security and coding-agent policies live in [SECURITY.md](../SECURITY.md) and [AGENTS.md](../AGENTS.md).
 
 ## Run locally
 
