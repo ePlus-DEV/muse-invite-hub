@@ -86,6 +86,34 @@
       openInvite.nextElementSibling !== button) {
     inviteActions.insertBefore(openInvite,button);
   }
+  // Trusted PR previews render the current main template, which may still
+  // contain two large copies of the same invite code. Convert only that legacy
+  // presentation to the new single-H1 hero while keeping the original heading,
+  // code text, links and instructions accessible and crawlable in HTML.
+  const hero = document.querySelector(".detail-code-panel");
+  const title = document.getElementById("detail-title");
+  const oldCode = document.getElementById("detail-code");
+  const guidance = document.querySelector(".detail-instructions");
+  if (hero && cardHeading && title && oldCode) {
+    hero.classList.add("detail-hero-unified");
+    const codeInTitle = title.querySelector?.(".detail-code-text");
+    if (codeInTitle && codeInTitle !== oldCode &&
+        typeof title.replaceChildren === "function" &&
+        typeof document.createElement === "function") {
+      const prefix = document.createElement("span");
+      prefix.className = "detail-h1-prefix";
+      prefix.textContent = "Invite code ";
+      codeInTitle.id = "detail-code";
+      title.replaceChildren(prefix,codeInTitle);
+      oldCode.remove?.();
+    }
+    if (title.parentElement !== hero && typeof cardHeading.after === "function") {
+      cardHeading.after(title);
+    }
+    if (guidance && guidance.parentElement !== hero &&
+        typeof hero.append === "function") hero.append(guidance);
+    document.querySelector(".detail-primary > .section-kicker")?.remove?.();
+  }
   // The trusted PR preview renderer can still use old main HTML. Align DOM focus
   // order with the new visual order: redemption choices before secondary actions.
   const feedbackCard = document.querySelector(".detail-feedback");
