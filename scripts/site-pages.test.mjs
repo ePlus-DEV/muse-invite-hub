@@ -140,6 +140,33 @@ test("unreported community codes do not invent quota or update history", () => {
   assert.equal((html.match(/class="detail-stats"/g)||[]).length,1);
   assert.equal((html.match(/<h1\b/g)||[]).length,1);
 });
+test("mobile unreported quota has a full-width row and never overflows a 3-column strip", () => {
+  const html = renderDetailPage({
+    ...community(),
+    code:"2MAL34",
+    note:"Community-submitted in issue #259; redemption not independently verified."
+  });
+  const css = readFileSync(new URL("../assets/styles.css",import.meta.url),"utf8");
+  const heroStart = html.indexOf('class="detail-code-panel detail-hero-unified"');
+  const statsStart = html.indexOf('class="detail-stats"',heroStart);
+  const noteStart = html.indexOf('class="detail-note"',statsStart);
+  const heroEnd = html.indexOf('</div>',statsStart);
+  const foldStart = html.indexOf('class="detail-instructions detail-mobile-fold"',heroStart);
+  assert.ok(statsStart > heroStart && noteStart > statsStart && noteStart < foldStart,
+    "Community caveat must be visually attached to the invite card, not floating below it");
+  assert.match(html, /class="detail-slots-number">Not reported<\/strong>/);
+  assert.match(html, /class="detail-stat-date">No report<\/strong>/);
+  assert.match(css, /@media\(max-width:620px\)\{\s*\.detail-hero-unified \.detail-stats\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.detail-hero-unified \.detail-stat:first-child\{[\s\S]*?grid-column:1\/-1/);
+  assert.match(css, /\.detail-hero-unified \.detail-stat:first-child \.detail-slots-number\{[^}]*white-space:normal/);
+  assert.match(css, /\.detail-hero-unified \.detail-stat:nth-child\(2\)\{border-right:1px/);
+  assert.match(css, /\.detail-hero-unified \.detail-note\{margin:0 -22px/);
+  const js=readFileSync(new URL("../assets/detail.js",import.meta.url),"utf8");
+  assert.match(js, /hero\.append\(contributorNote\)/);
+  assert.equal((html.match(/<h1\b/g)||[]).length,1);
+  assert.match(html, /<details class="detail-instructions detail-mobile-fold"/);
+});
+
 test("approved desktop/mobile layout retains real counts and accessible controls", () => {
   const css=readFileSync(new URL("../assets/styles.css",import.meta.url),"utf8");
   const js=readFileSync(new URL("../assets/detail.js",import.meta.url),"utf8");
