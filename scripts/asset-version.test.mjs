@@ -70,7 +70,7 @@ test("production and PR previews are stamped with their own local assets", () =>
       new RegExp('social-preview\\.png\\?v='+digest("preview OG")));
     assert.notEqual(digest("new branch styles"),digest(f.contents["styles.css"]));
     assert.match(readFileSync(join(preview,"index.html"),"utf8"),
-      /content="https:\\/\\/muse\\.eplus\\.dev\\/assets\\/social-preview\\.png"/);
+      /content="https:\/\/muse\.eplus\.dev\/assets\/social-preview\.png"/);
   } finally { f.cleanup(); }
 });
 
