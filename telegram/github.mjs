@@ -141,7 +141,7 @@ export async function submitNewCode(code,updateId,token,username) {
   if(prior)return {kind:prior.state==="open"?"pending":"closed",url:prior.html_url};
   // Use the same [Invite] Issue Form as other platforms. The internal Telegram
   // marker instructs the trusted planner to avoid GitHub-bot owner attribution
-  // and to propose a review-only Draft PR, never automatic publication.
+  // and to propose a Ready PR eligible for independent, trusted validation.
   const issue=await github("issues",token,"POST",{
     title:"[Invite] "+code,
     body:[
@@ -167,7 +167,7 @@ export async function submitNewCode(code,updateId,token,username) {
       "",
       "### Notes (optional)",
       "",
-      "Submitted via Telegram by @"+username+". Human review required; public profile is not proof of code ownership, redemption or quota.",
+      "Submitted via Telegram by @"+username+". Community report; public profile is not proof of code ownership, redemption or quota.",
       "",
       "### Contributor checklist",
       "",

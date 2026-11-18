@@ -52,6 +52,7 @@ jobs:
           github-token: ${{ github.token }}
           script: |
             const { autoMergeDecision, verifyNewGithubInvitePR, verifyNewSocialInvitePR,
+              verifyNewTelegramInvitePR,
               ciHasPassed, getMaintainerAuthorization, qualifiesForDefaultAutoMerge,
               needsEplusBotReview, dispatchBotValidation, isTransientMergeError,
               confirmedMergeAfterError, shouldDispatchPagesRecovery } = await import(
@@ -64,7 +65,8 @@ jobs:
               process.env.GITHUB_WORKSPACE + "/scripts/close-deleted-issue-prs.mjs"
             );
             const { AUTO_PUBLISH_NEW_INVITE_MARKER,
-              AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER } = await import(
+              AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER,
+              AUTO_PUBLISH_NEW_TELEGRAM_INVITE_MARKER } = await import(
               process.env.GITHUB_WORKSPACE + "/scripts/issue-to-pr.mjs"
             );
             const { owner, repo } = context.repo;
@@ -164,7 +166,8 @@ jobs:
               if (inviteMatch &&
                   ["github-actions[bot]","eplus-bot"].includes(pr.user?.login) &&
                   (String(pr.body || "").includes(AUTO_PUBLISH_NEW_INVITE_MARKER) ||
-                   String(pr.body || "").includes(AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER)) &&
+                   String(pr.body || "").includes(AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER) ||
+                   String(pr.body || "").includes(AUTO_PUBLISH_NEW_TELEGRAM_INVITE_MARKER)) &&
                   files.length >= 1 && files.length <= 10 &&
                   files.every(f => f.status === "added" &&
                     /^data\/invite-records\/community-issue-[a-z0-9-]+\.json$/.test(f.filename))) {
@@ -193,7 +196,8 @@ jobs:
                     files,fileContents,repo:fullName
                   };
                   newInviteEligible = verifyNewGithubInvitePR(trustInputs) ||
-                    verifyNewSocialInvitePR(trustInputs);
+                    verifyNewSocialInvitePR(trustInputs) ||
+                    verifyNewTelegramInvitePR(trustInputs);
                   if (newInviteEligible) {
                     sourceIssueNo=issue_number;
                     sourceIssueUpdatedAt=issue.updated_at;

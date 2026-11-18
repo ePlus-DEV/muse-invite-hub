@@ -123,7 +123,7 @@ Test your bot via private chat:
 
 ## 7. Review and privacy rules
 
-**New code:** `/submit CODE` → explicitly confirm public username and sharing/privacy → check catalog and open/closed Issues → create one standard **`[Invite] CODE`** Issue if unlisted → GitHub Actions creates a review-only **Draft PR** automatically. The bot's GitHub identity is never the code owner. A maintainer reviews identity, permission and source before merge; no automatic publication.
+**New code:** `/submit CODE` → explicitly confirm public username and sharing/privacy → check catalog and open/closed Issues → create one standard **`[Invite] CODE`** Issue if unlisted → GitHub Actions creates a **Ready PR** for a new, consented, strictly attributed code. An independent trusted gate checks the bot marker, source/profile, exact JSON record, duplicates and current-head CI before automatic merge as **unverified**. The bot's GitHub identity is never the code owner, and public Telegram profile attribution is not proof of ownership or successful Muse redemption. Invalid or conflicting submissions remain in manual review.
 
 **Existing code feedback:** /report CODE worked|failed → explicit public comment confirmation → append a report to the original canonical GitHub Issue. The existing workflow deliberately **ignores bot-authored comments**, so manual triage is required. No duplicate per-code Issues and no direct catalog status changes.
 
@@ -200,7 +200,7 @@ selector (translated into English, Vietnamese and Japanese):
 - **🤝 I have a code to share:** A 3×3 contributor menu for Submit a public
   code, My submissions from this Telegram chat, Check review/publication status,
   New codes, Browse, Report, Alerts, Settings and Switch role. Public GitHub
-  submissions still require an explicit confirmation and human review.
+  submissions still require explicit confirmation; only valid **new-code** reports may auto-publish as unverified after guarded CI. Feedback remains human-reviewed.
 
 - **Refresh behavior:** the persistent keyboard has no redundant Refresh row.
   Lists and individual code details retain inline Refresh. Inline refresh

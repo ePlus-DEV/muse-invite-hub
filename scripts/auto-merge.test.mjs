@@ -1,4 +1,4 @@
-import { planIssueChange, isAutoPublishableNewGithubInvite, isAutoPublishableNewSocialInvite, AUTO_PUBLISH_NEW_INVITE_MARKER, AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER } from "./issue-to-pr.mjs";
+import { planIssueChange, isAutoPublishableNewGithubInvite, isAutoPublishableNewSocialInvite, isAutoPublishableNewTelegramInvite, AUTO_PUBLISH_NEW_INVITE_MARKER, AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER, AUTO_PUBLISH_NEW_TELEGRAM_INVITE_MARKER } from "./issue-to-pr.mjs";
 import { changedRecord, changedRecords } from "./catalog.mjs";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   AUTO_MERGE_MAINTAINER, AUTO_MERGE_BLOCK_LABEL,
   getMaintainerAuthorization, ciHasPassed, autoMergeDecision,
-  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR, verifyNewSocialInvitePR, needsEplusBotReview,
+  qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR, verifyNewSocialInvitePR, verifyNewTelegramInvitePR, needsEplusBotReview,
   isTransientMergeError, confirmedMergeAfterError, shouldDispatchPagesRecovery, dispatchBotValidation
 } from "./auto-merge.mjs";
 
@@ -499,6 +499,73 @@ test("strict social new-code PR verifier keeps attribution unverified but permit
   assert.equal(verifyNewSocialInvitePR(foreign),false);
   assert.equal(autoMergeDecision({pr:data.pr,files:data.files,
     newInviteEligible:true,runs:[run(HEAD,"failure")]}).eligible,false);
+});
+
+test("Telegram new-code PR uses trusted independent auto-merge without claiming GitHub ownership",()=>{
+  const telegramIssue={...newCodeIssue("TG1234","Telegram (community code shared through bot)"),
+    title:"[Invite] TG1234",user:{login:"hoangsvit",id:11882322}};
+  telegramIssue.body=[
+    "### Invite code","","TG1234","",
+    "### Code source","","Telegram (community code shared through bot)","",
+    "### Social post or profile URL (required for Threads, X or Facebook)","","_No response_","",
+    "### Public confirmation or context (optional)","","https://t.me/alice_dev","",
+    "### Remaining invites (optional; self-reported)","","_No response_","",
+    "### Notes (optional)","","Submitted via Telegram by @alice_dev. Community report; public profile is not proof of code ownership, redemption or quota.","",
+    "### Contributor checklist","",
+    "- [x] I am authorized to share this code publicly; I understand this Issue is public.",
+    "- [x] This code is not a password, 2FA code, session token or private credential.","",
+    "<!-- muse-telegram-submission:TG1234 -->"
+  ].join("\n");
+  const data=botProposal(telegramIssue);
+  data.pr.user={login:"eplus-bot"};
+  data.pr.body=AUTO_PUBLISH_NEW_TELEGRAM_INVITE_MARKER+"\n"+
+    "Prepared from consented Telegram contributor @alice_dev in public Issue #230. "+
+    "GitHub Issue author @hoangsvit is the bot credential, not the code owner.";
+  const proposal=planIssueChange(telegramIssue,existingCatalog);
+  assert.equal(isAutoPublishableNewTelegramInvite(telegramIssue,proposal),true);
+  assert.equal(verifyNewTelegramInvitePR(data),true);
+  assert.equal(verifyNewGithubInvitePR(data),false);
+  assert.equal(verifyNewSocialInvitePR(data),false);
+  const entry=proposal.data.find(x=>x.code==="TG1234");
+  assert.equal(entry.status,"unverified");
+  assert.equal(entry.sourceUrl,"https://t.me/alice_dev");
+  assert.equal(entry.submittedBy,undefined);
+  assert.equal(entry.ownerConfirmed,undefined);
+  assert.equal(entry.reportedRemaining,undefined);
+  const decision=autoMergeDecision({pr:data.pr,files:data.files,
+    newInviteEligible:verifyNewTelegramInvitePR(data),runs:[run()]});
+  assert.equal(decision.eligible,true);
+  assert.equal(decision.method,"verified-new-telegram-invite");
+  assert.equal(needsEplusBotReview({...data,newInviteEligible:true,runs:[run()]}).required,false);
+  const alteredIssue=change=>({...telegramIssue,body:change(telegramIssue.body)});
+  for(const change of [
+    body=>body.replace("t.me/alice_dev","t.me/mallory"),
+    body=>body.replace("@alice_dev","@mallory"),
+    body=>body.replace("<!-- muse-telegram-submission:TG1234 -->",""),
+    body=>body.replace("- [x] This code is not a password","- [ ] This code is not a password"),
+    body=>body.replace("_No response_\n\n### Notes","10\n\n### Notes")
+  ]){
+    assert.equal(verifyNewTelegramInvitePR({...data,issue:alteredIssue(change)}),false);
+  }
+  for(const tampered of [
+    {issue:{...telegramIssue,user:{login:"stranger"}}},
+    {pr:{...data.pr,user:{login:"untrusted"}}},
+    {pr:{...data.pr,body:AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER}},
+    {pr:{...data.pr,changed_files:2}},
+    {files:[{...data.files[0],status:"modified"}]},
+    {fileContents:{...data.fileContents,[data.files[0].filename]:
+      data.fileContents[data.files[0].filename].replace('"status": "unverified"','"status": "reported-working"')}}
+  ]){
+    assert.equal(verifyNewTelegramInvitePR({...data,...tampered}),false);
+  }
+  const duplicate=[...existingCatalog,entry];
+  assert.equal(verifyNewTelegramInvitePR({...data,catalog:duplicate}),false);
+  assert.equal(autoMergeDecision({pr:data.pr,files:data.files,
+    newInviteEligible:true,runs:[run(HEAD,"failure")]}).eligible,false);
+  assert.equal(autoMergeDecision({pr:{...data.pr,draft:true},files:data.files,
+    newInviteEligible:true,runs:[run()]}).eligible,false);
+  assert.equal(autoMergeDecision({pr:{...data.pr,labels:[{name:"do-not-merge"}]},
+    files:data.files,newInviteEligible:true,runs:[run()]}).eligible,false);
 });
 
 test("transient GitHub merge 502 requires confirmed server-side merge before dispatch",()=>{
