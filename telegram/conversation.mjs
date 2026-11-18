@@ -91,9 +91,9 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
     for(const entry of visible)buttons.push([
       {text:"🎟 "+entry.code+" · "+
         (Number.isSafeInteger(entry.remaining)&&entry.usageReportedAt
-          ? String(entry.remaining)+" ("+msg("remainingLabel")+")"
+          ? msg("listReportedCount",{count:entry.remaining})
           : entry.basis==="default" && entry.remaining===30
-            ? "30/30 ("+msg("defaultCountLabel")+")"
+            ? msg("listDefaultCount")
             : msg("cardUnknown")),data:"t:detail:"+entry.code}
     ]);
     const nav=[];
@@ -127,15 +127,14 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
         return p;
       });
       await sendMenu(chatId,msg(role==="seeker"?"roleSeekerWelcome":"roleContributorWelcome"),language,role);
+      // One tap on "I need a code" opens the published list immediately.
+      // Keep the role keyboard, but do not require a second "Get codes" tap.
+      if(role==="seeker")await list();
       return true;
     }
     case "need-code":
-      await send(chatId,msg("needTitle")+"\n\n"+msg("needDetails"),[
-        [{text:msg("needBrowse"),data:"t:need:browse"}],
-        [{text:msg("needNotify"),data:"t:need:alerts"}],
-        [{text:msg("needSearch"),data:"t:need:search"}],
-        [{text:msg("backMenu"),data:"t:home"}]
-      ]);
+      // A seeker already chose this intent: show available listings, not a CTA menu.
+      await list();
       return true;
     case "browse": await list();return true;
     case "newest": await list("",true);return true;

@@ -27,6 +27,12 @@ function makeDeps(services = {}) {
   const sent = [], calls = { submit: [], report: [] };
   const defaults = {
     listRecentCodes: async () => ["DPNIHH", "TEST42"],
+    browseCodes: async () => [
+      {code:"DPNIHH",status:"unverified",remaining:23,basis:"reported",
+        usageReportedAt:"2026-11-15",platform:"GitHub"},
+      {code:"AUYL1M",status:"unverified",remaining:30,basis:"default",
+        usageReportedAt:null,platform:"GitHub"}
+    ],
     getCodeStatus: async code => ({kind:"listed",status:"unverified",reportedRemaining:23,
       usageReportedAt:"2026-11-15",url:"https://muse.eplus.dev/codes/"+code+"/"}),
     submitNewCode: async (...args) => { calls.submit.push(args); return { kind: "submitted", url: "https://github.com/ePlus-DEV/muse-invite-hub/issues/90" }; },
@@ -382,10 +388,14 @@ test("Worker onboarding lets seekers request community codes and switch to contr
   assert.equal((await handleWebhookRequest(webhook(vi),env,deps)).status,200);
   assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 Tôi cần mã");
   assert.equal((await handleWebhookRequest(webhook(callback(701,"t:role:seeker")),env,deps)).status,200);
-  assert.ok(sent.at(-1).payload.reply_markup.keyboard.flat().includes("🙋 Cần mã"));
+  const keyboard=sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard.flat();
+  assert.ok(keyboard.includes("🙋 Cần mã"));
+  assert.match(sent.at(-1).payload.text,/Mã mời cộng đồng/);
+  assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/Còn 23 lượt \(đã báo cáo\)/);
+  assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[1][0].text,/30\/30 \(mặc định\)/);
   assert.equal((await handleWebhookRequest(webhook(message(702,"🙋 Cần mã")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,4);
-  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[3][0].callback_data,"t:home");
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,3);
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[2][1].callback_data,"t:home");
   assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).subscribed,false);
   assert.equal(calls.submit.length,0);
   assert.equal((await handleWebhookRequest(webhook(callback(703,"t:need:alerts")),env,deps)).status,200);

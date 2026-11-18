@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { parseCommand, parseUpdate, BOT_COMMANDS, formatCodeStatus } from "./bot.mjs";
 import { browseCodes, getCodeStatus, submitNewCode } from "./github.mjs";
 import { createTelegramApp } from "./server.mjs";
+import { codeDescription } from "./menu.mjs";
 
 const token="123456789012345678901234567890";
 const secret="0123456789abcdef0123456789abcdef";
@@ -61,6 +62,12 @@ async function withApp(run,services={}) {
   const sent=[],calls={submit:[],report:[]};
   const defaults={
     listRecentCodes:async()=>["DPNIHH","TEST42"],
+    browseCodes:async()=>[
+      {code:"DPNIHH",status:"unverified",remaining:23,basis:"reported",
+        usageReportedAt:"2026-11-15",platform:"GitHub"},
+      {code:"AUYL1M",status:"unverified",remaining:30,basis:"default",
+        usageReportedAt:null,platform:"GitHub"}
+    ],
     getCodeStatus:async code=>({kind:"listed",status:"unverified",reportedRemaining:23,
       usageReportedAt:"2026-11-15",url:"https://muse.eplus.dev/codes/"+code+"/"}),
     submitNewCode:async(...args)=>{calls.submit.push(args);return {kind:"submitted",url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/90"};},
@@ -238,6 +245,17 @@ test("Telegram browse and status distinguish 30/30 default from owner reports in
   } finally {globalThis.fetch=old;}
 });
 
+test("Telegram code details keep a 30/30 default distinct from dated reports",()=>{
+  const unreported={code:"AUYL1M",status:"unverified",remaining:30,basis:"default",
+    usageReportedAt:null,platform:"GitHub"};
+  const reported={code:"DPNIHH",status:"unverified",remaining:23,basis:"reported",
+    usageReportedAt:"2026-11-15",platform:"GitHub"};
+  assert.match(codeDescription(unreported,"vi"),/30\/30 \(mặc định\)/);
+  assert.doesNotMatch(codeDescription(unreported,"vi"),/null|undefined/);
+  assert.match(codeDescription(reported,"vi"),/23/);
+  assert.match(codeDescription(reported,"vi"),/2026-11-15/);
+});
+
 test("Telegram status suppresses invalid 31-slot catalog claims",async()=>{
   const old=globalThis.fetch;
   let record={code:"DPNIHH",status:"unverified",
@@ -353,17 +371,19 @@ test("OCI Refresh re-fetches published codes without posting or changing prefere
     assert.equal((await post(message(500,"/start"))).status,200);
     assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
     assert.equal((await post(callback(501,"t:role:seeker"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
+    assert.equal(sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard.length,3);
+    assert.equal(reads,1,"Selecting seeker must load the first code page");
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:DPNIHH");
     assert.equal((await post(message(502,"🔄 Refresh"))).status,200);
-    assert.equal(reads,1);
-    assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/1 /);
-    assert.equal((await post(message(503,"/refresh"))).status,200);
     assert.equal(reads,2);
     assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/2 /);
-    assert.equal((await post(callback(504,"t:refresh-code:DPNIHH"))).status,200);
+    assert.equal((await post(message(503,"/refresh"))).status,200);
     assert.equal(reads,3);
+    assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/3 /);
+    assert.equal((await post(callback(504,"t:refresh-code:DPNIHH"))).status,200);
+    assert.equal(reads,4);
     assert.equal(sent.at(-2).name,"editMessageText");
-    assert.match(sent.at(-2).payload.text,/Reported 3 remaining/);
+    assert.match(sent.at(-2).payload.text,/Reported 4 remaining/);
     assert.equal(sent.at(-1).name,"answerCallbackQuery");
     assert.equal(sent.at(-1).payload.text,"Updated");
     assert.equal(calls.submit.length,0);
@@ -442,18 +462,27 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
     assert.equal(welcome[1][0],"🤝 Tôi muốn chia sẻ mã");
 
     assert.equal((await post(callback(701,"t:role:seeker"))).status,200);
-    const seeker=sent.at(-1).payload.reply_markup.keyboard.flat();
+    const seeker=sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard.flat();
     assert.equal(seeker.length,9);
     assert.ok(!seeker.includes("🔄 Làm mới"));
     assert.ok(seeker.includes("🎟 Nhận mã"));
     assert.ok(seeker.includes("🙋 Cần mã"));
     assert.ok(seeker.includes("🔄 Đổi vai trò"));
+    const initialList=sent.at(-1).payload;
+    assert.match(initialList.text,/Mã mời cộng đồng/);
+    assert.equal(initialList.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:DPNIHH");
+    assert.match(initialList.reply_markup.inline_keyboard[0][0].text,/Còn 23 lượt \(đã báo cáo\)/);
+    assert.match(initialList.reply_markup.inline_keyboard[1][0].text,/30\/30 \(mặc định\)/);
 
     assert.equal((await post(message(702,"🙋 Cần mã"))).status,200);
-    const offer=sent.at(-1).payload;
-    assert.match(offer.text,/không đảm bảo mã còn lượt sử dụng/i);
-    assert.equal(offer.reply_markup.inline_keyboard.length,4);
-    assert.equal(offer.reply_markup.inline_keyboard[3][0].callback_data,"t:home");
+    const directList=sent.at(-1).payload;
+    assert.match(directList.text,/Mã mời cộng đồng/);
+    assert.equal(directList.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:DPNIHH");
+    assert.equal(directList.reply_markup.inline_keyboard.length,3);
+    assert.equal(directList.reply_markup.inline_keyboard[2][1].callback_data,"t:home");
+    assert.equal((await post(callback(708,"t:need"))).status,200);
+    assert.match(sent.at(-1).payload.text,/Mã mời cộng đồng/,
+      "Old inline Need code actions must also navigate directly to codes");
     const profilePath=join(dir,"private-profiles.json");
     const profile=()=>JSON.parse(readFileSync(profilePath,"utf8"))["42"];
     assert.equal(profile().role,"seeker");
