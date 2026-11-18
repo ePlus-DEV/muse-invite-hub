@@ -28,8 +28,12 @@ for(const lang of LOCALES){
       actions.set(menuText(lang,key),type);
     }
   }
-  // Old Telegram clients can still send a stale Refresh keyboard label.
-  actions.set(menuText(lang,"refresh"),"refresh");
+  // Telegram clients can keep a previously sent custom keyboard indefinitely.
+  // Removed shortcuts remain accepted, but are no longer shown as duplicate keys.
+  for(const [key,type] of [
+    ["refresh","refresh"],["need","need-code"],["notifications","notifications"],
+    ["report","prompt-report"],["roleSwitch","choose-role"]
+  ])actions.set(menuText(lang,key),type);
 }
 export function menuChoice(text) { return actions.get(text)||null; }
 export function codeButtons(code,language="en") {
