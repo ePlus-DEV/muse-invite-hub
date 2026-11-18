@@ -164,6 +164,6 @@ export function parseUpdate(update) {
 export function keyboard(buttons) {
   return {inline_keyboard:buttons.map(row=>row.map(button=>({
     text:button.text,url:button.url,callback_data:button.data,
-    copy_text:button.copy_text
+    copy_text:button.copy_text,style:button.style
   })).map(button=>Object.fromEntries(Object.entries(button).filter(([,value])=>value!==undefined))))};
 }

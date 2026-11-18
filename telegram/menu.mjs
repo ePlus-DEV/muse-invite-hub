@@ -28,15 +28,17 @@ for(const lang of LOCALES){
       actions.set(menuText(lang,key),type);
     }
   }
+  // Old Telegram clients can still send a stale Refresh keyboard label.
+  actions.set(menuText(lang,"refresh"),"refresh");
 }
 export function menuChoice(text) { return actions.get(text)||null; }
 export function codeButtons(code,language="en") {
   return [
-    [{text:tr(language,"copy",{code}),copy_text:{text:code}},
-     {text:tr(language,"details"),url:"https://muse.eplus.dev/codes/"+code+"/"}],
+    [{text:tr(language,"copy",{code}),copy_text:{text:code},style:"primary"},
+     {text:tr(language,"details"),url:"https://muse.eplus.dev/codes/"+code+"/",style:"primary"}],
     [{text:tr(language,"watch"),data:"t:watch:"+code},
-     {text:tr(language,"worked"),data:"t:pick:"+code+":worked"},
-     {text:tr(language,"failed"),data:"t:pick:"+code+":failed"}],
+     {text:tr(language,"worked"),data:"t:pick:"+code+":worked",style:"success"},
+     {text:tr(language,"failed"),data:"t:pick:"+code+":failed",style:"danger"}],
     [{text:menuText(language,"refresh"),data:"t:refresh-code:"+code}],
     [{text:tr(language,"backList"),data:"t:back-list"},
      {text:tr(language,"backMenu"),data:"t:home"}]

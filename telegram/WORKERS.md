@@ -166,7 +166,7 @@ attached later as a Workers custom domain; re-run this step after changing it.
 
 ### 6. Test in a private chat
 
-- `/start` — welcome and persistent nine-button menu
+- `/start` — welcome and current persistent menu (new buttons appear after the new Worker deploy and the next /start)
 - `/codes` — latest published codes
 - `/status DPNIHH` — published or pending Issue status and dated **not-live** invite counts
 - `/privacy` — public GitHub reporting/privacy rules

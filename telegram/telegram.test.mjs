@@ -299,9 +299,9 @@ test("OCI Refresh re-fetches published codes without posting or changing prefere
   let reads=0;
   await withApp(async({post,sent,calls})=>{
     assert.equal((await post(message(500,"/start"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
     assert.equal((await post(callback(501,"t:role:seeker"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
     assert.equal((await post(message(502,"🔄 Refresh"))).status,200);
     assert.equal(reads,1);
     assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/1 /);
@@ -310,8 +310,10 @@ test("OCI Refresh re-fetches published codes without posting or changing prefere
     assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/2 /);
     assert.equal((await post(callback(504,"t:refresh-code:DPNIHH"))).status,200);
     assert.equal(reads,3);
-    assert.equal(sent.at(-1).name,"editMessageText");
-    assert.match(sent.at(-1).payload.text,/Reported 3 remaining/);
+    assert.equal(sent.at(-2).name,"editMessageText");
+    assert.match(sent.at(-2).payload.text,/Reported 3 remaining/);
+    assert.equal(sent.at(-1).name,"answerCallbackQuery");
+    assert.equal(sent.at(-1).payload.text,"Updated");
     assert.equal(calls.submit.length,0);
     assert.equal(calls.report.length,0);
   },{browseCodes:async()=>{
@@ -382,15 +384,15 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
     assert.equal((await post(vi)).status,200);
     assert.match(sent.at(-1).payload.text,/Bạn đến đây để làm gì/);
     const welcome=sent.at(-1).payload.reply_markup.keyboard;
-    assert.deepEqual(welcome.map(x=>x.length),[1,1,1,1]);
-    assert.equal(welcome[3][0],"🔄 Làm mới");
+    assert.deepEqual(welcome.map(x=>x.length),[1,1,1]);
+    assert.equal(welcome.flat().includes("🔄 Làm mới"),false);
     assert.equal(welcome[0][0],"🙋 Tôi cần mã");
     assert.equal(welcome[1][0],"🤝 Tôi muốn chia sẻ mã");
 
     assert.equal((await post(callback(701,"t:role:seeker"))).status,200);
     const seeker=sent.at(-1).payload.reply_markup.keyboard.flat();
-    assert.equal(seeker.length,10);
-    assert.ok(seeker.includes("🔄 Làm mới"));
+    assert.equal(seeker.length,9);
+    assert.ok(!seeker.includes("🔄 Làm mới"));
     assert.ok(seeker.includes("🎟 Nhận mã"));
     assert.ok(seeker.includes("🙋 Cần mã"));
     assert.ok(seeker.includes("🔄 Đổi vai trò"));

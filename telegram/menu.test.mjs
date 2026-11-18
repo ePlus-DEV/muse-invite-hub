@@ -34,14 +34,14 @@ function fixture() {
   return {run,profiles,messages,data,calls};
 }
 
-test("persistent keyboard retains all nine core actions plus a distinct Refresh row",()=>{
-  assert.equal(MENU.length,4);
-  assert.deepEqual(MENU.map(row=>row.length),[3,3,3,1]);
+test("persistent keyboard keeps nine core actions without a redundant Refresh row",()=>{
+  assert.equal(MENU.length,3);
+  assert.deepEqual(MENU.map(row=>row.length),[3,3,3]);
   assert.equal(MENU.flat().length,new Set(MENU.flat()).size);
   assert.equal(REPLY_KEYBOARD.is_persistent,true);
   assert.equal(REPLY_KEYBOARD.keyboard[0][0],"🎟 Get codes");
   assert.equal(MENU[0][0],"🎟 Get codes");
-  assert.equal(MENU[3][0],"🔄 Refresh");
+  assert.equal(MENU.flat().includes("🔄 Refresh"),false);
   assert.equal(parseCommand("🔄 Refresh").type,"refresh");
   assert.equal(parseCommand("🔄 Làm mới").type,"refresh");
   assert.equal(parseCommand("🔄 更新").type,"refresh");
@@ -62,6 +62,12 @@ test("Telegram copy-text button is native and code actions are private callbacks
   const rows=codeButtons("DPNIHH");
   const payload=keyboard(rows);
   assert.deepEqual(payload.inline_keyboard[0][0].copy_text,{text:"DPNIHH"});
+  assert.equal(payload.inline_keyboard[0][0].style,"primary");
+  assert.equal(payload.inline_keyboard[0][1].style,"primary");
+  assert.equal(payload.inline_keyboard[1][1].style,"success");
+  assert.equal(payload.inline_keyboard[1][2].style,"danger");
+  assert.equal(payload.inline_keyboard[1][0].style,undefined,
+    "watching a code must not imply it works");
   assert.equal(payload.inline_keyboard[0][0].url,undefined);
   assert.equal(payload.inline_keyboard[1][0].callback_data,"t:watch:DPNIHH");
   assert.equal(payload.inline_keyboard[2][0].callback_data,"t:refresh-code:DPNIHH");
@@ -149,6 +155,39 @@ test("Refresh fetches the latest catalog again without creating pending submissi
   assert.equal(await handleInteractive({action:{type:"refresh-code",chatId:42,code:"DPNIHH"},...f.calls}),true);
   assert.equal(reads,3);
   assert.match(f.messages.at(-1).text,/Reported 3 remaining/);
+});
+
+test("inline Refresh edits in place, preserves the current filter and never duplicates unchanged cards",async()=>{
+  const f=fixture();
+  const requests=[],edited=[],toasts=[];
+  f.calls.services.browseCodes=async options=>{
+    requests.push(options);
+    return [{code:"DPNIHH",status:"unverified",remaining:23,usageReportedAt:"2026-11-15"}];
+  };
+  f.calls.edit=async (chat,id,text,buttons)=>{
+    edited.push({chat,id,text,buttons});
+    throw Error("Telegram editMessageText HTTP 400: Bad Request: message is not modified");
+  };
+  f.calls.acknowledge=async text=>toasts.push(text);
+  await f.run("/search DPN");
+  const count=f.messages.length;
+  const refresh={type:"refresh",chatId:42,callbackId:"cb",messageId:123};
+  assert.equal(await handleInteractive({action:refresh,...f.calls}),true);
+  assert.equal(f.messages.length,count,"Do not send another message on no-op refresh");
+  assert.equal(requests.at(-1).query,"DPN");
+  assert.equal(requests.at(-1).newest,false);
+  assert.equal(edited.at(-1).id,123);
+  assert.deepEqual(toasts,["Already up to date"]);
+  const detail={type:"refresh-code",code:"DPNIHH",chatId:42,callbackId:"cb2",messageId:124};
+  assert.equal(await handleInteractive({action:detail,...f.calls}),true);
+  assert.equal(f.messages.length,count,"No new detail card after Telegram no-change response");
+  assert.equal(edited.at(-1).id,124);
+  assert.deepEqual(toasts,["Already up to date","Already up to date"]);
+  f.calls.edit=async()=>{throw Error("Telegram API timeout");};
+  assert.equal(await handleInteractive({action:detail,...f.calls}),true);
+  assert.equal(f.messages.length,count,"Errors during refresh should not spam the chat");
+  assert.equal(toasts.at(-1),"Could not refresh. Try again.");
+  assert.deepEqual((await f.profiles.get(42)).browse,{query:"DPN",newest:false,page:0});
 });
 
 test("paged list -> code detail -> back to same page -> home without public writes",async()=>{

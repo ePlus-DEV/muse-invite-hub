@@ -127,9 +127,9 @@ test("Worker Refresh fetches current catalog and has no public write side effect
     return [{code:"DPNIHH",status:"unverified",remaining:reads,usageReportedAt:"2026-11-15"}];
   }});
   assert.equal((await handleWebhookRequest(webhook(message(300,"/start")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
   assert.equal((await handleWebhookRequest(webhook(callback(301,"t:role:contributor")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
   assert.equal((await handleWebhookRequest(webhook(message(302,"🔄 Refresh")),env,deps)).status,200);
   assert.equal(reads,1);
   assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/1 /);
@@ -138,11 +138,30 @@ test("Worker Refresh fetches current catalog and has no public write side effect
   assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/2 /);
   assert.equal((await handleWebhookRequest(webhook(callback(304,"t:refresh-code:DPNIHH")),env,deps)).status,200);
   assert.equal(reads,3);
-  assert.equal(sent.at(-1).name,"editMessageText");
-  assert.match(sent.at(-1).payload.text,/Reported 3 remaining/);
+  assert.equal(sent.at(-2).name,"editMessageText");
+  assert.match(sent.at(-2).payload.text,/Reported 3 remaining/);
+  assert.equal(sent.at(-1).name,"answerCallbackQuery");
+  assert.equal(sent.at(-1).payload.text,"Updated");
   assert.equal(calls.submit.length,0);
   assert.equal(calls.report.length,0);
   assert.equal(await env.BOT_STATE.get("rl:42"),null,"Refreshing must not use public-write quota");
+});
+
+test("Worker no-change refresh shows toast without sending a duplicate card",async()=>{
+  const env=makeEnv();
+  const {deps,sent,calls}=makeDeps({browseCodes:async()=>[
+    {code:"DPNIHH",status:"unverified",remaining:23,usageReportedAt:"2026-11-15"}
+  ]});
+  deps.telegramApi=async (name,payload)=>{
+    sent.push({name,payload});
+    if(name==="editMessageText")
+      throw Error("Telegram editMessageText HTTP 400: Bad Request: message is not modified");
+  };
+  assert.equal((await handleWebhookRequest(webhook(callback(901,"t:refresh-code:DPNIHH")),env,deps)).status,200);
+  assert.deepEqual(sent.map(x=>x.name),["editMessageText","answerCallbackQuery"]);
+  assert.equal(sent.at(-1).payload.text,"Already up to date");
+  assert.equal(calls.submit.length,0);
+  assert.equal(calls.report.length,0);
 });
 
 test("Worker paging and code details are navigable without GitHub writes",async()=>{

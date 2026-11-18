@@ -24,19 +24,40 @@ export async function resolveInput(action,profiles) {
   return {...action,type:"usage-menu"};
 }
 
-export async function handleInteractive({action,profiles,send,sendMenu,edit,services,githubToken}) {
+export async function handleInteractive({action,profiles,send,sendMenu,edit,acknowledge,services,githubToken}) {
   const {type,chatId,code}=action;
   const profile=await profiles.get(chatId);
   const language=profile.language||"en";
   const msg=(key,params)=>tr(language,key,params);
-  // Edit the existing Telegram panel for read-only inline navigation.
-  // Old/expired/non-editable messages fall back to a new chat message.
-  // No GitHub writes are performed by the navigation path.
+  // Read-only inline navigation updates the existing message rather than
+  // flooding the chat with duplicate cards on unchanged Refresh presses.
+  const isRefreshCallback=Boolean(action.callbackId &&
+    (type==="refresh" || type==="refresh-code"));
+  const feedback=async key=>{
+    if(isRefreshCallback&&typeof acknowledge==="function"){
+      try {await acknowledge(msg(key));}
+      catch { /* Expired callbacks must not create a chat message. */ }
+    }
+  };
   const panel=async(text,buttons)=>{
     if(action.callbackId&&action.messageId&&typeof edit==="function"){
-      try {return await edit(chatId,action.messageId,text,buttons);}
-      catch { /* Telegram can refuse edits of stale or unchanged messages. */ }
+      try {
+        const result=await edit(chatId,action.messageId,text,buttons);
+        await feedback("refreshDone");
+        return result;
+      } catch(error) {
+        if(/message is not modified/i.test(String(error?.message||""))){
+          await feedback("alreadyUpToDate");
+          return;
+        }
+        if(isRefreshCallback){
+          await feedback("refreshFailed");
+          return; // Never duplicate a failed or unchanged refresh card.
+        }
+        // Non-refresh navigation may send another panel if the old one expired.
+      }
     }
+    if(isRefreshCallback){await feedback("refreshFailed");return;}
     return send(chatId,text,buttons);
   };
   const prompt=async(kind,key)=>{
@@ -116,7 +137,13 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,serv
       return true;
     case "browse": await list();return true;
     case "newest": await list("",true);return true;
-    case "refresh": await list("",true);return true;
+    case "refresh": {
+      // Inline refresh keeps search, sort and current page. Legacy /refresh
+      // still retrieves the newest listing when used from plain chat text.
+      const context=action.callbackId?profile.browse:null;
+      await list(context?.query||"",context?.newest??true,context?.page??0);
+      return true;
+    }
     case "page": {
       const context=profile.browse||{query:"",newest:true,page:0};
       await list(context.query,context.newest,action.page);

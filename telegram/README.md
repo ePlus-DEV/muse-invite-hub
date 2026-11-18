@@ -189,8 +189,7 @@ GitHub Issues and moderation flows are not translated or weakened.
 
 On the first `/start`, the bot no longer presents every contribution and
 consumer action at once. It asks what the user needs, with an **intent**
-selector and a separate Refresh button (translated into English, Vietnamese
-and Japanese):
+selector (translated into English, Vietnamese and Japanese):
 
 - **🙋 I need a code:** A 3×3 reader menu for Browse codes, New codes, Search,
   Need a code, opt-in Alerts, Watchlist, Report, Settings and Switch role.
@@ -203,17 +202,17 @@ and Japanese):
   New codes, Browse, Report, Alerts, Settings and Switch role. Public GitHub
   submissions still require an explicit confirmation and human review.
 
-- **🔄 Refresh** (also `/refresh`): a dedicated fourth row below the original
-  nine role-menu actions, available on onboarding and both roles. Fetches the
-  latest published community codes again, newest first. Refresh is read-only:
-  it never opens GitHub Issues, submits feedback, redeems codes, opts in to
-  alerts or changes a role/language. It dismisses an unfinished text-entry
-  prompt to avoid accidental submissions.
+- **Refresh behavior:** the persistent keyboard has no redundant Refresh row.
+  Lists and individual code details retain inline Refresh. Inline refresh
+  re-fetches data and edits the **same Telegram card**; unchanged data shows
+  a short "Already up to date" toast rather than another identical message.
+  It preserves the current search/sort/page and cannot write to GitHub.
+  The legacy `/refresh` command and old keyboard labels remain supported.
 - **Paged Browse/Search:** one compact Telegram message displays up to five
   published codes with buttons to open each code. **Previous / Next** pages
   retain the user's last search and sort in the private chat profile, and
-  **Back to codes / Main menu** provide explicit navigation. Refresh starts
-  at the newest published page. Opening a code displays the available
+  **Back to codes / Main menu** provide explicit navigation. Inline Refresh
+  preserves the current listing/page. Opening a code displays the available
   catalog status, platform, contributor (when supplied), added date and
   last dated remaining-count report, with Copy, Watch, Report, Refresh
   and navigation buttons. The public code detail link opens the website.
@@ -231,4 +230,7 @@ The preference is stored only in the existing private chat profile in the
 Worker's `BOT_STATE` KV (or OCI private profile file), together with
 language. `/delete_data` clears this preference; the welcome choice is
 shown again. Inline callbacks are language-independent to keep older buttons
-working after a locale switch.
+working after a locale switch. After a new bot feature is deployed, users
+can send `/start` or tap **Main menu** to receive the latest version's
+keyboard; no global Refresh button, account migration or new bot is needed.
+Bot deploys remain independent of GitHub Pages.
