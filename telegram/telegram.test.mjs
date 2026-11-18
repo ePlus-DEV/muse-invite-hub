@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseCommand, parseUpdate, BOT_COMMANDS, formatCodeStatus } from "./bot.mjs";
-import { getCodeStatus, submitNewCode } from "./github.mjs";
+import { browseCodes, getCodeStatus, submitNewCode } from "./github.mjs";
 import { createTelegramApp } from "./server.mjs";
 
 const token="123456789012345678901234567890";
@@ -198,6 +198,44 @@ test("GitHub code status distinguishes published, pending, closed and unknown",a
     assert.equal((await getCodeStatus("CLOSED","test-token")).kind,"closed");
     assert.equal((await getCodeStatus("UNSEEN","test-token")).kind,"unknown");
   } finally {globalThis.fetch=original;}
+});
+
+test("Telegram browse and status distinguish 30/30 default from owner reports in three locales",async()=>{
+  const old=globalThis.fetch;
+  const rows=[
+    {code:"AUYL1M",status:"unverified",addedAt:"2026-11-18",
+      quotaDisplay:{capacity:30,remaining:30,used:0,basis:"default",reportedAt:null}},
+    {code:"DPNIHH",status:"unverified",addedAt:"2026-11-11",
+      reportedCapacity:30,reportedUses:7,usageReportedAt:"2026-11-15",
+      quotaDisplay:{capacity:30,remaining:23,used:7,basis:"reported",reportedAt:"2026-11-15"}},
+    {code:"SMALL1",status:"unverified",addedAt:"2026-11-10",
+      reportedCapacity:20,reportedUses:3,usageReportedAt:"2026-11-14",
+      quotaDisplay:{capacity:20,remaining:17,used:3,basis:"reported",reportedAt:"2026-11-14"}}
+  ];
+  try {
+    globalThis.fetch=async()=>new Response(JSON.stringify(rows),{status:200});
+    const all=await browseCodes({limit:10});
+    assert.equal(all.length,3);
+    assert.deepEqual(all.find(x=>x.code==="AUYL1M")?.remaining,30);
+    assert.equal(all.find(x=>x.code==="AUYL1M")?.basis,"default");
+    assert.equal(all.find(x=>x.code==="AUYL1M")?.usageReportedAt,null);
+    const fresh=await getCodeStatus("AUYL1M","token");
+    assert.equal(fresh.reportedRemaining,null);
+    assert.equal(fresh.policyDefaultRemaining,30);
+    assert.match(formatCodeStatus("AUYL1M",fresh,"en"),/Default: 30\/30/);
+    assert.match(formatCodeStatus("AUYL1M",fresh,"vi"),/Mặc định 30\/30/);
+    assert.match(formatCodeStatus("AUYL1M",fresh,"ja"),/30\/30/);
+    const owner=await getCodeStatus("DPNIHH","token");
+    assert.equal(owner.reportedRemaining,23);
+    assert.equal(owner.policyDefaultRemaining,null);
+    assert.match(formatCodeStatus("DPNIHH",owner),/Reported remaining: 23/);
+    const smaller=await getCodeStatus("SMALL1","token");
+    assert.equal(smaller.reportedRemaining,17);
+    assert.equal(smaller.policyDefaultRemaining,null);
+    rows[0].quotaDisplay.remaining=31;
+    const malformed=await getCodeStatus("AUYL1M","token");
+    assert.equal(malformed.policyDefaultRemaining,null);
+  } finally {globalThis.fetch=old;}
 });
 
 test("Telegram status suppresses invalid 31-slot catalog claims",async()=>{

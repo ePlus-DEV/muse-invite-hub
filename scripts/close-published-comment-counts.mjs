@@ -108,9 +108,7 @@ export function matchesPublishedQuota(comment,record,{allowNarrative=false}={}) 
       record.reportedRemaining===remaining && capacity===null && uses===null;
   }
 
-  if (!allowNarrative || !Number.isInteger(record.reportedCapacity) ||
-      !Number.isInteger(record.reportedUses) || record.reportedCapacity <= 0 ||
-      record.reportedUses < 0 || record.reportedUses > record.reportedCapacity) return false;
+  if (!allowNarrative) return false;
   const lines=String(comment.body||"").trim().split(/\r?\n/).map(line=>line.trim());
   const heading=/^Owner count update\s*[—–:-]\s*([A-Z0-9]{6})\s*$/i.exec(lines[0] || "");
   if (!heading || heading[1].toUpperCase()!==record.code ||
@@ -127,6 +125,16 @@ export function matchesPublishedQuota(comment,record,{allowNarrative=false}={}) 
   }
   if (!counts.has("remaining invites")) return false;
   const remaining=counts.get("remaining invites");
+  if (Number.isInteger(record.reportedRemaining)) {
+    // A reviewed narrative report with only one count may publish exactly
+    // that dated remaining snapshot. Do not treat 30 as a reviewed total.
+    return remaining===record.reportedRemaining &&
+      !counts.has("total invites") && !counts.has("used invites");
+  }
+  if (!Number.isInteger(record.reportedCapacity) ||
+      !Number.isInteger(record.reportedUses) || record.reportedCapacity<=0 ||
+      record.reportedUses<0 || record.reportedUses>record.reportedCapacity)
+    return false;
   // One-number reports are accepted only when this published record already
   // contains the previously reviewed actual total. Never assume 30.
   const used=counts.get("used invites") ??

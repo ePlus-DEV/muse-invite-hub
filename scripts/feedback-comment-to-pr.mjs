@@ -74,12 +74,13 @@ function narrativeOwnerCount(issue, comment, catalog, code, item) {
     typeof item.usageReportedAt==="string" ? item.reportedCapacity : null;
   const total=hasTotal?values.get("total invites"):
     hasUsed?remaining+values.get("used invites"):knownTotal;
-  if (total===null) {
-    return review("The published record has no verified total; remaining can be recorded, but used cannot be inferred without a reviewed total.");
-  }
-  const used=hasUsed?values.get("used invites"):total-remaining;
-  if (total <= 0 || total > MAX_INVITES_PER_CODE ||
-      used > total || remaining > total || total - used !== remaining) {
+  // A first owner report may contain only Remaining, even when no earlier
+  // actual capacity exists. Record it as reportedRemaining, never as a
+  // fabricated complete 30-slot report. The public display policy is separate.
+  const remainingOnly=total===null;
+  const used=remainingOnly?null:hasUsed?values.get("used invites"):total-remaining;
+  if (!remainingOnly && (total <= 0 || total > MAX_INVITES_PER_CODE ||
+      used > total || remaining > total || total - used !== remaining)) {
     return review("Owner-count figures do not reconcile (total - used must equal remaining).");
   }
   if (!Number.isFinite(Date.parse(comment.created_at || ""))) {
@@ -89,29 +90,41 @@ function narrativeOwnerCount(issue, comment, catalog, code, item) {
   if (item.usageReportedAt && item.usageReportedAt > date) {
     return review("A newer owner report is already published.");
   }
-  if (item.reportedCapacity === total && item.reportedUses === used &&
-      item.usageReportedAt === date) {
-    return {outcome:"duplicate",kind:"count",code,reason:"This dated owner report is already published."};
+  if (item.usageReportedAt===date &&
+      (remainingOnly?item.reportedRemaining===remaining:
+        item.reportedCapacity===total && item.reportedUses===used)) {
+    return {outcome:"duplicate",kind:"count",code,
+      reason:"This dated owner report is already published."};
   }
   const data = structuredClone(catalog);
   const target = data.find(entry => entry.code === code);
   const hadSnapshot = typeof target.usageReportedAt === "string" &&
     [target.reportedCapacity,target.reportedUses,target.reportedRemaining]
       .some(value => value !== undefined);
+  delete target.reportedCapacity;
+  delete target.reportedUses;
   delete target.reportedRemaining;
-  target.reportedCapacity = total;
-  target.reportedUses = used;
+  if (remainingOnly) target.reportedRemaining=remaining;
+  else {
+    target.reportedCapacity=total;
+    target.reportedUses=used;
+  }
   target.usageReportedAt = date;
   if (hadSnapshot) target.quotaUpdateCount = (target.quotaUpdateCount || 0) + 1;
   return {
     outcome:"proposal",kind:"count",code,action:"review owner-reported count",data,
     branch:"auto/comment-"+issue.number+"-"+comment.id+"-count",
     issueNumber:issue.number,commentId:comment.id,reporter:comment.user.login,
-    notice:"The original owner-authored comment reports "+remaining+" remaining. Total "+total+" is "+
-      (hasTotal?"explicitly reported":hasUsed?"calculated from remaining + used":"retained from an earlier reviewed dated snapshot")+
-      "; used "+used+" is "+(hasUsed?"owner-reported":"derived from that total")+
-      ". The comment does NOT explicitly say the figures came from the owner's own Muse invite screen. "+
-      "Obtain that confirmation before merging. This is not a live or Muse-verified balance."
+    notice:remainingOnly
+      ? "The owner-authored comment reports "+remaining+" remaining only. No actual "+
+        "total or used count is independently known; the site's 30-slot maximum "+
+        "is only a display-policy estimate and must NOT become reportedCapacity "+
+        "or reportedUses. Obtain the owner's Muse-screen confirmation before merging."
+      : "The original owner-authored comment reports "+remaining+" remaining. Total "+total+" is "+
+        (hasTotal?"explicitly reported":hasUsed?"calculated from remaining + used":"retained from an earlier reviewed dated snapshot")+
+        "; used "+used+" is "+(hasUsed?"owner-reported":"derived from that total")+
+        ". The comment does NOT explicitly say the figures came from the owner's own Muse invite screen. "+
+        "Obtain that confirmation before merging. This is not a live or Muse-verified balance."
   };
 }
 
@@ -167,10 +180,15 @@ export function planCommentProposal(issue, comment, catalog) {
     if (!CODE.test(code) || !fields["Remaining invites"] && !fields["Total invites"]) {
       return {outcome:"needs-review",code,reason:"Provide an actual quota figure."};
     }
+    // The current comment form only asks for Remaining. Preserve optional
+    // historical Total/Used lines for genuinely legacy comments, without
+    // injecting two empty, obsolete headings into new Issue proposals.
     body=header+
       "### Remaining invites shown by Muse\n\n"+(fields["Remaining invites"]||"_No response_")+"\n\n"+
-      "### Total invite quota shown by Muse (if known)\n\n"+(fields["Total invites"]||"_No response_")+"\n\n"+
-      "### Already used invites (if known)\n\n"+(fields["Used invites"]||"_No response_")+"\n\n"+
+      (fields["Total invites"]
+        ? "### Total invite quota shown by Muse (if known)\n\n"+fields["Total invites"]+"\n\n" : "")+
+      (fields["Used invites"]
+        ? "### Already used invites (if known)\n\n"+fields["Used invites"]+"\n\n" : "")+
       "### Confirmation\n\n- [x] I confirm that these figures came from a Muse invite screen, not from copy-click counts or guesses.\n";
   } else {
     return {outcome:"ignored"};
