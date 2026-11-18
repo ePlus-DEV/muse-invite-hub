@@ -8,6 +8,7 @@ import { fetchGitHubJson } from "./github-api.mjs";
 import { syncCodeIssueMap, validIssueMap } from "./code-issue-map.mjs";
 import { readCatalog } from "./catalog.mjs";
 import { validateCatalog } from "./validate.mjs";
+import { withDisplayQuota } from "./invite-quota-policy.mjs";
 import { summarizeApprovedFeedback, readReviewedFeedback, validateFeedbackDirectory } from "./feedback-ledger.mjs";
 
 const REPO = process.env.GITHUB_REPOSITORY;
@@ -42,7 +43,12 @@ for (const required of ["index.html", "404.html", "llms.txt", "assets/app.js", "
 const code = readCatalog();
 const catalogErrors = validateCatalog(code);
 if (catalogErrors.length) throw Error("Production catalog invalid: " + catalogErrors.join("; "));
-writeFileSync(join(output,"data/invites.json"),JSON.stringify(code,null,2)+"\n");
+// Published data always contains an explicit, provenance-labelled 30-slot
+// policy default, without mutating submitted source records or report dates.
+const publicCatalog=withDisplayQuota(code);
+const publicErrors=validateCatalog(publicCatalog);
+if (publicErrors.length) throw Error("Public quota projection invalid: "+publicErrors.join("; "));
+writeFileSync(join(output,"data/invites.json"),JSON.stringify(publicCatalog,null,2)+"\n");
 const api = path => fetchGitHubJson(path, TOKEN);
 async function listAllRepositoryIssues() {
   const result = [];
