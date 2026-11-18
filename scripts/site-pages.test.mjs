@@ -40,7 +40,7 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /<h1 id="detail-title">Invite code <span class="detail-title-code">DPNIHH<\/span><\/h1>/);
   assert.match(html, /<p class="detail-code-text" id="detail-code">DPNIHH<\/p>/);
   assert.match(html, /class="detail-page-intro"/);
-  assert.match(html, /class="detail-stats" aria-label="Community-reported invitation statistics"/);
+  assert.match(html, /class="detail-stats" aria-label="Invite quota information"/);
   assert.equal((html.match(/<h1\b/g)||[]).length,1,"Exactly one visible and SEO-readable H1");
   assert.equal((html.match(/id="detail-code"/g)||[]).length,1,"Only one copy source ID");
   assert.doesNotMatch(html, /<p class="detail-code" id="detail-code">/);
@@ -131,12 +131,23 @@ test("detail visual restructure keeps SEO metadata, readable links and structure
   assert.match(generateSitemap([item]), /\/codes\/DPNIHH\//);
 });
 
-test("unreported community codes do not invent quota or update history", () => {
+test("detail page never represents an invalid >30 quota as available invites",()=>{
+  const overTotal=renderDetailPage({...owner(),reportedCapacity:31,reportedUses:0});
+  const overRemaining=renderDetailPage({...owner(),reportedCapacity:undefined,
+    reportedUses:undefined,reportedRemaining:31});
+  for(const html of [overTotal,overRemaining]){
+    assert.match(html,/Not reported/);
+    assert.doesNotMatch(html,/31 of 31 invites remained/);
+  }
+});
+
+test("unreported community codes show policy default but no owner report or update history", () => {
   const html=renderDetailPage(community());
-  assert.match(html, /class="detail-slots-number">Not reported<\/strong>/);
+  assert.match(html, /class="detail-slots-number">30 \/ 30<\/strong>/);
   assert.match(html, /class="detail-stat-date">No report<\/strong>/);
   assert.match(html, /class="detail-stat-updates">—<\/strong>/);
-  assert.match(html, /No confirmed remaining-slot data/);
+  assert.match(html, /Default 30-slot estimate · No owner report · Not live/);
+  assert.match(html, /<dt>Used invites<\/dt><dd>0 \(default estimate, unconfirmed\)<\/dd>/);
   assert.equal((html.match(/class="detail-stats"/g)||[]).length,1);
   assert.equal((html.match(/<h1\b/g)||[]).length,1);
 });
@@ -154,7 +165,7 @@ test("mobile unreported quota has a full-width row and never overflows a 3-colum
   const foldStart = html.indexOf('class="detail-instructions detail-mobile-fold"',heroStart);
   assert.ok(statsStart > heroStart && noteStart > statsStart && noteStart < foldStart,
     "Community caveat must be visually attached to the invite card, not floating below it");
-  assert.match(html, /class="detail-slots-number">Not reported<\/strong>/);
+  assert.match(html, /class="detail-slots-number">30 \/ 30<\/strong>/);
   assert.match(html, /class="detail-stat-date">No report<\/strong>/);
   assert.match(css, /@media\(max-width:620px\)\{\s*\.detail-hero-unified \.detail-stats\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(css, /\.detail-hero-unified \.detail-stat:first-child\{[\s\S]*?grid-column:1\/-1/);
@@ -264,7 +275,7 @@ test("all published invite details, including unverified codes, are indexable an
   const html = renderDetailPage(community());
   assert.match(html, /<meta name="robots" content="index,follow">/);
   assert.match(html, /rel="canonical" href="https:\/\/muse.eplus.dev\/codes\/TEST42\/"/);
-  assert.match(html, /Not reported/);
+  assert.match(html, /30 of 30 invites by default/);
   assert.match(html, /redemption has not been verified/i);
   assert.equal(canIndexDetail(community()), true);
   const sitemap = generateSitemap([owner(), community()]);

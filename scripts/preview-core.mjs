@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { validateCatalog } from "./validate.mjs";
 import { generateSite } from "./site-pages.mjs";
 import { assembleCatalog } from "./catalog.mjs";
+import { withDisplayQuota } from "./invite-quota-policy.mjs";
 
 export const PREVIEW_PREFIX = "pr-preview";
 export const REQUIRED_FILES = ["index.html", "assets/app.js", "assets/styles.css", "data/invites.json"];
@@ -68,7 +69,10 @@ export function buildPreview({ files, readFile, dest, number, sha, mergeSha = nu
     }
   }
   // Previews use the same merged catalog without executing PR-supplied scripts.
-  writeFileSync(join(dest,"data/invites.json"),JSON.stringify(dataset,null,2)+"\n");
+  const publicCatalog=withDisplayQuota(dataset);
+  const publicErrors=validateCatalog(publicCatalog);
+  if (publicErrors.length) throw Error("Invalid projected preview catalog: "+publicErrors.join("; "));
+  writeFileSync(join(dest,"data/invites.json"),JSON.stringify(publicCatalog,null,2)+"\n");
   if (paths.includes("countries/index.html")) {
     for (const file of ["assets/countries.js", "assets/countries.css", "data/world-countries.json"]) {
       if (!paths.includes(file)) throw Error("Missing country preview dependency: " + file);

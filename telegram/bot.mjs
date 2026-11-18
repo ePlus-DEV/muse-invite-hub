@@ -44,7 +44,10 @@ export function formatCodeStatus(code,entry,language="en") {
       /^\d{4}-\d{2}-\d{2}$/.test(entry.usageReportedAt||"");
     const remaining=dated
       ? tr(language,"reportedRemaining",{count:entry.reportedRemaining,date:entry.usageReportedAt})
-      : tr(language,"remainingUnknown");
+      : Number.isSafeInteger(entry.policyDefaultRemaining)&&
+          entry.policyDefaultRemaining===30
+        ? tr(language,"policyDefaultRemaining",{count:entry.policyDefaultRemaining})
+        : tr(language,"remainingUnknown");
     return tr(language,"codePublished",{code})+"\n"+tr(language,"statusLabel")+" "+
       tr(language,status)+".\n"+remaining+"\n"+tr(language,"listedDisclaimer")+"\n"+url;
   }

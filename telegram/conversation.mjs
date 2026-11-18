@@ -92,7 +92,9 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
       {text:"🎟 "+entry.code+" · "+
         (Number.isSafeInteger(entry.remaining)&&entry.usageReportedAt
           ? String(entry.remaining)+" ("+msg("remainingLabel")+")"
-          : msg("cardUnknown")),data:"t:detail:"+entry.code}
+          : entry.basis==="default" && entry.remaining===30
+            ? "30/30 ("+msg("defaultCountLabel")+")"
+            : msg("cardUnknown")),data:"t:detail:"+entry.code}
     ]);
     const nav=[];
     if(current>0)nav.push({text:msg("previous"),data:"t:page:"+(current-1)});

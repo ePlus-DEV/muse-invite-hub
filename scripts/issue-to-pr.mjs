@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { validateCatalog } from "./validate.mjs";
+import { MAX_INVITES_PER_CODE } from "./invite-quota-policy.mjs";
 import { fetchGitHubCatalog, changedRecord, changedRecords } from "./catalog.mjs";
 import { parsePublicSource, listedPlatform, LISTING_PLATFORMS } from "./source-platform.mjs";
 import { isShareCodeIssue, issueCodes, originalIssueNumber, parseInviteCodes, withCanonicalIssueRefs } from "./code-issue-map.mjs";
@@ -125,12 +126,12 @@ function explicitlyNoSocialSource(value) {
   return /^(?:n\/?a|none|not applicable|no social (?:source|post|url)(?:[;,]\s*this is my own (?:referral )?code)?)[.!]?$/i
     .test(plainOptionalText(value));
 }
-function optionalInteger(value, name, max = 1000) {
+function optionalInteger(value, name, max = MAX_INVITES_PER_CODE) {
   const str = String(value ?? "").trim();
   if (!str || explicitlyUnreported(str)) return null;
   if (!/^(?:0|[1-9][0-9]{0,3})$/.test(str)) throw Error(name + " must be a non-negative integer.");
   const n = Number(str);
-  if (n > max) throw Error(name + " is outside the supported range.");
+  if (n > max) throw Error(name + " must be between 0 and " + max + ".");
   return n;
 }
 function reportDate(issue) {
@@ -167,9 +168,18 @@ function actualQuota(fields, date, labels) {
     }
     return { reportedCapacity: total, reportedUses: count, usageReportedAt: date };
   }
-  // Do not discard a supplied "used" figure merely because total is blank.
-  // The owner must explicitly report the total before we publish a full breakdown.
-  if (used !== null) throw Error("Used invites requires Total invites. Reconfirm the total, or leave Used invites blank.");
+  // Simplified two-number report. When the owner supplies both remaining
+  // and used, their sum is a reported total (not the project's maximum 30).
+  // Never infer a 30-slot allocation from the global upper bound.
+  if (remaining !== null && used !== null) {
+    const derivedTotal = remaining + used;
+    if (derivedTotal < 1 || derivedTotal > MAX_INVITES_PER_CODE) {
+      throw Error("Remaining plus used must total between 1 and "+MAX_INVITES_PER_CODE+" invites.");
+    }
+    return {reportedCapacity:derivedTotal,reportedUses:used,usageReportedAt:date};
+  }
+  // Used-only remains ambiguous when the actual total is unknown.
+  if (used !== null) throw Error("Used invites requires Remaining invites or a known Total invites.");
   if (remaining !== null) return { reportedRemaining: remaining, usageReportedAt: date };
   return null;
 }
@@ -199,7 +209,7 @@ function quotaUpdateBlocked(state,kind,code) {
   return {outcome:state==="stale"||state==="requires-total"?"needs-review":"duplicate",kind,code,
     reason:state==="stale"?"Newer usage data is already published.":
       state==="requires-total"
-        ? "The published listing already has total and used counts. A remaining-only update would replace those fields. Please confirm the current total invites alongside remaining (used can be derived) before publishing."
+        ? "The existing quota snapshot is incomplete or inconsistent; it cannot be replaced safely with remaining alone. Provide remaining and used from Muse, or request maintainer review."
         : "The published catalog already has this dated quota."};
 }
 function rememberOwnerId(target,issue) {
@@ -487,12 +497,42 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
           : {outcome:"already-listed",kind,code,canonicalIssueNumber,
               reason:"Invite code already exists; use its original discussion for updates."};
       }
+      // Reuse only the owner's already reviewed, complete dated capacity.
+      // This matches the legacy Count update and canonical comment flows.
+      // Never assume the project maximum (30) is an individual allocation.
+      let reviewedQuota=quota;
+      if (quota.reportedRemaining !== undefined &&
+          Number.isInteger(existing.reportedCapacity) &&
+          Number.isInteger(existing.reportedUses) &&
+          existing.reportedCapacity > 0 &&
+          existing.reportedCapacity <= MAX_INVITES_PER_CODE &&
+          existing.reportedUses >= 0 &&
+          existing.reportedUses <= existing.reportedCapacity &&
+          typeof existing.usageReportedAt === "string") {
+        if (quota.reportedRemaining > existing.reportedCapacity) {
+          return {outcome:"needs-review",kind,code,
+            reason:"Remaining invites exceed the existing reviewed total; provide both remaining and used from Muse, or request manual review."};
+        }
+        reviewedQuota={
+          reportedCapacity:existing.reportedCapacity,
+          reportedUses:existing.reportedCapacity-quota.reportedRemaining,
+          usageReportedAt:date
+        };
+        notice="The owner reported remaining "+quota.reportedRemaining+
+          "; total "+existing.reportedCapacity+" came from an earlier reviewed snapshot, "+
+          "and used "+reviewedQuota.reportedUses+" is derived. This is not a live Muse balance.";
+      } else {
+        notice="The GitHub owner updated a dated self-reported count; "+
+          (quota.reportedCapacity!==undefined
+            ?"the total is derived from their remaining and used figures. "
+            :"only remaining is known; no total is assumed. ")+
+          "This is NOT a live Muse balance.";
+      }
       const target=data.find(item=>item.code===existing.code);
-      const state=updateQuota(target,quota,date);
+      const state=updateQuota(target,reviewedQuota,date);
       if(state!=="updated") return quotaUpdateBlocked(state,kind,code);
       rememberOwnerId(target,issue);
       action="update owner report";
-      notice="The GitHub owner updated a dated self-reported count; this is NOT a live Muse balance.";
     } else {
       const id = "community-issue-" + issue.number;
       if (data.some(item => item.id === id)) throw Error("Catalog ID already exists.");
@@ -549,12 +589,52 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
     if (!ownerMatches(existing,issue)) {
       return { outcome:"needs-review",kind,code,reason:"Only the cataloged code owner may submit a quota proposal automatically." };
     }
-    const quota = actualQuota(f,date,{
+    let quota = actualQuota(f,date,{
       total:"Total invite quota shown by Muse (if known)",
       used:"Already used invites (if known)",
       remaining:"Remaining invites shown by Muse"
     });
     if (!quota) return { outcome:"needs-review",kind,code,reason:"Supply remaining invites or a consistent total and used count." };
+    // A same-owner, explicitly confirmed remaining-only report may reuse the
+    // previously published *known* capacity. Preserve that capacity rather
+    // than replacing a complete snapshot with reportedRemaining. Derive used
+    // arithmetically, and make the provenance explicit for human review.
+    // Missing or inconsistent historical capacity still needs manual review.
+    if (quota.reportedRemaining !== undefined &&
+        Number.isInteger(existing.reportedCapacity) &&
+        Number.isInteger(existing.reportedUses) &&
+        existing.reportedCapacity > 0 &&
+        existing.reportedUses >= 0 &&
+        existing.reportedUses <= existing.reportedCapacity &&
+        typeof existing.usageReportedAt === "string") {
+      if (quota.reportedRemaining > existing.reportedCapacity) {
+        return {outcome:"needs-review",kind,code,
+          reason:"Remaining invites exceed the previously published total. Confirm the new total before updating."};
+      }
+      const inheritedCapacity=existing.reportedCapacity;
+      quota={
+        reportedCapacity:inheritedCapacity,
+        reportedUses:inheritedCapacity-quota.reportedRemaining,
+        usageReportedAt:date
+      };
+      notice="The owner confirmed remaining invites from their Muse screen. "+
+        "Total "+inheritedCapacity+" was retained from the previous published snapshot; "+
+        "used "+quota.reportedUses+" was derived as total minus remaining. "+
+        "These are dated owner-reported figures, NOT a live Muse balance.";
+    }
+    if (quota.reportedCapacity !== undefined &&
+        !field(f,"Total invite quota shown by Muse (if known)").trim() &&
+        field(f,"Remaining invites shown by Muse").trim() &&
+        field(f,"Already used invites (if known)").trim()) {
+      const formerTotal=existing.reportedCapacity;
+      notice="The owner reported remaining "+(quota.reportedCapacity-quota.reportedUses)+
+        " and used "+quota.reportedUses+"; total "+quota.reportedCapacity+
+        " was calculated as their sum (not presumed to be the 30-slot maximum). "+
+        (Number.isInteger(formerTotal) && formerTotal!==quota.reportedCapacity
+          ? "This differs from the previously published total "+formerTotal+
+            "; verify the change before merging. " : "")+
+        "This is a dated self-report, NOT a live Muse balance.";
+    }
     const target=data.find(item=>item.code===existing.code);
     const state=updateQuota(target,quota,date);
     if(state!=="updated") return quotaUpdateBlocked(state,kind,code);

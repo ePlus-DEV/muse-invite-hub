@@ -4,6 +4,8 @@ import { CODE_PATTERN, TELEGRAM_USERNAME } from "./bot.mjs";
 const REPO="ePlus-DEV/muse-invite-hub";
 const API="https://api.github.com/repos/"+REPO+"/";
 const SITE="https://muse.eplus.dev";
+// Read-only bot mirrors the catalog's 30-slot per-code maximum.
+const MAX_INVITES_PER_CODE=30;
 
 async function request(url, options={}) {
   const response=await fetch(url,{
@@ -53,10 +55,10 @@ export async function browseCodes({query="",newest=false,limit=5,offset=0}={}) {
       Math.min(50,Math.max(1,Number.isSafeInteger(limit)?limit:5)))
     .map(row=>{
       const dated=/^\d{4}-\d{2}-\d{2}$/.test(row.usageReportedAt||"");
-      const remaining=Number.isSafeInteger(row.reportedRemaining)&&row.reportedRemaining>=0
+      const remaining=Number.isSafeInteger(row.reportedRemaining)&&row.reportedRemaining>=0&&row.reportedRemaining<=MAX_INVITES_PER_CODE
         ? row.reportedRemaining
         : Number.isSafeInteger(row.reportedCapacity)&&Number.isSafeInteger(row.reportedUses)&&
-          row.reportedCapacity>=row.reportedUses&&row.reportedUses>=0
+          row.reportedCapacity>=row.reportedUses&&row.reportedCapacity<=MAX_INVITES_PER_CODE&&row.reportedCapacity>0&&row.reportedUses>=0
           ? row.reportedCapacity-row.reportedUses : null;
       // Public, already validated catalog metadata only. Never assume live availability.
       let platform="GitHub";
@@ -69,7 +71,12 @@ export async function browseCodes({query="",newest=false,limit=5,offset=0}={}) {
           else if(["t.me","www.t.me"].includes(host))platform="Telegram";
         } catch { /* Ignore malformed catalog provenance. */ }
       }
-      return {code:row.code,status:row.status,remaining:dated?remaining:null,
+      const policy=row.quotaDisplay;
+      const hasDefault=policy?.basis==="default" && policy.capacity===MAX_INVITES_PER_CODE &&
+        policy.remaining===MAX_INVITES_PER_CODE && policy.reportedAt===null;
+      return {code:row.code,status:row.status,
+        remaining:dated?remaining:hasDefault?MAX_INVITES_PER_CODE:null,
+        basis:dated?"reported":hasDefault?"default":"unknown",
         usageReportedAt:dated?row.usageReportedAt:null,platform,
         submittedBy:typeof row.submittedBy==="string"?row.submittedBy.slice(0,80):
           platform==="Telegram"?new URL(row.sourceUrl).pathname.split("/")[1]||null:null,
@@ -83,13 +90,18 @@ export async function getCodeStatus(code,token) {
   if(entry) {
     const dated=typeof entry.usageReportedAt==="string" &&
       /^\d{4}-\d{2}-\d{2}$/.test(entry.usageReportedAt);
-    const explicit=Number.isSafeInteger(entry.reportedRemaining)&&entry.reportedRemaining>=0
+    const explicit=Number.isSafeInteger(entry.reportedRemaining)&&entry.reportedRemaining>=0&&entry.reportedRemaining<=MAX_INVITES_PER_CODE
       ? entry.reportedRemaining : null;
     const calculated=Number.isSafeInteger(entry.reportedCapacity)&&
       Number.isSafeInteger(entry.reportedUses)&&entry.reportedCapacity>=entry.reportedUses&&
-      entry.reportedUses>=0 ? entry.reportedCapacity-entry.reportedUses : null;
+      entry.reportedUses>=0&&entry.reportedCapacity>0&&entry.reportedCapacity<=MAX_INVITES_PER_CODE ? entry.reportedCapacity-entry.reportedUses : null;
+    const policy=entry.quotaDisplay;
+    const hasDefault=policy?.basis==="default" &&
+      policy.capacity===MAX_INVITES_PER_CODE &&
+      policy.remaining===MAX_INVITES_PER_CODE && policy.reportedAt===null;
     return {kind:"listed",status:entry.status,
       reportedRemaining:dated?(explicit??calculated):null,
+      policyDefaultRemaining:hasDefault?MAX_INVITES_PER_CODE:null,
       usageReportedAt:dated?entry.usageReportedAt:null,
       url:SITE+"/codes/"+encodeURIComponent(code)+"/"};
   }
@@ -148,14 +160,6 @@ export async function submitNewCode(code,updateId,token,username) {
       "### Public confirmation or context (optional)",
       "",
       "https://t.me/"+username,
-      "",
-      "### Uses so far (optional; self-reported)",
-      "",
-      "_No response_",
-      "",
-      "### Invite limit (optional; self-reported)",
-      "",
-      "_No response_",
       "",
       "### Remaining invites (optional; self-reported)",
       "",

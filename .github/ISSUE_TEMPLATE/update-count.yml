@@ -9,7 +9,7 @@ body:
         Share only **numbers shown in your own Muse account**, not credentials or private account screenshots.
         Select the platform of the **listed invite code**, not your own login. Identical usernames on GitHub, Threads, X and Facebook are different identities.
         GitHub Issue ownership checks can confirm only the cataloged GitHub owner. **Threads, X and Facebook codes require manual owner verification** and will not receive automatic quota PRs.
-        Updates are reviewed before changing the site. Counts are snapshots, NOT live Muse availability.
+        Each code supports at most **30 reported invites**. The maximum is not a default allocation or live balance. Enter only remaining invites (0–30). When the code already has a reviewed actual total, used invites are calculated automatically as total minus remaining. Unknown totals remain unknown. Updates are reviewed before changing the site; counts are dated snapshots, NOT live Muse availability.
   - type: input
     id: invite_code
     attributes:
@@ -35,26 +35,10 @@ body:
     id: remaining
     attributes:
       label: Remaining invites shown by Muse
-      description: "Enter a non-negative number displayed by your Invite screen. If you do not know, describe what you see below instead."
+      description: "Enter 0–30 shown on your Muse Invite screen. This is the only number required; do not assume all 30 remain."
       placeholder: "e.g. 25"
     validations:
-      required: false
-  - type: input
-    id: total
-    attributes:
-      label: Total invite quota shown by Muse (if known)
-      description: "Only enter if visible. No assumed 30-invite limit."
-      placeholder: "e.g. 30"
-    validations:
-      required: false
-  - type: input
-    id: used
-    attributes:
-      label: Already used invites (if known)
-      description: "Only enter if visible or consistently calculated from Muse's displayed total and remaining."
-      placeholder: "e.g. 5"
-    validations:
-      required: false
+      required: true
   - type: textarea
     id: details
     attributes:

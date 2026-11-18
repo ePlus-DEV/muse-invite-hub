@@ -71,24 +71,42 @@ test("only actual listed GitHub owner can propose quota update via original Issu
   assert.match(stranger.reason,/cataloged code owner/);
 });
 
-test("Issue #14 remaining-only owner comment cannot erase published total and used counts",()=>{
+test("Issue #14 owner remaining-only reports keep known published capacity without guessing",()=>{
   const previous={...item,submittedById:11882322,
     reportedCapacity:30,reportedUses:7,usageReportedAt:"2026-11-15"};
   const body="## Muse invite report\n\nCode: DPNIHH\nUpdate type: Owner count\n"+
-    "Remaining invites: 20\nTotal invites: \nUsed invites: \n"+
+    "Remaining invites: 19\nTotal invites: \nUsed invites: \n"+
     "Owner confirmation: I confirm these figures came from my own Muse invite screen.";
-  const comment=member(body,{id:6953354142,created_at:"2026-11-17T16:00:00Z",
+  const comment=member(body,{id:6968988185,created_at:"2026-11-18T04:23:33Z",
     user:{login:"hoangsvit",id:11882322,type:"User"}});
-  const blocked=planCommentProposal(issue,comment,[previous]);
-  assert.equal(blocked.outcome,"needs-review");
-  assert.match(blocked.reason,/remaining-only update would replace/);
-  assert.equal(previous.reportedCapacity,30);
-  assert.equal(previous.reportedUses,7);
-  const confirmed=planCommentProposal(issue,{...comment,
+  const proposal=planCommentProposal(issue,comment,[previous]);
+  assert.equal(proposal.outcome,"proposal");
+  assert.equal(proposal.kind,"count");
+  assert.equal(proposal.branch,"auto/comment-14-6968988185-count");
+  assert.equal(proposal.data[0].reportedCapacity,30);
+  assert.equal(proposal.data[0].reportedUses,11);
+  assert.equal(proposal.data[0].usageReportedAt,"2026-11-18");
+  assert.equal(proposal.data[0].reportedRemaining,undefined);
+  assert.equal(proposal.data[0].quotaUpdateCount,1);
+  assert.match(proposal.notice,/retained from the previous published snapshot/);
+  assert.equal(previous.reportedUses,7,"historical snapshot must not mutate");
+  const withTotal=planCommentProposal(issue,{...comment,
     body:body.replace("Total invites: ","Total invites: 30")},[previous]);
-  assert.equal(confirmed.outcome,"proposal");
-  assert.equal(confirmed.data[0].reportedCapacity,30);
-  assert.equal(confirmed.data[0].reportedUses,10);
+  assert.equal(withTotal.outcome,"proposal");
+  assert.equal(withTotal.data[0].reportedUses,11);
+  const beyondTotal=planCommentProposal(issue,{...comment,
+    body:body.replace("Remaining invites: 19","Remaining invites: 31")},[previous]);
+  assert.equal(beyondTotal.outcome,"needs-review");
+  assert.match(beyondTotal.reason,/0 and 30|exceed.*total/);
+  const wrongOwner=planCommentProposal(issue,{...comment,
+    user:{login:"not-owner",id:987654,type:"User"}},[previous]);
+  assert.equal(wrongOwner.outcome,"needs-review");
+  const noKnownTotal=planCommentProposal(issue,comment,[{
+    ...previous,reportedCapacity:undefined,reportedUses:undefined
+  }]);
+  assert.equal(noKnownTotal.outcome,"proposal");
+  assert.equal(noKnownTotal.data[0].reportedRemaining,19);
+  assert.equal(noKnownTotal.data[0].reportedCapacity,undefined);
 });
 
 test("ambiguous repeated quota labels require manual review",()=>{
@@ -107,12 +125,24 @@ test("ambiguous repeated quota labels require manual review",()=>{
   assert.equal(clean.outcome,"proposal");
 });
 
-test("remaining and used without total cannot silently drop the used count",()=>{
+test("simplified owner count derives actual total from remaining plus used, never defaulting to 30",()=>{
   const owner={login:"hoangsvit",type:"User",id:124};
-  const comment=ownerCount.replace("Total invites: 30","Total invites: ");
-  const result=planCommentProposal(issue,member(comment,{user:owner}),[item]);
-  assert.equal(result.outcome,"needs-review");
-  assert.match(result.reason,/Used invites requires Total invites/);
+  const comment=ownerCount.replace("Total invites: 30\n","");
+  const full=planCommentProposal(issue,member(comment,{user:owner}),[item]);
+  assert.equal(full.outcome,"proposal");
+  assert.equal(full.data[0].reportedCapacity,30);
+  assert.equal(full.data[0].reportedUses,27);
+  const smaller=planCommentProposal(issue,member(comment
+    .replace("Remaining invites: 3","Remaining invites: 2")
+    .replace("Used invites: 27","Used invites: 18"),{user:owner}),[item]);
+  assert.equal(smaller.outcome,"proposal");
+  assert.equal(smaller.data[0].reportedCapacity,20);
+  assert.equal(smaller.data[0].reportedUses,18);
+  const usedOnly=planCommentProposal(issue,member(comment.replace("Remaining invites: 3","Remaining invites: "),{user:owner}),[item]);
+  assert.equal(usedOnly.outcome,"needs-review");
+  const tooMany=planCommentProposal(issue,member(comment.replace("Remaining invites: 3","Remaining invites: 4"),{user:owner}),[item]);
+  assert.equal(tooMany.outcome,"needs-review");
+  assert.match(tooMany.reason,/Remaining plus used/);
 });
 
 test("owner count requires an explicit confirmation and numeric input",()=>{
@@ -198,12 +228,48 @@ test("narrative owner count rejects mistaken, forged, ambiguous and inconsistent
   assert.equal(proposed(body,{...owner,id:222}).outcome,"needs-review");
   assert.equal(proposed(body.replace("YKDCA9","OTHER1")).outcome,"needs-review");
   assert.equal(proposed(body.replace("29","28")).outcome,"needs-review");
-  assert.equal(proposed(body.replace("- Used invites: 1","")).outcome,"needs-review");
+  const legacyWithoutUsed=proposed(body.replace("- Used invites: 1",""));
+  assert.equal(legacyWithoutUsed.outcome,"proposal");
+  assert.deepEqual([legacyWithoutUsed.data[0].reportedCapacity,
+    legacyWithoutUsed.data[0].reportedUses],[30,1]);
+  const remainingOnly=body.replace("- Total invites: 30\n","")
+    .replace("- Used invites: 1","");
+  assert.equal(proposed(remainingOnly).outcome,"needs-review",
+    "Without a prior reviewed total, do not assume 30.");
+  const previous={...published,reportedCapacity:30,reportedUses:2,
+    usageReportedAt:"2026-11-16"};
+  const accepted=proposed(remainingOnly,owner,previous);
+  assert.equal(accepted.outcome,"proposal");
+  assert.deepEqual([accepted.data[0].reportedCapacity,accepted.data[0].reportedUses],[30,1]);
   assert.equal(proposed(body.replace("- Used invites: 1","- Used invites: 1\n- Used invites: 1")).outcome,"needs-review");
   assert.equal(proposed(body.replace("- Used invites: 1","- Used invites: many")).outcome,"needs-review");
   assert.equal(proposed(body.replace("I am the owner of this invite code.","")).outcome,"needs-review");
   assert.equal(proposed(body,owner,{...published,sourceUrl:"https://www.threads.com/@source/post/123"}).outcome,"needs-review");
   assert.equal(proposed("Great work, thank you!").outcome,"ignored");
+});
+
+test("narrative owner updates reject totals, remaining and usage above the 30-slot rule",()=>{
+  const root={number:204,state:"open",title:"[Invite] YKDCA9",
+    body:"### Invite code\n\nYKDCA9"};
+  const published={id:"community-issue-204",code:"YKDCA9",status:"unverified",
+    addedAt:"2026-11-16",submittedBy:"JackChong1",
+    submittedById:123796417,feedbackIssueNumber:204};
+  const owner={login:"JackChong1",type:"User",id:123796417};
+  const base="Owner count update — YKDCA9\n- Total invites: 30\n"+
+    "- Remaining invites: 29\n- Used invites: 1\nI am the owner of this invite code.";
+  const make=body=>planCommentProposal(root,member(body,{
+    id:6934787451,created_at:"2026-11-17T01:20:21Z",user:owner
+  }),[published]);
+  assert.equal(make(base).outcome,"proposal");
+  for(const changed of [
+    base.replace("Total invites: 30","Total invites: 31"),
+    base.replace("Remaining invites: 29","Remaining invites: 31"),
+    base.replace("Used invites: 1","Used invites: 31")
+  ]){
+    const result=make(changed);
+    assert.equal(result.outcome,"needs-review");
+    assert.match(result.reason,/30/);
+  }
 });
 
 test("trusted Issue action never posts an unverified result directly to the catalog",()=>{

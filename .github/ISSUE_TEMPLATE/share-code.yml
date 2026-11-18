@@ -48,26 +48,10 @@ body:
     validations:
       required: false
   - type: input
-    id: reported_uses
-    attributes:
-      label: Uses so far (optional; self-reported)
-      description: "Only for your own GitHub code. Leave blank when submitting multiple codes."
-      placeholder: "e.g. 1"
-    validations:
-      required: false
-  - type: input
-    id: reported_capacity
-    attributes:
-      label: Invite limit (optional; self-reported)
-      description: "Only for your own GitHub code; do not guess."
-      placeholder: "e.g. 30"
-    validations:
-      required: false
-  - type: input
     id: remaining
     attributes:
       label: Remaining invites (optional; self-reported)
-      description: "Only for your own GitHub code, from your Muse invite screen."
+      description: "Enter only the actual remaining invites (0–30) shown in your own Muse account; maximum 30 is not an assumed available balance. If an earlier verified total is known, used is calculated automatically."
       placeholder: "e.g. 17"
     validations:
       required: false

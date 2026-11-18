@@ -28,7 +28,7 @@ test("all site page layouts retain current design and render the same native sha
   assert.match(home,/<section class="overview container"/);
   assert.match(home,/<section class="hero container"/);
   assert.match(detail,/class="detail-code-panel detail-hero-unified"/);
-  assert.match(detail,/class="detail-stats" aria-label="Community-reported invitation statistics"/);
+  assert.match(detail,/class="detail-stats" aria-label="Invite quota information"/);
   assert.match(country, /class="country-disclaimer"/);
 });
 test("modal is styled only with current brand tokens and phone-sized cards",()=>{

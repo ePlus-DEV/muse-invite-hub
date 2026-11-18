@@ -3,9 +3,10 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { parsePublicSource } from "./source-platform.mjs";
 import { readCatalog } from "./catalog.mjs";
+import { MAX_INVITES_PER_CODE, displayQuota } from "./invite-quota-policy.mjs";
 
 const statuses = new Set(["unverified", "reported-working", "reported-not-working"]);
-const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "reportedRemaining", "usageReportedAt", "quotaUpdateCount", "submittedById", "featured", "ownerConfirmed", "feedbackIssueNumber"]);
+const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "reportedRemaining", "usageReportedAt", "quotaUpdateCount", "submittedById", "featured", "ownerConfirmed", "feedbackIssueNumber", "quotaDisplay"]);
 
 function validDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -84,15 +85,19 @@ export function validateCatalog(data) {
       if (fullPresent && remainingPresent) errors.push(at + ": use either full counts or remaining-only, not both.");
       if (fullPresent) {
         if (!Number.isInteger(item.reportedUses) || item.reportedUses < 0) errors.push(at + ": reportedUses must be a non-negative integer.");
-        if (!Number.isInteger(item.reportedCapacity) || item.reportedCapacity <= 0 || item.reportedCapacity > 1000) errors.push(at + ": reportedCapacity must be an integer from 1 to 1000.");
+        if (!Number.isInteger(item.reportedCapacity) || item.reportedCapacity <= 0 || item.reportedCapacity > MAX_INVITES_PER_CODE) errors.push(at + ": reportedCapacity must be an integer from 1 to "+MAX_INVITES_PER_CODE+".");
         if (Number.isInteger(item.reportedUses) && Number.isInteger(item.reportedCapacity) && item.reportedUses > item.reportedCapacity) {
           errors.push(at + ": reportedUses cannot exceed reportedCapacity.");
         }
       } else if (remainingPresent) {
-        if (!Number.isInteger(item.reportedRemaining) || item.reportedRemaining < 0 || item.reportedRemaining > 1000) {
-          errors.push(at + ": reportedRemaining must be an integer from 0 to 1000.");
+        if (!Number.isInteger(item.reportedRemaining) || item.reportedRemaining < 0 || item.reportedRemaining > MAX_INVITES_PER_CODE) {
+          errors.push(at + ": reportedRemaining must be an integer from 0 to "+MAX_INVITES_PER_CODE+".");
         }
       } else errors.push(at + ": usageReportedAt requires a reported count.");
+    }
+    if (item.quotaDisplay !== undefined &&
+        JSON.stringify(item.quotaDisplay)!==JSON.stringify(displayQuota(item))) {
+      errors.push(at + ": quotaDisplay must match the derived 30-invite display policy and dated owner reports.");
     }
     // Number of accepted revisions to an existing reported quota, not clicks or a Muse balance.
     if (item.quotaUpdateCount !== undefined &&

@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { validateCatalog } from "./validate.mjs";
+import { displayQuota } from "./invite-quota-policy.mjs";
 import { parsePublicSource } from "./source-platform.mjs";
 import { renderPageSkeleton } from "./page-skeleton.mjs";
 import { renderSiteHeader } from "./site-navigation.mjs";
@@ -37,22 +38,23 @@ function jsonLd(data) {
   return JSON.stringify(data).replace(/</g, "\\u003c").replace(/>/g, "\\u003e");
 }
 function reportedSlots(item) {
-  const { reportedCapacity: capacity, reportedUses: used, reportedRemaining: remaining, usageReportedAt: at } = item;
-  if (!at) return null;
-  if (Number.isInteger(remaining) && remaining >= 0) {
-    return { remaining, capacity: null, date: dateText(at) };
-  }
-  if (!Number.isInteger(capacity) || capacity < 1 ||
-      !Number.isInteger(used) || used < 0 || used > capacity) return null;
-  return { remaining: capacity - used, capacity, date: dateText(at) };
+  const q=displayQuota(item);
+  return q.remaining===null?null:{
+    remaining:q.remaining,capacity:q.capacity,used:q.used,
+    date:q.reportedAt?dateText(q.reportedAt):null,basis:q.basis
+  };
 }
 function detailDescription(item) {
   const owner = item.ownerConfirmed ? "The site owner confirms ownership of this code." :
     "Community-shared listing; redemption has not been verified.";
   const quota = reportedSlots(item);
-  const slots = quota
-    ? " " + quota.remaining + (quota.capacity === null ? " invites remained (total not provided)" : " of " + quota.capacity + " invites remained") + " in a report dated " + quota.date + " (not live)."
-    : " Remaining invite availability has not been reported.";
+  const slots = quota?.basis === "default"
+    ? " Site policy displays 30 of 30 invites by default, but no owner availability has been reported or verified."
+    : quota
+      ? " " + quota.remaining + " of " + quota.capacity +
+        (quota.basis==="reported-remaining" ? " maximum" : "")+
+        " invites remained in an owner report dated " + quota.date + " (not live)."
+      : " Remaining invite availability is unknown because the report is incomplete.";
   return "Explore Muse invite code " + item.code + ". " + owner + slots;
 }
 // The homepage is the single trusted source of the dated Meta-backed market list.
@@ -92,15 +94,27 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
   const quota = reportedSlots(item);
   const usage = quota
     ? '<strong class="detail-slots-number">' + escapeHtml(quota.remaining) +
-      (quota.capacity === null ? '' : ' / ' + escapeHtml(quota.capacity)) + '</strong><span class="detail-slots-caption">Invites remaining · Not live</span>'
-    : '<strong class="detail-slots-number">Not reported</strong><span class="detail-slots-caption">No confirmed remaining-slot data</span>';
+      ' / ' + escapeHtml(quota.capacity) + '</strong><span class="detail-slots-caption">' +
+      (quota.basis==="default"
+        ? 'Default 30-slot estimate · No owner report · Not live'
+        : quota.basis==="reported-remaining"
+          ? 'Remaining reported · 30 max, total unconfirmed · Not live'
+          : 'Owner-reported remaining · Not live') + '</span>'
+    : '<strong class="detail-slots-number">Not reported</strong><span class="detail-slots-caption">Incomplete quota report · Not live</span>';
   const baseUpdates = Number.isSafeInteger(quotaHistory[item.code]) && quotaHistory[item.code] > 0
     ? quotaHistory[item.code] : 0;
   const reviewedUpdates = Number.isSafeInteger(item.quotaUpdateCount) && item.quotaUpdateCount > 0
     ? item.quotaUpdateCount : 0;
   const totalUpdates = baseUpdates + reviewedUpdates;
   const updateLabel = totalUpdates > 0 ? totalUpdates + (totalUpdates === 1 ? " update" : " updates") : "—";
-  const lastReported = quota ? quota.date : "No report";
+  const lastReported = quota?.date || "No report";
+  const usedText = quota
+    ? quota.used + (quota.basis==="default"
+      ? " (default estimate, unconfirmed)"
+      : quota.basis==="reported-remaining"
+        ? " (calculated from 30-slot maximum)"
+        : " (owner-reported)")
+    : "Not reported";
   const social = parsePublicSource(item.sourceUrl);
   const platform = social?.platform || "GitHub";
   const handle = social?.handle || item.submittedBy;
@@ -187,7 +201,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '            <button class="detail-copy-inline" type="button" aria-label="Copy invite code ' + escapeHtml(item.code) + '" title="Copy invite code"><i class="fa-regular fa-copy" aria-hidden="true"></i></button></div>' +
     '          <div class="detail-action-row"><a class="button button-primary detail-open-invite" href="https://muse.ai/invite/' + encodeURIComponent(item.code) + '" target="_blank" rel="noopener noreferrer" aria-label="Open Muse invite link for code ' + escapeHtml(item.code) + '">Open invite <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>' +
     '            <button class="button button-outlined" type="button" id="detail-copy"><i class="fa-regular fa-copy" aria-hidden="true"></i> <span class="detail-copy-label">Copy invite code</span></button></div>' +
-    '          <div class="detail-stats" aria-label="Community-reported invitation statistics">' +
+    '          <div class="detail-stats" aria-label="Invite quota information">' +
     '            <div class="detail-stat"><i class="fa-solid fa-users" aria-hidden="true"></i><span class="detail-stat-body">' + usage + '</span></div>' +
     '            <div class="detail-stat"><i class="fa-regular fa-calendar" aria-hidden="true"></i><span class="detail-stat-body"><strong class="detail-stat-date">' + escapeHtml(lastReported) + '</strong><span class="detail-stat-label">Last reported</span></span></div>' +
     '            <div class="detail-stat"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i><span class="detail-stat-body"><strong class="detail-stat-updates">' + escapeHtml(updateLabel) + '</strong><span class="detail-stat-label">' + (totalUpdates > 0 ? 'Quota updated' : 'No recorded updates') + '</span></span></div>' +
@@ -203,6 +217,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '          <div class="detail-fold-body"><dl class="detail-meta"><div><dt>Contributor</dt><dd>' + escapeHtml(author) + '</dd></div>' +
     '            <div><dt>Source</dt><dd>' + sourceLink + '</dd></div>' +
     '            <div><dt>Listed</dt><dd>' + escapeHtml(dateText(item.addedAt)) + '</dd></div>' +
+    '            <div><dt>Used invites</dt><dd>' + escapeHtml(usedText) + '</dd></div>' +
     '            <div><dt>Muse redemption</dt><dd>' + escapeHtml(redemptionLine) + '</dd></div></dl></div>' +
     '        </details><div class="detail-info-card detail-feedback"><h2>Does this code work?</h2><p>Share your experience to help the community keep listings accurate.</p>' +
     '          <div class="detail-feedback-actions"><a class="detail-quick-feedback" data-feedback-outcome="worked" href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-thumbs-up" aria-hidden="true"></i> Worked for me</a>' +

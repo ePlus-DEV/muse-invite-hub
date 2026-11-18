@@ -9,9 +9,9 @@ const date="2026-11-11T10:00:00Z";
 const share = [
   "### Invite code","","PNSMZZ","",
   "### Public confirmation or context (optional)","","_No response_","",
+  "### Remaining invites (optional; self-reported)","","_No response_","",
   "### Uses so far (optional; self-reported)","","_No response_","",
   "### Invite limit (optional; self-reported)","","30","",
-  "### Remaining invites (optional; self-reported)","","_No response_","",
   "### Notes (optional)","","_No response_","",
   "### Contributor checklist","",
   "- [x] I am authorized to share this code publicly and understand this issue is public.",
@@ -46,8 +46,6 @@ const telegramBody=(code="ABC123",handle="alice_dev") => [
   "### Code source","","Telegram (community code shared through bot)","",
   "### Social post or profile URL (required for Threads, X or Facebook)","","_No response_","",
   "### Public confirmation or context (optional)","","https://t.me/"+handle,"",
-  "### Uses so far (optional; self-reported)","","_No response_","",
-  "### Invite limit (optional; self-reported)","","_No response_","",
   "### Remaining invites (optional; self-reported)","","_No response_","",
   "### Notes (optional)","","Submitted via Telegram by @"+handle+
     ". Human review required; public profile is not proof of code ownership, redemption or quota.","",
@@ -255,9 +253,14 @@ test("existing invite Issue updates preserve complete snapshots and accept confi
     .replace("### Notes (optional)\n\n_No response_",
       "### Notes (optional)\n\nInvite code ARKHZZ — 17 uses left. Enter it within 48 hours.");
   const ownerIssue={...issue(28,"[Invite] ARKHZZ",body,"pdm0809"),user:{login:"pdm0809",id:316039127}};
-  const rejected=planIssueChange(ownerIssue,[item,existing]);
-  assert.equal(rejected.outcome,"needs-review");
-  assert.match(rejected.reason,/remaining-only update would replace/);
+  const remainingOnly=planIssueChange(ownerIssue,[item,existing]);
+  assert.equal(remainingOnly.outcome,"proposal");
+  assert.equal(remainingOnly.action,"update owner report");
+  assert.match(remainingOnly.notice,/earlier reviewed snapshot/);
+  const inherited=remainingOnly.data.find(x=>x.code==="ARKHZZ");
+  assert.deepEqual([inherited.reportedCapacity,inherited.reportedUses],[17,0]);
+  assert.equal(inherited.quotaUpdateCount,1);
+  assert.equal(planIssueChange(ownerIssue,remainingOnly.data).outcome,"duplicate");
   assert.equal(existing.reportedCapacity,17);
   assert.equal(existing.reportedUses,0);
 
@@ -367,14 +370,17 @@ test("count updates require owner confirmation, known total and internally consi
   assert.throws(()=>planIssueChange(issue(14,"[Count update]",
     count({used:"6"}),"hoangsvit"),[item]),/inconsistent/);
 });
-test("owner count update preserves prior full report until current total is reconfirmed",()=>{
+test("owner count update keeps previous total and derives usage for same-owner remaining-only report",()=>{
   const previous={...item,reportedCapacity:30,reportedUses:7,usageReportedAt:"2026-11-10"};
   const comment={...issue(14,"[Count update]",count({
     remaining:"20",total:"_No response_",used:"_No response_"
   }),"hoangsvit"),updated_at:"2026-11-17T10:00:00Z"};
   const partial=planIssueChange(comment,[previous]);
-  assert.equal(partial.outcome,"needs-review");
-  assert.match(partial.reason,/remaining-only update would replace/);
+  assert.equal(partial.outcome,"proposal");
+  assert.deepEqual([partial.data[0].reportedCapacity,
+    partial.data[0].reportedUses,partial.data[0].usageReportedAt],[30,10,"2026-11-17"]);
+  assert.equal(partial.data[0].reportedRemaining,undefined);
+  assert.match(partial.notice,/retained from the previous published snapshot/);
   assert.deepEqual([previous.reportedCapacity,previous.reportedUses],[30,7]);
   const reconfirmed={...comment,body:count({
     remaining:"20",total:"30",used:"_No response_"
@@ -399,38 +405,46 @@ test("owner quota combinations, freshness, changes and incomplete reports",()=>{
   },[previous]);
   const cases=[
     [{remaining:"20",total:"30",used:"_No response_"},30,10],
-    [{remaining:"20",total:"_No response_",used:"_No response_"},null,null],
+    [{remaining:"20",total:"_No response_",used:"_No response_"},30,10],
     [{remaining:"_No response_",total:"30",used:"10"},30,10],
     [{remaining:"20",total:"30",used:"10"},30,10],
-    [{remaining:"20",total:"50",used:"30"},50,30],
+    [{remaining:"20",total:"25",used:"5"},25,5],
     [{remaining:"0",total:"30",used:"30"},30,30]
   ];
   for(const [fields,total,used] of cases) {
     const proposal=change(fields);
-    if(total===null){
-      assert.equal(proposal.outcome,"needs-review");
-      assert.match(proposal.reason,/remaining-only update would replace/);
-    } else {
-      assert.equal(proposal.outcome,"proposal");
-      assert.equal(proposal.data[0].reportedCapacity,total);
-      assert.equal(proposal.data[0].reportedUses,used);
-      assert.equal(proposal.data[0].reportedRemaining,undefined);
-      assert.equal(proposal.data[0].quotaUpdateCount,1);
-    }
+    assert.equal(proposal.outcome,"proposal");
+    assert.equal(proposal.data[0].reportedCapacity,total);
+    assert.equal(proposal.data[0].reportedUses,used);
+    assert.equal(proposal.data[0].reportedRemaining,undefined);
+    assert.equal(proposal.data[0].quotaUpdateCount,1);
   }
+  const twoCounts=change({remaining:"20",total:"_No response_",used:"10"});
+  assert.equal(twoCounts.outcome,"proposal");
+  assert.deepEqual([twoCounts.data[0].reportedCapacity,twoCounts.data[0].reportedUses],[30,10]);
+  const smaller=change({remaining:"19",total:"_No response_",used:"1"});
+  assert.equal(smaller.outcome,"proposal");
+  assert.deepEqual([smaller.data[0].reportedCapacity,smaller.data[0].reportedUses],[20,1]);
+  assert.throws(()=>change({remaining:"20",total:"_No response_",used:"11"}),/Remaining plus used/);
   assert.equal(change({remaining:"20",total:"_No response_",used:"_No response_"},partial).outcome,"proposal");
   assert.equal(change({remaining:"20",total:"_No response_",used:"_No response_"},item).outcome,"proposal");
+  assert.throws(()=>change({remaining:"31",total:"_No response_",used:"_No response_"}),/0 and 30/);
   for(const [remaining,total,used] of [
     ["20","30","9"],
     ["40","30","_No response_"],
-    ["20","_No response_","10"],
     ["_No response_","_No response_","7"]
   ]) {
-    assert.throws(()=>change({remaining,total,used}),/inconsistent|requires Total invites/);
+    assert.throws(()=>change({remaining,total,used}),/inconsistent|requires Remaining invites|0 and 30/);
   }
   assert.equal(change({remaining:"20",total:"30",used:"10"},full,"2026-11-14T13:00:00Z").outcome,"needs-review");
   assert.match(change({remaining:"20",total:"30",used:"10"},full,"2026-11-14T13:00:00Z").reason,/Newer usage data/);
   assert.equal(change({remaining:"23",total:"30",used:"7"},full,"2026-11-15T13:00:00Z").outcome,"duplicate");
+  for(const fields of [
+    {remaining:"0",total:"31",used:"31"},
+    {remaining:"31",total:"30",used:"0"},
+    {remaining:"0",total:"30",used:"31"},
+    {remaining:"1000",total:"1000",used:"0"}
+  ])assert.throws(()=>change(fields),/0 and 30/);
   assert.deepEqual([full.reportedCapacity,full.reportedUses,full.usageReportedAt],[30,7,"2026-11-15"]);
 });
 
@@ -467,6 +481,29 @@ const updatedShare = (source, url="", quota=false) => [
   "- [x] I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
   "- [x] This code is not a password, 2FA code, session token or private credential."
 ].join("\n");
+
+test("new GitHub Share Code form exposes only remaining count, preserving unknown totals",()=>{
+  const form=readFileSync(new URL("../.github/ISSUE_TEMPLATE/share-code.yml",import.meta.url),"utf8");
+  const labels=[...form.matchAll(/^\s{6}label: (.+)$/gm)].map(row=>row[1]);
+  assert.ok(labels.includes("Remaining invites (optional; self-reported)"));
+  assert.ok(!labels.includes("Uses so far (optional; self-reported)"));
+  assert.ok(!labels.includes("Invite limit (optional; self-reported)"));
+  const body=updatedShare("GitHub (my own code)")
+    .replace('### Invite limit (optional; self-reported)\n\n_No response_\n','')
+    .replace('### Uses so far (optional; self-reported)\n\n_No response_\n','')
+    .replace('### Remaining invites (optional; self-reported)\n\n_No response_',
+      '### Remaining invites (optional; self-reported)\n\n19');
+  const proposal=planIssueChange(issue(65,"[Invite]",body,"github-report"),[item]);
+  assert.equal(proposal.outcome,"proposal");
+  const added=proposal.data.find(x=>x.code==="18I70N");
+  assert.equal(added.reportedRemaining,19);
+  assert.equal(added.reportedCapacity,undefined);
+  assert.equal(added.reportedUses,undefined);
+  assert.deepEqual(validateCatalog(proposal.data),[]);
+  const invalid=body.replace('Remaining invites (optional; self-reported)\n\n19',
+    'Remaining invites (optional; self-reported)\n\n31');
+  assert.throws(()=>planIssueChange(issue(65,"[Invite]",invalid,"github-report"),/0 and 30/));
+});
 
 test("new GitHub form keeps GitHub authorship and owner quota safely", () => {
   const body=updatedShare("GitHub (my own code)").replace("18I70N","XZ4PV6");

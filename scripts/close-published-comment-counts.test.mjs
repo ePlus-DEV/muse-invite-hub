@@ -295,6 +295,105 @@ test("PR #304 owner-count source matches trusted comment provenance",()=>{
   });
 });
 
+test("Issue #14 remaining-only owner comment matches only the published derived snapshot",()=>{
+  const current={...record,reportedCapacity:30,reportedUses:11,
+    usageReportedAt:"2026-11-18"};
+  const source={
+    ...comment,
+    id:6968988185,
+    created_at:"2026-11-18T04:23:33Z",
+    body:"Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 19\n"+
+      "Total invites: \nUsed invites: \n"+
+      "Owner confirmation: I confirm these figures came from my own Muse invite screen."
+  };
+  assert.equal(matchesPublishedQuota(source,current),true);
+  assert.equal(matchesPublishedQuota({...source,
+    body:source.body.replace("Remaining invites: 19","Remaining invites: 20")},current),false);
+  assert.equal(matchesPublishedQuota({...source,
+    user:{login:"someone-else",id:1}},current),false);
+  assert.equal(matchesPublishedQuota({...source,
+    body:source.body.replace("Owner confirmation: I confirm these figures came from my own Muse invite screen.","Owner confirmation: yes")},current),false);
+  assert.equal(matchesPublishedQuota(source,{...current,reportedUses:10}),false);
+  assert.equal(matchesPublishedQuota(source,{...current,usageReportedAt:"2026-11-17"}),false);
+});
+
+test("Issue #14 latest remaining-only manual review PR closes only after verified publication",async()=>{
+  const latest={...record,reportedCapacity:30,reportedUses:11,
+    usageReportedAt:"2026-11-18",quotaUpdateCount:1};
+  const latestComment={
+    ...comment,
+    id:6968988185,
+    created_at:"2026-11-18T04:23:33Z",
+    body:"Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 19\n"+
+      "Total invites: \nUsed invites: \n"+
+      "Owner confirmation: I confirm these figures came from my own Muse invite screen."
+  };
+  const manualPr={
+    ...pr,number:308,
+    title:"data: review DPNIHH owner count from issue #14 (19 remaining)",
+    body:"Source: [@hoangsvit's comment](https://github.com/"+repo+
+      "/issues/14#issuecomment-6968988185) on 2026-11-18 (UTC).\n"+
+      "Existing invite code: **DPNIHH**.\n"+
+      "Tracks Issue #14 and comment #6968988185.",
+    user:{login:"hoangsvit"},
+    head:{ref:"data/issue-14-owner-remaining-19-20261118",
+      repo:{full_name:repo}}
+  };
+  assert.equal(commentCountCandidate(manualPr)?.provenance,"maintainer");
+  const m=mock({pull:manualPr,source:latestComment,
+    mergedRecord:latest,liveRecord:latest});
+  const result=await closePublishedCommentCounts({
+    token:"test",repository:repo,deployedSha:deployed,request:m.request,
+    catalog:[latest],mapping:{DPNIHH:14}
+  });
+  assert.deepEqual(result,{notified:1,closed:1,pending:0,skipped:0});
+  assert.equal(m.issue.state,"closed");
+  assert.ok(m.events.indexOf("POST issues/14/comments")<
+    m.events.indexOf("PATCH issues/14"));
+  const wrong=mock({pull:manualPr,source:latestComment,
+    mergedRecord:latest,liveRecord:{...latest,reportedUses:10}});
+  const blocked=await closePublishedCommentCounts({
+    token:"test",repository:repo,deployedSha:deployed,request:wrong.request,
+    catalog:[latest],mapping:{DPNIHH:14}
+  });
+  assert.equal(blocked.closed,0);
+  assert.ok(!wrong.events.includes("PATCH issues/14"));
+});
+
+test("post-deploy closure accepts simplified remaining plus used without Total",async()=>{
+  const simplified={...comment,
+    body:"Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 23\n"+
+      "Used invites: 7\nOwner confirmation: I confirm these figures came from my own Muse invite screen."};
+  assert.equal(matchesPublishedQuota(simplified,record),true);
+  assert.equal(matchesPublishedQuota({...simplified,
+    body:simplified.body.replace("Used invites: 7","Used invites: 8")},record),false);
+  assert.equal(matchesPublishedQuota({...simplified,
+    body:simplified.body.replace("Remaining invites: 23","Remaining invites: 24")},record),false);
+  const m=mock({source:simplified});
+  const result=await closePublishedCommentCounts({
+    token:"test",repository:repo,deployedSha:deployed,
+    request:m.request,catalog:[record],mapping:{DPNIHH:14}
+  });
+  assert.deepEqual(result,{notified:1,closed:1,pending:0,skipped:0});
+  assert.equal(m.issue.state,"closed");
+});
+
+test("published owner-count acceptance rejects 31-slot reports and forged 30-slot totals",()=>{
+  const base={...record,reportedCapacity:30,reportedUses:7,usageReportedAt:"2026-11-15"};
+  const candidates=[
+    {reportedCapacity:31,reportedUses:7},
+    {reportedCapacity:30,reportedUses:31},
+    {reportedRemaining:31,reportedCapacity:undefined,reportedUses:undefined}
+  ];
+  for(const patch of candidates){
+    assert.equal(matchesPublishedQuota(comment,{...base,...patch}),false);
+  }
+  const oversized={...comment,body:comment.body.replace("Total invites: 30","Total invites: 31")};
+  assert.equal(matchesPublishedQuota(oversized,base),false);
+  const overUsed={...comment,body:comment.body.replace("Used invites: 7","Used invites: 31")};
+  assert.equal(matchesPublishedQuota(overUsed,base),false);
+});
+
 test("match only the owner-confirmed source comment and exact dated count",()=>{
   assert.equal(matchesPublishedQuota(comment,record),true);
   for(const change of [

@@ -62,13 +62,13 @@ For Threads, X, Facebook or Telegram source listings, a GitHub username alone ca
 
 | Example | Quantity |
 | --- | ---: |
-| Total invites | 30 |
-| Remaining invites | 3 |
-| Used invites (30 − 3) | 27 |
+| Remaining invites (the only field to enter) | 3 |
+| Previous reviewed total (display only, if available) | 30 |
+| Calculated used = previous total − remaining | 27 |
 
-If only a remaining number is shown, report it without inventing the total. The public catalog stores either the complete `reportedCapacity` + `reportedUses` + `usageReportedAt` snapshot, **or** `reportedRemaining` + `usageReportedAt` when only the remaining count is known. The latter displays the remaining number without inventing a total. The trusted workflow proposes an automatic **Draft PR** only when the reporter matches the listed GitHub code owner and the figures are consistent. For Threads, X or Facebook listings, GitHub identity alone does not prove code ownership and quota changes require manual verification. A maintainer must review and merge the proposal before publication.
+The project supports **at most 30 invite slots per code**, not a guaranteed allocation or balance. Valid total values are **1–30**, with remaining and used in **0–30**; used cannot exceed the reported total. A previously reported smaller total (for example 20) remains valid. If only remaining is shown, do not invent the total. The public catalog stores either the complete `reportedCapacity` + `reportedUses` + `usageReportedAt` snapshot, **or** `reportedRemaining` + `usageReportedAt` when only the remaining count is known. The latter displays the remaining number without inventing a total. The Update count form and new Share Code Issue Form expose only **Remaining invites (0–30)** for quota entry; Used and Total are not user inputs. If the same verified GitHub owner previously had a complete, dated reviewed total, the system retains that actual total and calculates used = total − remaining for a review-only proposal. If no reviewed total exists, only the dated remaining count is stored; used remains unknown. Historical Issue comments containing Used/Total remain supported. This does not mean the total was re-confirmed. The trusted workflow proposes an automatic **Draft PR** only when the reporter matches the listed GitHub code owner and the figures are consistent. For Threads, X or Facebook listings, GitHub identity alone does not prove code ownership and quota changes require manual verification. A maintainer must review and merge the proposal before publication.
 
-Amounts are **dated self-reported snapshots**, not live Muse availability. Copying a code is not redeeming it. Missing or incomplete values display **Not reported**.
+Amounts are **dated self-reported snapshots**, not live Muse availability. Copying a code is not redeeming it. The published JSON contains a separate `quotaDisplay` projection. Codes **without any count report** display **30/30 · default (unconfirmed)** according to site policy, with **No report** for the date. This is NOT verified availability: the `reported*` values and report date stay absent. `quotaDisplay.used` is `0` by default, or `30 − reported remaining` when only remaining was reported; it is explicitly a policy estimate rather than an owner-reported used count. Codes with accepted dated counts display their reported figures instead, including smaller actual totals. Invalid/incomplete reports remain **Not reported** rather than being silently replaced.
 
 ## Automatic Issue-to-PR and publication
 
@@ -207,13 +207,13 @@ For Threads, X or Facebook source listings, a GitHub username alone cannot estab
 
 | Example | Quantity |
 | --- | ---: |
-| Total invites | 30 |
-| Remaining invites | 3 |
-| Used invites (30 − 3) | 27 |
+| Remaining invites (the only field to enter) | 3 |
+| Previous reviewed total (display only, if available) | 30 |
+| Calculated used = previous total − remaining | 27 |
 
-If only a remaining number is shown, report it without inventing the total. The public catalog stores either the complete `reportedCapacity` + `reportedUses` + `usageReportedAt` snapshot, **or** `reportedRemaining` + `usageReportedAt` when only the remaining count is known. The latter displays the remaining number without inventing a total. The trusted workflow proposes an automatic **Draft PR** only when the reporter matches the listed GitHub code owner and the figures are consistent. For Threads, X or Facebook listings, GitHub identity alone does not prove code ownership and quota changes require manual verification. A maintainer must review and merge the proposal before publication.
+The project supports **at most 30 invite slots per code**, not a guaranteed allocation or balance. Valid total values are **1–30**, with remaining and used in **0–30**; used cannot exceed the reported total. A previously reported smaller total (for example 20) remains valid. If only remaining is shown, do not invent the total. The public catalog stores either the complete `reportedCapacity` + `reportedUses` + `usageReportedAt` snapshot, **or** `reportedRemaining` + `usageReportedAt` when only the remaining count is known. The latter displays the remaining number without inventing a total. The Update count form and new Share Code Issue Form expose only **Remaining invites (0–30)** for quota entry; Used and Total are not user inputs. If the same verified GitHub owner previously had a complete, dated reviewed total, the system retains that actual total and calculates used = total − remaining for a review-only proposal. If no reviewed total exists, only the dated remaining count is stored; used remains unknown. Historical Issue comments containing Used/Total remain supported. This does not mean the total was re-confirmed. The trusted workflow proposes an automatic **Draft PR** only when the reporter matches the listed GitHub code owner and the figures are consistent. For Threads, X or Facebook listings, GitHub identity alone does not prove code ownership and quota changes require manual verification. A maintainer must review and merge the proposal before publication.
 
-Amounts are **dated self-reported snapshots**, not live Muse availability. Copying a code is not redeeming it. Missing or incomplete values display **Not reported**.
+Amounts are **dated self-reported snapshots**, not live Muse availability. Copying a code is not redeeming it. The published JSON contains a separate `quotaDisplay` projection. Codes **without any count report** display **30/30 · default (unconfirmed)** according to site policy, with **No report** for the date. This is NOT verified availability: the `reported*` values and report date stay absent. `quotaDisplay.used` is `0` by default, or `30 − reported remaining` when only remaining was reported; it is explicitly a policy estimate rather than an owner-reported used count. Codes with accepted dated counts display their reported figures instead, including smaller actual totals. Invalid/incomplete reports remain **Not reported** rather than being silently replaced.
 
 ## Automatic Issue-to-PR and publication
 
@@ -297,7 +297,7 @@ Use the real code, authorized contributor handle and actual addition date, never
 | `note` | Optional plain-text note, max 180 characters |
 | `checkedAt` | Optional date of last reviewed community feedback |
 | `reportedUses` / `reportedCapacity` / `usageReportedAt` | Optional full snapshot: used ≥ 0, capacity 1–1000, used ≤ capacity, real date `YYYY-MM-DD` |
-| `reportedRemaining` / `usageReportedAt` | Alternative remaining-only snapshot: 0–1000, real date; cannot mix with full snapshot |
+| `reportedRemaining` / `usageReportedAt` | Alternative remaining-only snapshot: 0–30, real date; cannot mix with full snapshot |
 | `submittedById` | Optional positive GitHub numeric account ID recorded on authorized owner updates; protects against future username reuse |
 | `sourceUrl` | Optional public HTTPS context. Social attribution requires a valid Threads, X/Twitter or Facebook profile/post permalink, with no `submittedBy`/`submittedById`. Use direct original posts for automatic Issue proposals; profiles or unsupported Facebook shares require manual review. No private data or unrelated GitHub repositories |
 | `featured` | Optional boolean; at most one featured code |

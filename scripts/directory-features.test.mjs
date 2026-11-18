@@ -67,8 +67,10 @@ test("quota update badge displays recorded revisions, not click counts", () => {
   const published=JSON.parse(read("data/invite-records/eplus-owner-dpnihh.json"));
   assert.equal(published.code,"DPNIHH");
   const baseline=JSON.parse(read("data/quota-update-baseline.json"));
-  assert.equal(published.quotaUpdateCount,undefined,
-    "The trusted main preview validator must accept the historical record");
+  assert.ok(published.quotaUpdateCount === undefined ||
+    (Number.isSafeInteger(published.quotaUpdateCount) &&
+     published.quotaUpdateCount >= 0),
+    "Historical records may omit the counter; reviewed newer owner revisions track a nonnegative count");
   assert.equal(baseline.DPNIHH,1,
     "Issue #14 and PR #157 document one approved update after the initial report");
   assert.match(app,/const tracked = Number\.isSafeInteger\(item\.quotaUpdateCount\)/);
@@ -129,7 +131,7 @@ test("every card uses the same status, source, availability and original listing
   assert.match(app,/document\.createTextNode\(" Availability: " \+ availability\)/);
   assert.match(app,/document\.createTextNode\(" Listed: " \+ formatDate\(item\.addedAt\)\)/);
   assert.match(app,/amount\.title = remaining/);
-  assert.match(app,/remaining\.date \+ "\. Not live Muse availability\."/);
+  assert.match(app,/remaining\.date \+ "; " \+ remaining\.used/);
   assert.match(app,/amount\.setAttribute\("aria-label", "Availability: " \+ availability/);
   assert.match(app,/author\.title = source\.group/);
   assert.match(css,/\.card-status-row\{display:flex;align-items:center;justify-content:space-between/);
@@ -385,72 +387,59 @@ test("editable feedback dialog prepares a report and reuses the linked Issue wit
   assert.doesNotMatch(feedbackSection, /issues\/new\?/);
 });
 
-test("owner-count comment requires real, consistent figures before Safari copy", () => {
-  const template = features.feedbackComment("DPNIHH", "count");
-  const blank = features.prepareOwnerCountComment(template);
-  assert.match(blank.error, /Enter your actual Remaining invites/);
-  const remainingOnly = features.prepareOwnerCountComment(
-    template.replace("[enter actual number or leave blank]", "0")
-  );
-  assert.equal(remainingOnly.error, undefined);
-  assert.match(remainingOnly.text, /Remaining invites: 0/);
-  assert.doesNotMatch(remainingOnly.text, /\[optional\]|\[enter actual number/);
-  assert.match(remainingOnly.text, /Owner confirmation: I confirm these figures/);
-
-  const totalUsed = features.prepareOwnerCountComment(template
-    .replace("Total invites: [optional]", "Total invites: 30")
-    .replace("Used invites: [optional]", "Used invites: 27"));
-  assert.equal(totalUsed.error, undefined);
-  assert.match(totalUsed.text, /Total invites: 30/);
-
-  for (const invalid of [
-    template.replace("Total invites: [optional]", "Total invites: 30"),
-    template.replace("[enter actual number or leave blank]", "-1"),
-    template.replace("[enter actual number or leave blank]", "1001"),
-    template.replace("Total invites: [optional]", "Total invites: 5")
-      .replace("Used invites: [optional]", "Used invites: 6"),
-    template.replace("[enter actual number or leave blank]", "8")
-      .replace("Total invites: [optional]", "Total invites: 10")
-      .replace("Used invites: [optional]", "Used invites: 1"),
-    template.replace("Remaining invites: [enter actual number or leave blank]",
-      "Remaining invites: 2\nRemaining invites: 3")
-  ]) {
-    assert.equal(typeof features.prepareOwnerCountComment(invalid).error, "string");
+test("owner-count comment validates only a remaining value; legacy three-field comments remain readable",()=>{
+  const template=features.feedbackComment("DPNIHH","count");
+  assert.doesNotMatch(template,/^Used invites:|^Total invites:/m);
+  const blank=features.prepareOwnerCountComment(template);
+  assert.match(blank.error,/Enter the remaining invites shown/);
+  for(const count of [0,19,30]){
+    const result=features.prepareOwnerCountComment(
+      features.ownerCountComment("DPNIHH",String(count)));
+    assert.equal(result.error,undefined);
+    assert.match(result.text,new RegExp("Remaining invites: "+count));
+    assert.doesNotMatch(result.text,/^Used invites:|^Total invites:|\[(?:optional|enter actual)/m);
+    assert.match(result.text,/Owner confirmation: I confirm these figures/);
   }
-
-  const helper = read("assets/directory-features.js");
-  assert.match(helper, /document\.execCommand\("copy"\) === true/);
-  assert.match(helper, /textarea\.setSelectionRange\(0, textarea\.value\.length\)/);
-  assert.match(helper, /Automatic copy was blocked\. Long-press/);
-  assert.match(helper, /Enter your actual Remaining invites number, or both Total invites and Used invites/);
+  for(const count of [-1,31,99,1000]){
+    const invalid=features.prepareOwnerCountComment(
+      features.ownerCountComment("DPNIHH",String(count)));
+    assert.match(invalid.error,/0 and 30/);
+  }
+  assert.match(features.prepareOwnerCountComment(
+    template.replace("Remaining invites: [enter actual number or leave blank]",
+    "Remaining invites: 2\nRemaining invites: 3")).error,/only once/);
+  const legacy=features.prepareOwnerCountComment(
+    "Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 3\nTotal invites: 30\nUsed invites: 27\nOwner confirmation: [confirm this report below]");
+  assert.equal(legacy.error,undefined);
+  assert.match(legacy.text,/Total invites: 30/);
+  assert.match(legacy.text,/Used invites: 27/);
+  const mismatched=features.prepareOwnerCountComment(
+    "Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 3\nTotal invites: 30\nUsed invites: 26\nOwner confirmation: [confirm this report below]");
+  assert.match(mismatched.error,/consistent/);
+  const helper=read("assets/directory-features.js");
+  assert.match(helper,/document\.execCommand\("copy"\) === true/);
+  assert.match(helper,/textarea\.setSelectionRange\(0, textarea\.value\.length\)/);
+  assert.match(helper,/Automatic copy was blocked\. Long-press/);
 });
 
-test("guided mobile owner count fields generate the canonical GitHub report", () => {
-  const report = features.ownerCountComment("DPNIHH", "3", "", "");
-  assert.match(report, /^Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 3/m);
-  const preparedRemaining = features.prepareOwnerCountComment(report);
-  assert.equal(preparedRemaining.error, undefined);
-  assert.match(preparedRemaining.text, /Remaining invites: 3/);
-  const detailed = features.prepareOwnerCountComment(
-    features.ownerCountComment("DPNIHH", "", "30", "27")
-  );
-  assert.equal(detailed.error, undefined);
-  assert.match(detailed.text, /Total invites: 30/);
-  assert.match(detailed.text, /Used invites: 27/);
-  assert.match(detailed.text, /Owner confirmation: I confirm these figures/);
-
-  const helper = read("assets/directory-features.js");
-  const style = read("assets/styles.css");
-  assert.match(helper, /remainingInput\.inputMode = "numeric"/);
-  assert.match(helper, /remainingInput\.placeholder = "e\.g\. 3"/);
-  assert.match(helper, /optionalSummary\.textContent = "Total and used invites \(if known\)"/);
-  assert.match(helper, /confirm and re-enter the current total to preserve its breakdown/);
-  assert.match(helper, /commentEditor\.open = !isCount/);
-  assert.match(helper, /textarea\.value = isCount \? ownerCountComment\(code\)/);
-  assert.match(helper, /copy\.textContent = isCount \? "Copy report" : "Copy comment"/);
-  assert.match(helper, /countFields\.hidden = !isCount/);
-  assert.match(style, /\.feedback-count-fields\[hidden\]\{display:none\}/);
-  assert.match(style, /\.feedback-count-grid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+test("web owner-count input has exactly one numeric field and no guessed quota",()=>{
+  const helper=read("assets/directory-features.js");
+  assert.match(helper,/remainingInput\.inputMode = "numeric"/);
+  assert.match(helper,/remainingInput\.maxLength = 2/);
+  assert.match(helper,/countFields\.append\(remainingLabel, remainingHint, remainingInput\)/);
+  assert.doesNotMatch(helper,/feedback-count-used|usedInput|feedback-count-total|totalField/);
+  assert.match(helper,/textarea\.value = isCount \? ownerCountComment\(code\)/);
+  assert.match(helper,/countFields\.hidden = !isCount/);
+  assert.match(helper,/copy\.textContent = isCount \? "Copy report" : "Copy comment"/);
+  assert.match(read("assets/styles.css"),/\.feedback-count-fields\[hidden\]\{display:none\}/);
+  const example=features.tokenPotential([
+    {usageReportedAt:"2026-11-18",reportedCapacity:20,reportedUses:3},
+    {usageReportedAt:"2026-11-18",reportedRemaining:30},
+    {usageReportedAt:"2026-11-18",reportedRemaining:31}
+  ]);
+  assert.equal(example.remainingUses,47);
+  assert.equal(example.reportedCodes,2);
+  assert.match(app,/MAX_INVITES_PER_CODE/);
 });
 
 test("homepage token potential totals only dated reported remaining uses", () => {

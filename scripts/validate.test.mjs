@@ -47,6 +47,24 @@ test("undated, invalid, or exaggerated usage claims are rejected", () => {
   assert.ok(validateCatalog([{ ...sample(), reportedUses: -1, reportedCapacity: 30, usageReportedAt: "2026-11-11" }]).some(e => e.includes("non-negative")));
 });
 
+test("30 is an inclusive upper bound on each reported code, not a default allocation",()=>{
+  const at="2026-11-18";
+  for(const n of [0,30]){
+    assert.deepEqual(validateCatalog([{...sample(),reportedRemaining:n,usageReportedAt:at}]),[]);
+  }
+  assert.deepEqual(validateCatalog([{...sample(),reportedCapacity:20,reportedUses:3,usageReportedAt:at}]),[]);
+  assert.deepEqual(validateCatalog([{...sample(),reportedCapacity:30,reportedUses:30,usageReportedAt:at}]),[]);
+  for(const count of [31,50,1000]){
+    assert.ok(validateCatalog([{...sample(),reportedCapacity:count,reportedUses:0,usageReportedAt:at}])
+      .some(error=>error.includes("reportedCapacity")),String(count));
+    assert.ok(validateCatalog([{...sample(),reportedRemaining:count,usageReportedAt:at}])
+      .some(error=>error.includes("reportedRemaining")),String(count));
+    assert.ok(validateCatalog([{...sample(),reportedCapacity:30,reportedUses:count,usageReportedAt:at}])
+      .some(error=>error.includes("cannot exceed")),String(count));
+  }
+  assert.deepEqual(validateCatalog([sample()]),[],"Unknown quota does not default to 30");
+});
+
 test("quota revision badge requires a positive real count and a dated quota", () => {
   const published={...sample(), reportedCapacity:30,reportedUses:7,
     usageReportedAt:"2026-11-15",quotaUpdateCount:1};

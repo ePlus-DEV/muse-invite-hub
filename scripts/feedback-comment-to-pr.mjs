@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { planIssueChange } from "./issue-to-pr.mjs";
+import { MAX_INVITES_PER_CODE } from "./invite-quota-policy.mjs";
 import { feedbackCodeForIssue } from "./reopen-code-feedback.mjs";
 import { REPO, withCanonicalIssueRefs } from "./code-issue-map.mjs";
 import { listedPlatform } from "./source-platform.mjs";
@@ -56,16 +57,29 @@ function narrativeOwnerCount(issue, comment, catalog, code, item) {
       return review("Owner-count fields must be non-negative whole numbers.");
     }
     const number = Number(match[2]);
-    if (number > 1000) return review("Owner-count value exceeds the supported range.");
+    if (number > MAX_INVITES_PER_CODE) return review("Invite count cannot exceed "+MAX_INVITES_PER_CODE+" per code.");
     values.set(key, number);
   }
-  if (!["total invites","remaining invites","used invites"].every(key => values.has(key))) {
-    return review("Provide all three owner-count figures: total, remaining and used.");
+  if (!values.has("remaining invites")) {
+    return review("Report the remaining invites shown in Muse (0–30).");
   }
-  const total = values.get("total invites");
   const remaining = values.get("remaining invites");
-  const used = values.get("used invites");
-  if (total <= 0 || used > total || remaining > total || total - used !== remaining) {
+  const hasUsed=values.has("used invites"),hasTotal=values.has("total invites");
+  // The one-number route is valid only with an existing complete, dated,
+  // owner-approved total. Never infer allocation from max=30 alone.
+  const knownTotal=Number.isSafeInteger(item.reportedCapacity) &&
+    Number.isSafeInteger(item.reportedUses) && item.reportedCapacity>0 &&
+    item.reportedCapacity<=MAX_INVITES_PER_CODE && item.reportedUses>=0 &&
+    item.reportedUses<=item.reportedCapacity &&
+    typeof item.usageReportedAt==="string" ? item.reportedCapacity : null;
+  const total=hasTotal?values.get("total invites"):
+    hasUsed?remaining+values.get("used invites"):knownTotal;
+  if (total===null) {
+    return review("The published record has no verified total; remaining can be recorded, but used cannot be inferred without a reviewed total.");
+  }
+  const used=hasUsed?values.get("used invites"):total-remaining;
+  if (total <= 0 || total > MAX_INVITES_PER_CODE ||
+      used > total || remaining > total || total - used !== remaining) {
     return review("Owner-count figures do not reconcile (total - used must equal remaining).");
   }
   if (!Number.isFinite(Date.parse(comment.created_at || ""))) {
@@ -93,10 +107,11 @@ function narrativeOwnerCount(issue, comment, catalog, code, item) {
     outcome:"proposal",kind:"count",code,action:"review owner-reported count",data,
     branch:"auto/comment-"+issue.number+"-"+comment.id+"-count",
     issueNumber:issue.number,commentId:comment.id,reporter:comment.user.login,
-    notice:"The original owner-authored comment reports "+total+" total, "+used+
-      " used and "+remaining+" remaining. The comment does NOT explicitly say these "+
-      "figures came from the owner's own Muse invite screen. Obtain that confirmation "+
-      "before merging. This is not a live or Muse-verified balance."
+    notice:"The original owner-authored comment reports "+remaining+" remaining. Total "+total+" is "+
+      (hasTotal?"explicitly reported":hasUsed?"calculated from remaining + used":"retained from an earlier reviewed dated snapshot")+
+      "; used "+used+" is "+(hasUsed?"owner-reported":"derived from that total")+
+      ". The comment does NOT explicitly say the figures came from the owner's own Muse invite screen. "+
+      "Obtain that confirmation before merging. This is not a live or Muse-verified balance."
   };
 }
 
