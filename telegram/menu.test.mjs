@@ -110,6 +110,20 @@ test("menu search, contribute and report prompt resolve only one six-character c
   assert.equal(f.messages.at(-1).buttons[0][0].data,"t:pick:DPNIHH:worked");
 });
 
+test("pasting a bare code with no pending prompt opens its detail or status panel",async()=>{
+  const f=fixture();
+  const listed=await f.run("dpnihh");
+  assert.equal(listed.action.type,"detail");
+  assert.equal(listed.action.code,"DPNIHH");
+  assert.equal(f.messages.at(-1).buttons[0][0].copy_text.text,"DPNIHH");
+  const unlisted=await f.run("ZZZ999");
+  assert.equal(unlisted.action.type,"detail");
+  assert.equal(unlisted.action.code,"ZZZ999");
+  assert.match(f.messages.at(-1).text,/ZZZ999/);
+  const other=await f.run("hello there");
+  assert.equal(other.action.type,"usage-menu");
+});
+
 test("menu supports browse, get, watch, notification preference, deletion",async()=>{
   const f=fixture();
   await f.run("/start");

@@ -517,13 +517,13 @@ test("OCI bot navigates pages, detail and Back without public writes",async()=>{
     items.filter(x=>!query||x.code.includes(query)).slice(offset,offset+limit)});
 });
 
-test("OCI bot defaults to English and retains an explicit Japanese override",async()=>{
+test("OCI bot follows the Telegram language and retains an explicit Japanese override",async()=>{
   await withApp(async({post,sent,dir})=>{
     const vi={...message(600,"/start")};
     vi.message.from.language_code="vi-VN";
     assert.equal((await post(vi)).status,200);
-    assert.match(sent.at(-1).payload.text,/Welcome/);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
+    assert.match(sent.at(-1).payload.text,/Chào mừng/);
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 Tôi cần mã");
     assert.equal((await post(message(601,"/status DPNIHH"))).status,200);
     assert.match(sent.at(-1).payload.text,/published/);
     assert.equal((await post(message(602,"/language ja"))).status,200);
