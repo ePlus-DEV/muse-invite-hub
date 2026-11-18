@@ -413,7 +413,9 @@ test("OCI /menu refresh resets stale panel so next Search prompt is visible",asy
     assert.match(after.at(-1).payload.text,/Enter a code or contributor name/);
     const latest=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"];
     assert.equal(latest.pending.type,"search");
-    assert.ok(latest.panelMessageId>before.panelMessageId);
+    assert.ok(latest.panelMessageId>0);
+    assert.notEqual(latest.panelMessageId,before.panelMessageId,
+      "The new visible panel must replace the old callback-owned message ID");
     assert.equal((await post(message(2954,"DPNIHH"))).status,200);
     assert.equal(sent.findLast(x=>x.name==="editMessageText").payload.message_id,
       latest.panelMessageId);
