@@ -3,10 +3,10 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { parsePublicSource } from "./source-platform.mjs";
 import { readCatalog } from "./catalog.mjs";
-import { MAX_INVITES_PER_CODE } from "./invite-quota-policy.mjs";
+import { MAX_INVITES_PER_CODE, displayQuota } from "./invite-quota-policy.mjs";
 
 const statuses = new Set(["unverified", "reported-working", "reported-not-working"]);
-const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "reportedRemaining", "usageReportedAt", "quotaUpdateCount", "submittedById", "featured", "ownerConfirmed", "feedbackIssueNumber"]);
+const allowedKeys = new Set(["id", "code", "status", "addedAt", "submittedBy", "note", "sourceUrl", "checkedAt", "reportedUses", "reportedCapacity", "reportedRemaining", "usageReportedAt", "quotaUpdateCount", "submittedById", "featured", "ownerConfirmed", "feedbackIssueNumber", "quotaDisplay"]);
 
 function validDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -94,6 +94,10 @@ export function validateCatalog(data) {
           errors.push(at + ": reportedRemaining must be an integer from 0 to "+MAX_INVITES_PER_CODE+".");
         }
       } else errors.push(at + ": usageReportedAt requires a reported count.");
+    }
+    if (item.quotaDisplay !== undefined &&
+        JSON.stringify(item.quotaDisplay)!==JSON.stringify(displayQuota(item))) {
+      errors.push(at + ": quotaDisplay must match the derived 30-invite display policy and dated owner reports.");
     }
     // Number of accepted revisions to an existing reported quota, not clicks or a Muse balance.
     if (item.quotaUpdateCount !== undefined &&
