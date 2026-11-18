@@ -148,7 +148,8 @@ export function parseUpdate(update) {
       data==="t:roles"?"choose-role":data==="t:need"?"need-code":
       data==="t:need:browse"?"browse":data==="t:need:alerts"?"subscribe":
       data==="t:need:search"?"prompt-search":
-      data==="t:settings"?"settings":data==="t:newest"?"newest":
+      data==="t:settings"?"settings":data==="t:mine"?"my-codes":
+      data==="t:prompt-submit"?"prompt-submit":data==="t:newest"?"newest":
       data==="t:search"?"prompt-search":
       data==="t:home"?"home":data==="t:back-list"?"back-list":
       data==="t:refresh"?"refresh":data==="t:browse"?"browse":
