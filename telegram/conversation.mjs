@@ -40,9 +40,15 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
     }
   };
   const panel=async(text,buttons)=>{
-    if(action.callbackId&&action.messageId&&typeof edit==="function"){
+    // Reply-keyboard actions do not include a callback message ID. Reuse the
+    // last bot-owned inline panel when possible, even across process restarts.
+    const stored=await profiles.get(chatId);
+    const target=action.callbackId? action.messageId:stored.panelMessageId;
+    if(target&&typeof edit==="function"){
       try {
-        const result=await edit(chatId,action.messageId,text,buttons);
+        const result=await edit(chatId,target,text,buttons);
+        if(stored.panelMessageId!==target)
+          await mutateProfile(profiles,chatId,p=>{p.panelMessageId=target;return p;});
         await feedback("refreshDone");
         return result;
       } catch(error) {
@@ -52,20 +58,69 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
         }
         if(isRefreshCallback){
           await feedback("refreshFailed");
-          return; // Never duplicate a failed or unchanged refresh card.
+          return; // Never duplicate a failed or unchanged Refresh card.
         }
-        // Non-refresh navigation may send another panel if the old one expired.
+        // Old/deleted messages cannot be edited: send one replacement panel.
       }
     }
     if(isRefreshCallback){await feedback("refreshFailed");return;}
-    return send(chatId,text,buttons);
+    const sent=await send(chatId,text,buttons);
+    if(Number.isSafeInteger(sent?.message_id)&&sent.message_id>0)
+      await mutateProfile(profiles,chatId,p=>{p.panelMessageId=sent.message_id;return p;});
+    return sent;
   };
   const prompt=async(kind,key)=>{
     await mutateProfile(profiles,chatId,p=>{p.pending={type:kind,until:Date.now()+10*60*1000};return p;});
-    return send(chatId,msg(key));
+    return panel(msg(key),[[{text:msg("backMenu"),data:"t:home"}]]);
   };
-  const languageButtons=()=>LOCALES.map(code=>
-    [{text:(language===code?"✅ ":"")+LOCALE_NAMES[code],data:"t:lang:"+code}]);
+  const languageButtons=(locale=language)=>LOCALES.map(code=>
+    [{text:(locale===code?"✅ ":"")+LOCALE_NAMES[code],data:"t:lang:"+code}]);
+  const settingsPanel=async(locale=language)=>{
+    const current=await profiles.get(chatId);
+    const trn=(key,params)=>tr(locale,key,params);
+    return panel(trn("settingsTitle")+
+      "\n"+trn("alertsLabel")+" "+trn(current.subscribed?"alertsOn":"alertsOff")+
+      "\n"+trn("watchedCount")+" "+current.watching.length+
+      "\n"+trn("roleCurrent")+" "+trn(current.role==="seeker"?"roleSeekerName":
+        current.role==="contributor"?"roleContributorName":"roleUnsetName")+
+      "\n"+trn("alertsNote"),[
+        [{text:trn(current.subscribed?"disableAlerts":"enableAlerts"),
+          data:"t:sub:"+(current.subscribed?"off":"on")}],
+        [{text:trn("watchedButton"),data:"t:watchlist"},
+         {text:trn("languageButton")+" · "+LOCALE_NAMES[locale],data:"t:langs"}],
+        [{text:trn("roleChange"),data:"t:roles"}],
+        [{text:trn("deleteData"),data:"t:erase:ask"}],
+        [{text:trn("backList"),data:"t:back-list"},
+         {text:trn("backMenu"),data:"t:home"}]
+      ]);
+  };
+  const watchlistPanel=async()=>{
+    const current=await profiles.get(chatId);
+    const text=current.watching.length
+      ? msg("watchlistTitle")+"\n"+msg("watchlistFooter")
+      : msg("watchlistEmpty");
+    const rows=current.watching.map(code=>[
+      {text:"🎟 "+code,data:"t:detail:"+code},
+      {text:msg("unwatchButton"),data:"t:unwatch:"+code}
+    ]);
+    rows.push([{text:msg("settingsTitle"),data:"t:settings"},
+      {text:msg("backMenu"),data:"t:home"}]);
+    return panel(text,rows);
+  };
+  const homePanel=async()=>{
+    const current=await profiles.get(chatId);
+    const role=current.role;
+    const actions=role==="contributor"
+      ? [[{text:menuText(language,"submit"),data:"t:prompt-submit"},
+          {text:menuText(language,"browse"),data:"t:browse"}],
+         [{text:menuText(language,"mine"),data:"t:mine"},
+          {text:menuText(language,"settings"),data:"t:settings"}]]
+      : [[{text:menuText(language,"browse"),data:"t:browse"},
+          {text:menuText(language,"newest"),data:"t:newest"}],
+         [{text:menuText(language,"search"),data:"t:search"},
+          {text:menuText(language,"settings"),data:"t:settings"}]];
+    return panel(msg(role==="contributor"?"roleContributorWelcome":"roleSeekerWelcome"),actions);
+  };
   async function list(query="",newest=false,page=0) {
     // One concise message per page instead of five separate code cards.
     const needle=String(query||"").trim().slice(0,80);
@@ -102,6 +157,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
     if(nav.length)buttons.push(nav);
     buttons.push([
       {text:menuText(language,"refresh"),data:"t:refresh"},
+      {text:menuText(language,"settings"),data:"t:settings"},
       {text:msg("backMenu"),data:"t:home"}
     ]);
     const heading=msg(needle?"searchHeading":newest?"newestHeading":"browseHeading");
@@ -116,7 +172,11 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
         : msg("roleIntro"),language,profile.role);
       return true;
     case "choose-role":
-      await sendMenu(chatId,msg("roleChoiceTitle"),language,null);
+      await panel(msg("roleChoiceTitle"),[
+        [{text:menuText(language,"roleSeeker"),data:"t:role:seeker"}],
+        [{text:menuText(language,"roleContributor"),data:"t:role:contributor"}],
+        [{text:msg("backMenu"),data:"t:settings"}]
+      ]);
       return true;
     case "set-role-seeker":
     case "set-role-contributor": {
@@ -124,6 +184,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
       await mutateProfile(profiles,chatId,p=>{
         p.role=role;
         p.pending=null; // Switching menus must not accidentally complete an earlier submission.
+        p.panelMessageId=null; // New role: show the first panel below its new keyboard.
         return p;
       });
       await sendMenu(chatId,msg(role==="seeker"?"roleSeekerWelcome":"roleContributorWelcome"),language,role);
@@ -157,7 +218,8 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
     }
     case "home":
       if(profile.pending)await mutateProfile(profiles,chatId,p=>{p.pending=null;return p;});
-      await sendMenu(chatId,profile.role
+      if(action.callbackId)await homePanel();
+      else await sendMenu(chatId,profile.role
         ? msg(profile.role==="seeker"?"roleSeekerWelcome":"roleContributorWelcome")
         : msg("roleIntro"),language,profile.role);
       return true;
@@ -166,6 +228,14 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
     case "prompt-report": await prompt("report","promptReport");return true;
     case "prompt-status": await prompt("status","statusPrompt");return true;
     case "search": await list(action.query);return true;
+    case "status": {
+      const entry=await services.getCodeStatus(code,githubToken);
+      await panel(formatCodeStatus(code,entry,language),[
+        [{text:msg("backList"),data:"t:back-list"},
+         {text:msg("backMenu"),data:"t:home"}]
+      ]);
+      return true;
+    }
     case "detail":
     case "refresh-code":
     case "get": {
@@ -179,7 +249,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
       return true;
     }
     case "report-choose":
-      await send(chatId,msg("reportChoose",{code}),[
+      await panel(msg("reportChoose",{code}),[
         [{text:msg("worked"),data:"t:pick:"+code+":worked"},
          {text:msg("failed"),data:"t:pick:"+code+":failed"}],
         [{text:msg("cancel"),data:"t:cancel"},
@@ -194,29 +264,20 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
       return true;
     case "my-codes": {
       const rows=profile.submitted;
-      if(!rows.length)await send(chatId,msg("mineEmpty"));
-      else await send(chatId,msg("mineTitle")+"\n"+
-        rows.map(x=>"• "+x.code+" — "+x.url).join("\n")+"\n"+msg("mineFooter"));
+      await panel(rows.length
+        ? msg("mineTitle")+"\n"+rows.map(x=>"• "+x.code+" — "+x.url).join("\n")+"\n"+msg("mineFooter")
+        : msg("mineEmpty"),[[{text:msg("backMenu"),data:"t:home"}]]);
       return true;
     }
     case "notifications":
-    case "settings": {
-      await send(chatId,msg(type==="settings"?"settingsTitle":"notificationsTitle")+
-        "\n"+msg("alertsLabel")+" "+msg(profile.subscribed?"alertsOn":"alertsOff")+
-        "\n"+msg("watchedCount")+" "+profile.watching.length+
-        "\n"+msg("roleCurrent")+" "+msg(profile.role==="seeker"?"roleSeekerName":
-          profile.role==="contributor"?"roleContributorName":"roleUnsetName")+
-        "\n"+msg("alertsNote"),[
-          [{text:msg(profile.subscribed?"disableAlerts":"enableAlerts"),data:"t:sub:"+(profile.subscribed?"off":"on")}],
-          [{text:msg("watchedButton"),data:"t:watchlist"},
-           {text:msg("languageButton")+" · "+LOCALE_NAMES[language],data:"t:langs"}],
-          [{text:msg("roleChange"),data:"t:roles"}],
-          [{text:msg("deleteData"),data:"t:erase:ask"}]
-        ]);
+    case "settings":
+      await settingsPanel();
       return true;
-    }
     case "choose-language":
-      await send(chatId,msg("languageTitle"),languageButtons());
+      await panel(msg("languageTitle"),[
+        ...languageButtons(),
+        [{text:msg("settingsTitle"),data:"t:settings"}]
+      ]);
       return true;
     case "set-language": {
       if(!LOCALES.includes(action.language))return true;
@@ -224,40 +285,44 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
         p.language=action.language;p.languageManual=true;return p;
       });
       await sendMenu(chatId,tr(action.language,"languageChanged"),action.language,profile.role);
+      if(action.callbackId)await settingsPanel(action.language);
       return true;
     }
     case "subscribe":
-    case "unsubscribe": {
-      const p=await mutateProfile(profiles,chatId,p=>{p.subscribed=type==="subscribe";return p;});
-      await send(chatId,msg(p.subscribed?"subscribed":"unsubscribed"));
+    case "unsubscribe":
+      await mutateProfile(profiles,chatId,p=>{p.subscribed=type==="subscribe";return p;});
+      await settingsPanel();
       return true;
-    }
-    case "watchlist": {
-      await send(chatId,profile.watching.length
-        ? msg("watchlistTitle")+"\n"+profile.watching.map(x=>"• "+x).join("\n")+"\n"+msg("watchlistFooter")
-        : msg("watchlistEmpty"));
+    case "watchlist":
+      await watchlistPanel();
       return true;
-    }
     case "watch": {
       const entry=await services.getCodeStatus(code,githubToken);
       if(!["listed","pending"].includes(entry.kind)){
-        await send(chatId,msg("watchDenied")+"\n"+entry.url);
+        await panel(msg("watchDenied")+"\n"+entry.url,[
+          [{text:msg("backList"),data:"t:back-list"}]
+        ]);
         return true;
       }
       const p=await mutateProfile(profiles,chatId,p=>{
         if(!p.watching.includes(code))p.watching=[...p.watching,code].slice(-50);
         return p;
       });
-      await send(chatId,msg("watching",{code,count:p.watching.length}));
+      const rows=await services.browseCodes({query:code,limit:50});
+      const listing=rows.find(x=>x.code===code);
+      await panel(msg("watching",{code,count:p.watching.length})+
+        (listing?"\n\n"+codeDescription(listing,language):""),listing
+        ? codeButtons(code,language)
+        : [[{text:msg("watchedButton"),data:"t:watchlist"},
+            {text:msg("backMenu"),data:"t:home"}]]);
       return true;
     }
-    case "unwatch": {
+    case "unwatch":
       await mutateProfile(profiles,chatId,p=>{p.watching=p.watching.filter(x=>x!==code);return p;});
-      await send(chatId,msg("unwatched",{code}));
+      await watchlistPanel();
       return true;
-    }
     case "delete-data":
-      await send(chatId,msg("deletePrompt"),[
+      await panel(msg("deletePrompt"),[
         [{text:msg("confirmDelete"),data:"t:erase:confirm"},{text:msg("cancel"),data:"t:cancel"}]
       ]);
       return true;
