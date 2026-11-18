@@ -490,10 +490,10 @@ export const MENU_KEYS = Object.freeze([
 // Keep Refresh as an inline list/detail action, not a persistent menu row.
 export const ENTRY_MENU_KEYS = Object.freeze([["roleSeeker"],["roleContributor"],["languageButton"]]);
 export const ROLE_MENU_KEYS = Object.freeze({
-  seeker:[["browse","newest","search"],["need","notifications","watchlist"],
-    ["report","settings","roleSwitch"]],
-  contributor:[["submit","mine","status"],["newest","browse","report"],
-    ["notifications","settings","roleSwitch"]]
+  // Reports live on a code detail; alerts, language and role changes live in Settings.
+  // "Need a code" is identical to Browse, so do not repeat it on the keyboard.
+  seeker:[["browse","newest","search"],["watchlist","settings"]],
+  contributor:[["submit","mine","status"],["browse","settings"]]
 });
 export function translationCoverage() {
   return LOCALES.map(language=>({language,
