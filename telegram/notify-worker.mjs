@@ -21,6 +21,23 @@ export function makeWorkerNotifyState(kv) {
       }
       return {profiles,cursor:page.list_complete?null:page.cursor};
     },
+    async getDigest(id){
+      const raw=await kv.get("notify:digest:"+id);
+      if(!raw)return null;
+      try {
+        const value=JSON.parse(raw);
+        return Number.isSafeInteger(value.messageId)&&value.messageId>0&&
+          Number.isSafeInteger(value.at)&&value.at>0&&
+          Array.isArray(value.codes)&&value.codes.length<=25&&
+          value.codes.every(code=>/^[A-Z0-9]{6}$/.test(code))
+          ? value:null;
+      } catch {return null;}
+    },
+    async setDigest(id,digest){
+      await kv.put("notify:digest:"+id,JSON.stringify(digest),{
+        expirationTtl:3600
+      });
+    },
     async wasSent(id,code){return await kv.get("notify:sent:"+id+":"+code)!==null;},
     async markSent(id,code){await kv.put("notify:sent:"+id+":"+code,"1");}
   };
