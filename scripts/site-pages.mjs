@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { validateCatalog } from "./validate.mjs";
+import { MAX_INVITES_PER_CODE } from "./invite-quota-policy.mjs";
 import { parsePublicSource } from "./source-platform.mjs";
 import { renderPageSkeleton } from "./page-skeleton.mjs";
 import { renderSiteHeader } from "./site-navigation.mjs";
@@ -39,10 +40,10 @@ function jsonLd(data) {
 function reportedSlots(item) {
   const { reportedCapacity: capacity, reportedUses: used, reportedRemaining: remaining, usageReportedAt: at } = item;
   if (!at) return null;
-  if (Number.isInteger(remaining) && remaining >= 0) {
+  if (Number.isInteger(remaining) && remaining >= 0 && remaining <= MAX_INVITES_PER_CODE) {
     return { remaining, capacity: null, date: dateText(at) };
   }
-  if (!Number.isInteger(capacity) || capacity < 1 ||
+  if (!Number.isInteger(capacity) || capacity < 1 || capacity > MAX_INVITES_PER_CODE ||
       !Number.isInteger(used) || used < 0 || used > capacity) return null;
   return { remaining: capacity - used, capacity, date: dateText(at) };
 }
