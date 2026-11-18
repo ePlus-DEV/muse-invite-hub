@@ -19,7 +19,7 @@ export function menuVersion(language="en",role=null) {
   return "v"+MENU_SCHEMA_VERSION+"-"+hash.toString(16).padStart(8,"0");
 }
 
-export function createMenuSync({profiles,sendMenu,action}) {
+export function createMenuSync({profiles,sendMenu,action,priorProfile}) {
   let sentMenu=false;
   const isPrivate=action.type!=="private-only";
   // Deleting private data should not immediately recreate a profile record.
@@ -52,9 +52,12 @@ export function createMenuSync({profiles,sendMenu,action}) {
     // First-time API-only users may have no prior keyboard. Avoid an
     // unsolicited second message on their first status / submit callback.
     // Any old reply-keyboard tap is explicit evidence of a stale keyboard.
-    const prior=Boolean(profile.menuVersion||action.fromMenu||profile.role||
-      profile.panelMessageId||profile.languageManual||profile.subscribed||
-      profile.watching.length||profile.submitted.length);
+    // Determine whether a keyboard was already in use BEFORE this action.
+    // Creating a new inline panel right now must not trigger an extra message.
+    const previous=priorProfile||profile;
+    const prior=Boolean(previous.menuVersion||action.fromMenu||previous.role||
+      previous.panelMessageId||previous.languageManual||previous.subscribed||
+      previous.watching?.length||previous.submitted?.length);
     if(!prior)return false;
     try {
       await trackedSendMenu(chatId,tr(language,"menuAutoUpdated"),language,role);
