@@ -143,19 +143,40 @@
     });
   }
   function reportedRemaining(item) {
-    if (!item || typeof item.usageReportedAt !== "string") return null;
-    const date = formatDate(item.usageReportedAt);
-    if (Number.isInteger(item.reportedRemaining) && item.reportedRemaining >= 0 && item.reportedRemaining <= MAX_INVITES_PER_CODE) {
-      return { remaining: item.reportedRemaining, total: null, date };
+    if (!item) return null;
+    const projection=item.quotaDisplay;
+    if (projection && Number.isSafeInteger(projection.capacity) &&
+        projection.capacity>=1 && projection.capacity<=MAX_INVITES_PER_CODE &&
+        Number.isSafeInteger(projection.remaining) &&
+        projection.remaining>=0 && projection.remaining<=projection.capacity &&
+        ["default","reported","reported-remaining"].includes(projection.basis)) {
+      return {
+        remaining:projection.remaining,total:projection.capacity,
+        date:projection.reportedAt?formatDate(projection.reportedAt):null,
+        basis:projection.basis
+      };
     }
-    if (!Number.isInteger(item.reportedUses) ||
-        !Number.isInteger(item.reportedCapacity) ||
-        item.reportedCapacity < 1 || item.reportedCapacity > MAX_INVITES_PER_CODE || item.reportedUses < 0 ||
-        item.reportedUses > item.reportedCapacity) return null;
-    return {
-      remaining: item.reportedCapacity - item.reportedUses,
-      total: item.reportedCapacity, date
-    };
+    // Non-built legacy JSON receives the same 30-slot display fallback.
+    // Never turn a corrupt dated report into a default balance.
+    if (typeof item.usageReportedAt !== "string") {
+      if (["reportedRemaining","reportedCapacity","reportedUses"].some(key=>
+          item[key]!==undefined)) return null;
+      return {remaining:MAX_INVITES_PER_CODE,total:MAX_INVITES_PER_CODE,
+        date:null,basis:"default"};
+    }
+    const date=formatDate(item.usageReportedAt);
+    if (Number.isSafeInteger(item.reportedRemaining) &&
+        item.reportedRemaining>=0 && item.reportedRemaining<=MAX_INVITES_PER_CODE &&
+        item.reportedCapacity===undefined && item.reportedUses===undefined) {
+      return {remaining:item.reportedRemaining,total:MAX_INVITES_PER_CODE,
+        date,basis:"reported-remaining"};
+    }
+    if (!Number.isSafeInteger(item.reportedCapacity) ||
+        !Number.isSafeInteger(item.reportedUses) ||
+        item.reportedCapacity<1 || item.reportedCapacity>MAX_INVITES_PER_CODE ||
+        item.reportedUses<0 || item.reportedUses>item.reportedCapacity) return null;
+    return {remaining:item.reportedCapacity-item.reportedUses,
+      total:item.reportedCapacity,date,basis:"reported"};
   }
   function setStat(id, value) {
     const target = document.getElementById(id);
@@ -171,7 +192,7 @@
       const origin = sourceInfo(c);
       return origin.handle ? origin.platform.toLowerCase() + ":" + origin.handle.toLowerCase() : null;
     }).filter(Boolean));
-    const reported = codes.filter(c => reportedRemaining(c) !== null);
+    const reported = codes.filter(c => {const q=reportedRemaining(c);return q && q.basis!=="default";});
     setStat("stat-total", codes.length.toLocaleString("en-US"));
     setStat("stat-contributors", contributors.size.toLocaleString("en-US"));
     setStat("stat-reported", reported.length.toLocaleString("en-US"));
@@ -182,7 +203,7 @@
       potential.remainingUses.toLocaleString("en-US") + " reported remaining uses across " +
       potential.reportedCodes.toLocaleString("en-US") + " codes; " +
       potential.unknownCodes.toLocaleString("en-US") +
-      " codes have no reported availability. This is potential, not earned tokens." :
+      " codes have no owner-reported availability. The 30/30 default shown on cards is a policy estimate, not a validated balance. This is potential, not earned tokens." :
       "No codes have reported remaining invite uses. Token potential is unknown.");
   }
   function fallbackCopy(value) {
@@ -317,13 +338,20 @@
     const availability = remaining
       ? remaining.remaining.toLocaleString("en-US") +
           (remaining.total === null ? "" : " / " + remaining.total.toLocaleString("en-US")) +
-          " remaining · reported"
+          (remaining.basis==="default"
+            ? " remaining · default (unconfirmed)"
+            : remaining.basis==="reported-remaining"
+              ? " remaining · reported (30 max)"
+              : " remaining · reported")
       : "Not reported";
     amount.title = remaining
-      ? "Community count reported " + remaining.date + ". Not live Muse availability."
-      : "No dated invite quota has been reported for this code.";
+      ? remaining.basis==="default"
+        ? "Policy default: 30 invites per code. No count was reported; actual availability is unknown."
+        : "Community count reported " + remaining.date + ". Not live Muse availability."
+      : "An incomplete or invalid report has not been published as a balance.";
     amount.setAttribute("aria-label", "Availability: " + availability +
-      (remaining ? ", as of " + remaining.date + ", not live" : ""));
+      (remaining?.date ? ", as of " + remaining.date + ", not live" :
+        ", not an owner-verified balance"));
     amount.append(icon("fa-solid fa-chart-simple"));
     amount.append(document.createTextNode(" Availability: " + availability));
     info.append(amount);
