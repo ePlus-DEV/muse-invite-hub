@@ -378,6 +378,34 @@ test("Cloudflare Worker defaults to English and preserves manually chosen langua
     "Deleting preferences resets to English even if Telegram is Vietnamese");
 });
 
+test("Worker reply-keyboard Settings edits the saved inline panel in KV",async()=>{
+  const env=makeEnv(),{deps,sent,calls}=makeDeps();
+  deps.telegramApi=async(name,payload)=>{
+    sent.push({name,payload});
+    return name==="sendMessage"?{message_id:2000+sent.length}:undefined;
+  };
+  assert.equal((await handleWebhookRequest(webhook(message(860,"/language vi")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(message(861,"/start")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(callback(862,"t:role:seeker")),env,deps)).status,200);
+  const panelId=2000+sent.length;
+  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).panelMessageId,panelId);
+  const messages=sent.filter(x=>x.name==="sendMessage").length;
+  assert.equal((await handleWebhookRequest(webhook(message(863,"⚙️ Cài đặt")),env,deps)).status,200);
+  assert.equal(sent.at(-1).name,"editMessageText");
+  assert.equal(sent.at(-1).payload.message_id,panelId);
+  assert.equal((await handleWebhookRequest(webhook(callback(864,"t:sub:on")),env,deps)).status,200);
+  assert.equal(sent.at(-1).name,"editMessageText");
+  assert.match(sent.at(-1).payload.text,/BẬT/);
+  assert.equal((await handleWebhookRequest(webhook(callback(865,"t:watchlist")),env,deps)).status,200);
+  assert.equal(sent.at(-1).name,"editMessageText");
+  assert.equal((await handleWebhookRequest(webhook(message(866,"🎟 Nhận mã")),env,deps)).status,200);
+  assert.equal(sent.at(-1).name,"editMessageText");
+  assert.equal(sent.filter(x=>x.name==="sendMessage").length,messages);
+  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).subscribed,true);
+  assert.equal(calls.submit.length,0);
+  assert.equal(calls.report.length,0);
+});
+
 test("Worker onboarding lets seekers request community codes and switch to contributing safely",async()=>{
   const env=makeEnv();
   const {deps,sent,calls}=makeDeps();
