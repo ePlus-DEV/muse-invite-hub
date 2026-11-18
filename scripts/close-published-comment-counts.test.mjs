@@ -360,6 +360,22 @@ test("Issue #14 latest remaining-only manual review PR closes only after verifie
   assert.ok(!wrong.events.includes("PATCH issues/14"));
 });
 
+test("published owner-count acceptance rejects 31-slot reports and forged 30-slot totals",()=>{
+  const base={...record,reportedCapacity:30,reportedUses:7,usageReportedAt:"2026-11-15"};
+  const candidates=[
+    {reportedCapacity:31,reportedUses:7},
+    {reportedCapacity:30,reportedUses:31},
+    {reportedRemaining:31,reportedCapacity:undefined,reportedUses:undefined}
+  ];
+  for(const patch of candidates){
+    assert.equal(matchesPublishedQuota(comment,{...base,...patch}),false);
+  }
+  const oversized={...comment,body:comment.body.replace("Total invites: 30","Total invites: 31")};
+  assert.equal(matchesPublishedQuota(oversized,base),false);
+  const overUsed={...comment,body:comment.body.replace("Used invites: 7","Used invites: 31")};
+  assert.equal(matchesPublishedQuota(overUsed,base),false);
+});
+
 test("match only the owner-confirmed source comment and exact dated count",()=>{
   assert.equal(matchesPublishedQuota(comment,record),true);
   for(const change of [
