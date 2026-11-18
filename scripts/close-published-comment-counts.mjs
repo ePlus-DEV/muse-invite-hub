@@ -96,7 +96,10 @@ export function matchesPublishedQuota(comment,record,{allowNarrative=false}={}) 
       return (capacity===null || capacity===record.reportedCapacity) &&
         (uses===null || uses===record.reportedUses) &&
         (remaining===null || remaining===record.reportedCapacity-record.reportedUses) &&
-        ((capacity!==null && uses!==null) || (remaining!==null && (capacity!==null || uses!==null)));
+        // Remaining-only owner comments are attributable to a reviewed,
+        // explicit owner-screen confirmation. The merged record's known
+        // capacity supplies the historic total; its used figure is derived.
+        ((capacity!==null && uses!==null) || remaining!==null);
     }
     return Number.isInteger(record.reportedRemaining) && remaining!==null &&
       record.reportedRemaining===remaining && capacity===null && uses===null;
