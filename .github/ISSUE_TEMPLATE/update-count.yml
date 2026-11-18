@@ -9,7 +9,7 @@ body:
         Share only **numbers shown in your own Muse account**, not credentials or private account screenshots.
         Select the platform of the **listed invite code**, not your own login. Identical usernames on GitHub, Threads, X and Facebook are different identities.
         GitHub Issue ownership checks can confirm only the cataloged GitHub owner. **Threads, X and Facebook codes require manual owner verification** and will not receive automatic quota PRs.
-        Each code supports at most **30 reported invites**. The maximum is not a default allocation or live balance. Valid total 1–30, remaining/used 0–30. Updates are reviewed before changing the site; counts are dated snapshots, NOT live Muse availability.
+        Each code supports at most **30 reported invites**. The maximum is not a default allocation or live balance. Enter remaining (0–30), plus used if known. Their sum must be 1–30; no separate total is needed. Updates are reviewed before changing the site; counts are dated snapshots, NOT live Muse availability.
   - type: input
     id: invite_code
     attributes:
@@ -35,23 +35,15 @@ body:
     id: remaining
     attributes:
       label: Remaining invites shown by Muse
-      description: "Enter 0–30 shown on your Muse Invite screen. If unknown, leave blank; do not assume all 30 remain."
+      description: "Enter 0–30 shown on your Muse Invite screen. This is the only required count; do not assume all 30 remain."
       placeholder: "e.g. 25"
-    validations:
-      required: false
-  - type: input
-    id: total
-    attributes:
-      label: Total invite quota shown by Muse (if known)
-      description: "The maximum is 30 per code, but your actual total may be smaller or unknown. Only enter a total shown by Muse."
-      placeholder: "e.g. 30"
     validations:
       required: false
   - type: input
     id: used
     attributes:
       label: Already used invites (if known)
-      description: "Enter 0–30 only if visible or consistently calculated from a known total and remaining; never guess."
+      description: "Optional, 0–30 from your Muse screen. If both numbers are supplied, total = remaining + used (at most 30). If only remaining is known, leave this blank."
       placeholder: "e.g. 5"
     validations:
       required: false
