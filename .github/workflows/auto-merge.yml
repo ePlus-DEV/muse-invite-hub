@@ -16,7 +16,7 @@ on:
     workflows: ["Validate website and invite catalog"]
     types: [completed]
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/20 * * * *"
   workflow_dispatch:
 
 permissions:
