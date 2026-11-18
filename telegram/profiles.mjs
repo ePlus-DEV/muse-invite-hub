@@ -2,8 +2,9 @@
 import { LOCALES } from "./i18n.mjs";
 const CODE=/^[A-Z0-9]{6}$/;
 const INTENTS=new Set(["search","submit","report","status"]);
+const MENU_VERSION=/^v[1-9][0-9]*-[0-9a-f]{8}$/;
 export function emptyProfile() {
-  return {subscribed:false,watching:[],submitted:[],pending:null,language:null,languageManual:false,role:null,browse:null,panelMessageId:null};
+  return {subscribed:false,watching:[],submitted:[],pending:null,language:null,languageManual:false,role:null,browse:null,panelMessageId:null,menuVersion:null};
 }
 export function cleanProfile(value) {
   const base=emptyProfile();
@@ -13,6 +14,8 @@ export function cleanProfile(value) {
     role:value.role==="seeker"||value.role==="contributor"?value.role:null,
     language:LOCALES.includes(value.language)?value.language:null,
     languageManual:value.languageManual===true&&LOCALES.includes(value.language),
+    menuVersion:typeof value.menuVersion==="string"&&MENU_VERSION.test(value.menuVersion)
+      ? value.menuVersion:null,
     // A bot-owned message ID allows editing one navigation panel from reply-keyboard actions.
     // It is private chat state, not a public invite or Telegram identity claim.
     panelMessageId:Number.isSafeInteger(value.panelMessageId)&&value.panelMessageId>0
