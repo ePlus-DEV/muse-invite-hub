@@ -200,6 +200,20 @@ test("GitHub code status distinguishes published, pending, closed and unknown",a
   } finally {globalThis.fetch=original;}
 });
 
+test("Telegram status suppresses invalid 31-slot catalog claims",async()=>{
+  const old=globalThis.fetch;
+  let record={code:"DPNIHH",status:"unverified",
+    reportedCapacity:31,reportedUses:0,usageReportedAt:"2026-11-18"};
+  try {
+    globalThis.fetch=async()=>new Response(JSON.stringify([record]),{status:200});
+    assert.equal((await getCodeStatus("DPNIHH","test-token")).reportedRemaining,null);
+    record={...record,reportedCapacity:30,reportedUses:0};
+    assert.equal((await getCodeStatus("DPNIHH","test-token")).reportedRemaining,30);
+    record={...record,reportedCapacity:undefined,reportedUses:undefined,reportedRemaining:31};
+    assert.equal((await getCodeStatus("DPNIHH","test-token")).reportedRemaining,null);
+  } finally {globalThis.fetch=old;}
+});
+
 test("Telegram contributions keep closed Issues distinct and require human source review",async()=>{
   const original=globalThis.fetch;
   let includeClosed=true;
