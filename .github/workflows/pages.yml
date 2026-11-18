@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  actions: write # dispatch only the existing trusted Issue workflow after live publication
   checks: read
   pull-requests: write
   issues: write
@@ -190,6 +191,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           DEPLOYED_SHA="$(git rev-parse HEAD)" node scripts/close-accepted-issues.mjs
+      - name: Recheck blocked duplicate Issues after canonical publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --check scripts/requeue-blocked-duplicates.mjs
+          DEPLOYED_SHA="$(git rev-parse HEAD)" node scripts/requeue-blocked-duplicates.mjs
       - name: Close verified owner count comment Issues only after live publication
         env:
           GH_TOKEN: ${{ github.token }}
