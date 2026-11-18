@@ -125,12 +125,24 @@ test("ambiguous repeated quota labels require manual review",()=>{
   assert.equal(clean.outcome,"proposal");
 });
 
-test("remaining and used without total cannot silently drop the used count",()=>{
+test("simplified owner count derives actual total from remaining plus used, never defaulting to 30",()=>{
   const owner={login:"hoangsvit",type:"User",id:124};
-  const comment=ownerCount.replace("Total invites: 30","Total invites: ");
-  const result=planCommentProposal(issue,member(comment,{user:owner}),[item]);
-  assert.equal(result.outcome,"needs-review");
-  assert.match(result.reason,/Used invites requires Total invites/);
+  const comment=ownerCount.replace("Total invites: 30\\n","");
+  const full=planCommentProposal(issue,member(comment,{user:owner}),[item]);
+  assert.equal(full.outcome,"proposal");
+  assert.equal(full.data[0].reportedCapacity,30);
+  assert.equal(full.data[0].reportedUses,27);
+  const smaller=planCommentProposal(issue,member(comment
+    .replace("Remaining invites: 3","Remaining invites: 2")
+    .replace("Used invites: 27","Used invites: 18"),{user:owner}),[item]);
+  assert.equal(smaller.outcome,"proposal");
+  assert.equal(smaller.data[0].reportedCapacity,20);
+  assert.equal(smaller.data[0].reportedUses,18);
+  const usedOnly=planCommentProposal(issue,member(comment.replace("Remaining invites: 3","Remaining invites: "),{user:owner}),[item]);
+  assert.equal(usedOnly.outcome,"needs-review");
+  const tooMany=planCommentProposal(issue,member(comment.replace("Remaining invites: 3","Remaining invites: 4"),{user:owner}),[item]);
+  assert.equal(tooMany.outcome,"needs-review");
+  assert.match(tooMany.reason,/Remaining plus used/);
 });
 
 test("owner count requires an explicit confirmation and numeric input",()=>{
