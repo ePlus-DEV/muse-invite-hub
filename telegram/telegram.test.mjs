@@ -395,6 +395,33 @@ test("OCI menu sync persists its version on disk and recognizes old buttons",asy
   });
 });
 
+test("OCI /menu refresh resets stale panel so next Search prompt is visible",async()=>{
+  await withApp(async({post,sent,dir})=>{
+    assert.equal((await post(message(2950,"/start"))).status,200);
+    assert.equal((await post(callback(2951,"t:role:seeker"))).status,200);
+    const before=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"];
+    assert.ok(before.panelMessageId>0,"Browse panel already exists");
+    assert.equal((await post(message(2952,"/menu"))).status,200);
+    const fresh=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"];
+    assert.equal(fresh.panelMessageId,null,"Refresh detaches the earlier navigation panel");
+    const size=sent.length;
+    assert.equal((await post(message(2953,"🔎 Search"))).status,200);
+    const after=sent.slice(size);
+    assert.equal(after.filter(x=>x.name==="editMessageText").length,0,
+      "Search must not edit the off-screen panel from before /menu");
+    assert.equal(after.filter(x=>x.name==="sendMessage").length,1);
+    assert.match(after.at(-1).payload.text,/Enter a code or contributor name/);
+    const latest=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"];
+    assert.equal(latest.pending.type,"search");
+    assert.ok(latest.panelMessageId>0);
+    assert.notEqual(latest.panelMessageId,before.panelMessageId,
+      "The new visible panel must replace the old callback-owned message ID");
+    assert.equal((await post(message(2954,"DPNIHH"))).status,200);
+    assert.equal(sent.findLast(x=>x.name==="editMessageText").payload.message_id,
+      latest.panelMessageId);
+  },{},{trackMessageIds:true});
+});
+
 test("OCI Refresh re-fetches published codes without posting or changing preferences",async()=>{
   let reads=0;
   await withApp(async({post,sent,calls})=>{

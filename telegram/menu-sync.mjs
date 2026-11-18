@@ -31,6 +31,13 @@ export function createMenuSync({profiles,sendMenu,action,priorProfile}) {
       try {
         await mutateProfile(profiles,chatId,p=>{
           p.menuVersion=menuVersion(language,role);
+          // Sending a fresh Reply Keyboard starts a new navigation session.
+          // An old saved inline panel may be dozens of messages above this
+          // one; editing it hides the result of the user's current action.
+          // Clear only this UI pointer, not their role, language, pending
+          // search, watched codes or contribution history. The next panel
+          // is sent beside the new keyboard and saves its fresh message ID.
+          p.panelMessageId=null;
           return p;
         });
       } catch {

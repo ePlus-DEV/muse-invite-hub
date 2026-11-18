@@ -222,6 +222,37 @@ test("Worker lazily migrates old nine-key menus exactly once, without losing the
   assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
 });
 
+test("Worker old menu Search refresh opens a visible new prompt, never an off-screen panel",async()=>{
+  const env=makeEnv(),{deps,sent,calls}=makeDeps();
+  deps.telegramApi=async(method,payload)=>{
+    sent.push({name:method,payload});
+    return method==="sendMessage"?{message_id:7000+sent.length}:undefined;
+  };
+  await env.BOT_STATE.put("profile:42",JSON.stringify({
+    role:"seeker",language:"en",panelMessageId:120,
+    watching:["DPNIHH"],subscribed:true
+  }));
+  assert.equal((await handleWebhookRequest(webhook(message(2830,"🔎 Search")),env,deps)).status,200);
+  assert.equal(sent.filter(x=>x.name==="editMessageText").length,0,
+    "Never edit the previous panel at message 120 above the current chat");
+  const sentMessages=sent.filter(x=>x.name==="sendMessage");
+  assert.equal(sentMessages.length,2,"One keyboard update and one visible Search prompt");
+  assert.ok(sentMessages[0].payload.reply_markup.keyboard);
+  assert.match(sentMessages[1].payload.text,/Enter a code or contributor name/);
+  assert.equal(sentMessages[1].payload.reply_markup.inline_keyboard[0][0].callback_data,"t:home");
+  const profile=JSON.parse(await env.BOT_STATE.get("profile:42"));
+  assert.equal(profile.panelMessageId,7000+sent.length);
+  assert.equal(profile.pending.type,"search");
+  assert.deepEqual(profile.watching,["DPNIHH"]);
+  assert.equal(profile.subscribed,true);
+  assert.equal(calls.submit.length,0);
+  assert.equal(calls.report.length,0);
+  assert.equal((await handleWebhookRequest(webhook(message(2831,"DPNIHH")),env,deps)).status,200);
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+  assert.equal(sent.findLast(x=>x.name==="editMessageText").payload.message_id,profile.panelMessageId,
+    "Subsequent navigation can reuse the new nearby panel");
+});
+
 test("Worker /start, Settings Refresh menu and role changes send one keyboard each",async()=>{
   const env=makeEnv(),{deps,sent}=makeDeps();
   assert.equal((await handleWebhookRequest(webhook(message(2811,"/start")),env,deps)).status,200);

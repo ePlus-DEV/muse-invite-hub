@@ -45,7 +45,8 @@ test("legacy keyboard tap migrates once and preserves existing profile",async()=
   assert.equal(profile.menuVersion,menuVersion("vi","seeker"));
   assert.deepEqual(profile.watching,["DPNIHH"]);
   assert.equal(profile.subscribed,true);
-  assert.equal(profile.panelMessageId,234);
+  assert.equal(profile.panelMessageId,null,
+    "An auto-updated Reply Keyboard must detach old inline panels above the chat");
   const next=createMenuSync({...f,action,priorProfile:profile});
   assert.equal(await next.syncIfNeeded(42),false);
   assert.equal(f.messages.length,1);
@@ -59,6 +60,7 @@ test("explicit menu sends and language/role changes do not double-send",async()=
   assert.equal(await sync.syncIfNeeded(42),false);
   assert.equal(f.messages.length,1);
   assert.equal((await f.profiles.get(42)).menuVersion,menuVersion("en","seeker"));
+  assert.equal((await f.profiles.get(42)).panelMessageId,null);
   const change=createMenuSync({...f,action:{type:"set-language",chatId:42},
     priorProfile:await f.profiles.get(42)});
   await change.trackedSendMenu(42,"Language changed","ja","seeker");
