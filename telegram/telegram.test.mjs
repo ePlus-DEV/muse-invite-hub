@@ -27,13 +27,14 @@ test("Telegram commands accept only public code patterns and known report outcom
   assert.equal(parseCommand("/count").type,"count");
   assert.equal(parseCommand("/codes").type,"browse");
   assert.equal(parseCommand("/refresh").type,"refresh");
+  assert.equal(parseCommand("/menu").type,"sync-menu");
   assert.deepEqual(parseCommand("/status dpnihh"),{type:"status",code:"DPNIHH"});
   assert.deepEqual(parseCommand("/code dpnihh"),{type:"status",code:"DPNIHH"});
   assert.equal(parseCommand("/status DPNIH").type,"usage-status");
   assert.equal(parseCommand("/status DPNIHH EXTRA").type,"usage-status");
   assert.equal(parseCommand("/privacy").type,"privacy");
   assert.equal(parseCommand("/cancel").type,"cancel");
-  assert.equal(BOT_COMMANDS.length,23);
+  assert.equal(BOT_COMMANDS.length,24);
   assert.equal(new Set(BOT_COMMANDS.map(x=>x.command)).size,BOT_COMMANDS.length);
   assert.equal(parseCommand("/start@MuseBot").type,"help");
   assert.equal(parseCommand("x".repeat(400)).type,"help");
@@ -368,6 +369,30 @@ test("deployment sources never embed real credentials or auto-publish third-part
   assert.match(workflow,/workflow_dispatch:/);
   assert.match(workflow,/platforms: linux\/arm64/);
   assert.doesNotMatch(workflow,/push:\s*\n\s*branches:/);
+});
+
+test("OCI menu sync persists its version on disk and recognizes old buttons",async()=>{
+  await withApp(async({post,sent,dir})=>{
+    const before=sent.length;
+    assert.equal((await post(message(2900,"🎟 Get codes"))).status,200);
+    const changed=sent.slice(before);
+    assert.equal(changed.filter(x=>x.payload?.reply_markup?.inline_keyboard).length,1);
+    assert.equal(changed.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+    assert.equal(changed.find(x=>x.payload?.reply_markup?.keyboard)
+      .payload.reply_markup.keyboard.length,3);
+    const state=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"));
+    assert.match(state["42"].menuVersion,/^v1-[0-9a-f]{8}$/);
+    assert.equal((await post(message(2901,"🎟 Get codes"))).status,200);
+    assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+    assert.equal((await post(message(2902,"/menu"))).status,200);
+    assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,2);
+    assert.equal((await post(message(2903,"/settings"))).status,200);
+    const settings=sent.findLast(x=>x.payload?.reply_markup?.inline_keyboard);
+    assert.ok(settings.payload.reply_markup.inline_keyboard.some(row=>
+      row.some(btn=>btn.callback_data==="t:menu:refresh")));
+    assert.equal((await post(callback(2904,"t:menu:refresh"))).status,200);
+    assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,3);
+  });
 });
 
 test("OCI Refresh re-fetches published codes without posting or changing preferences",async()=>{

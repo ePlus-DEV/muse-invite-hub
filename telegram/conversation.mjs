@@ -89,6 +89,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
         [{text:trn("watchedButton"),data:"t:watchlist"},
          {text:trn("languageButton")+" · "+LOCALE_NAMES[locale],data:"t:langs"}],
         [{text:trn("roleChange"),data:"t:roles"}],
+        [{text:trn("menuRefreshButton"),data:"t:menu:refresh"}],
         [{text:trn("deleteData"),data:"t:erase:ask"}],
         [{text:trn("backList"),data:"t:back-list"},
          {text:trn("backMenu"),data:"t:home"}]
@@ -170,6 +171,9 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
       await sendMenu(chatId,profile.role
         ? msg(profile.role==="seeker"?"roleSeekerWelcome":"roleContributorWelcome")
         : msg("roleIntro"),language,profile.role);
+      return true;
+    case "sync-menu":
+      await sendMenu(chatId,msg("menuRefreshed"),language,profile.role);
       return true;
     case "choose-role":
       await panel(msg("roleChoiceTitle"),[

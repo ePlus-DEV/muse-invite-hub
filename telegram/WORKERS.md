@@ -275,3 +275,28 @@ Worker's `BOT_STATE` KV (or OCI private profile file), together with
 language. `/delete_data` clears this preference; the welcome choice is
 shown again. Inline callbacks are language-independent to keep older buttons
 working after a locale switch.
+
+
+## Keeping Telegram menu buttons current
+
+Telegram stores persistent Reply Keyboards on the client; a new Worker deploy
+does not overwrite an already displayed keyboard. The bot now uses **lazy
+menu synchronization**: the current keyboard fingerprint is derived from its
+role-specific translated buttons and saved privately as `menuVersion` in
+`BOT_STATE` KV, only after a successful Telegram `sendMessage` reply-keyboard
+request. When a user next interacts through an old menu, or has a saved older
+fingerprint, the bot sends the new keyboard once **before** handling the action.
+The action is not dropped, and no message is broadcast to dormant chats.
+
+For a one-off refresh, open **Settings → 🔄 Refresh menu** or use `/menu`.
+`/start`, role changes and language changes already send a current keyboard
+without an extra synchronization message. The bot recognizes older menu labels
+so users can still navigate. `/delete_data` erases the stored fingerprint and
+does not recreate a profile merely to save a menu version.
+
+**Operational check:** the Telegram webhook runtime must first deploy the
+merged `main` code. Verify its `/version` endpoint and the configured
+Webhook's actual host; publishing GitHub Pages alone is insufficient. No
+Telegram tokens or GitHub credentials need to change. A bot with old runtime
+cannot send new buttons. The menu fingerprint intentionally does not use the
+Git commit SHA, so catalog-only releases do not resend keyboards.

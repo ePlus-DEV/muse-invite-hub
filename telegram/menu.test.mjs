@@ -46,6 +46,7 @@ test("persistent keyboard keeps nine core actions without a redundant Refresh ro
   assert.equal(parseCommand("🔄 Làm mới").type,"refresh");
   assert.equal(parseCommand("🔄 更新").type,"refresh");
   assert.equal(parseCommand("/refresh").type,"refresh");
+  assert.equal(parseCommand("/menu").type,"sync-menu");
   assert.equal(parseCommand("🎟 Nhận mã").type,"browse");
   assert.equal(parseCommand("/subscribe").type,"subscribe");
   assert.equal(parseCommand("/watchlist").type,"watchlist");

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { resolve, join } from "node:path";
 import { parseUpdate, keyboard } from "./bot.mjs";
 import { replyKeyboard } from "./menu.mjs";
+import { createMenuSync } from "./menu-sync.mjs";
 import { handleLegacy } from "./legacy.mjs";
 import { resolveInput, handleInteractive } from "./conversation.mjs";
 import { cleanProfile, syncTelegramLocale } from "./profiles.mjs";
@@ -147,9 +148,17 @@ export function createTelegramApp({
       const acknowledge=async text=>call("answerCallbackQuery",{
         callback_query_id:action.callbackId,...(text?{text}:{})
       });
+      // Capture pre-action state: a first-time user opening a new inline
+      // panel must not receive an unsolicited second message.
+      const priorProfile=await profiles.get(chatId);
       action=await resolveInput(action,profiles);
-      if(await handleInteractive({action,profiles,send,sendMenu,edit,
-        acknowledge,services,githubToken}))return;
+      const menuSync=createMenuSync({profiles,sendMenu,action,priorProfile});
+      // Reply Keyboards cannot be edited in place. Update before processing
+      // so the response to the user's original action remains the final item.
+      await menuSync.syncIfNeeded(chatId);
+      if(await handleInteractive({action,profiles,send,
+        sendMenu:menuSync.trackedSendMenu,edit,
+        acknowledge,services,githubToken})) return;
       async function complete(message) {
         await send(chatId,message);
         if(action.callbackId&&action.messageId) {
@@ -159,10 +168,11 @@ export function createTelegramApp({
           }); } catch { /* UI error must never retry a successful GitHub write. */ }
         }
       }
-      return await handleLegacy({
+      const result=await handleLegacy({
         action,profiles,send,complete,services,githubToken,
         allowWrite:async (id,code)=>allowWrite(id,action.updateId,action.type,code)
       });
+      return result;
     } catch(error) {
       if(action.callbackId&&["submit","report"].includes(action.type)&&
           !notifiedFailures.has(action.updateId)) {

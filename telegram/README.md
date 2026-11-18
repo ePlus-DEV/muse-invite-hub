@@ -234,3 +234,25 @@ working after a locale switch. After a new bot feature is deployed, users
 can send `/start` or tap **Main menu** to receive the latest version's
 keyboard; no global Refresh button, account migration or new bot is needed.
 Bot deploys remain independent of GitHub Pages.
+
+
+## Automatic Reply Keyboard refresh
+
+Older Telegram buttons persist on users' devices after a bot release. The
+Worker and OCI versions both compute a fingerprint of the current
+role-/language-specific Reply Keyboard and store it privately as
+`menuVersion`, after Telegram confirms the keyboard was sent. On the next
+interaction with an old keyboard or a previously configured chat, the bot
+replaces the keyboard once and still carries out the original action.
+It does **not** proactively message every subscriber or rerun GitHub writes.
+
+Users can also open **Settings → 🔄 Refresh menu**, or send `/menu`. The
+`/start`, role and language flows continue to update the keyboard directly,
+without duplicate welcome messages. Legacy button labels remain accepted.
+Deleting private data clears the fingerprint.
+
+After merging a menu PR, OCI production needs a new manually built GHCR image
+from `main` and a container restart/pull; a GitHub Pages deployment does
+not update the Telegram bot. The existing `/healthz` endpoint tests basic
+health; verify the actual production bot revision/deployment independently
+before testing `/menu`. No token or bot replacement is required.

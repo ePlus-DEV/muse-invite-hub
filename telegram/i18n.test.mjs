@@ -33,8 +33,10 @@ test("all Telegram copy is translated consistently with matching placeholders",(
     assert.ok(status.includes("2026-11-15"));
     assert.ok(status.includes("2"));
     const commandSet=commandsFor(code);
-    assert.equal(commandSet.length,23);
+    assert.equal(commandSet.length,24);
     assert.equal(commandSet.find(x=>x.command==="language").command,"language");
+    assert.ok(commandSet.find(x=>x.command==="menu"));
+    assert.equal(typeof tr(code,"menuRefreshButton"),"string");
     assert.ok(commandSet.every(x=>x.description.length>=3&&x.description.length<=256));
   }
   assert.notEqual(menuText("vi","browse"),menuText("en","browse"));
