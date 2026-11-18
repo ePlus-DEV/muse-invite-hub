@@ -80,6 +80,7 @@ export function createTelegramApp({
       throw Error("Telegram "+method+" HTTP "+response.status+": "+
         String(result?.description||"Unknown API error").slice(0,160));
     }
+    return result.result;
   });
   async function send(chat_id,text,buttons){
     const payload={chat_id,text,disable_web_page_preview:true};
