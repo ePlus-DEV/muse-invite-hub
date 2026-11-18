@@ -14,6 +14,7 @@ const USER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 const GITHUB_OWN = "GitHub (my own code)";
 export const AUTO_PUBLISH_NEW_INVITE_MARKER = "<!-- muse-auto-publish-new-github-v1 -->";
 export const AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER = "<!-- muse-auto-publish-new-public-post-v1 -->";
+export const AUTO_PUBLISH_NEW_TELEGRAM_INVITE_MARKER = "<!-- muse-auto-publish-new-telegram-v1 -->";
 const THREADS_FOUND = "Threads (public code I found)";
 const X_FOUND = "X (Twitter) (public code I found)";
 const FACEBOOK_FOUND = "Facebook (public code I found)";
@@ -283,7 +284,8 @@ function planMultiInvite(issue, current, codes, fields) {
 }
 
 // Telegram Issue authors are the bot credential, never the contributor.
-// Build only review-only Draft PRs from the bot's strict public form and consent.
+// Only a new, consented, strictly attributed code can auto-publish as unverified.
+// This is never GitHub account ownership or proof of working redemption.
 export function planTelegramIssue(issue, current) {
   const title=/^\[(?:Invite|Telegram submission)\] ([A-Z0-9]{6})$/.exec(String(issue.title||""));
   const body=String(issue.body||"");
@@ -302,7 +304,7 @@ export function planTelegramIssue(issue, current) {
   // The normal Share Code form fields carry the Telegram identity. No custom
   // headings are needed, and the bot's GitHub account is never the sender.
   const notes=field(fields,"Notes (optional)").trim();
-  const standardWho=/^Submitted via Telegram by @([A-Za-z][A-Za-z0-9_]{4,31})\. Human review required; public profile is not proof of code ownership, redemption or quota\.$/.exec(notes);
+  const standardWho=/^Submitted via Telegram by @([A-Za-z][A-Za-z0-9_]{4,31})\. (?:Human review required|Community report); public profile is not proof of code ownership, redemption or quota\.$/.exec(notes);
   const legacyWho=/^@([A-Za-z][A-Za-z0-9_]{4,31}) \(Telegram sender, public attribution accepted during confirmation\)$/.exec(field(fields,"Telegram contributor").trim());
   const legacyUrl=/^(https:\/\/t\.me\/[A-Za-z][A-Za-z0-9_]{4,31}) \(Telegram profile only, not source-post evidence\)$/.exec(context);
   const who=standard?standardWho:legacyWho;
@@ -341,8 +343,8 @@ export function planTelegramIssue(issue, current) {
   if(errors.length)throw Error("Telegram draft record failed catalog validation: "+errors.join("; "));
   return {outcome:"proposal",kind:"invite",code,action:"add Telegram source",data,
     branch:"auto/issue-"+issue.number+"-invite",
-    notice:"Telegram sender @"+source.handle+" supplied a public profile, NOT proof of code ownership or a source post. No owner quotas or Muse redemption have been verified. Manual Draft PR review is mandatory.",
-    summary:summary(issue,code,"review Telegram community report")};
+    notice:"Telegram sender @"+source.handle+" supplied a public profile only, not proof of code ownership or a source post. This community report can auto-publish only as unverified after independent Issue, record, duplicate and CI checks; owner quotas and Muse redemption are not verified.",
+    summary:summary(issue,code,"add Telegram community report")};
 }
 
 export function planIssueChange(issue, current, {deferValidation=false}={}) {
@@ -732,6 +734,32 @@ export function isAutoPublishableNewSocialInvite(issue,proposal) {
     entry.reportedRemaining===undefined);
 }
 
+// Bot-submitted Telegram codes use the same guarded unverified publication
+// as public social reports. The profile confirms attribution format only:
+// it never establishes ownership, redeemed invites or remaining quota.
+export function isAutoPublishableNewTelegramInvite(issue,proposal) {
+  if (!issue || issue.state!=="open" || issue.pull_request ||
+      !proposal || proposal.outcome!=="proposal" || proposal.kind!=="invite" ||
+      proposal.action!=="add Telegram source" ||
+      !hasRequiredInviteConfirmations(issue.body)) return false;
+  const parsed=planTelegramIssue(issue,[]);
+  if (parsed.outcome!=="proposal" || parsed.code!==proposal.code ||
+      (proposal.codes||[proposal.code]).length!==1) return false;
+  const fields=readIssueFields(issue.body);
+  const raw=field(fields,"Public confirmation or context (optional)").trim();
+  const legacy=/^(https:\/\/t\.me\/[A-Za-z][A-Za-z0-9_]{4,31}) \(Telegram profile only, not source-post evidence\)$/.exec(raw);
+  const source=parsePublicSource(legacy?.[1]||raw);
+  const entry=proposal.data.find(row=>row.code===proposal.code);
+  return Boolean(source?.platform==="Telegram" && !source.post &&
+    entry && entry.id==="community-issue-"+issue.number &&
+    entry.feedbackIssueNumber===issue.number &&
+    entry.sourceUrl===source.url && entry.sourceUrl===parsed.data.find(row=>row.code===proposal.code)?.sourceUrl &&
+    entry.status==="unverified" && entry.submittedBy===undefined &&
+    entry.submittedById===undefined && entry.ownerConfirmed!==true &&
+    entry.featured!==true && entry.reportedUses===undefined &&
+    entry.reportedCapacity===undefined && entry.reportedRemaining===undefined);
+}
+
 const apiRoot="https://api.github.com/repos/"+REPO+"/";
 async function api(method,path,token,payload,allow404=false) {
   const response = await fetch(apiRoot+path,{
@@ -909,16 +937,24 @@ async function propose(issue,token) {
     await api("POST","git/refs",token,{ref:"refs/heads/"+proposed.branch,sha:commit.sha});
   }
   const socialAutoPublish=isAutoPublishableNewSocialInvite(issue,proposed);
-  const autoPublish=isAutoPublishableNewGithubInvite(issue,proposed)||socialAutoPublish;
+  const telegramAutoPublish=isAutoPublishableNewTelegramInvite(issue,proposed);
+  const autoPublish=isAutoPublishableNewGithubInvite(issue,proposed)||
+    socialAutoPublish||telegramAutoPublish;
   const title="data: review "+codesLabel+" "+proposed.kind+" (issue #"+issue.number+")";
+  const sourceFields=readIssueFields(issue.body);
+  const telegramSource=parsePublicSource(sourceFields["Public confirmation or context (optional)"]||"");
+  const telegramAttribution=telegramSource?.platform==="Telegram"
+    ? "@"+telegramSource.handle
+    : sourceFields["Telegram contributor"]?.split(" ")[0]||"unknown";
   const body=[
-    autoPublish ? (socialAutoPublish
-      ? AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER : AUTO_PUBLISH_NEW_INVITE_MARKER) : "",
+    autoPublish ? (telegramAutoPublish ? AUTO_PUBLISH_NEW_TELEGRAM_INVITE_MARKER
+      : socialAutoPublish ? AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER
+      : AUTO_PUBLISH_NEW_INVITE_MARKER) : "",
     autoPublish ? "## Automated community submission — automatic publication after validation" :
       "## Automated draft proposal",
     "",
     proposed.action==="add Telegram source"
-      ? "Prepared from consented Telegram contributor "+readIssueFields(issue.body)["Telegram contributor"]?.split(" ")[0]+" in public Issue #"+issue.number+". GitHub Issue author @"+issue.user.login+" is the bot credential, not the code owner."
+      ? "Prepared from consented Telegram contributor "+telegramAttribution+" in public Issue #"+issue.number+". GitHub Issue author @"+issue.user.login+" is the bot credential, not the code owner."
       : "Prepared from public Issue #"+issue.number+" by @"+issue.user.login+".",
     (codes.length===1?"Code: **":"Codes: **")+codesLabel+"**. Change: **"+proposed.action+"**.",
     "",
@@ -926,15 +962,17 @@ async function propose(issue,token) {
     "",
     ...(autoPublish
       ? ["### Automatic publication checks",
-         socialAutoPublish
-           ? "- [x] Reporter selected a syntactically valid public post URL and checked both confirmations"
-           : "- [x] Contributor selected GitHub (my own code) and checked both confirmations",
+         telegramAutoPublish
+           ? "- [x] Bot-issued Telegram marker, consented public @username and matching t.me profile; this is not ownership proof"
+           : socialAutoPublish
+             ? "- [x] Reporter selected a syntactically valid public post URL and checked both confirmations"
+             : "- [x] Contributor selected GitHub (my own code) and checked both confirmations",
          "- [x] New code only; data generated by the trusted Issue bot",
          "- [ ] Re-check Issue content, exact per-code records, duplicates and current main",
          "- [ ] Full CI must pass for the current PR head",
          "",
          "**Automatically publish as unverified only after all checks pass.** "+
-           "This does not independently verify the source post, Muse redemption or actual ownership. "+
+           "This does not independently verify any source post, Telegram profile ownership, Muse redemption or actual code ownership. "+
            "Contributors are responsible for what they submit; visitors must check the original source and code themselves."]
       : ["### Required human checks",
          "- [ ] Verify the submitter, code and any ownership or usage claims",
@@ -984,7 +1022,8 @@ async function propose(issue,token) {
   }
   await comment(issue,token,autoPublish
     ? "Created [PR #"+pr.number+"]("+pr.html_url+") for **"+codesLabel+
-      "**. This new "+(socialAutoPublish?"public-post-reported":"GitHub-sourced")+
+      "**. This new "+(telegramAutoPublish?"Telegram community-reported":
+        socialAutoPublish?"public-post-reported":"GitHub-sourced")+
       " code is eligible for automatic publication "+
       "as **unverified** after CI, source/consent checks and duplicate checks pass. "+
       "The Issue stays open until successful deployment."
@@ -1032,8 +1071,8 @@ export async function runIssueAutomation({
       return resolved;
     }
     if(result.outcome==="already-open"){
-      await comment(issue,token,"A [Draft PR]("+result.url+") already exists for this Issue. "+
-        "Review the existing proposal; no duplicate branch was created.");
+      await comment(issue,token,"A [PR]("+result.url+") already exists for this Issue. "+
+        "Check the existing proposal; no duplicate branch was created.");
     }
     if(result.outcome==="blocked")process.exitCode=1;
     if(result.outcome!=="created")console.log("No new PR created: "+(result.reason||result.outcome));
