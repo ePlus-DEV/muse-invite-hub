@@ -211,7 +211,7 @@ test("paged list -> code detail -> back to same page -> home without public writ
   assert.equal((f.messages.at(-1).text.match(/CODE00/g)||[]).length,0,
     "Invite codes appear in selectable buttons rather than twice in text and buttons");
   assert.equal(f.messages.at(-1).buttons[5][0].data,"t:page:1");
-  assert.equal(f.messages.at(-1).buttons[6][1].data,"t:home");
+  assert.equal(f.messages.at(-1).buttons[6][2].data,"t:home");
   assert.equal((await f.profiles.get(42)).browse.page,0);
   assert.equal(await handleInteractive({action:{type:"page",page:1,chatId:42},...f.calls}),true);
   assert.equal(requests.at(-1).offset,5);
