@@ -400,10 +400,16 @@ test("owner-count comment requires real, consistent figures before Safari copy",
   assert.match(remainingOnly.text, /Owner confirmation: I confirm these figures/);
 
   const totalUsed = features.prepareOwnerCountComment(template
-    .replace("Total invites: [optional]", "Total invites: 30")
+    .replace("[enter actual number or leave blank]", "3")
     .replace("Used invites: [optional]", "Used invites: 27"));
   assert.equal(totalUsed.error, undefined);
-  assert.match(totalUsed.text, /Total invites: 30/);
+  assert.match(totalUsed.text, /Remaining invites: 3/);
+  assert.match(totalUsed.text, /Used invites: 27/);
+  assert.doesNotMatch(totalUsed.text, /Total invites:/);
+  // Preserve old manually authored comments that explicitly contain Total.
+  const legacy=features.prepareOwnerCountComment(
+    "Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 3\nTotal invites: 30\nUsed invites: 27\nOwner confirmation: [confirm this report below]");
+  assert.equal(legacy.error,undefined);
 
   for (const invalid of [
     template.replace("Total invites: [optional]", "Total invites: 30"),
@@ -412,8 +418,7 @@ test("owner-count comment requires real, consistent figures before Safari copy",
     template.replace("Total invites: [optional]", "Total invites: 5")
       .replace("Used invites: [optional]", "Used invites: 6"),
     template.replace("[enter actual number or leave blank]", "8")
-      .replace("Total invites: [optional]", "Total invites: 10")
-      .replace("Used invites: [optional]", "Used invites: 1"),
+      .replace("Used invites: [optional]", "Used invites: 23"),
     template.replace("Remaining invites: [enter actual number or leave blank]",
       "Remaining invites: 2\nRemaining invites: 3")
   ]) {
