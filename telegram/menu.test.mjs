@@ -151,6 +151,39 @@ test("Refresh fetches the latest catalog again without creating pending submissi
   assert.match(f.messages.at(-1).text,/Reported 3 remaining/);
 });
 
+test("inline Refresh edits in place, preserves the current filter and never duplicates unchanged cards",async()=>{
+  const f=fixture();
+  const requests=[],edited=[],toasts=[];
+  f.calls.services.browseCodes=async options=>{
+    requests.push(options);
+    return [{code:"DPNIHH",status:"unverified",remaining:23,usageReportedAt:"2026-11-15"}];
+  };
+  f.calls.edit=async (chat,id,text,buttons)=>{
+    edited.push({chat,id,text,buttons});
+    throw Error("Telegram editMessageText HTTP 400: Bad Request: message is not modified");
+  };
+  f.calls.acknowledge=async text=>toasts.push(text);
+  await f.run("/search DPN");
+  const count=f.messages.length;
+  const refresh={type:"refresh",chatId:42,callbackId:"cb",messageId:123};
+  assert.equal(await handleInteractive({action:refresh,...f.calls}),true);
+  assert.equal(f.messages.length,count,"Do not send another message on no-op refresh");
+  assert.equal(requests.at(-1).query,"DPN");
+  assert.equal(requests.at(-1).newest,false);
+  assert.equal(edited.at(-1).id,123);
+  assert.deepEqual(toasts,["Already up to date"]);
+  const detail={type:"refresh-code",code:"DPNIHH",chatId:42,callbackId:"cb2",messageId:124};
+  assert.equal(await handleInteractive({action:detail,...f.calls}),true);
+  assert.equal(f.messages.length,count,"No new detail card after Telegram no-change response");
+  assert.equal(edited.at(-1).id,124);
+  assert.deepEqual(toasts,["Already up to date","Already up to date"]);
+  f.calls.edit=async()=>{throw Error("Telegram API timeout");};
+  assert.equal(await handleInteractive({action:detail,...f.calls}),true);
+  assert.equal(f.messages.length,count,"Errors during refresh should not spam the chat");
+  assert.equal(toasts.at(-1),"Could not refresh. Try again.");
+  assert.deepEqual((await f.profiles.get(42)).browse,{query:"DPN",newest:false,page:0});
+});
+
 test("paged list -> code detail -> back to same page -> home without public writes",async()=>{
   const f=fixture();
   const rows=Array.from({length:12},(_,i)=>({
