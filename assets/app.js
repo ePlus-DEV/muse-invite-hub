@@ -152,6 +152,7 @@
         ["default","reported","reported-remaining"].includes(projection.basis)) {
       return {
         remaining:projection.remaining,total:projection.capacity,
+        used:projection.capacity-projection.remaining,
         date:projection.reportedAt?formatDate(projection.reportedAt):null,
         basis:projection.basis
       };
@@ -162,21 +163,21 @@
       if (["reportedRemaining","reportedCapacity","reportedUses"].some(key=>
           item[key]!==undefined)) return null;
       return {remaining:MAX_INVITES_PER_CODE,total:MAX_INVITES_PER_CODE,
-        date:null,basis:"default"};
+        used:0,date:null,basis:"default"};
     }
     const date=formatDate(item.usageReportedAt);
     if (Number.isSafeInteger(item.reportedRemaining) &&
         item.reportedRemaining>=0 && item.reportedRemaining<=MAX_INVITES_PER_CODE &&
         item.reportedCapacity===undefined && item.reportedUses===undefined) {
       return {remaining:item.reportedRemaining,total:MAX_INVITES_PER_CODE,
-        date,basis:"reported-remaining"};
+        used:MAX_INVITES_PER_CODE-item.reportedRemaining,date,basis:"reported-remaining"};
     }
     if (!Number.isSafeInteger(item.reportedCapacity) ||
         !Number.isSafeInteger(item.reportedUses) ||
         item.reportedCapacity<1 || item.reportedCapacity>MAX_INVITES_PER_CODE ||
         item.reportedUses<0 || item.reportedUses>item.reportedCapacity) return null;
     return {remaining:item.reportedCapacity-item.reportedUses,
-      total:item.reportedCapacity,date,basis:"reported"};
+      total:item.reportedCapacity,used:item.reportedUses,date,basis:"reported"};
   }
   function setStat(id, value) {
     const target = document.getElementById(id);
@@ -346,8 +347,10 @@
       : "Not reported";
     amount.title = remaining
       ? remaining.basis==="default"
-        ? "Policy default: 30 invites per code. No count was reported; actual availability is unknown."
-        : "Community count reported " + remaining.date + ". Not live Muse availability."
+        ? "Policy default: 30/30 displayed, 0 used estimated. No owner report; actual availability is unknown."
+        : "Community count reported " + remaining.date + "; " + remaining.used +
+          (remaining.basis==="reported-remaining" ? " used estimated against 30 max." : " used reported.") +
+          " Not live Muse availability."
       : "An incomplete or invalid report has not been published as a balance.";
     amount.setAttribute("aria-label", "Availability: " + availability +
       (remaining?.date ? ", as of " + remaining.date + ", not live" :
