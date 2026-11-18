@@ -131,6 +131,16 @@ test("detail visual restructure keeps SEO metadata, readable links and structure
   assert.match(generateSitemap([item]), /\/codes\/DPNIHH\//);
 });
 
+test("detail page never represents an invalid >30 quota as available invites",()=>{
+  const overTotal=renderDetailPage({...owner(),reportedCapacity:31,reportedUses:0});
+  const overRemaining=renderDetailPage({...owner(),reportedCapacity:undefined,
+    reportedUses:undefined,reportedRemaining:31});
+  for(const html of [overTotal,overRemaining]){
+    assert.match(html,/Not reported/);
+    assert.doesNotMatch(html,/31 of 31 invites remained/);
+  }
+});
+
 test("unreported community codes do not invent quota or update history", () => {
   const html=renderDetailPage(community());
   assert.match(html, /class="detail-slots-number">Not reported<\/strong>/);
