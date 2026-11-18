@@ -47,7 +47,6 @@ const telegramBody=(code="ABC123",handle="alice_dev") => [
   "### Social post or profile URL (required for Threads, X or Facebook)","","_No response_","",
   "### Public confirmation or context (optional)","","https://t.me/"+handle,"",
   "### Remaining invites (optional; self-reported)","","_No response_","",
-  "### Uses so far (optional; self-reported)","","_No response_","",
   "### Notes (optional)","","Submitted via Telegram by @"+handle+
     ". Human review required; public profile is not proof of code ownership, redemption or quota.","",
   "### Contributor checklist","",
@@ -483,27 +482,27 @@ const updatedShare = (source, url="", quota=false) => [
   "- [x] This code is not a password, 2FA code, session token or private credential."
 ].join("\n");
 
-test("all new GitHub form quota inputs accept remaining plus used without Total",()=>{
+test("new GitHub Share Code form exposes only remaining count, preserving unknown totals",()=>{
   const form=readFileSync(new URL("../.github/ISSUE_TEMPLATE/share-code.yml",import.meta.url),"utf8");
   const labels=[...form.matchAll(/^\s{6}label: (.+)$/gm)].map(row=>row[1]);
   assert.ok(labels.includes("Remaining invites (optional; self-reported)"));
-  assert.ok(labels.includes("Uses so far (optional; self-reported)"));
+  assert.ok(!labels.includes("Uses so far (optional; self-reported)"));
   assert.ok(!labels.includes("Invite limit (optional; self-reported)"));
   const body=updatedShare("GitHub (my own code)")
     .replace('### Invite limit (optional; self-reported)\n\n_No response_\n','')
+    .replace('### Uses so far (optional; self-reported)\n\n_No response_\n','')
     .replace('### Remaining invites (optional; self-reported)\n\n_No response_',
-      '### Remaining invites (optional; self-reported)\n\n19')
-    .replace('### Uses so far (optional; self-reported)\n\n_No response_',
-      '### Uses so far (optional; self-reported)\n\n1');
+      '### Remaining invites (optional; self-reported)\n\n19');
   const proposal=planIssueChange(issue(65,"[Invite]",body,"github-report"),[item]);
   assert.equal(proposal.outcome,"proposal");
-  const updated=proposal.data.find(x=>x.code==="18I70N");
-  assert.deepEqual([updated.reportedCapacity,updated.reportedUses],[20,1]);
-  assert.equal(updated.reportedRemaining,undefined);
+  const added=proposal.data.find(x=>x.code==="18I70N");
+  assert.equal(added.reportedRemaining,19);
+  assert.equal(added.reportedCapacity,undefined);
+  assert.equal(added.reportedUses,undefined);
   assert.deepEqual(validateCatalog(proposal.data),[]);
   const invalid=body.replace('Remaining invites (optional; self-reported)\n\n19',
-    'Remaining invites (optional; self-reported)\n\n30');
-  assert.throws(()=>planIssueChange(issue(65,"[Invite]",invalid,"github-report"),[item]),/Remaining plus used/);
+    'Remaining invites (optional; self-reported)\n\n31');
+  assert.throws(()=>planIssueChange(issue(65,"[Invite]",invalid,"github-report"),/0 and 30/));
 });
 
 test("new GitHub form keeps GitHub authorship and owner quota safely", () => {
