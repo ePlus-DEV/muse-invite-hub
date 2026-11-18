@@ -60,13 +60,14 @@ function narrativeOwnerCount(issue, comment, catalog, code, item) {
     if (number > MAX_INVITES_PER_CODE) return review("Invite count cannot exceed "+MAX_INVITES_PER_CODE+" per code.");
     values.set(key, number);
   }
-  if (!["total invites","remaining invites","used invites"].every(key => values.has(key))) {
-    return review("Provide all three owner-count figures: total, remaining and used.");
+  if (!["remaining invites","used invites"].every(key => values.has(key))) {
+    return review("Provide remaining and used invite counts; total is calculated automatically.");
   }
-  const total = values.get("total invites");
   const remaining = values.get("remaining invites");
   const used = values.get("used invites");
-  if (total <= 0 || used > total || remaining > total || total - used !== remaining) {
+  const total = values.get("total invites") ?? remaining + used;
+  if (total <= 0 || total > MAX_INVITES_PER_CODE ||
+      used > total || remaining > total || total - used !== remaining) {
     return review("Owner-count figures do not reconcile (total - used must equal remaining).");
   }
   if (!Number.isFinite(Date.parse(comment.created_at || ""))) {
@@ -94,10 +95,10 @@ function narrativeOwnerCount(issue, comment, catalog, code, item) {
     outcome:"proposal",kind:"count",code,action:"review owner-reported count",data,
     branch:"auto/comment-"+issue.number+"-"+comment.id+"-count",
     issueNumber:issue.number,commentId:comment.id,reporter:comment.user.login,
-    notice:"The original owner-authored comment reports "+total+" total, "+used+
-      " used and "+remaining+" remaining. The comment does NOT explicitly say these "+
-      "figures came from the owner's own Muse invite screen. Obtain that confirmation "+
-      "before merging. This is not a live or Muse-verified balance."
+    notice:"The original owner-authored comment reports "+used+" used and "+remaining+
+      " remaining. Total "+total+" is "+(values.has("total invites")?"also explicitly reported":"calculated from those two values")+
+      ". The comment does NOT explicitly say these figures came from the owner's own Muse invite screen. "+
+      "Obtain that confirmation before merging. This is not a live or Muse-verified balance."
   };
 }
 
