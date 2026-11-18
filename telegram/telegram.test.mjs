@@ -371,27 +371,28 @@ test("deployment sources never embed real credentials or auto-publish third-part
   assert.doesNotMatch(workflow,/push:\s*\n\s*branches:/);
 });
 
-test("OCI menu sync persists its version on disk and recognizes old buttons",async()=>{
+test("OCI menu version syncs silently, Settings drops Refresh menu, old buttons keep working",async()=>{
   await withApp(async({post,sent,dir})=>{
     const before=sent.length;
     assert.equal((await post(message(2900,"🎟 Get codes"))).status,200);
     const changed=sent.slice(before);
     assert.equal(changed.filter(x=>x.payload?.reply_markup?.inline_keyboard).length,1);
-    assert.equal(changed.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
-    assert.equal(changed.find(x=>x.payload?.reply_markup?.keyboard)
-      .payload.reply_markup.keyboard.length,3);
+    assert.equal(changed.filter(x=>x.payload?.reply_markup?.keyboard).length,0,
+      "A stale menu version must not add a standalone keyboard message");
     const state=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"));
     assert.match(state["42"].menuVersion,/^v1-[0-9a-f]{8}$/);
     assert.equal((await post(message(2901,"🎟 Get codes"))).status,200);
-    assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+    assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,0);
     assert.equal((await post(message(2902,"/menu"))).status,200);
-    assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,2);
+    assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
     assert.equal((await post(message(2903,"/settings"))).status,200);
     const settings=sent.findLast(x=>x.payload?.reply_markup?.inline_keyboard);
-    assert.ok(settings.payload.reply_markup.inline_keyboard.some(row=>
-      row.some(btn=>btn.callback_data==="t:menu:refresh")));
+    assert.equal(settings.payload.reply_markup.inline_keyboard.some(row=>
+      row.some(btn=>btn.callback_data==="t:menu:refresh")),false,
+      "Settings no longer carries the Refresh menu workaround button");
     assert.equal((await post(callback(2904,"t:menu:refresh"))).status,200);
-    assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,3);
+    assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,2,
+      "Panels saved before the cleanup can still use their Refresh menu button");
   });
 });
 
@@ -404,6 +405,9 @@ test("OCI /menu refresh resets stale panel so next Search prompt is visible",asy
     assert.equal((await post(message(2952,"/menu"))).status,200);
     const fresh=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"];
     assert.equal(fresh.panelMessageId,null,"Refresh detaches the earlier navigation panel");
+    assert.ok(sent.some(x=>x.name==="deleteMessage"&&
+      x.payload.message_id===before.panelMessageId),
+      "Refresh deletes the earlier navigation panel instead of leaving it in the chat");
     const size=sent.length;
     assert.equal((await post(message(2953,"🔎 Search"))).status,200);
     const after=sent.slice(size);

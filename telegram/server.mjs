@@ -99,6 +99,9 @@ export function createTelegramApp({
       chat_id:chatId,text,disable_web_page_preview:true,reply_markup:replyKeyboard(language,role)
     });
   }
+  async function removeMessage(chatId,messageId) {
+    return call("deleteMessage",{chat_id:chatId,message_id:messageId});
+  }
   function allowWrite(chatId,updateId,kind,code) {
     const now=Date.now();
     const key=String(chatId);
@@ -148,13 +151,10 @@ export function createTelegramApp({
       const acknowledge=async text=>call("answerCallbackQuery",{
         callback_query_id:action.callbackId,...(text?{text}:{})
       });
-      // Capture pre-action state: a first-time user opening a new inline
-      // panel must not receive an unsolicited second message.
-      const priorProfile=await profiles.get(chatId);
       action=await resolveInput(action,profiles);
-      const menuSync=createMenuSync({profiles,sendMenu,action,priorProfile});
-      // Reply Keyboards cannot be edited in place. Update before processing
-      // so the response to the user's original action remains the final item.
+      const menuSync=createMenuSync({profiles,sendMenu,removeMessage,action});
+      // Silent menu-version bookkeeping only: this never sends a message,
+      // so the response to the user's action remains the only new item.
       await menuSync.syncIfNeeded(chatId);
       if(await handleInteractive({action,profiles,send,
         sendMenu:menuSync.trackedSendMenu,edit,
