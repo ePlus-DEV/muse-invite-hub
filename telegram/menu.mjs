@@ -51,7 +51,9 @@ export function codeDescription(entry,language="en") {
     entry.status==="reported-not-working"?"cardStatusFailed":"statusUnverified";
   const count=entry.remaining===null||entry.remaining===undefined
     ? tr(language,"cardUnknown")
-    : tr(language,"cardRemaining",{count:entry.remaining,date:entry.usageReportedAt});
+    : entry.basis==="default" && entry.remaining===30 && !entry.usageReportedAt
+      ? tr(language,"listDefaultCount")
+      : tr(language,"cardRemaining",{count:entry.remaining,date:entry.usageReportedAt});
   const extra=[
     tr(language,"platformLabel")+" "+(entry.platform||"GitHub"),
     ...(entry.submittedBy?[tr(language,"contributorLabel")+" "+entry.submittedBy]:[]),
