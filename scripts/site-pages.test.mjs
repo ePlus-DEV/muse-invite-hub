@@ -147,6 +147,7 @@ test("unreported community codes show policy default but no owner report or upda
   assert.match(html, /class="detail-stat-date">No report<\/strong>/);
   assert.match(html, /class="detail-stat-updates">—<\/strong>/);
   assert.match(html, /Default 30-slot estimate · No owner report · Not live/);
+  assert.match(html, /<dt>Used invites<\/dt><dd>0 \(default estimate, unconfirmed\)<\/dd>/);
   assert.equal((html.match(/class="detail-stats"/g)||[]).length,1);
   assert.equal((html.match(/<h1\b/g)||[]).length,1);
 });
