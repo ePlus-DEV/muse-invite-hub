@@ -40,7 +40,7 @@ test("owner detail is HTML with canonical, status, structured data and dated quo
   assert.match(html, /<h1 id="detail-title">Invite code <span class="detail-title-code">DPNIHH<\/span><\/h1>/);
   assert.match(html, /<p class="detail-code-text" id="detail-code">DPNIHH<\/p>/);
   assert.match(html, /class="detail-page-intro"/);
-  assert.match(html, /class="detail-stats" aria-label="Community-reported invitation statistics"/);
+  assert.match(html, /class="detail-stats" aria-label="Invite quota information"/);
   assert.equal((html.match(/<h1\b/g)||[]).length,1,"Exactly one visible and SEO-readable H1");
   assert.equal((html.match(/id="detail-code"/g)||[]).length,1,"Only one copy source ID");
   assert.doesNotMatch(html, /<p class="detail-code" id="detail-code">/);
