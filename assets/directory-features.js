@@ -114,7 +114,6 @@
     if (outcome === "count") {
       return "Code: " + code + "\nUpdate type: Owner count" +
         "\nRemaining invites: [enter actual number or leave blank]" +
-        "\nTotal invites: [optional]" +
         "\nUsed invites: [optional]" +
         "\nOwner confirmation: [confirm this report below]";
     }
@@ -164,8 +163,14 @@
     const total = fields["Total invites"];
     const used = fields["Used invites"];
     if (remaining === null && (total === null || used === null)) {
-      return {error: "Enter your actual Remaining invites number, or both Total invites and Used invites, before copying."};
+      return {error: "Enter the remaining invites shown in Muse (0–30). Used invites is optional."};
     }
+    if (remaining !== null && used !== null && total === null &&
+        (remaining + used < 1 || remaining + used > MAX_INVITES_PER_CODE)) {
+      return {error: "Remaining + used must be between 1 and 30 invites."};
+    }
+    // Older manually edited comments can still include a total; do not
+    // discard or reinterpret that explicit third value.
     if ((total !== null && total < 1) ||
         (total !== null && used !== null && used > total) ||
         (remaining !== null && total !== null && remaining > total) ||
@@ -181,10 +186,9 @@
 
   // The form generates the canonical text; visitors never need to edit code or
   // placeholder labels just to report their remaining slots.
-  function ownerCountComment(code, remaining = "", total = "", used = "") {
+  function ownerCountComment(code, remaining = "", used = "") {
     return feedbackComment(code, "count")
       .replace("[enter actual number or leave blank]", String(remaining).trim())
-      .replace("Total invites: [optional]", "Total invites: " + String(total).trim())
       .replace("Used invites: [optional]", "Used invites: " + String(used).trim());
   }
 
@@ -231,36 +235,22 @@
     remainingInput.placeholder = "e.g. 3";
     remainingInput.setAttribute("aria-describedby", "feedback-count-hint");
     remainingHint.id = "feedback-count-hint";
-    const optionalCounts = document.createElement("details");
-    optionalCounts.className = "feedback-count-extra";
-    const optionalSummary = document.createElement("summary");
-    optionalSummary.textContent = "Total and used invites (if known)";
-    const optionalHelp = document.createElement("p");
-    optionalHelp.textContent = "Maximum 30 invites per code. If this code already has a reviewed total, you may leave Total and Used blank when reporting only remaining; the review process retains the previous total and derives Used. If the total changed, enter the updated figures.";
-    optionalHelp.className = "feedback-count-hint";
-    const optionalGrid = document.createElement("div");
-    optionalGrid.className = "feedback-count-grid";
-    function optionalCountField(id, text, placeholder) {
-      const wrapper = document.createElement("div");
-      const label = document.createElement("label");
-      label.setAttribute("for", id);
-      label.textContent = text;
-      const input = document.createElement("input");
-      input.id = id;
-      input.type = "text";
-      input.inputMode = "numeric";
-      input.pattern = "[0-9]*";
-      input.maxLength = 2;
-      input.autocomplete = "off";
-      input.placeholder = placeholder;
-      wrapper.append(label, input);
-      return { wrapper, input };
-    }
-    const totalField = optionalCountField("feedback-count-total", "Total invites", "e.g. 30");
-    const usedField = optionalCountField("feedback-count-used", "Used invites", "e.g. 27");
-    optionalGrid.append(totalField.wrapper, usedField.wrapper);
-    optionalCounts.append(optionalSummary, optionalHelp, optionalGrid);
-    countFields.append(remainingLabel, remainingHint, remainingInput, optionalCounts);
+    const usedLabel = document.createElement("label");
+    usedLabel.setAttribute("for", "feedback-count-used");
+    usedLabel.textContent = "Used invites (optional)";
+    const usedInput = document.createElement("input");
+    usedInput.id = "feedback-count-used";
+    usedInput.type = "text";
+    usedInput.inputMode = "numeric";
+    usedInput.pattern = "[0-9]*";
+    usedInput.maxLength = 2;
+    usedInput.autocomplete = "off";
+    usedInput.placeholder = "e.g. 11";
+    const usedHint = document.createElement("p");
+    usedHint.className = "feedback-count-hint";
+    usedHint.textContent = "Leave blank if unknown. With both numbers, total = remaining + used (maximum 30); otherwise the bot retains an earlier reviewed total if available.";
+    countFields.append(remainingLabel, remainingHint, remainingInput,
+      usedLabel, usedInput, usedHint);
     countFields.hidden = true;
 
     const commentEditor = document.createElement("details");
@@ -270,11 +260,10 @@
     commentEditor.append(commentSummary, label, textarea);
     function refreshOwnerComment() {
       if (activeOutcome !== "count") return;
-      textarea.value = ownerCountComment(activeCode, remainingInput.value,
-        totalField.input.value, usedField.input.value);
+      textarea.value = ownerCountComment(activeCode, remainingInput.value, usedInput.value);
       feedbackStatus.textContent = "";
     }
-    for (const input of [remainingInput, totalField.input, usedField.input]) {
+    for (const input of [remainingInput, usedInput]) {
       input.addEventListener("input", refreshOwnerComment);
     }
     const ownerConfirm = document.createElement("label");
@@ -317,18 +306,12 @@
     copy.addEventListener("click", async () => {
       let text = textarea.value.trim();
       if (activeOutcome === "count") {
-        const structured = ownerCountComment(activeCode, remainingInput.value,
-          totalField.input.value, usedField.input.value);
+        const structured = ownerCountComment(activeCode, remainingInput.value, usedInput.value);
         const numbers = prepareOwnerCountComment(structured);
         if (numbers.error) {
           feedbackStatus.textContent = numbers.error;
-          if (!remainingInput.value.trim() &&
-              (!totalField.input.value.trim() || !usedField.input.value.trim())) {
-            remainingInput.focus();
-          } else {
-            optionalCounts.open = true;
-            (totalField.input.value.trim() ? usedField.input : totalField.input).focus();
-          }
+          if (!remainingInput.value.trim()) remainingInput.focus();
+          else usedInput.focus();
           return;
         }
         if (!ownerCheckbox.checked) {
@@ -400,9 +383,7 @@
         ownerConfirm.hidden = !isCount;
         countFields.hidden = !isCount;
         remainingInput.value = "";
-        totalField.input.value = "";
-        usedField.input.value = "";
-        optionalCounts.open = false;
+        usedInput.value = "";
         commentEditor.open = !isCount;
         copy.textContent = isCount ? "Copy report" : "Copy comment";
         label.textContent = isCount ? "Prepared GitHub comment (editable)" : "Your comment (editable)";
