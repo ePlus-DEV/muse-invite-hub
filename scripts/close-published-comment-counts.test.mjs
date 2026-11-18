@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  commentCountCandidate, matchesPublishedQuota, sameQuota, closePublishedCommentCounts
+  commentCountCandidate, matchesPublishedQuota, sameQuota,
+  canonicalOwnerCountIssue, closePublishedCommentCounts
 } from "./close-published-comment-counts.mjs";
 
 const repo="ePlus-DEV/muse-invite-hub", code="DPNIHH", commentId=6889445306;
@@ -239,6 +240,59 @@ test("auto-triage an unrelated new invite comment before closing a reviewed owne
     assert.equal((await run(pending)).closed,0);
     assert.ok(!pending.events.includes("PATCH issues/14"));
   }
+});
+
+test("Issue #188: per-record canonical Issue mapping works when legacy map is missing",async()=>{
+  const real={
+    id:"community-issue-188",code:"BN5LUW",
+    submittedBy:"Brearu",submittedById:260433262,
+    feedbackIssueNumber:188,reportedCapacity:30,reportedUses:0,
+    usageReportedAt:"2026-11-18"
+  };
+  assert.equal(canonicalOwnerCountIssue(real,{},"BN5LUW",188),true);
+  assert.equal(canonicalOwnerCountIssue(real,{BN5LUW:188},"BN5LUW",188),true);
+  assert.equal(canonicalOwnerCountIssue(real,{BN5LUW:189},"BN5LUW",188),false);
+  assert.equal(canonicalOwnerCountIssue({...real,feedbackIssueNumber:189},{},
+    "BN5LUW",188),false);
+  assert.equal(canonicalOwnerCountIssue({...real,feedbackIssueNumber:undefined,
+    id:"another-record"},{}, "BN5LUW",188),false);
+  assert.equal(canonicalOwnerCountIssue(real,{BN5LUW:"188"},"BN5LUW",188),false);
+  assert.equal(canonicalOwnerCountIssue(real,{},"OTHER1",188),false);
+  // The existing, reviewed comment and production checks still govern closure.
+  // Only the previously stale legacy-map precondition is relaxed.
+  const done=mock();
+  const reconciled=await closePublishedCommentCounts({
+    token:"test",repository:repo,deployedSha:deployed,
+    request:done.request,catalog:[record],mapping:{}
+  });
+  assert.deepEqual(reconciled,{notified:1,closed:1,pending:0,skipped:0});
+  const wrong=mock();
+  const blocked=await closePublishedCommentCounts({
+    token:"test",repository:repo,deployedSha:deployed,
+    request:wrong.request,catalog:[record],mapping:{DPNIHH:19}
+  });
+  assert.equal(blocked.notified,0);
+  assert.equal(blocked.closed,0);
+  assert.equal(blocked.pending,1);
+  assert.equal(wrong.issue.state,"open");
+});
+
+test("PR #304 owner-count source matches trusted comment provenance",()=>{
+  const commentNo=6968401230;
+  const sourcePr={
+    ...pr,number:304,
+    title:"data: review BN5LUW count from comment #"+commentNo,
+    body:"## Community feedback — requires human review\\n\\nOriginal Issue: #188\\n"+
+      "Source comment: https://github.com/"+repo+
+      "/issues/188#issuecomment-"+commentNo+"\\n"+
+      "Reporter: @Brearu\\nCode: **BN5LUW**\\nAction: update quota\\n",
+    head:{ref:"auto/comment-188-"+commentNo+"-count",repo:{full_name:repo}},
+    merge_commit_sha:merged
+  };
+  assert.deepEqual(commentCountCandidate(sourcePr),{
+    issueNumber:188,commentId:commentNo,code:"BN5LUW",prNumber:304,
+    mergeSha:merged,provenance:"auto",allowNarrative:false
+  });
 });
 
 test("match only the owner-confirmed source comment and exact dated count",()=>{
