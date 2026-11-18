@@ -11,9 +11,9 @@ test("all Telegram copy is translated consistently with matching placeholders",(
   assert.deepEqual(LOCALES,["en","vi","ja"]);
   assert.deepEqual(translationCoverage().map(x=>x.missing),[[],[],[]]);
   for(const code of LOCALES){
-    assert.equal(replyKeyboard(code).keyboard.length,4);
-    assert.deepEqual(replyKeyboard(code).keyboard.map(x=>x.length),[3,3,3,1]);
-    assert.equal(replyKeyboard(code).keyboard[3][0],menuText(code,"refresh"));
+    assert.equal(replyKeyboard(code).keyboard.length,3);
+    assert.deepEqual(replyKeyboard(code).keyboard.map(x=>x.length),[3,3,3]);
+    assert.equal(replyKeyboard(code).keyboard.flat().includes(menuText(code,"refresh")),false);
     for(const row of MENU_KEYS)for(const key of row){
       const label=menuText(code,key);
       assert.equal(typeof label,"string");
