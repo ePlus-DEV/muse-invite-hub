@@ -125,7 +125,7 @@ const telegramPR=()=>pr({
     "Code: **ALFA12**. Change: **add Telegram source**."
 });
 const telegramIssue=()=>issue({user:{login:"hoangsvit"},
-  body:telegramBody});
+  created_at:"2026-11-12T00:00:00Z",body:telegramBody});
 const telegramRecord=()=>({id:"community-issue-90",code,
   feedbackIssueNumber:90,sourceUrl:"https://t.me/Metalker",status:"unverified",
   addedAt:"2026-11-12"});
@@ -187,7 +187,7 @@ test("Telegram acceptance never bypasses source, consent, merge, deployment or f
     assert.ok(!m.events.includes("POST issues/90/comments"));
     assert.ok(!m.events.includes("PATCH issues/90"));
   }
-  assert.equal(acceptedCandidate(telegramPR() && pr({
+  assert.equal(acceptedCandidate(pr({
     ...telegramPR(),body:"Prepared from consented Telegram contributor undefined in public Issue #89. "+
     "GitHub Issue author @hoangsvit is the bot credential, not the code owner.\n"+
     "Code: **ALFA12**. Change: **add Telegram source**."
