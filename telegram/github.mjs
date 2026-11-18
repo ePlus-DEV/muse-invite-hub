@@ -71,7 +71,12 @@ export async function browseCodes({query="",newest=false,limit=5,offset=0}={}) {
           else if(["t.me","www.t.me"].includes(host))platform="Telegram";
         } catch { /* Ignore malformed catalog provenance. */ }
       }
-      return {code:row.code,status:row.status,remaining:dated?remaining:null,
+      const policy=row.quotaDisplay;
+      const hasDefault=policy?.basis==="default" && policy.capacity===MAX_INVITES_PER_CODE &&
+        policy.remaining===MAX_INVITES_PER_CODE && policy.reportedAt===null;
+      return {code:row.code,status:row.status,
+        remaining:dated?remaining:hasDefault?MAX_INVITES_PER_CODE:null,
+        basis:dated?"reported":hasDefault?"default":"unknown",
         usageReportedAt:dated?row.usageReportedAt:null,platform,
         submittedBy:typeof row.submittedBy==="string"?row.submittedBy.slice(0,80):
           platform==="Telegram"?new URL(row.sourceUrl).pathname.split("/")[1]||null:null,
@@ -90,8 +95,13 @@ export async function getCodeStatus(code,token) {
     const calculated=Number.isSafeInteger(entry.reportedCapacity)&&
       Number.isSafeInteger(entry.reportedUses)&&entry.reportedCapacity>=entry.reportedUses&&
       entry.reportedUses>=0&&entry.reportedCapacity>0&&entry.reportedCapacity<=MAX_INVITES_PER_CODE ? entry.reportedCapacity-entry.reportedUses : null;
+    const policy=entry.quotaDisplay;
+    const hasDefault=policy?.basis==="default" &&
+      policy.capacity===MAX_INVITES_PER_CODE &&
+      policy.remaining===MAX_INVITES_PER_CODE && policy.reportedAt===null;
     return {kind:"listed",status:entry.status,
       reportedRemaining:dated?(explicit??calculated):null,
+      policyDefaultRemaining:hasDefault?MAX_INVITES_PER_CODE:null,
       usageReportedAt:dated?entry.usageReportedAt:null,
       url:SITE+"/codes/"+encodeURIComponent(code)+"/"};
   }
