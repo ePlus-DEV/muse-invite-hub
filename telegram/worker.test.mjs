@@ -198,6 +198,71 @@ test("Worker paging and code details are navigable without GitHub writes",async(
   assert.equal(await env.BOT_STATE.get("rl:42"),null);
 });
 
+test("Worker lazily migrates old nine-key menus exactly once, without losing the action",async()=>{
+  const env=makeEnv(),{deps,sent}=makeDeps();
+  // Existing profile predates menuVersion and uses the old persistent keyboard.
+  await env.BOT_STATE.put("profile:42",JSON.stringify({
+    role:"seeker",language:"vi",languageManual:true,subscribed:true,
+    watching:["DPNIHH"]
+  }));
+  const original=sent.length;
+  assert.equal((await handleWebhookRequest(webhook(message(2801,"🎟 Nhận mã")),env,deps)).status,200);
+  const changed=sent.slice(original);
+  assert.equal(changed.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+  assert.equal(changed.filter(x=>x.payload?.reply_markup?.inline_keyboard).length,1);
+  const keys=changed.find(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard;
+  assert.deepEqual(keys.map(x=>x.length),[3,2]);
+  const profile=JSON.parse(await env.BOT_STATE.get("profile:42"));
+  assert.match(profile.menuVersion,/^v1-[0-9a-f]{8}$/);
+  assert.deepEqual(profile.watching,["DPNIHH"]);
+  assert.equal(profile.subscribed,true);
+  assert.equal((await handleWebhookRequest(webhook(message(2802,"🎟 Nhận mã")),env,deps)).status,200);
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+  assert.equal((await handleWebhookRequest(webhook(message(2802,"🎟 Nhận mã")),env,deps)).status,200);
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+});
+
+test("Worker /start, Settings Refresh menu and role changes send one keyboard each",async()=>{
+  const env=makeEnv(),{deps,sent}=makeDeps();
+  assert.equal((await handleWebhookRequest(webhook(message(2811,"/start")),env,deps)).status,200);
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+  assert.equal((await handleWebhookRequest(webhook(message(2812,"/settings")),env,deps)).status,200);
+  const settings=sent.findLast(x=>x.payload?.reply_markup?.inline_keyboard);
+  assert.ok(settings.payload.reply_markup.inline_keyboard.some(row=>
+    row.some(btn=>btn.callback_data==="t:menu:refresh")));
+  const count=sent.filter(x=>x.payload?.reply_markup?.keyboard).length;
+  assert.equal((await handleWebhookRequest(webhook(callback(2813,"t:menu:refresh")),env,deps)).status,200);
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,count+1);
+  assert.equal((await handleWebhookRequest(webhook(message(2814,"/menu")),env,deps)).status,200);
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,count+2);
+  assert.equal((await handleWebhookRequest(webhook(callback(2815,"t:role:seeker")),env,deps)).status,200);
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,count+3);
+  const profile=JSON.parse(await env.BOT_STATE.get("profile:42"));
+  assert.equal(profile.role,"seeker");
+});
+
+test("Worker failed automatic keyboard send keeps previous version and never replays the business action",async()=>{
+  const env=makeEnv(),{deps,sent}=makeDeps();
+  await env.BOT_STATE.put("profile:42",JSON.stringify({
+    role:"seeker",language:"en",menuVersion:"v1-deadbeef",watching:["DPNIHH"]
+  }));
+  let fail=true;
+  const original=deps.telegramApi;
+  deps.telegramApi=async(method,payload)=>{
+    if(method==="sendMessage"&&payload.reply_markup?.keyboard&&fail){
+      fail=false;throw Error("Telegram unavailable");
+    }
+    return original(method,payload);
+  };
+  assert.equal((await handleWebhookRequest(webhook(message(2821,"🎟 Get codes")),env,deps)).status,200);
+  assert.equal(await env.BOT_STATE.get("upd:2821"),"1");
+  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).menuVersion,"v1-deadbeef");
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.inline_keyboard).length,1);
+  assert.equal((await handleWebhookRequest(webhook(message(2822,"🎟 Get codes")),env,deps)).status,200);
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+  assert.notEqual(JSON.parse(await env.BOT_STATE.get("profile:42")).menuVersion,"v1-deadbeef");
+});
+
 test("worker status and privacy are read-only",async()=>{
   const env=makeEnv();
   const {deps,sent,calls}=makeDeps();
