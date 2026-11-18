@@ -51,7 +51,7 @@ body:
     id: reported_uses
     attributes:
       label: Uses so far (optional; self-reported)
-      description: "Only for your own GitHub code. Leave blank when submitting multiple codes."
+      description: "Only for your own GitHub code, from your Muse screen; 0–30. Leave blank when submitting multiple codes."
       placeholder: "e.g. 1"
     validations:
       required: false
@@ -59,7 +59,7 @@ body:
     id: reported_capacity
     attributes:
       label: Invite limit (optional; self-reported)
-      description: "Only for your own GitHub code; do not guess."
+      description: "Only for your own GitHub code: maximum 30 invites per code. Enter the actual total only if known; do not assume every code starts with 30."
       placeholder: "e.g. 30"
     validations:
       required: false
@@ -67,7 +67,7 @@ body:
     id: remaining
     attributes:
       label: Remaining invites (optional; self-reported)
-      description: "Only for your own GitHub code, from your Muse invite screen."
+      description: "Only for your own GitHub code, from your Muse invite screen; 0–30. Never infer remaining from the maximum."
       placeholder: "e.g. 17"
     validations:
       required: false
