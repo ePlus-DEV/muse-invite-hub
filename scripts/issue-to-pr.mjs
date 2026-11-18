@@ -168,9 +168,18 @@ function actualQuota(fields, date, labels) {
     }
     return { reportedCapacity: total, reportedUses: count, usageReportedAt: date };
   }
-  // Do not discard a supplied "used" figure merely because total is blank.
-  // The owner must explicitly report the total before we publish a full breakdown.
-  if (used !== null) throw Error("Used invites requires Total invites. Reconfirm the total, or leave Used invites blank.");
+  // Simplified two-number report. When the owner supplies both remaining
+  // and used, their sum is a reported total (not the project's maximum 30).
+  // Never infer a 30-slot allocation from the global upper bound.
+  if (remaining !== null && used !== null) {
+    const derivedTotal = remaining + used;
+    if (derivedTotal < 1 || derivedTotal > MAX_INVITES_PER_CODE) {
+      throw Error("Remaining plus used must total between 1 and "+MAX_INVITES_PER_CODE+" invites.");
+    }
+    return {reportedCapacity:derivedTotal,reportedUses:used,usageReportedAt:date};
+  }
+  // Used-only remains ambiguous when the actual total is unknown.
+  if (used !== null) throw Error("Used invites requires Remaining invites or a known Total invites.");
   if (remaining !== null) return { reportedRemaining: remaining, usageReportedAt: date };
   return null;
 }
