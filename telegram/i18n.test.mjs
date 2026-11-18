@@ -115,8 +115,8 @@ test("onboarding and role-specific menus are translated in all supported languag
   const { ENTRY_MENU_KEYS, ROLE_MENU_KEYS, menuText }=await import("./i18n.mjs");
   const { replyKeyboard,menuChoice }=await import("./menu.mjs");
   assert.deepEqual(ENTRY_MENU_KEYS.map(x=>x.length),[1,1,1]);
-  assert.deepEqual(ROLE_MENU_KEYS.seeker.map(x=>x.length),[3,3,3]);
-  assert.deepEqual(ROLE_MENU_KEYS.contributor.map(x=>x.length),[3,3,3]);
+  assert.deepEqual(ROLE_MENU_KEYS.seeker.map(x=>x.length),[3,2]);
+  assert.deepEqual(ROLE_MENU_KEYS.contributor.map(x=>x.length),[3,2]);
   for(const locale of LOCALES){
     const entry=replyKeyboard(locale,null);
     assert.deepEqual(entry.keyboard.map(x=>x.length),[1,1,1]);
@@ -129,17 +129,20 @@ test("onboarding and role-specific menus are translated in all supported languag
     assert.equal(menuChoice(menuText(locale,"status")),"prompt-status");
     const consumer=replyKeyboard(locale,"seeker").keyboard.flat();
     const contributor=replyKeyboard(locale,"contributor").keyboard.flat();
-    assert.equal(consumer.length,9);
-    assert.equal(contributor.length,9);
+    assert.equal(consumer.length,5);
+    assert.equal(contributor.length,5);
     assert.equal(consumer.includes(menuText(locale,"refresh")),false);
     assert.equal(contributor.includes(menuText(locale,"refresh")),false);
-    assert.ok(consumer.includes(menuText(locale,"need")));
+    assert.ok(!consumer.includes(menuText(locale,"need")));
     assert.ok(consumer.includes(menuText(locale,"browse")));
     assert.ok(contributor.includes(menuText(locale,"submit")));
     assert.ok(contributor.includes(menuText(locale,"mine")));
     assert.ok(contributor.includes(menuText(locale,"status")));
-    assert.ok(consumer.includes(menuText(locale,"roleSwitch")));
-    assert.ok(contributor.includes(menuText(locale,"roleSwitch")));
+    assert.ok(!consumer.includes(menuText(locale,"roleSwitch")));
+    assert.ok(!contributor.includes(menuText(locale,"roleSwitch")));
+    assert.ok(!consumer.includes(menuText(locale,"notifications")));
+    assert.ok(!contributor.includes(menuText(locale,"report")));
+    assert.ok(consumer.includes(menuText(locale,"settings")));
     assert.ok(!consumer.includes(menuText(locale,"submit")));
     assert.ok(!contributor.includes(menuText(locale,"need")));
     assert.ok(tr(locale,"roleIntro").length>30);
