@@ -149,12 +149,12 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
       const priorProfile=await profiles.get(chatId);
       action=await resolveInput(action,profiles);
       const menuSync=createMenuSync({profiles,sendMenu,action,priorProfile});
+      // Reply Keyboards cannot be edited in place. Update before processing
+      // so the response to the user's original action remains the final item.
+      await menuSync.syncIfNeeded(chatId);
       if(await handleInteractive({action,profiles,send,
         sendMenu:menuSync.trackedSendMenu,edit,
-        acknowledge,services,githubToken})) {
-        await menuSync.syncIfNeeded(chatId);
-        return;
-      }
+        acknowledge,services,githubToken})) return;
       async function complete(message) {
         await send(chatId,message);
         if(action.callbackId&&action.messageId) {
@@ -167,7 +167,6 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
         action,profiles,send,complete,services,githubToken,
         allowWrite:(id,code)=>state.allowWrite(id,action.updateId,action.type,code)
       });
-      await menuSync.syncIfNeeded(chatId);
       return result;
     } catch(error) {
       if(action.callbackId&&["submit","report"].includes(action.type)) {
