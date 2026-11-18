@@ -303,8 +303,6 @@ Git commit SHA, so catalog-only releases do not resend keyboards.
 
 ## Telegram navigation and notification batching (2026-11-18)
 
-## Telegram navigation and notification batching (2026-11-18)
-
 - A **Reply Keyboard** button (Get codes, New codes, Search, Settings, etc.)
   creates a **fresh inline panel at the bottom of the chat**, best-effort
   removing the previous bot-owned panel. The same applies to typed query
