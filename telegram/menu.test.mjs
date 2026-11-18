@@ -120,7 +120,8 @@ test("menu supports browse, get, watch, notification preference, deletion",async
   await f.run("/watch DPNIHH");
   assert.deepEqual((await f.profiles.get(42)).watching,["DPNIHH"]);
   await f.run("📌 Theo dõi");
-  assert.match(f.messages.at(-1).text,/DPNIHH/);
+  assert.equal(f.messages.at(-1).buttons[0][0].text,"🎟 DPNIHH");
+  assert.equal(f.messages.at(-1).buttons[0][1].data,"t:unwatch:DPNIHH");
   await f.run("/subscribe");
   assert.equal((await f.profiles.get(42)).subscribed,true);
   await f.run("🔔 Thông báo");
