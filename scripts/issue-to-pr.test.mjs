@@ -9,9 +9,9 @@ const date="2026-11-11T10:00:00Z";
 const share = [
   "### Invite code","","PNSMZZ","",
   "### Public confirmation or context (optional)","","_No response_","",
+  "### Remaining invites (optional; self-reported)","","_No response_","",
   "### Uses so far (optional; self-reported)","","_No response_","",
   "### Invite limit (optional; self-reported)","","30","",
-  "### Remaining invites (optional; self-reported)","","_No response_","",
   "### Notes (optional)","","_No response_","",
   "### Contributor checklist","",
   "- [x] I am authorized to share this code publicly and understand this issue is public.",
