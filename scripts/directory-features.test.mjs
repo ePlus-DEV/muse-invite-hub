@@ -471,7 +471,7 @@ test("guided mobile owner count fields generate the canonical GitHub report", ()
   assert.match(helper, /remainingInput\.inputMode = "numeric"/);
   assert.match(helper, /remainingInput\.placeholder = "e\.g\. 3"/);
   assert.match(helper, /optionalSummary\.textContent = "Total and used invites \(if known\)"/);
-  assert.match(helper, /confirm and re-enter the current total to preserve its breakdown/);
+  assert.match(helper, /review process retains the previous total and derives Used/);
   assert.match(helper, /commentEditor\.open = !isCount/);
   assert.match(helper, /textarea\.value = isCount \? ownerCountComment\(code\)/);
   assert.match(helper, /copy\.textContent = isCount \? "Copy report" : "Copy comment"/);
