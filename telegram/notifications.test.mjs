@@ -146,7 +146,7 @@ test("transient digest edit failure retries and accepts Telegram not-modified",a
   assert.equal((await publishNotifications({...args,now:args.now+3000})).sent,1);
   assert.equal(await state.wasSent(42,"CCC333"),true);
   assert.equal(sent.length,1,"Failed edit must never create duplicate push");
-  assert.equal(edits,3);
+  assert.equal(edits,2,"One failed edit and one idempotent retry");
 });
 
 test("pagination and retries preserve per-chat/code delivery markers",async()=>{
