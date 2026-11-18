@@ -56,14 +56,6 @@ body:
     validations:
       required: false
   - type: input
-    id: reported_capacity
-    attributes:
-      label: Invite limit (optional; self-reported)
-      description: "Only for your own GitHub code: maximum 30 invites per code. Enter the actual total only if known; do not assume every code starts with 30."
-      placeholder: "e.g. 30"
-    validations:
-      required: false
-  - type: input
     id: remaining
     attributes:
       label: Remaining invites (optional; self-reported)
