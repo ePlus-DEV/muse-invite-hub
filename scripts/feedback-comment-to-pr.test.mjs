@@ -127,7 +127,7 @@ test("ambiguous repeated quota labels require manual review",()=>{
 
 test("simplified owner count derives actual total from remaining plus used, never defaulting to 30",()=>{
   const owner={login:"hoangsvit",type:"User",id:124};
-  const comment=ownerCount.replace("Total invites: 30\\n","");
+  const comment=ownerCount.replace("Total invites: 30\n","");
   const full=planCommentProposal(issue,member(comment,{user:owner}),[item]);
   assert.equal(full.outcome,"proposal");
   assert.equal(full.data[0].reportedCapacity,30);
