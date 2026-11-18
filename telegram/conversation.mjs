@@ -227,6 +227,14 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
     case "prompt-report": await prompt("report","promptReport");return true;
     case "prompt-status": await prompt("status","statusPrompt");return true;
     case "search": await list(action.query);return true;
+    case "status": {
+      const entry=await services.getCodeStatus(code,githubToken);
+      await panel(formatCodeStatus(code,entry,language),[
+        [{text:msg("backList"),data:"t:back-list"},
+         {text:msg("backMenu"),data:"t:home"}]
+      ]);
+      return true;
+    }
     case "detail":
     case "refresh-code":
     case "get": {
