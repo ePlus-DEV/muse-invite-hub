@@ -210,18 +210,27 @@ export async function handleWebhookRequest(request, env, deps = {}) {
     const {notificationResponse}=await import("./notifications.mjs");
     const {makeWorkerNotifyState}=await import("./notify-worker.mjs");
     if(!env.BOT_STATE||!env.TELEGRAM_BOT_TOKEN)return respond(503,"notifications not configured");
+    const notifyCall=async(method,payload)=>{
+      const response=await fetch("https://api.telegram.org/bot"+env.TELEGRAM_BOT_TOKEN+"/"+method,{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload),signal:AbortSignal.timeout(10000)
+      });
+      const data=await response.json().catch(()=>null);
+      if(!response.ok||data?.ok!==true)
+        throw Error("Telegram notification "+method+" failed: "+
+          String(data?.description||"Unknown API error").slice(0,110));
+      return data.result;
+    };
     return notificationResponse(request,{
       secret:env.TELEGRAM_NOTIFY_SECRET,
       state:makeWorkerNotifyState(env.BOT_STATE),
       catalog:async()=> (await import("./github.mjs")).publishedCatalog(),
-      send:async(chatId,text)=>{
-        const result=await fetch("https://api.telegram.org/bot"+env.TELEGRAM_BOT_TOKEN+"/sendMessage",{
-          method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({chat_id:chatId,text,disable_web_page_preview:true}),
-          signal:AbortSignal.timeout(10000)
-        });
-        if(!result.ok||(await result.json()).ok!==true)throw Error("Telegram notify send failed");
-      },
+      send:(chatId,text)=>notifyCall("sendMessage",{
+        chat_id:chatId,text,disable_web_page_preview:true
+      }),
+      edit:(chatId,messageId,text)=>notifyCall("editMessageText",{
+        chat_id:chatId,message_id:messageId,text,disable_web_page_preview:true
+      }),
       logger:msg=>console.error(msg)
     });
   }
