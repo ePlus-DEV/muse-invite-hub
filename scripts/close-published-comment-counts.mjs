@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { readCatalog, recordPath } from "./catalog.mjs";
-import { issueCodes } from "./code-issue-map.mjs";
+import { issueCodes, originalIssueNumber } from "./code-issue-map.mjs";
 import { unrelatedReferralCode } from "./reopen-code-feedback.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
@@ -132,6 +132,25 @@ export function sameQuota(a,b) {
     QUOTA_FIELDS.every(key=>a[key]===b[key]));
 }
 
+// New per-code invite records carry their own reviewed canonical Issue number.
+// data/code-issues.json on trusted main is a legacy/static seed and may lack
+// entries that are only added to the deployed catalog at build time. Requiring
+// a key in that file stranded merged owner-count reports such as Issue #188.
+// Fall back ONLY to the record's original Issue reference; reject conflicting
+// references rather than silently changing ownership or source attribution.
+export function canonicalOwnerCountIssue(item,roots,code,issueNumber) {
+  if (!item || item.code!==code || !Number.isSafeInteger(issueNumber) ||
+      issueNumber<=0 || !roots || typeof roots!=="object" ||
+      Array.isArray(roots)) return false;
+  const mapped=roots[code];
+  const recordIssue=originalIssueNumber(item);
+  if(mapped!==undefined &&
+     (!Number.isSafeInteger(mapped) || mapped<=0 || mapped!==issueNumber))
+    return false;
+  if(recordIssue!==null && recordIssue!==issueNumber)return false;
+  return mapped===issueNumber || recordIssue===issueNumber;
+}
+
 function apiRequest(request,token) {
   return async (method,path,body) => {
     const response=await request("https://api.github.com/repos/"+REPO+"/"+path,{
@@ -202,8 +221,7 @@ export async function closePublishedCommentCounts({
       // Do not discard a newer PR when an older updated PR has a stale count.
       const {issueNumber,commentId,code,prNumber,mergeSha}=candidate;
       const item=records.find(row=>row.code===code);
-      if(!item || roots[code]!==issueNumber ||
-          (item.feedbackIssueNumber && item.feedbackIssueNumber!==issueNumber)) {
+      if(!canonicalOwnerCountIssue(item,roots,code,issueNumber)) {
         summary.pending++; continue;
       }
       const issue=await api("GET","issues/"+issueNumber);
