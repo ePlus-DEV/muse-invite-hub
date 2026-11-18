@@ -131,7 +131,7 @@ test("every card uses the same status, source, availability and original listing
   assert.match(app,/document\.createTextNode\(" Availability: " \+ availability\)/);
   assert.match(app,/document\.createTextNode\(" Listed: " \+ formatDate\(item\.addedAt\)\)/);
   assert.match(app,/amount\.title = remaining/);
-  assert.match(app,/remaining\.date \+ "\. Not live Muse availability\."/);
+  assert.match(app,/remaining\.date \+ "; " \+ remaining\.used/);
   assert.match(app,/amount\.setAttribute\("aria-label", "Availability: " \+ availability/);
   assert.match(app,/author\.title = source\.group/);
   assert.match(css,/\.card-status-row\{display:flex;align-items:center;justify-content:space-between/);
