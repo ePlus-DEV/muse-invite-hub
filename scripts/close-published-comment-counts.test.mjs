@@ -295,6 +295,28 @@ test("PR #304 owner-count source matches trusted comment provenance",()=>{
   });
 });
 
+test("Issue #14 remaining-only owner comment matches only the published derived snapshot",()=>{
+  const current={...record,reportedCapacity:30,reportedUses:11,
+    usageReportedAt:"2026-11-18"};
+  const source={
+    ...comment,
+    id:6968988185,
+    created_at:"2026-11-18T04:23:33Z",
+    body:"Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 19\n"+
+      "Total invites: \nUsed invites: \n"+
+      "Owner confirmation: I confirm these figures came from my own Muse invite screen."
+  };
+  assert.equal(matchesPublishedQuota(source,current),true);
+  assert.equal(matchesPublishedQuota({...source,
+    body:source.body.replace("Remaining invites: 19","Remaining invites: 20")},current),false);
+  assert.equal(matchesPublishedQuota({...source,
+    user:{login:"someone-else",id:1}},current),false);
+  assert.equal(matchesPublishedQuota({...source,
+    body:source.body.replace("Owner confirmation: I confirm these figures came from my own Muse invite screen.","Owner confirmation: yes")},current),false);
+  assert.equal(matchesPublishedQuota(source,{...current,reportedUses:10}),false);
+  assert.equal(matchesPublishedQuota(source,{...current,usageReportedAt:"2026-11-17"}),false);
+});
+
 test("match only the owner-confirmed source comment and exact dated count",()=>{
   assert.equal(matchesPublishedQuota(comment,record),true);
   for(const change of [
