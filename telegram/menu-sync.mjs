@@ -42,6 +42,11 @@ export function createMenuSync({profiles,sendMenu,action,priorProfile}) {
   };
   const syncIfNeeded=async(chatId)=>{
     if(!isPrivate||forget||sentMenu)return false;
+    // These actions already replace the Reply Keyboard. Do not send the
+    // previous version first and then the new one in the same update.
+    if (["help","sync-menu","set-role-seeker","set-role-contributor",
+         "set-language","usage-menu"].includes(action.type) ||
+        (action.type==="home"&&!action.callbackId)) return false;
     let profile;
     try {profile=await profiles.get(chatId);}
     catch {return false;}
