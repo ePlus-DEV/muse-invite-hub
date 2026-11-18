@@ -234,8 +234,14 @@ test("narrative owner count rejects mistaken, forged, ambiguous and inconsistent
     legacyWithoutUsed.data[0].reportedUses],[30,1]);
   const remainingOnly=body.replace("- Total invites: 30\n","")
     .replace("- Used invites: 1","");
-  assert.equal(proposed(remainingOnly).outcome,"needs-review",
-    "Without a prior reviewed total, do not assume 30.");
+  const withoutTotal=proposed(remainingOnly);
+  assert.equal(withoutTotal.outcome,"proposal",
+    "A first owner narrative can store a dated remaining-only snapshot.");
+  assert.equal(withoutTotal.data[0].reportedRemaining,29);
+  assert.equal(withoutTotal.data[0].reportedCapacity,undefined);
+  assert.equal(withoutTotal.data[0].reportedUses,undefined);
+  assert.match(withoutTotal.notice,/display-policy estimate/);
+  assert.equal(proposed(remainingOnly,owner,withoutTotal.data[0]).outcome,"duplicate");
   const previous={...published,reportedCapacity:30,reportedUses:2,
     usageReportedAt:"2026-11-16"};
   const accepted=proposed(remainingOnly,owner,previous);
@@ -246,6 +252,35 @@ test("narrative owner count rejects mistaken, forged, ambiguous and inconsistent
   assert.equal(proposed(body.replace("I am the owner of this invite code.","")).outcome,"needs-review");
   assert.equal(proposed(body,owner,{...published,sourceUrl:"https://www.threads.com/@source/post/123"}).outcome,"needs-review");
   assert.equal(proposed("Great work, thank you!").outcome,"ignored");
+});
+
+test("first narrative report 0/30 is valid, 31 is rejected, and old owner data is preserved",()=>{
+  const root={number:204,state:"open",title:"[Invite] YKDCA9",
+    body:"### Invite code\\n\\nYKDCA9"};
+  const owner={login:"JackChong1",type:"User",id:123796417};
+  const initial={id:"community-issue-204",code:"YKDCA9",status:"unverified",
+    addedAt:"2026-11-16",submittedBy:"JackChong1",
+    submittedById:123796417,feedbackIssueNumber:204};
+  const make=(remaining,entry=initial)=>planCommentProposal(root,member(
+    "Owner count update — YKDCA9\\n- Remaining invites: "+remaining+
+    "\\nI am the owner of this invite code.",
+    {id:6934787451,created_at:"2026-11-17T01:20:21Z",user:owner}),[entry]);
+  for(const remaining of [0,30]){
+    const plan=make(remaining);
+    assert.equal(plan.outcome,"proposal");
+    assert.equal(plan.data[0].reportedRemaining,remaining);
+    assert.equal(plan.data[0].reportedCapacity,undefined);
+    assert.equal(plan.data[0].reportedUses,undefined);
+    assert.equal(initial.usageReportedAt,undefined);
+  }
+  assert.equal(make(31).outcome,"needs-review");
+  assert.equal(make(-1).outcome,"needs-review");
+  const previous={...initial,reportedRemaining:10,usageReportedAt:"2026-11-16"};
+  const updated=make(3,previous);
+  assert.equal(updated.outcome,"proposal");
+  assert.equal(updated.data[0].reportedRemaining,3);
+  assert.equal(updated.data[0].quotaUpdateCount,1);
+  assert.equal(previous.reportedRemaining,10);
 });
 
 test("narrative owner updates reject totals, remaining and usage above the 30-slot rule",()=>{
