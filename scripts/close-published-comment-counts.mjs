@@ -3,6 +3,7 @@
  * Never close a canonical Issue for an unreviewed or newer community report.
  */
 import { readFileSync } from "node:fs";
+import { MAX_INVITES_PER_CODE, validReportedQuota } from "./invite-quota-policy.mjs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { readCatalog, recordPath } from "./catalog.mjs";
@@ -70,7 +71,8 @@ function fieldsFromComment(body) {
 function optionalCount(value) {
   if (value===undefined || value==="") return null;
   if (!/^(0|[1-9]\d{0,3})$/.test(value)) return NaN;
-  return Number(value);
+  const parsed=Number(value);
+  return parsed<=MAX_INVITES_PER_CODE?parsed:NaN;
 }
 
 // The structured form requires the explicit owner's Muse-screen confirmation.
@@ -81,6 +83,7 @@ export function matchesPublishedQuota(comment,record,{allowNarrative=false}={}) 
       (record.submittedById && comment.user?.id !== record.submittedById) ||
       !/^\d{4}-\d{2}-\d{2}T/.test(comment.created_at||"") ||
       record.usageReportedAt !== comment.created_at.slice(0,10)) return false;
+  if (!validReportedQuota(record)) return false;
   const f=fieldsFromComment(comment.body);
   if (!f) return false;
   if (f.Code===record.code && f["Update type"]==="Owner count" &&
@@ -119,7 +122,7 @@ export function matchesPublishedQuota(comment,record,{allowNarrative=false}={}) 
     const key=match[1].toLowerCase();
     if (counts.has(key) || !/^(?:0|[1-9]\d{0,3})$/.test(match[2])) return false;
     const value=Number(match[2]);
-    if (value>1000) return false;
+    if (value>MAX_INVITES_PER_CODE) return false;
     counts.set(key,value);
   }
   if (!["total invites","remaining invites","used invites"].every(key=>counts.has(key))) return false;
