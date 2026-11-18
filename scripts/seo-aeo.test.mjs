@@ -91,12 +91,12 @@ test("public and preview build allow the llms.txt file safely", () => {
 });
 
 
-test("country availability panel lists five Meta-confirmed markets with exact sources", () => {
+test("country availability panel lists six Meta-confirmed markets with exact sources", () => {
   const html = read("index.html");
-  const expected = [{"code":"US","country":"United States","iso":"2026-09-08","source":"https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/"},{"code":"CA","country":"Canada","iso":"2026-09-29","source":"https://about.fb.com/news/2026/09/introducing-muse-small-business/"},{"code":"JP","country":"Japan","iso":"2026-10-23","source":"https://about.fb.com/ja/news/2026/10/muse-personal-ai-agent-launches-in-japan/"},{"code":"SG","country":"Singapore","iso":"2026-10-27","source":"https://about.fb.com/news/2026/10/muse-is-now-available-in-singapore-the-worlds-first-personal-ai-agent-built-for-everyone/"},{"code":"MX","country":"Mexico","iso":"2026-11-05","source":"https://about.fb.com/ltam/news/2026/09/presentamos-muse-el-primer-agente-de-ia-personal-del-mundo-creado-para-todos/"}];
+  const expected = [{"code":"US","country":"United States","iso":"2026-09-08","source":"https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/"},{"code":"CA","country":"Canada","iso":"2026-09-29","source":"https://about.fb.com/news/2026/09/introducing-muse-small-business/"},{"code":"JP","country":"Japan","iso":"2026-10-23","source":"https://about.fb.com/ja/news/2026/10/muse-personal-ai-agent-launches-in-japan/"},{"code":"SG","country":"Singapore","iso":"2026-10-27","source":"https://about.fb.com/news/2026/10/muse-is-now-available-in-singapore-the-worlds-first-personal-ai-agent-built-for-everyone/"},{"code":"MX","country":"Mexico","iso":"2026-11-05","source":"https://about.fb.com/ltam/news/2026/09/presentamos-muse-el-primer-agente-de-ia-personal-del-mundo-creado-para-todos/"},{"code":"AU","country":"Australia","iso":"2026-11-17","source":"https://about.fb.com/news/2026/11/muse-is-now-available-in-australia/"}];
   assert.match(html, /<section class="availability-section" id="availability"/);
   assert.match(html, /Where is Muse available\?/);
-  assert.match(html, /5 confirmed markets/);
+  assert.match(html, /6 confirmed markets/);
   const listed = [...html.matchAll(/<li data-country="([A-Z]{2})">/g)].map(match => match[1]);
   assert.deepEqual(listed, expected.map(entry => entry.code));
   for (const item of expected) {
@@ -112,6 +112,6 @@ test("country availability panel lists five Meta-confirmed markets with exact so
   }
   assert.match(html, /Vietnam is not among these announced launch markets/);
   assert.match(html, /An invite code does not override geographic restrictions or guarantee signup or rewards/);
-  assert.match(html, /16 Nov 2026/);
+  assert.match(html, /18 Nov 2026/);
   assert.doesNotMatch(html, /FAQPage|guaranteed access|available everywhere/i);
 });
