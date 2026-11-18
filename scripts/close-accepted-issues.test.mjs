@@ -105,6 +105,95 @@ test("bot-authored new invite PR is accepted after live deployment",async()=>{
   assert.deepEqual(result,{notified:1,closed:1,pending:0,skipped:0});
 });
 
+const telegramBody=[
+  "### Invite code","","ALFA12","",
+  "### Code source","","Telegram (community code shared through bot)","",
+  "### Public confirmation or context (optional)","","https://t.me/Metalker","",
+  "### Notes (optional)","",
+  "Submitted via Telegram by @Metalker. Human review required; public profile is not proof of code ownership, redemption or quota.","",
+  "### Contributor checklist","",
+  "- [x] I am authorized to share this code publicly; I understand this Issue is public.",
+  "- [x] This code is not a password, 2FA code, session token or private credential.",
+  "",
+  "<!-- muse-telegram-submission:ALFA12 -->"
+].join("\n");
+const telegramPR=()=>pr({
+  user:{login:"eplus-bot"},
+  body:"## Automated draft proposal\n"+
+    "Prepared from consented Telegram contributor undefined in public Issue #90. "+
+    "GitHub Issue author @hoangsvit is the bot credential, not the code owner.\n"+
+    "Code: **ALFA12**. Change: **add Telegram source**."
+});
+const telegramIssue=()=>issue({user:{login:"hoangsvit"},
+  created_at:"2026-11-12T00:00:00Z",body:telegramBody});
+const telegramRecord=()=>({id:"community-issue-90",code,
+  feedbackIssueNumber:90,sourceUrl:"https://t.me/Metalker",status:"unverified",
+  addedAt:"2026-11-12"});
+const telegramFile=[{filename:"data/invite-records/community-issue-90.json"}];
+
+test("reviewed Telegram PR is accepted with published detail comment and no ownership claim",async()=>{
+  assert.deepEqual(acceptedCandidate(telegramPR()),{
+    issueNumber:90,kind:"invite",code,telegram:true,prNumber:91,mergeSha:merged
+  });
+  const m=mock({pull:telegramPR(),initialIssue:telegramIssue(),files:telegramFile});
+  const result=await closeAcceptedIssues({
+    request:m.request,token:"test-token",deployedSha:deployed,
+    catalog:[telegramRecord()]
+  });
+  assert.deepEqual(result,{notified:1,closed:1,pending:0,skipped:0});
+  assert.ok(m.events.indexOf("live")<m.events.indexOf("POST issues/90/comments"));
+  assert.ok(m.events.indexOf("POST issues/90/comments")<
+    m.events.indexOf("PATCH issues/90"));
+});
+
+test("closed reviewed Telegram Issue receives missing detail comment without reopening",async()=>{
+  const closed=telegramIssue();
+  closed.state="closed";closed.state_reason="completed";
+  const m=mock({pull:telegramPR(),initialIssue:closed,files:telegramFile});
+  const result=await closeAcceptedIssues({
+    request:m.request,token:"test-token",deployedSha:deployed,
+    catalog:[telegramRecord()]
+  });
+  assert.deepEqual(result,{notified:1,closed:0,pending:0,skipped:1});
+  assert.ok(m.events.includes("POST issues/90/comments"));
+  assert.ok(!m.events.includes("PATCH issues/90"));
+  assert.equal(m.issue.state,"closed");
+  const duplicate=mock({pull:telegramPR(),initialIssue:closed,files:telegramFile,posted:true});
+  const again=await closeAcceptedIssues({
+    request:duplicate.request,token:"test-token",deployedSha:deployed,
+    catalog:[telegramRecord()]
+  });
+  assert.equal(again.notified,0);
+  assert.equal(duplicate.events.includes("POST issues/90/comments"),false);
+});
+
+test("Telegram acceptance never bypasses source, consent, merge, deployment or file checks",async()=>{
+  const conditions=[
+    {config:{initialIssue:telegramIssue(),comparison:"behind"}},
+    {config:{initialIssue:telegramIssue(),live:false}},
+    {config:{initialIssue:telegramIssue(),files:[{filename:"README.md"}]}},
+    {config:{initialIssue:issue({user:{login:"hoangsvit"},body:telegramBody.replace(
+      "<!-- muse-telegram-submission:ALFA12 -->","")})}},
+    {config:{initialIssue:telegramIssue()},catalog:[{
+      ...telegramRecord(),sourceUrl:"https://t.me/SomebodyElse"
+    }]}
+  ];
+  for (const {config,catalog=[telegramRecord()]} of conditions){
+    const m=mock({pull:telegramPR(),files:telegramFile,...config});
+    const result=await closeAcceptedIssues({request:m.request,token:"test-token",
+      deployedSha:deployed,catalog});
+    assert.equal(result.notified,0);
+    assert.equal(result.closed,0);
+    assert.ok(!m.events.includes("POST issues/90/comments"));
+    assert.ok(!m.events.includes("PATCH issues/90"));
+  }
+  assert.equal(acceptedCandidate(pr({
+    ...telegramPR(),body:"Prepared from consented Telegram contributor undefined in public Issue #89. "+
+    "GitHub Issue author @hoangsvit is the bot credential, not the code owner.\n"+
+    "Code: **ALFA12**. Change: **add Telegram source**."
+  })),null);
+});
+
 test("an already posted acceptance comment is not duplicated on retry",async()=>{
   const m=mock({posted:true});
   const result=await closeAcceptedIssues({

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
-import { readIssueFields } from "./issue-to-pr.mjs";
+import { planTelegramIssue } from "./issue-to-pr.mjs";
 import { readCatalog, recordPath } from "./catalog.mjs";
 import { isShareCodeIssue, issueCodes, parseInviteCodes } from "./code-issue-map.mjs";
 
@@ -27,10 +27,22 @@ export function acceptedCandidate(pr) {
   } catch { return null; }
   if ((group && codes.length<2) || (single && codes.length!==1)) return null;
   const code=codes[0], label=codes.join(", ");
+  const body=pr.body||"";
+  const githubSource=body.includes("Prepared from public Issue #" + issueNumber + " by @");
+  // Bot-created Telegram submissions use a different, reviewed-only PR header.
+  // Historical PRs wrote "undefined" instead of the public sender handle;
+  // the original Issue and exact published source are verified below, never
+  // the untrusted header's claim about Telegram account ownership.
+  const telegramSource=kind==="invite" && codes.length===1 &&
+    body.includes("Prepared from consented Telegram contributor ") &&
+    body.includes(" in public Issue #"+issueNumber+". GitHub Issue author @") &&
+    body.includes("Change: **add Telegram source**.");
   if (!CODE.test(code) ||
       pr.title !== "data: review " + label + " " + kind + " (issue #" + issueNumber + ")" ||
-      !(pr.body || "").includes("Prepared from public Issue #" + issueNumber + " by @")) return null;
-  return { issueNumber, kind, code, ...(group?{codes}:{}),prNumber:pr.number, mergeSha:pr.merge_commit_sha };
+      (!githubSource && !telegramSource)) return null;
+  return { issueNumber, kind, code, ...(group?{codes}:{}),
+    ...(telegramSource?{telegram:true}:{}),
+    prNumber:pr.number, mergeSha:pr.merge_commit_sha };
 }
 
 export function acceptanceComment({ code, codes=[code], prNumber }) {
@@ -124,7 +136,14 @@ export async function closeAcceptedIssues({
       const {issueNumber,kind,code,prNumber,mergeSha} = candidate;
       const codes=candidate.codes || [code];
       const issue = await api("GET","issues/" + issueNumber);
-      if (issue.state !== "open" || issue.pull_request) { summary.skipped++; continue; }
+      // A previously completed Telegram Issue may have been closed manually
+      // before the broken acceptance matcher was fixed. Backfill its missing
+      // detail-link comment without reopening or re-closing the discussion.
+      const closedTelegram=candidate.telegram && issue.state==="closed" &&
+        issue.state_reason==="completed";
+      if ((issue.state!=="open"&&!closedTelegram) || issue.pull_request) {
+        summary.skipped++; continue;
+      }
       const expectedTitle = {
         invite:"[Invite]",count:"[Count update]",feedback:"[Code feedback]"
       }[kind];
@@ -132,6 +151,24 @@ export async function closeAcceptedIssues({
             (kind === "invite" && isShareCodeIssue(issue))) ||
           !codes.every(value=>issueCodes(issue).includes(value)) ||
           !codes.every(value=>published.has(value))) { summary.pending++; continue; }
+      if (candidate.telegram) {
+        // Telegram identity is not GitHub ownership. Re-check the trusted
+        // Issue's bot marker, author, consent and public profile before
+        // accepting even a merged bot PR. Do not use PR text as proof.
+        const checked=planTelegramIssue(issue,[]);
+        const verified=checked.outcome==="proposal" &&
+          checked.action==="add Telegram source" && checked.code===code &&
+          checked.data.find(row=>row.code===code);
+        const record=records.find(row=>row.code===code);
+        if (!verified || !record ||
+            verified.id!==record.id ||
+            verified.feedbackIssueNumber!==issueNumber ||
+            verified.sourceUrl!==record.sourceUrl ||
+            !pr.body?.includes("GitHub Issue author @"+issue.user.login+
+              " is the bot credential, not the code owner.")) {
+          summary.pending++; continue;
+        }
+      }
       const files = await api("GET","pulls/" + prNumber + "/files?per_page=100");
       const selected=codes.map(value=>records.find(item=>item.code===value));
       const recordFiles=selected.map(item=>item?.id?recordPath(item):null);
@@ -165,6 +202,12 @@ export async function closeAcceptedIssues({
         await api("POST","issues/" + issueNumber + "/comments",
           {body:acceptanceComment({code,codes,prNumber})});
         summary.notified++;
+      }
+      if (closedTelegram) {
+        // Keep the original completed state intact; do not reopen or
+        // generate another comment on the next successful deployment.
+        summary.skipped++;
+        continue;
       }
       await api("PATCH","issues/" + issueNumber,{state:"closed",state_reason:"completed"});
       summary.closed++;
