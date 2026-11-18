@@ -48,19 +48,19 @@ body:
     validations:
       required: false
   - type: input
-    id: reported_uses
-    attributes:
-      label: Uses so far (optional; self-reported)
-      description: "Only for your own GitHub code, from your Muse screen; 0–30. Leave blank when submitting multiple codes."
-      placeholder: "e.g. 1"
-    validations:
-      required: false
-  - type: input
     id: remaining
     attributes:
       label: Remaining invites (optional; self-reported)
       description: "Only for your own GitHub code, from your Muse invite screen; 0–30. Never infer remaining from the maximum."
       placeholder: "e.g. 17"
+    validations:
+      required: false
+  - type: input
+    id: reported_uses
+    attributes:
+      label: Uses so far (optional; self-reported)
+      description: "Only for your own GitHub code, from your Muse screen; 0–30. Leave blank when submitting multiple codes."
+      placeholder: "e.g. 1"
     validations:
       required: false
   - type: textarea
