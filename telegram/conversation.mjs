@@ -30,7 +30,7 @@ export async function resolveInput(action,profiles) {
   return {...action,type:"usage-menu"};
 }
 
-export async function handleInteractive({action,profiles,send,sendMenu,edit,acknowledge,services,githubToken}) {
+export async function handleInteractive({action,profiles,send,sendMenu,edit,removeMessage,acknowledge,services,githubToken}) {
   const {type,chatId,code}=action;
   const profile=await profiles.get(chatId);
   const language=profile.language||"en";
@@ -46,10 +46,20 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
     }
   };
   const panel=async(text,buttons)=>{
-    // Reply-keyboard actions do not include a callback message ID. Reuse the
-    // last bot-owned inline panel when possible, even across process restarts.
     const stored=await profiles.get(chatId);
-    const target=action.callbackId? action.messageId:stored.panelMessageId;
+    // Only inline callbacks edit their OWN message. Every reply-keyboard,
+    // slash-command or typed-input action creates a panel near the latest
+    // user message. Editing a saved panel instead makes the response
+    // appear far up the chat (particularly after new-code notifications).
+    if(!action.callbackId){
+      if(stored.panelMessageId && typeof removeMessage==="function"){
+        try {await removeMessage(chatId,stored.panelMessageId);}
+        catch { /* Old panel might be >48h old or already removed. */ }
+      }
+      if(stored.panelMessageId)
+        await mutateProfile(profiles,chatId,p=>{p.panelMessageId=null;return p;});
+    }
+    const target=action.callbackId?action.messageId:null;
     if(target&&typeof edit==="function"){
       try {
         const result=await edit(chatId,target,text,buttons);
@@ -64,9 +74,9 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
         }
         if(isRefreshCallback){
           await feedback("refreshFailed");
-          return; // Never duplicate a failed or unchanged Refresh card.
+          return; // Never create a second Refresh card.
         }
-        // Old/deleted messages cannot be edited: send one replacement panel.
+        // Deleted or expired callback panel: send a new nearby message.
       }
     }
     if(isRefreshCallback){await feedback("refreshFailed");return;}
