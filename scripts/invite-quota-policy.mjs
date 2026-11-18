@@ -30,21 +30,23 @@ export function displayQuota(record) {
   if (knownDate && validReportedQuota(record)) {
     if (record.reportedRemaining !== undefined) {
       return {capacity:MAX_INVITES_PER_CODE,remaining:record.reportedRemaining,
+        used:MAX_INVITES_PER_CODE-record.reportedRemaining,
         basis:"reported-remaining",reportedAt:record.usageReportedAt};
     }
     return {capacity:record.reportedCapacity,
       remaining:record.reportedCapacity-record.reportedUses,
+      used:record.reportedUses,
       basis:"reported",reportedAt:record.usageReportedAt};
   }
   // Invalid/incomplete owner reports are never silently turned into proof
   // that all invites are available.
   if (record && ["reportedCapacity","reportedUses","reportedRemaining",
       "usageReportedAt"].some(key=>record[key]!==undefined)) {
-    return {capacity:MAX_INVITES_PER_CODE,remaining:null,
+    return {capacity:MAX_INVITES_PER_CODE,remaining:null,used:null,
       basis:"invalid",reportedAt:null};
   }
   return {capacity:MAX_INVITES_PER_CODE,remaining:MAX_INVITES_PER_CODE,
-    basis:"default",reportedAt:null};
+    used:0,basis:"default",reportedAt:null};
 }
 
 export function withDisplayQuota(records) {
