@@ -12,6 +12,8 @@
   const REPO = "https://github.com/ePlus-DEV/muse-invite-hub";
   const CODE_PATTERN = /^[A-Z0-9]{6}$/;
   const MAX_SAVED = 200;
+  // Must match MAX_INVITES_PER_CODE in scripts/invite-quota-policy.mjs.
+  const MAX_INVITES_PER_CODE = 30;
 
   // Deep links are navigation shortcuts, not proof of code redemption.
   function museInviteUrl(code) {
@@ -34,11 +36,11 @@
           !/^\d{4}-\d{2}-\d{2}$/.test(item.usageReportedAt)) continue;
       let remaining = null;
       if (Number.isSafeInteger(item.reportedRemaining) &&
-          item.reportedRemaining >= 0 && item.reportedRemaining <= 1000) {
+          item.reportedRemaining >= 0 && item.reportedRemaining <= MAX_INVITES_PER_CODE) {
         remaining = item.reportedRemaining;
       } else if (Number.isSafeInteger(item.reportedCapacity) &&
           Number.isSafeInteger(item.reportedUses) &&
-          item.reportedCapacity > 0 && item.reportedCapacity <= 1000 &&
+          item.reportedCapacity > 0 && item.reportedCapacity <= MAX_INVITES_PER_CODE &&
           item.reportedUses >= 0 && item.reportedUses <= item.reportedCapacity) {
         remaining = item.reportedCapacity - item.reportedUses;
       }
@@ -153,8 +155,8 @@
       seen.add(name);
       const value = rawValue.trim();
       if (!value || /^\[(?:optional|enter actual number or leave blank)\]$/.test(value)) continue;
-      if (!/^\d{1,4}$/.test(value) || Number(value) > 1000) {
-        return {error: "Use actual whole-number invite counts between 0 and 1000."};
+      if (!/^\d{1,2}$/.test(value) || Number(value) > MAX_INVITES_PER_CODE) {
+        return {error: "Use actual whole-number invite counts between 0 and 30."};
       }
       fields[name] = Number(value);
     }
@@ -218,13 +220,13 @@
     remainingLabel.textContent = "Remaining invites";
     const remainingHint = document.createElement("p");
     remainingHint.className = "feedback-count-hint";
-    remainingHint.textContent = "How many invites are left in your Muse account? Enter 0 if none.";
+    remainingHint.textContent = "Enter the remaining invites shown in Muse (0–30). This is a report, not a live balance.";
     const remainingInput = document.createElement("input");
     remainingInput.id = "feedback-count-remaining";
     remainingInput.type = "text";
     remainingInput.inputMode = "numeric";
     remainingInput.pattern = "[0-9]*";
-    remainingInput.maxLength = 4;
+    remainingInput.maxLength = 2;
     remainingInput.autocomplete = "off";
     remainingInput.placeholder = "e.g. 3";
     remainingInput.setAttribute("aria-describedby", "feedback-count-hint");
@@ -234,7 +236,7 @@
     const optionalSummary = document.createElement("summary");
     optionalSummary.textContent = "Total and used invites (if known)";
     const optionalHelp = document.createElement("p");
-    optionalHelp.textContent = "If this code already shows a total, confirm and re-enter the current total to preserve its breakdown. Used invites can be calculated from total minus remaining. Otherwise, if remaining is unknown, enter both total and used.";
+    optionalHelp.textContent = "Maximum 30 invites per code. If this code already has a reviewed total, you may leave Total and Used blank when reporting only remaining; the review process retains the previous total and derives Used. If the total changed, enter the updated figures.";
     optionalHelp.className = "feedback-count-hint";
     const optionalGrid = document.createElement("div");
     optionalGrid.className = "feedback-count-grid";
@@ -248,7 +250,7 @@
       input.type = "text";
       input.inputMode = "numeric";
       input.pattern = "[0-9]*";
-      input.maxLength = 4;
+      input.maxLength = 2;
       input.autocomplete = "off";
       input.placeholder = placeholder;
       wrapper.append(label, input);
