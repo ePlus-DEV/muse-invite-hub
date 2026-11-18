@@ -47,7 +47,14 @@ test("never requeue ambiguous source claims, owner quotas, incomplete consent or
     issue({state:"closed"}),
     issue({pull_request:{url:"https://github.com/example"}}),
     issue({body:body.replace("GitHub (my own code)","Telegram (community code shared through bot)")}),
-    issue({body:body.replace("_No response_","12")}),
+    issue({body:body.replace(
+      "### Invite limit (optional; self-reported)\n\n_No response_",
+      "### Invite limit (optional; self-reported)\n\n12"
+    )}),
+    issue({body:body.replace(
+      "### Social post or profile URL (required for Threads, X or Facebook)\n\n_No response_",
+      "### Social post or profile URL (required for Threads, X or Facebook)\n\nhttps://t.me/Other"
+    )}),
     issue({body:body.replace("- [x] I am authorized","- [ ] I am authorized")}),
     issue({body:body.replace(code,"ANOTHER")}),
     issue({number:297})
