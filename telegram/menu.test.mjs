@@ -34,14 +34,14 @@ function fixture() {
   return {run,profiles,messages,data,calls};
 }
 
-test("persistent keyboard retains all nine core actions plus a distinct Refresh row",()=>{
-  assert.equal(MENU.length,4);
-  assert.deepEqual(MENU.map(row=>row.length),[3,3,3,1]);
+test("persistent keyboard keeps nine core actions without a redundant Refresh row",()=>{
+  assert.equal(MENU.length,3);
+  assert.deepEqual(MENU.map(row=>row.length),[3,3,3]);
   assert.equal(MENU.flat().length,new Set(MENU.flat()).size);
   assert.equal(REPLY_KEYBOARD.is_persistent,true);
   assert.equal(REPLY_KEYBOARD.keyboard[0][0],"🎟 Get codes");
   assert.equal(MENU[0][0],"🎟 Get codes");
-  assert.equal(MENU[3][0],"🔄 Refresh");
+  assert.equal(MENU.flat().includes("🔄 Refresh"),false);
   assert.equal(parseCommand("🔄 Refresh").type,"refresh");
   assert.equal(parseCommand("🔄 Làm mới").type,"refresh");
   assert.equal(parseCommand("🔄 更新").type,"refresh");
