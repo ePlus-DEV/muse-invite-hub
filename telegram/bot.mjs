@@ -8,6 +8,7 @@ const publicUsername = name => typeof name==="string"&&TELEGRAM_USERNAME.test(na
 
 export const BOT_COMMANDS = [
   {command:"start",description:"Help and contribution guide"},
+  {command:"menu",description:"Refresh current menu buttons"},
   {command:"codes",description:"Browse recently published codes"},
   {command:"refresh",description:"Reload the latest published community codes"},
   {command:"status",description:"Check a code or pending review"},
@@ -59,10 +60,11 @@ export function formatCodeStatus(code,entry,language="en") {
 export function parseCommand(text) {
   if (typeof text !== "string" || text.length > 300) return {type:"help"};
   const selected=menuChoice(text.trim());
-  if(selected)return {type:selected};
+  if(selected)return {type:selected,fromMenu:true};
   const parts=text.trim().split(/\s+/);
   const command=(parts[0]||"").toLowerCase().replace(/@[a-z0-9_]+$/i,"");
-  if (command==="/start"||command==="/help"||command==="/menu") return {type:"help"};
+  if (command==="/start"||command==="/help") return {type:"help"};
+  if (command==="/menu")return {type:"sync-menu"};
   if (command==="/role"||command==="/roles")return {type:"choose-role"};
   if (command==="/need"||command==="/request")return {type:"need-code"};
   if (command==="/codes") return {type:"browse"};
@@ -148,6 +150,7 @@ export function parseUpdate(update) {
       data==="t:roles"?"choose-role":data==="t:need"?"need-code":
       data==="t:need:browse"?"browse":data==="t:need:alerts"?"subscribe":
       data==="t:need:search"?"prompt-search":
+      data==="t:menu:refresh"?"sync-menu":
       data==="t:settings"?"settings":data==="t:mine"?"my-codes":
       data==="t:prompt-submit"?"prompt-submit":data==="t:newest"?"newest":
       data==="t:search"?"prompt-search":
