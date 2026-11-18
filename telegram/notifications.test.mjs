@@ -127,7 +127,7 @@ test("expired/deleted Telegram digest falls back to a new message without losing
 
 test("transient digest edit failure retries and accepts Telegram not-modified",async()=>{
   const state=fakeState([user(42,{subscribed:true})]);
-  let items=[{code:"AAA111"}],edits=0,failMode="timeout";
+  let items=[{code:"AAA111"}],edits=0,failMode="ok";
   const sent=[];
   const args={event,state,catalog:async()=>items,now:1_800_000_000_000,
     send:async(_,text)=>{sent.push(text);return {message_id:141};},
@@ -138,6 +138,7 @@ test("transient digest edit failure retries and accepts Telegram not-modified",a
   items.push({code:"BBB222"});
   await publishNotifications({...args,now:args.now+1000});
   items.push({code:"CCC333"});
+  failMode="timeout";
   await assert.rejects(()=>publishNotifications({...args,now:args.now+2000,
     logger:()=>{}}),/network timeout/);
   assert.equal(await state.wasSent(42,"CCC333"),false);
@@ -145,7 +146,7 @@ test("transient digest edit failure retries and accepts Telegram not-modified",a
   assert.equal((await publishNotifications({...args,now:args.now+3000})).sent,1);
   assert.equal(await state.wasSent(42,"CCC333"),true);
   assert.equal(sent.length,1,"Failed edit must never create duplicate push");
-  assert.equal(edits,2);
+  assert.equal(edits,3);
 });
 
 test("pagination and retries preserve per-chat/code delivery markers",async()=>{
