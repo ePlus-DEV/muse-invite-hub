@@ -205,7 +205,9 @@ test("OCI notification state survives process restart without exposing private d
     await first.setBaseline(["AAA111"]);
     assert.deepEqual((await first.listProfiles(null,10)).profiles[0].chatId,42);
     await first.markSent(42,"BBB222");
+    await first.setDigest(42,{messageId:110,at:Date.now(),codes:["BBB222"]});
     const second=makeNodeNotifyState(dir);
+    assert.deepEqual(await second.getDigest(42),await first.getDigest(42));
     assert.deepEqual(await second.getBaseline(),["AAA111"]);
     assert.equal(await second.wasSent(42,"BBB222"),true);
   }finally{rmSync(dir,{recursive:true,force:true});}
@@ -236,4 +238,7 @@ test("Workers KV keeps subscriber records private and supports cursor paging",as
   assert.equal(await state.wasSent(42,"BBB222"),false);
   await state.markSent(42,"BBB222");
   assert.equal(await state.wasSent(42,"BBB222"),true);
+  const digest={messageId:140,at:Date.now(),codes:["BBB222"]};
+  await state.setDigest(42,digest);
+  assert.deepEqual(await state.getDigest(42),digest);
 });
