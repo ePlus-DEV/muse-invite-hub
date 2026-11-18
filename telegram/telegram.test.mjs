@@ -478,8 +478,8 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
     const directList=sent.at(-1).payload;
     assert.match(directList.text,/Mã mời cộng đồng/);
     assert.equal(directList.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:DPNIHH");
-    assert.equal(directList.reply_markup.inline_keyboard.length,4);
-    assert.equal(directList.reply_markup.inline_keyboard[3][1].callback_data,"t:home");
+    assert.equal(directList.reply_markup.inline_keyboard.length,3);
+    assert.equal(directList.reply_markup.inline_keyboard[2][1].callback_data,"t:home");
     assert.equal((await post(callback(708,"t:need"))).status,200);
     assert.match(sent.at(-1).payload.text,/Mã mời cộng đồng/,
       "Old inline Need code actions must also navigate directly to codes");
