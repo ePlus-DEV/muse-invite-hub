@@ -256,14 +256,14 @@ test("narrative owner count rejects mistaken, forged, ambiguous and inconsistent
 
 test("first narrative report 0/30 is valid, 31 is rejected, and old owner data is preserved",()=>{
   const root={number:204,state:"open",title:"[Invite] YKDCA9",
-    body:"### Invite code\\n\\nYKDCA9"};
+    body:"### Invite code\n\nYKDCA9\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [x] agreed"};
   const owner={login:"JackChong1",type:"User",id:123796417};
   const initial={id:"community-issue-204",code:"YKDCA9",status:"unverified",
     addedAt:"2026-11-16",submittedBy:"JackChong1",
     submittedById:123796417,feedbackIssueNumber:204};
   const make=(remaining,entry=initial)=>planCommentProposal(root,member(
-    "Owner count update — YKDCA9\\n- Remaining invites: "+remaining+
-    "\\nI am the owner of this invite code.",
+    "Owner count update — YKDCA9\n- Remaining invites: "+remaining+
+    "\nI am the owner of this invite code.",
     {id:6934787451,created_at:"2026-11-17T01:20:21Z",user:owner}),[entry]);
   for(const remaining of [0,30]){
     const plan=make(remaining);
