@@ -2,6 +2,8 @@
   "use strict";
   const features = window.MuseDirectoryFeatures;
   if (!features) throw Error("Missing directory helpers");
+  // Must match MAX_INVITES_PER_CODE in scripts/invite-quota-policy.mjs.
+  const MAX_INVITES_PER_CODE = 30;
   const STATUS = {
     "reported-working": { label: "Reported working", description: "A community member reported this code worked; not verified by Muse." },
     "unverified": { label: "Unverified", description: "Shared by the community; no confirmed redemption feedback." },
@@ -143,12 +145,12 @@
   function reportedRemaining(item) {
     if (!item || typeof item.usageReportedAt !== "string") return null;
     const date = formatDate(item.usageReportedAt);
-    if (Number.isInteger(item.reportedRemaining) && item.reportedRemaining >= 0) {
+    if (Number.isInteger(item.reportedRemaining) && item.reportedRemaining >= 0 && item.reportedRemaining <= MAX_INVITES_PER_CODE) {
       return { remaining: item.reportedRemaining, total: null, date };
     }
     if (!Number.isInteger(item.reportedUses) ||
         !Number.isInteger(item.reportedCapacity) ||
-        item.reportedCapacity < 1 || item.reportedUses < 0 ||
+        item.reportedCapacity < 1 || item.reportedCapacity > MAX_INVITES_PER_CODE || item.reportedUses < 0 ||
         item.reportedUses > item.reportedCapacity) return null;
     return {
       remaining: item.reportedCapacity - item.reportedUses,
