@@ -27,7 +27,10 @@ export function retryableDuplicate(issue,records){
   if(f["Code source"]!=="GitHub (my own code)")return null;
   if(["Invite limit (optional; self-reported)",
       "Uses so far (optional; self-reported)",
-      "Remaining invites (optional; self-reported)"].some(key=>Boolean(f[key])))return null;
+      "Remaining invites (optional; self-reported)",
+      "Social post or profile URL (required for Threads, X or Facebook)",
+      "Threads public post or profile URL (required for Threads)",
+      "Public confirmation or context (optional)"].some(key=>Boolean(f[key])))return null;
   const canonical=records.find(item=>item.code===codes[0]);
   const original=originalIssueNumber(canonical);
   if(!canonical || !Number.isSafeInteger(original) ||
