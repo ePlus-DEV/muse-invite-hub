@@ -189,7 +189,6 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
       // One tap on "I need a code" opens the published list immediately.
       // Keep the role keyboard, but do not require a second "Get codes" tap.
       if(role==="seeker")await list();
-      else await homePanel();
       return true;
     }
     case "need-code":
