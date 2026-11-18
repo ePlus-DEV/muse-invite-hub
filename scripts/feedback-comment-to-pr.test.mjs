@@ -224,6 +224,30 @@ test("narrative owner count rejects mistaken, forged, ambiguous and inconsistent
   assert.equal(proposed("Great work, thank you!").outcome,"ignored");
 });
 
+test("narrative owner updates reject totals, remaining and usage above the 30-slot rule",()=>{
+  const root={number:204,state:"open",title:"[Invite] YKDCA9",
+    body:"### Invite code\n\nYKDCA9"};
+  const published={id:"community-issue-204",code:"YKDCA9",status:"unverified",
+    addedAt:"2026-11-16",submittedBy:"JackChong1",
+    submittedById:123796417,feedbackIssueNumber:204};
+  const owner={login:"JackChong1",type:"User",id:123796417};
+  const base="Owner count update — YKDCA9\n- Total invites: 30\n"+
+    "- Remaining invites: 29\n- Used invites: 1\nI am the owner of this invite code.";
+  const make=body=>planCommentProposal(root,member(body,{
+    id:6934787451,created_at:"2026-11-17T01:20:21Z",user:owner
+  }),[published]);
+  assert.equal(make(base).outcome,"proposal");
+  for(const changed of [
+    base.replace("Total invites: 30","Total invites: 31"),
+    base.replace("Remaining invites: 29","Remaining invites: 31"),
+    base.replace("Used invites: 1","Used invites: 31")
+  ]){
+    const result=make(changed);
+    assert.equal(result.outcome,"needs-review");
+    assert.match(result.reason,/30/);
+  }
+});
+
 test("trusted Issue action never posts an unverified result directly to the catalog",()=>{
   const code=readFileSync(new URL("./feedback-comment-to-pr.mjs",import.meta.url),"utf8");
   const flow=readFileSync(new URL("../.github/workflows/reopen-code-feedback.yml",import.meta.url),"utf8");
