@@ -360,6 +360,24 @@ test("Issue #14 latest remaining-only manual review PR closes only after verifie
   assert.ok(!wrong.events.includes("PATCH issues/14"));
 });
 
+test("post-deploy closure accepts simplified remaining plus used without Total",async()=>{
+  const simplified={...comment,
+    body:"Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 23\n"+
+      "Used invites: 7\nOwner confirmation: I confirm these figures came from my own Muse invite screen."};
+  assert.equal(matchesPublishedQuota(simplified,record),true);
+  assert.equal(matchesPublishedQuota({...simplified,
+    body:simplified.body.replace("Used invites: 7","Used invites: 8")},record),false);
+  assert.equal(matchesPublishedQuota({...simplified,
+    body:simplified.body.replace("Remaining invites: 23","Remaining invites: 24")},record),false);
+  const m=mock({source:simplified});
+  const result=await closePublishedCommentCounts({
+    token:"test",repository:repo,deployedSha:deployed,
+    request:m.request,catalog:[record],mapping:{DPNIHH:14}
+  });
+  assert.deepEqual(result,{notified:1,closed:1,pending:0,skipped:0});
+  assert.equal(m.issue.state,"closed");
+});
+
 test("published owner-count acceptance rejects 31-slot reports and forged 30-slot totals",()=>{
   const base={...record,reportedCapacity:30,reportedUses:7,usageReportedAt:"2026-11-15"};
   const candidates=[
