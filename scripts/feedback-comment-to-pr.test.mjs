@@ -228,7 +228,19 @@ test("narrative owner count rejects mistaken, forged, ambiguous and inconsistent
   assert.equal(proposed(body,{...owner,id:222}).outcome,"needs-review");
   assert.equal(proposed(body.replace("YKDCA9","OTHER1")).outcome,"needs-review");
   assert.equal(proposed(body.replace("29","28")).outcome,"needs-review");
-  assert.equal(proposed(body.replace("- Used invites: 1","")).outcome,"needs-review");
+  const legacyWithoutUsed=proposed(body.replace("- Used invites: 1",""));
+  assert.equal(legacyWithoutUsed.outcome,"proposal");
+  assert.deepEqual([legacyWithoutUsed.data[0].reportedCapacity,
+    legacyWithoutUsed.data[0].reportedUses],[30,1]);
+  const remainingOnly=body.replace("- Total invites: 30\\n","")
+    .replace("- Used invites: 1","");
+  assert.equal(proposed(remainingOnly).outcome,"needs-review",
+    "Without a prior reviewed total, do not assume 30.");
+  const previous={...published,reportedCapacity:30,reportedUses:2,
+    usageReportedAt:"2026-11-16"};
+  const accepted=proposed(remainingOnly,owner,previous);
+  assert.equal(accepted.outcome,"proposal");
+  assert.deepEqual([accepted.data[0].reportedCapacity,accepted.data[0].reportedUses],[30,1]);
   assert.equal(proposed(body.replace("- Used invites: 1","- Used invites: 1\n- Used invites: 1")).outcome,"needs-review");
   assert.equal(proposed(body.replace("- Used invites: 1","- Used invites: many")).outcome,"needs-review");
   assert.equal(proposed(body.replace("I am the owner of this invite code.","")).outcome,"needs-review");
