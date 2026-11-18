@@ -167,6 +167,31 @@ test("recognize PR #220's real manual owner-count review provenance",()=>{
   ])assert.equal(matchesPublishedQuota({...source,...changed},reported,{allowNarrative:true}),false);
 });
 
+test("remaining-only narrative with no reviewed total can close after a trusted merge",async()=>{
+  const first={...record,reportedCapacity:undefined,reportedUses:undefined,
+    reportedRemaining:19,usageReportedAt:"2026-11-15"};
+  const source={...comment,
+    body:"Owner count update — DPNIHH\\n- Remaining invites: 19\\n"+
+      "I am the owner of this invite code."};
+  assert.equal(matchesPublishedQuota(source,first),false,
+    "Only trusted reviewed PRs can close narrative reports.");
+  assert.equal(matchesPublishedQuota(source,first,{allowNarrative:true}),true);
+  assert.equal(matchesPublishedQuota({...source,
+    body:source.body.replace("19","31")},first,{allowNarrative:true}),false);
+  assert.equal(matchesPublishedQuota({...source,
+    body:source.body+"\\n- Used invites: 11"},first,{allowNarrative:true}),false);
+  const bot={...pr,body:pr.body.replace("Action: update quota","Action: review owner-reported count")};
+  const published=mock({pull:bot,source,mergedRecord:first,liveRecord:first});
+  const result=await run(published,first);
+  assert.deepEqual(result,{notified:1,closed:1,pending:0,skipped:0});
+  assert.equal(published.issue.state,"closed");
+  for(const option of [{live:false},{liveRecord:{...first,reportedRemaining:18}},
+    {newHuman:true}]){
+    const pending=mock({pull:bot,source,mergedRecord:first,liveRecord:first,...option});
+    assert.equal((await run(pending,first)).closed,0);
+  }
+});
+
 test("new bot-created narrative count proposals can close after a trusted merge",()=>{
   const body=pr.body.replace("Action: update quota","Action: review owner-reported count");
   const narrativeBot={...pr,body};
