@@ -209,7 +209,7 @@ function quotaUpdateBlocked(state,kind,code) {
   return {outcome:state==="stale"||state==="requires-total"?"needs-review":"duplicate",kind,code,
     reason:state==="stale"?"Newer usage data is already published.":
       state==="requires-total"
-        ? "The published listing already has total and used counts. A remaining-only update would replace those fields. Please confirm the current total invites alongside remaining (used can be derived) before publishing."
+        ? "The existing quota snapshot is incomplete or inconsistent; it cannot be replaced safely with remaining alone. Provide remaining and used from Muse, or request maintainer review."
         : "The published catalog already has this dated quota."};
 }
 function rememberOwnerId(target,issue) {
@@ -497,12 +497,42 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
           : {outcome:"already-listed",kind,code,canonicalIssueNumber,
               reason:"Invite code already exists; use its original discussion for updates."};
       }
+      // Reuse only the owner's already reviewed, complete dated capacity.
+      // This matches the legacy Count update and canonical comment flows.
+      // Never assume the project maximum (30) is an individual allocation.
+      let reviewedQuota=quota;
+      if (quota.reportedRemaining !== undefined &&
+          Number.isInteger(existing.reportedCapacity) &&
+          Number.isInteger(existing.reportedUses) &&
+          existing.reportedCapacity > 0 &&
+          existing.reportedCapacity <= MAX_INVITES_PER_CODE &&
+          existing.reportedUses >= 0 &&
+          existing.reportedUses <= existing.reportedCapacity &&
+          typeof existing.usageReportedAt === "string") {
+        if (quota.reportedRemaining > existing.reportedCapacity) {
+          return {outcome:"needs-review",kind,code,
+            reason:"Remaining invites exceed the existing reviewed total; provide both remaining and used from Muse, or request manual review."};
+        }
+        reviewedQuota={
+          reportedCapacity:existing.reportedCapacity,
+          reportedUses:existing.reportedCapacity-quota.reportedRemaining,
+          usageReportedAt:date
+        };
+        notice="The owner reported remaining "+quota.reportedRemaining+
+          "; total "+existing.reportedCapacity+" came from an earlier reviewed snapshot, "+
+          "and used "+reviewedQuota.reportedUses+" is derived. This is not a live Muse balance.";
+      } else {
+        notice="The GitHub owner updated a dated self-reported count; "+
+          (quota.reportedCapacity!==undefined
+            ?"the total is derived from their remaining and used figures. "
+            :"only remaining is known; no total is assumed. ")+
+          "This is NOT a live Muse balance.";
+      }
       const target=data.find(item=>item.code===existing.code);
-      const state=updateQuota(target,quota,date);
+      const state=updateQuota(target,reviewedQuota,date);
       if(state!=="updated") return quotaUpdateBlocked(state,kind,code);
       rememberOwnerId(target,issue);
       action="update owner report";
-      notice="The GitHub owner updated a dated self-reported count; this is NOT a live Muse balance.";
     } else {
       const id = "community-issue-" + issue.number;
       if (data.some(item => item.id === id)) throw Error("Catalog ID already exists.");
