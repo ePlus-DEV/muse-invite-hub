@@ -592,6 +592,19 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
         "used "+quota.reportedUses+" was derived as total minus remaining. "+
         "These are dated owner-reported figures, NOT a live Muse balance.";
     }
+    if (quota.reportedCapacity !== undefined &&
+        !field(f,"Total invite quota shown by Muse (if known)").trim() &&
+        field(f,"Remaining invites shown by Muse").trim() &&
+        field(f,"Already used invites (if known)").trim()) {
+      const formerTotal=existing.reportedCapacity;
+      notice="The owner reported remaining "+(quota.reportedCapacity-quota.reportedUses)+
+        " and used "+quota.reportedUses+"; total "+quota.reportedCapacity+
+        " was calculated as their sum (not presumed to be the 30-slot maximum). "+
+        (Number.isInteger(formerTotal) && formerTotal!==quota.reportedCapacity
+          ? "This differs from the previously published total "+formerTotal+
+            "; verify the change before merging. " : "")+
+        "This is a dated self-report, NOT a live Muse balance.";
+    }
     const target=data.find(item=>item.code===existing.code);
     const state=updateQuota(target,quota,date);
     if(state!=="updated") return quotaUpdateBlocked(state,kind,code);
