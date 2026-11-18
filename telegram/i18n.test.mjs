@@ -64,7 +64,7 @@ test("Telegram language tags auto-select and unknown locale falls back to Englis
   assert.equal(callback.language,"ja");
 });
 
-test("English is the default even for Vietnamese Telegram; manual preferences persist",async()=>{
+test("Telegram language is the default; manual preferences persist",async()=>{
   const data=new Map();
   const storage={
     async get(id){return cleanProfile(data.get(id));},
@@ -72,12 +72,14 @@ test("English is the default even for Vietnamese Telegram; manual preferences pe
     async delete(id){data.delete(id);}
   };
   assert.deepEqual(await storage.get(42),emptyProfile());
-  assert.equal(await syncTelegramLocale(storage,42,"vi-VN"),"en");
-  assert.equal((await storage.get(42)).language,"en");
-  assert.equal(await syncTelegramLocale(storage,42,"ja"),"en");
-  // Existing accounts with legacy auto-detected Vietnamese (not manual) migrate to English.
+  assert.equal(await syncTelegramLocale(storage,42,"vi-VN"),"vi");
+  assert.equal((await storage.get(42)).language,"vi");
+  assert.equal(await syncTelegramLocale(storage,42,"ja"),"ja");
+  // Unsupported Telegram languages fall back to English.
+  assert.equal(await syncTelegramLocale(storage,42,"fr"),"en");
+  // Non-manual preferences keep following the Telegram client language.
   await storage.set(42,{language:"vi",languageManual:false});
-  assert.equal(await syncTelegramLocale(storage,42,"vi"),"en");
+  assert.equal(await syncTelegramLocale(storage,42,"en-US"),"en");
   assert.equal((await storage.get(42)).language,"en");
   // A user who explicitly chooses Vietnamese retains their preference.
   const manual=await storage.get(42);
@@ -86,7 +88,7 @@ test("English is the default even for Vietnamese Telegram; manual preferences pe
   assert.equal(await syncTelegramLocale(storage,42,"ja"),"vi");
   assert.equal((await storage.get(42)).languageManual,true);
   await storage.delete(42);
-  assert.equal(await syncTelegramLocale(storage,42,"vi-VN"),"en");
+  assert.equal(await syncTelegramLocale(storage,42,"vi-VN"),"vi");
 });
 
 test("publication notifications match each recipient's saved language",async()=>{

@@ -7,7 +7,13 @@ const SITE="https://muse.eplus.dev";
 export async function resolveInput(action,profiles) {
   if(action.type!=="text")return action;
   const profile=await profiles.get(action.chatId);
-  if(!profile.pending)return {...action,type:"usage-menu"};
+  if(!profile.pending){
+    // Pasting an invite code is the most common free-text input: open its
+    // detail (or status) panel instead of bouncing to the usage menu.
+    const pasted=action.text.trim().toUpperCase();
+    if(CODE_PATTERN.test(pasted))return {...action,type:"detail",code:pasted};
+    return {...action,type:"usage-menu"};
+  }
   const text=action.text.trim();
   const code=text.toUpperCase();
   if(profile.pending.type==="search"){

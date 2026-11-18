@@ -442,14 +442,14 @@ test("worker sources keep secrets out of the repository and reuse the review-onl
   assert.doesNotMatch(wrangler, /GITHUB_ISSUES_TOKEN\s*=\s*"/);
 });
 
-test("Cloudflare Worker defaults to English and preserves manually chosen languages",async()=>{
+test("Cloudflare Worker follows the Telegram language and preserves manually chosen languages",async()=>{
   const env=makeEnv();
   const {deps,sent}=makeDeps();
   const vi={...message(600,"/start")};
   vi.message.from.language_code="vi-VN";
   assert.equal((await handleWebhookRequest(webhook(vi),env,deps)).status,200);
-  assert.match(sent.at(-1).payload.text,/Welcome/);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
+  assert.match(sent.at(-1).payload.text,/Chào mừng/);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 Tôi cần mã");
   assert.equal((await handleWebhookRequest(webhook(message(601,"/status DPNIHH")),env,deps)).status,200);
   assert.match(sent.at(-1).payload.text,/published/);
   assert.equal((await handleWebhookRequest(webhook(callback(602,"t:lang:ja")),env,deps)).status,200);
@@ -470,8 +470,8 @@ test("Cloudflare Worker defaults to English and preserves manually chosen langua
   const freshVietnameseClient={...message(607,"/start")};
   freshVietnameseClient.message.from.language_code="vi-VN";
   assert.equal((await handleWebhookRequest(webhook(freshVietnameseClient),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code",
-    "Deleting preferences resets to English even if Telegram is Vietnamese");
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 Tôi cần mã",
+    "Deleting preferences resets to the Telegram client language");
 });
 
 test("Worker reply-keyboard Settings edits the saved inline panel in KV",async()=>{

@@ -1,5 +1,5 @@
 /* Minimal opt-in private Telegram preferences. Never expose chat IDs in GitHub Issues. */
-import { LOCALES } from "./i18n.mjs";
+import { LOCALES, normalizeLocale } from "./i18n.mjs";
 const CODE=/^[A-Z0-9]{6}$/;
 const INTENTS=new Set(["search","submit","report","status"]);
 const MENU_VERSION=/^v[1-9][0-9]*-[0-9a-f]{8}$/;
@@ -52,16 +52,18 @@ export async function mutateProfile(profiles,chatId,fn) {
   return cleanProfile(next);
 }
 
-/* English is the bot default, independent of Telegram's interface language.
- * Migrate old automatically detected language preferences, but preserve any
- * language manually chosen via /language or the Settings menu.
+/* The bot follows the Telegram client's language (normalized to a supported
+ * locale, English when unsupported) until the user explicitly picks a
+ * language via /language or the Settings menu; a manual choice always wins
+ * and is never overwritten by later Telegram language changes.
  */
-export async function syncTelegramLocale(profiles,chatId,_telegramLanguage) {
+export async function syncTelegramLocale(profiles,chatId,telegramLanguage) {
   const profile=await profiles.get(chatId);
   if(profile.languageManual)return profile.language;
-  if(profile.language!=="en"){
-    profile.language="en";
+  const detected=normalizeLocale(telegramLanguage);
+  if(profile.language!==detected){
+    profile.language=detected;
     await profiles.set(chatId,profile);
   }
-  return "en";
+  return detected;
 }
