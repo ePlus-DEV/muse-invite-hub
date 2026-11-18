@@ -421,8 +421,10 @@ test("OCI /menu refresh resets stale panel so next Search prompt is visible",asy
     assert.notEqual(latest.panelMessageId,before.panelMessageId,
       "The new visible panel must replace the old callback-owned message ID");
     assert.equal((await post(message(2954,"DPNIHH"))).status,200);
-    assert.equal(sent.findLast(x=>x.name==="editMessageText").payload.message_id,
-      latest.panelMessageId);
+    assert.ok(sent.some(x=>x.name==="deleteMessage"&&
+      x.payload.message_id===latest.panelMessageId));
+    assert.equal(sent.at(-1).name,"sendMessage",
+      "Typed search results must be visible at the bottom, not edited above");
   },{},{trackMessageIds:true});
 });
 
@@ -455,40 +457,44 @@ test("OCI Refresh re-fetches published codes without posting or changing prefere
   }});
 });
 
-test("OCI reply-keyboard actions reuse one panel for Settings, alerts and watched codes",async()=>{
+test("OCI keyboard navigation shows a new panel; inline actions keep editing the latest",async()=>{
   await withApp(async({post,sent,dir})=>{
     assert.equal((await post(message(900,"/language vi"))).status,200);
     assert.equal((await post(message(901,"/start"))).status,200);
     assert.equal((await post(message(902,"🙋 Tôi cần mã"))).status,200);
-    const list=sent.at(-1);
-    assert.equal(list.name,"sendMessage");
-    const panelId=1000+sent.length;
-    assert.equal(JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"].panelMessageId,panelId);
-    const initialMessages=sent.filter(x=>x.name==="sendMessage").length;
+    const oldId=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"].panelMessageId;
+    assert.ok(oldId>0);
+    const before=sent.filter(x=>x.name==="sendMessage").length;
     assert.equal((await post(message(903,"⚙️ Cài đặt"))).status,200);
-    assert.equal(sent.at(-1).name,"editMessageText");
-    assert.equal(sent.at(-1).payload.message_id,panelId);
+    assert.ok(sent.some(x=>x.name==="deleteMessage"&&x.payload.message_id===oldId));
+    assert.equal(sent.at(-1).name,"sendMessage");
     assert.match(sent.at(-1).payload.text,/Cài đặt/);
-    assert.equal((await post(callback(904,"t:sub:on",panelId))).status,200);
+    assert.equal(sent.filter(x=>x.name==="sendMessage").length,before+1);
+    const settingsId=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"].panelMessageId;
+    assert.notEqual(settingsId,oldId);
+    assert.equal((await post(callback(904,"t:sub:on",settingsId))).status,200);
     assert.equal(sent.at(-1).name,"editMessageText");
+    assert.equal(sent.at(-1).payload.message_id,settingsId);
     assert.match(sent.at(-1).payload.text,/BẬT/);
-    assert.equal((await post(callback(905,"t:watchlist",panelId))).status,200);
+    assert.equal((await post(callback(905,"t:watchlist",settingsId))).status,200);
     assert.equal(sent.at(-1).name,"editMessageText");
     assert.match(sent.at(-1).payload.text,/Danh sách theo dõi trống/);
-    assert.equal((await post(callback(906,"t:settings",panelId))).status,200);
+    assert.equal((await post(callback(906,"t:settings",settingsId))).status,200);
     assert.equal(sent.at(-1).name,"editMessageText");
     assert.equal((await post(message(907,"🎟 Nhận mã"))).status,200);
+    assert.ok(sent.some(x=>x.name==="deleteMessage"&&x.payload.message_id===settingsId));
+    assert.equal(sent.at(-1).name,"sendMessage");
+    assert.match(sent.at(-1).payload.text,/Mã mời cộng đồng/);
+    assert.equal(sent.filter(x=>x.name==="sendMessage").length,before+2);
+    const listId=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"].panelMessageId;
+    assert.notEqual(listId,settingsId);
+    assert.equal((await post(callback(908,"t:detail:DPNIHH",listId))).status,200);
+    assert.equal((await post(callback(909,"t:watch:DPNIHH",listId))).status,200);
     assert.equal(sent.at(-1).name,"editMessageText");
-    assert.equal(sent.at(-1).payload.message_id,panelId);
-    assert.equal(sent.filter(x=>x.name==="sendMessage").length,initialMessages,
-      "settings and reply-keyboard navigation must not spam new bot messages");
-    assert.equal((await post(callback(908,"t:detail:DPNIHH",panelId))).status,200);
-    assert.equal((await post(callback(909,"t:watch:DPNIHH",panelId))).status,200);
-    assert.equal(sent.at(-1).name,"editMessageText");
-    assert.equal((await post(callback(910,"t:watchlist",panelId))).status,200);
+    assert.equal((await post(callback(910,"t:watchlist",listId))).status,200);
     assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][1].callback_data,
       "t:unwatch:DPNIHH");
-    assert.equal((await post(callback(911,"t:unwatch:DPNIHH",panelId))).status,200);
+    assert.equal((await post(callback(911,"t:unwatch:DPNIHH",listId))).status,200);
     assert.match(sent.at(-1).payload.text,/Danh sách theo dõi trống/);
     const profile=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"];
     assert.equal(profile.subscribed,true);
