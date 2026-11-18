@@ -367,14 +367,17 @@ test("count updates require owner confirmation, known total and internally consi
   assert.throws(()=>planIssueChange(issue(14,"[Count update]",
     count({used:"6"}),"hoangsvit"),[item]),/inconsistent/);
 });
-test("owner count update preserves prior full report until current total is reconfirmed",()=>{
+test("owner count update keeps previous total and derives usage for same-owner remaining-only report",()=>{
   const previous={...item,reportedCapacity:30,reportedUses:7,usageReportedAt:"2026-11-10"};
   const comment={...issue(14,"[Count update]",count({
     remaining:"20",total:"_No response_",used:"_No response_"
   }),"hoangsvit"),updated_at:"2026-11-17T10:00:00Z"};
   const partial=planIssueChange(comment,[previous]);
-  assert.equal(partial.outcome,"needs-review");
-  assert.match(partial.reason,/remaining-only update would replace/);
+  assert.equal(partial.outcome,"proposal");
+  assert.deepEqual([partial.data[0].reportedCapacity,
+    partial.data[0].reportedUses,partial.data[0].usageReportedAt],[30,10,"2026-11-17"]);
+  assert.equal(partial.data[0].reportedRemaining,undefined);
+  assert.match(partial.notice,/retained from the previous published snapshot/);
   assert.deepEqual([previous.reportedCapacity,previous.reportedUses],[30,7]);
   const reconfirmed={...comment,body:count({
     remaining:"20",total:"30",used:"_No response_"
@@ -399,7 +402,7 @@ test("owner quota combinations, freshness, changes and incomplete reports",()=>{
   },[previous]);
   const cases=[
     [{remaining:"20",total:"30",used:"_No response_"},30,10],
-    [{remaining:"20",total:"_No response_",used:"_No response_"},null,null],
+    [{remaining:"20",total:"_No response_",used:"_No response_"},30,10],
     [{remaining:"_No response_",total:"30",used:"10"},30,10],
     [{remaining:"20",total:"30",used:"10"},30,10],
     [{remaining:"20",total:"50",used:"30"},50,30],
@@ -407,19 +410,17 @@ test("owner quota combinations, freshness, changes and incomplete reports",()=>{
   ];
   for(const [fields,total,used] of cases) {
     const proposal=change(fields);
-    if(total===null){
-      assert.equal(proposal.outcome,"needs-review");
-      assert.match(proposal.reason,/remaining-only update would replace/);
-    } else {
-      assert.equal(proposal.outcome,"proposal");
-      assert.equal(proposal.data[0].reportedCapacity,total);
-      assert.equal(proposal.data[0].reportedUses,used);
-      assert.equal(proposal.data[0].reportedRemaining,undefined);
-      assert.equal(proposal.data[0].quotaUpdateCount,1);
-    }
+    assert.equal(proposal.outcome,"proposal");
+    assert.equal(proposal.data[0].reportedCapacity,total);
+    assert.equal(proposal.data[0].reportedUses,used);
+    assert.equal(proposal.data[0].reportedRemaining,undefined);
+    assert.equal(proposal.data[0].quotaUpdateCount,1);
   }
   assert.equal(change({remaining:"20",total:"_No response_",used:"_No response_"},partial).outcome,"proposal");
   assert.equal(change({remaining:"20",total:"_No response_",used:"_No response_"},item).outcome,"proposal");
+  const exceeds=change({remaining:"31",total:"_No response_",used:"_No response_"});
+  assert.equal(exceeds.outcome,"needs-review");
+  assert.match(exceeds.reason,/exceed.*total/);
   for(const [remaining,total,used] of [
     ["20","30","9"],
     ["40","30","_No response_"],
