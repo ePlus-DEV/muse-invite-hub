@@ -114,7 +114,6 @@
     if (outcome === "count") {
       return "Code: " + code + "\nUpdate type: Owner count" +
         "\nRemaining invites: [enter actual number or leave blank]" +
-        "\nUsed invites: [optional]" +
         "\nOwner confirmation: [confirm this report below]";
     }
     return "Code: " + code + "\nResult: " + FEEDBACK_CHOICES[outcome] +
@@ -163,7 +162,7 @@
     const total = fields["Total invites"];
     const used = fields["Used invites"];
     if (remaining === null && (total === null || used === null)) {
-      return {error: "Enter the remaining invites shown in Muse (0–30). Used invites is optional."};
+      return {error: "Enter the remaining invites shown in Muse (0–30)."};
     }
     if (remaining !== null && used !== null && total === null &&
         (remaining + used < 1 || remaining + used > MAX_INVITES_PER_CODE)) {
@@ -186,10 +185,9 @@
 
   // The form generates the canonical text; visitors never need to edit code or
   // placeholder labels just to report their remaining slots.
-  function ownerCountComment(code, remaining = "", used = "") {
+  function ownerCountComment(code, remaining = "") {
     return feedbackComment(code, "count")
-      .replace("[enter actual number or leave blank]", String(remaining).trim())
-      .replace("Used invites: [optional]", "Used invites: " + String(used).trim());
+      .replace("[enter actual number or leave blank]", String(remaining).trim());
   }
 
   // Existing GitHub Issues cannot prefill comments through a URL. Instead this
@@ -235,22 +233,7 @@
     remainingInput.placeholder = "e.g. 3";
     remainingInput.setAttribute("aria-describedby", "feedback-count-hint");
     remainingHint.id = "feedback-count-hint";
-    const usedLabel = document.createElement("label");
-    usedLabel.setAttribute("for", "feedback-count-used");
-    usedLabel.textContent = "Used invites (optional)";
-    const usedInput = document.createElement("input");
-    usedInput.id = "feedback-count-used";
-    usedInput.type = "text";
-    usedInput.inputMode = "numeric";
-    usedInput.pattern = "[0-9]*";
-    usedInput.maxLength = 2;
-    usedInput.autocomplete = "off";
-    usedInput.placeholder = "e.g. 11";
-    const usedHint = document.createElement("p");
-    usedHint.className = "feedback-count-hint";
-    usedHint.textContent = "Leave blank if unknown. With both numbers, total = remaining + used (maximum 30); otherwise the bot retains an earlier reviewed total if available.";
-    countFields.append(remainingLabel, remainingHint, remainingInput,
-      usedLabel, usedInput, usedHint);
+    countFields.append(remainingLabel, remainingHint, remainingInput);
     countFields.hidden = true;
 
     const commentEditor = document.createElement("details");
@@ -260,12 +243,10 @@
     commentEditor.append(commentSummary, label, textarea);
     function refreshOwnerComment() {
       if (activeOutcome !== "count") return;
-      textarea.value = ownerCountComment(activeCode, remainingInput.value, usedInput.value);
+      textarea.value = ownerCountComment(activeCode, remainingInput.value);
       feedbackStatus.textContent = "";
     }
-    for (const input of [remainingInput, usedInput]) {
-      input.addEventListener("input", refreshOwnerComment);
-    }
+    remainingInput.addEventListener("input", refreshOwnerComment);
     const ownerConfirm = document.createElement("label");
     ownerConfirm.className = "feedback-dialog-consent";
     const ownerCheckbox = document.createElement("input");
@@ -306,12 +287,11 @@
     copy.addEventListener("click", async () => {
       let text = textarea.value.trim();
       if (activeOutcome === "count") {
-        const structured = ownerCountComment(activeCode, remainingInput.value, usedInput.value);
+        const structured = ownerCountComment(activeCode, remainingInput.value);
         const numbers = prepareOwnerCountComment(structured);
         if (numbers.error) {
           feedbackStatus.textContent = numbers.error;
-          if (!remainingInput.value.trim()) remainingInput.focus();
-          else usedInput.focus();
+          remainingInput.focus();
           return;
         }
         if (!ownerCheckbox.checked) {
@@ -383,12 +363,11 @@
         ownerConfirm.hidden = !isCount;
         countFields.hidden = !isCount;
         remainingInput.value = "";
-        usedInput.value = "";
         commentEditor.open = !isCount;
         copy.textContent = isCount ? "Copy report" : "Copy comment";
         label.textContent = isCount ? "Prepared GitHub comment (editable)" : "Your comment (editable)";
         help.textContent = isCount ?
-          "Enter the figures you see in Muse. We will prepare the GitHub comment for you." :
+          "Enter the remaining invites shown in your Muse account (0–30). We will prepare the comment for you." :
           "Review and copy your prepared comment, then open the existing GitHub Issue and paste it. GitHub cannot prefill comments in an existing Issue.";
         note.textContent = isCount ?
           "Copying does not submit your update. After copying, open GitHub, paste and post the comment. Only the listed GitHub owner can request an update." :
