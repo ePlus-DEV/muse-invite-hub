@@ -427,6 +427,31 @@ test("owner-count comment requires real, consistent figures before Safari copy",
   assert.match(helper, /Enter your actual Remaining invites number, or both Total invites and Used invites/);
 });
 
+test("web owner-count validation uses 0–30 inclusive, never a 1000-slot claim",()=>{
+  const base=features.feedbackComment("DPNIHH","count");
+  for(const remaining of [0,30]){
+    const report=base.replace("[enter actual number or leave blank]",String(remaining));
+    assert.equal(features.prepareOwnerCountComment(report).error,undefined);
+  }
+  for(const value of [31,99,1000]){
+    const report=base.replace("[enter actual number or leave blank]",String(value));
+    assert.match(features.prepareOwnerCountComment(report).error,/0 and 30/);
+    const full=base.replace("[enter actual number or leave blank]","0")
+      .replace("Total invites: [optional]","Total invites: "+value)
+      .replace("Used invites: [optional]","Used invites: 0");
+    assert.match(features.prepareOwnerCountComment(full).error,/0 and 30/);
+  }
+  const example=features.tokenPotential([
+    {usageReportedAt:"2026-11-18",reportedCapacity:20,reportedUses:3},
+    {usageReportedAt:"2026-11-18",reportedRemaining:30},
+    {usageReportedAt:"2026-11-18",reportedRemaining:31}
+  ]);
+  assert.equal(example.remainingUses,47);
+  assert.equal(example.reportedCodes,2,"Out-of-range sources must be ignored, not clipped");
+  assert.match(app,/MAX_INVITES_PER_CODE/);
+  assert.match(read("assets/directory-features.js"),/maxLength = 2/);
+});
+
 test("guided mobile owner count fields generate the canonical GitHub report", () => {
   const report = features.ownerCountComment("DPNIHH", "3", "", "");
   assert.match(report, /^Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 3/m);
