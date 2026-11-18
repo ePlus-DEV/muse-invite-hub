@@ -282,10 +282,10 @@ test("PR #304 owner-count source matches trusted comment provenance",()=>{
   const sourcePr={
     ...pr,number:304,
     title:"data: review BN5LUW count from comment #"+commentNo,
-    body:"## Community feedback — requires human review\\n\\nOriginal Issue: #188\\n"+
+    body:"## Community feedback — requires human review\n\nOriginal Issue: #188\n"+
       "Source comment: https://github.com/"+repo+
-      "/issues/188#issuecomment-"+commentNo+"\\n"+
-      "Reporter: @Brearu\\nCode: **BN5LUW**\\nAction: update quota\\n",
+      "/issues/188#issuecomment-"+commentNo+"\n"+
+      "Reporter: @Brearu\nCode: **BN5LUW**\nAction: update quota\n",
     head:{ref:"auto/comment-188-"+commentNo+"-count",repo:{full_name:repo}},
     merge_commit_sha:merged
   };
