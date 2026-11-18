@@ -317,6 +317,49 @@ test("Issue #14 remaining-only owner comment matches only the published derived 
   assert.equal(matchesPublishedQuota(source,{...current,usageReportedAt:"2026-11-17"}),false);
 });
 
+test("Issue #14 latest remaining-only manual review PR closes only after verified publication",async()=>{
+  const latest={...record,reportedCapacity:30,reportedUses:11,
+    usageReportedAt:"2026-11-18",quotaUpdateCount:1};
+  const latestComment={
+    ...comment,
+    id:6968988185,
+    created_at:"2026-11-18T04:23:33Z",
+    body:"Code: DPNIHH\nUpdate type: Owner count\nRemaining invites: 19\n"+
+      "Total invites: \nUsed invites: \n"+
+      "Owner confirmation: I confirm these figures came from my own Muse invite screen."
+  };
+  const manualPr={
+    ...pr,number:308,
+    title:"data: review DPNIHH owner count from issue #14 (19 remaining)",
+    body:"Source: [@hoangsvit's comment](https://github.com/"+repo+
+      "/issues/14#issuecomment-6968988185) on 2026-11-18 (UTC).\n"+
+      "Existing invite code: **DPNIHH**.\n"+
+      "Tracks Issue #14 and comment #6968988185.",
+    user:{login:"hoangsvit"},
+    head:{ref:"data/issue-14-owner-remaining-19-20261118",
+      repo:{full_name:repo}}
+  };
+  assert.equal(commentCountCandidate(manualPr)?.provenance,"maintainer");
+  const m=mock({pull:manualPr,source:latestComment,
+    mergedRecord:latest,liveRecord:latest});
+  const result=await closePublishedCommentCounts({
+    token:"test",repository:repo,deployedSha:deployed,request:m.request,
+    catalog:[latest],mapping:{DPNIHH:14}
+  });
+  assert.deepEqual(result,{notified:1,closed:1,pending:0,skipped:0});
+  assert.equal(m.issue.state,"closed");
+  assert.ok(m.events.indexOf("POST issues/14/comments")<
+    m.events.indexOf("PATCH issues/14"));
+  const wrong=mock({pull:manualPr,source:latestComment,
+    mergedRecord:latest,liveRecord:{...latest,reportedUses:10}});
+  const blocked=await closePublishedCommentCounts({
+    token:"test",repository:repo,deployedSha:deployed,request:wrong.request,
+    catalog:[latest],mapping:{DPNIHH:14}
+  });
+  assert.equal(blocked.closed,0);
+  assert.ok(!wrong.events.includes("PATCH issues/14"));
+});
+
 test("match only the owner-confirmed source comment and exact dated count",()=>{
   assert.equal(matchesPublishedQuota(comment,record),true);
   for(const change of [
