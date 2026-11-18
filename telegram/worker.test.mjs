@@ -250,8 +250,12 @@ test("Worker old menu Search refresh opens a visible new prompt, never an off-sc
   assert.equal(calls.report.length,0);
   assert.equal((await handleWebhookRequest(webhook(message(2831,"DPNIHH")),env,deps)).status,200);
   assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,0);
-  assert.equal(sent.findLast(x=>x.name==="editMessageText").payload.message_id,profile.panelMessageId,
-    "Subsequent navigation can reuse the new nearby panel");
+  assert.ok(sent.some(x=>x.name==="deleteMessage"&&
+    x.payload.message_id===profile.panelMessageId),
+    "A typed search query retires the old prompt before returning new results");
+  assert.match(sent.filter(x=>x.name==="sendMessage").at(-1).payload.text,/DPNIHH|No codes|Search/i);
+  assert.equal(sent.filter(x=>x.name==="editMessageText").length,0,
+    "Typed input does not silently edit a panel above the conversation");
 });
 
 test("Worker /start, Settings and role changes send one keyboard each; legacy Refresh-menu callback still works",async()=>{
@@ -472,7 +476,7 @@ test("Cloudflare Worker follows the Telegram language and preserves manually cho
     "Deleting preferences resets to the Telegram client language");
 });
 
-test("Worker reply-keyboard Settings edits the saved inline panel in KV",async()=>{
+test("Worker keyboard navigation opens latest panel; inline actions edit only that panel",async()=>{
   const env=makeEnv(),{deps,sent,calls}=makeDeps();
   deps.telegramApi=async(name,payload)=>{
     sent.push({name,payload});
@@ -481,20 +485,28 @@ test("Worker reply-keyboard Settings edits the saved inline panel in KV",async()
   assert.equal((await handleWebhookRequest(webhook(message(860,"/language vi")),env,deps)).status,200);
   assert.equal((await handleWebhookRequest(webhook(message(861,"/start")),env,deps)).status,200);
   assert.equal((await handleWebhookRequest(webhook(message(862,"🙋 Tôi cần mã")),env,deps)).status,200);
-  const panelId=2000+sent.length;
-  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).panelMessageId,panelId);
-  const messages=sent.filter(x=>x.name==="sendMessage").length;
+  const firstId=JSON.parse(await env.BOT_STATE.get("profile:42")).panelMessageId;
+  assert.ok(firstId>0);
   assert.equal((await handleWebhookRequest(webhook(message(863,"⚙️ Cài đặt")),env,deps)).status,200);
+  assert.ok(sent.some(x=>x.name==="deleteMessage"&&x.payload.message_id===firstId));
+  const settings=sent.findLast(x=>x.name==="sendMessage");
+  assert.match(settings.payload.text,/Cài đặt/);
+  const current=JSON.parse(await env.BOT_STATE.get("profile:42")).panelMessageId;
+  assert.notEqual(current,firstId);
+  const sends=sent.filter(x=>x.name==="sendMessage").length;
+  assert.equal((await handleWebhookRequest(webhook(callback(864,"t:sub:on",current)),env,deps)).status,200);
   assert.equal(sent.at(-1).name,"editMessageText");
-  assert.equal(sent.at(-1).payload.message_id,panelId);
-  assert.equal((await handleWebhookRequest(webhook(callback(864,"t:sub:on",panelId)),env,deps)).status,200);
-  assert.equal(sent.at(-1).name,"editMessageText");
+  assert.equal(sent.at(-1).payload.message_id,current);
   assert.match(sent.at(-1).payload.text,/BẬT/);
-  assert.equal((await handleWebhookRequest(webhook(callback(865,"t:watchlist",panelId)),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(callback(865,"t:watchlist",current)),env,deps)).status,200);
   assert.equal(sent.at(-1).name,"editMessageText");
+  assert.equal(sent.filter(x=>x.name==="sendMessage").length,sends,
+    "Inline navigation edits in place without new messages");
   assert.equal((await handleWebhookRequest(webhook(message(866,"🎟 Nhận mã")),env,deps)).status,200);
-  assert.equal(sent.at(-1).name,"editMessageText");
-  assert.equal(sent.filter(x=>x.name==="sendMessage").length,messages);
+  assert.ok(sent.some(x=>x.name==="deleteMessage"&&x.payload.message_id===current));
+  assert.equal(sent.at(-1).name,"sendMessage");
+  assert.match(sent.at(-1).payload.text,/Mã mời cộng đồng|Trang 1/);
+  assert.equal(sent.filter(x=>x.name==="sendMessage").length,sends+1);
   assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).subscribed,true);
   assert.equal(calls.submit.length,0);
   assert.equal(calls.report.length,0);
