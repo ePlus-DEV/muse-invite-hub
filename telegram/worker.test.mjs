@@ -145,6 +145,23 @@ test("Worker Refresh fetches current catalog and has no public write side effect
   assert.equal(await env.BOT_STATE.get("rl:42"),null,"Refreshing must not use public-write quota");
 });
 
+test("Worker no-change refresh shows toast without sending a duplicate card",async()=>{
+  const env=makeEnv();
+  const {deps,sent,calls}=makeDeps({browseCodes:async()=>[
+    {code:"DPNIHH",status:"unverified",remaining:23,usageReportedAt:"2026-11-15"}
+  ]});
+  deps.telegramApi=async (name,payload)=>{
+    sent.push({name,payload});
+    if(name==="editMessageText")
+      throw Error("Telegram editMessageText HTTP 400: Bad Request: message is not modified");
+  };
+  assert.equal((await handleWebhookRequest(webhook(callback(901,"t:refresh-code:DPNIHH")),env,deps)).status,200);
+  assert.deepEqual(sent.map(x=>x.name),["editMessageText","answerCallbackQuery"]);
+  assert.equal(sent.at(-1).payload.text,"Already up to date");
+  assert.equal(calls.submit.length,0);
+  assert.equal(calls.report.length,0);
+});
+
 test("Worker paging and code details are navigable without GitHub writes",async()=>{
   const env=makeEnv(),sentMessages=[];
   const items=Array.from({length:8},(_,i)=>({
