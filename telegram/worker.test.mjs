@@ -127,9 +127,9 @@ test("Worker Refresh fetches current catalog and has no public write side effect
     return [{code:"DPNIHH",status:"unverified",remaining:reads,usageReportedAt:"2026-11-15"}];
   }});
   assert.equal((await handleWebhookRequest(webhook(message(300,"/start")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
   assert.equal((await handleWebhookRequest(webhook(callback(301,"t:role:contributor")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
   assert.equal((await handleWebhookRequest(webhook(message(302,"🔄 Refresh")),env,deps)).status,200);
   assert.equal(reads,1);
   assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/1 /);
