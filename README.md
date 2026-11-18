@@ -11,7 +11,7 @@
 ## Features
 
 - **One directory:** browse, search, filter and sort invite codes shared on GitHub, Threads, X (Twitter), Facebook and Telegram. New submissions follow Muse's 6-character alphanumeric invite format (A–Z, 0–9; no hyphens), but matching the format does not guarantee redemption.
-- **[Country availability map](https://muse.eplus.dev/countries/):** interactive, accessible world map showing five Meta-announced Muse launch markets as rechecked 16 November 2026, with primary sources. Highlighted countries do not guarantee individual account eligibility. Boundaries: Natural Earth (public domain).
+- **[Country availability map](https://muse.eplus.dev/countries/):** interactive, accessible world map showing six Meta-announced Muse launch markets as rechecked 18 November 2026, with primary sources. Highlighted countries do not guarantee individual account eligibility. Boundaries: Natural Earth (public domain).
 - **Saved codes:** bookmark codes on the homepage or detail page and filter by saved items. Bookmarks are stored only in this browser (no accounts or server synchronization).
 - **Copied codes:** successfully copied codes show the same soft brand-blue **Copied** button on all directory cards, including featured and Verified Owner cards. It remains clickable to copy again, and the detail page uses the same blue copied highlight. The state persists only in this browser; copying never proves Muse redemption.
 - **Recently updated:** sort by the latest recorded listing date, reported usage date or catalog check. This does not verify current Muse redemption.

@@ -65,7 +65,7 @@ export function renderDetailMarketAvailability() {
   const end = home.indexOf("</section>", start);
   if (start < 0 || end < start) throw Error("Homepage availability disclosure missing");
   const html = home.slice(start, end + "</section>".length);
-  if ((html.match(/<li data-country="[A-Z]{2}">/g) || []).length !== 5) {
+  if ((html.match(/<li data-country="[A-Z]{2}">/g) || []).length !== 6) {
     throw Error("Unexpected market list in homepage disclosure");
   }
   return html

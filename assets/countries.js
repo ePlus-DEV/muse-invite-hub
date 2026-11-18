@@ -26,6 +26,7 @@
     JP: { longitude: 138, latitude: 36, label: "Japan", dx: -17, dy: -10, anchor: "end" },
     SG: { longitude: 103.82, latitude: 1.35, label: "Singapore", dx: 15, dy: -10 },
     MX: { longitude: -102, latitude: 24, label: "Mexico", dx: 15, dy: 20 },
+    AU: { longitude: 134, latitude: -25, label: "Australia", dx: -15, dy: 20, anchor: "end" },
     GB: { longitude: -2.5, latitude: 54, label: "UK (expected)", dx: 15, dy: -10 }
   };
   const views = {
@@ -162,7 +163,7 @@
       setSelected(selected);
       status.hidden = true;
     } catch {
-      status.textContent = "The map could not load. The five Meta-confirmed markets and separate UK press report are still listed below.";
+      status.textContent = "The map could not load. The six Meta-confirmed markets and separate UK press report are still listed below.";
     }
   }
   buildGraticule();

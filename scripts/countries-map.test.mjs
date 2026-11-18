@@ -11,9 +11,9 @@ const home = read("index.html");
 const page = read("countries/index.html");
 const js = read("assets/countries.js");
 const css = read("assets/countries.css");
-const expected = ["US", "CA", "JP", "SG", "MX"];
+const expected = ["US", "CA", "JP", "SG", "MX", "AU"];
 
-test("map page and homepage retain the same five documented launch markets", () => {
+test("map page and homepage retain the same six documented launch markets", () => {
   const homeCodes = [...home.matchAll(/<li data-country="([A-Z]{2})">/g)].map(x => x[1]);
   const pageCodes = [...page.matchAll(/<article class="country-card(?: is-selected)?" data-code="([A-Z]{2})"/g)].map(x => x[1]);
   assert.deepEqual(homeCodes, expected);
@@ -26,11 +26,11 @@ test("map page and homepage retain the same five documented launch markets", () 
     assert.ok(page.includes('../assets/flags/' + flag + '.svg'));
     assert.ok(page.includes('data-select="' + code + '"'));
   }
-  for (const date of ["2026-09-08", "2026-09-29", "2026-10-23", "2026-10-27", "2026-11-05"]) {
+  for (const date of ["2026-09-08", "2026-09-29", "2026-10-23", "2026-10-27", "2026-11-05", "2026-11-17"]) {
     assert.ok(home.includes('datetime="' + date + '"'));
     assert.ok(page.includes('datetime="' + date + '"'));
   }
-  assert.ok(page.includes('datetime="2026-11-16"'));
+  assert.ok(page.includes('datetime="2026-11-18"'));
   assert.match(page, /Countries without a confirmed announcement are not necessarily blocked/);
   assert.match(page, /Availability ≠ eligibility/);
   assert.ok(!/guaranteed access|live availability|globally available/i.test(page));
@@ -39,12 +39,12 @@ test("map page and homepage retain the same five documented launch markets", () 
 test("country recheck date and source list remain synchronized", () => {
   const guide=read("docs/PROJECT_GUIDE.md");
   const readme=read("README.md");
-  assert.ok(home.includes("5 confirmed markets · 1 press-reported · Updated 16 Nov 2026"));
-  assert.ok(home.includes('As of <time datetime="2026-11-16">16 Nov 2026</time>'));
-  assert.ok(page.includes('Last reviewed <time datetime="2026-11-16">16 Nov 2026</time>'));
-  assert.ok(page.includes("Updated 16 Nov 2026"));
-  assert.ok(readme.includes("as rechecked 16 November 2026"));
-  assert.ok(guide.includes("As rechecked 16 November 2026"));
+  assert.ok(home.includes("6 confirmed markets · 1 press-reported · Updated 18 Nov 2026"));
+  assert.ok(home.includes('As of <time datetime="2026-11-18">18 Nov 2026</time>'));
+  assert.ok(page.includes('Last reviewed <time datetime="2026-11-18">18 Nov 2026</time>'));
+  assert.ok(page.includes("Updated 18 Nov 2026"));
+  assert.ok(readme.includes("as rechecked 18 November 2026"));
+  assert.ok(guide.includes("As rechecked 18 November 2026"));
   assert.equal(guide.split("# Project guide — Muse Invite Hub").length-1,1);
   assert.ok(guide.includes("`^[A-Z0-9]{6}$`"));
   assert.ok(guide.includes("UK timing remains press-reported and not an official announcement"));
@@ -52,7 +52,7 @@ test("country recheck date and source list remain synchronized", () => {
 
 test("press-reported UK is clearly separate from officially confirmed rollout", () => {
   const source = "https://www.thetimes.com/business/technology/article/mark-zuckerbergs-muse-ai-assistant-uk-launch-c5srqnkb8";
-  assert.match(home, /5 confirmed markets · 1 press-reported · Updated 16 Nov 2026/);
+  assert.match(home, /6 confirmed markets · 1 press-reported · Updated 18 Nov 2026/);
   assert.match(home, /availability-expected-label/);
   assert.match(home, /No official launch date or availability/);
   assert.ok(home.includes(source));
@@ -65,10 +65,10 @@ test("press-reported UK is clearly separate from officially confirmed rollout", 
   assert.ok(page.includes(source));
   assert.ok(page.includes('datetime="2026-11-09"'));
   assert.equal((page.match(/data-code="GB"/g)||[]).length,1);
-  assert.equal((home.match(/<li data-country="[A-Z]{2}">/g)||[]).length,5);
-  assert.equal((page.match(/class="country-card(?: is-selected)?"/g)||[]).length,5);
+  assert.equal((home.match(/<li data-country="[A-Z]{2}">/g)||[]).length,6);
+  assert.equal((page.match(/class="country-card(?: is-selected)?"/g)||[]).length,6);
   assert.match(page, /1 press-reported market/);
-  assert.match(page, /excluded from the <strong>5 confirmed markets<\/strong> total/);
+  assert.match(page, /excluded from the <strong>6 confirmed markets<\/strong> total/);
   assert.match(page, /map-legend-expected/);
   assert.match(page, /data-region="europe"/);
   assert.match(js, /const confirmedMarkets = new Map/);
@@ -88,7 +88,7 @@ test("accessible map uses bundled Natural Earth geometry and handles absent geom
   assert.equal(geo.type, "FeatureCollection");
   assert.ok(geo.features.length >= 170);
   assert.match(geo.attribution, /Natural Earth public domain/);
-  for (const code of ["US", "CA", "JP", "MX", "GB"]) {
+  for (const code of ["US", "CA", "JP", "MX", "AU", "GB"]) {
     assert.ok(geo.features.some(f => f.code === code && f.geometry), code);
   }
   assert.match(js, /document\.createElementNS/);
