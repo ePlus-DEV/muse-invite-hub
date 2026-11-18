@@ -86,6 +86,9 @@ const STRINGS = {
     "browseHeading": "Published community codes (not live or Muse-verified):",
     "pageTitle": "Page {page}",
     "chooseCode": "Select a code to view details:",
+    "alreadyUpToDate": "Already up to date",
+    "refreshDone": "Updated",
+    "refreshFailed": "Could not refresh. Try again.",
     "previous": "◀ Previous",
     "next": "Next ▶",
     "backList": "◀ Back to codes",
@@ -215,6 +218,9 @@ const STRINGS = {
     "browseHeading": "Mã cộng đồng đã công bố (không phải trạng thái trực tiếp hoặc được Muse xác minh):",
     "pageTitle": "Trang {page}",
     "chooseCode": "Chọn mã để xem chi tiết:",
+    "alreadyUpToDate": "Nội dung đã mới nhất",
+    "refreshDone": "Đã cập nhật",
+    "refreshFailed": "Không thể làm mới. Hãy thử lại.",
     "previous": "◀ Trước",
     "next": "Sau ▶",
     "backList": "◀ Danh sách mã",
@@ -344,6 +350,9 @@ const STRINGS = {
     "browseHeading": "公開コミュニティコード（リアルタイム情報・Muse認証ではありません）：",
     "pageTitle": "ページ {page}",
     "chooseCode": "詳細を見るコードを選択:",
+    "alreadyUpToDate": "最新の状態です",
+    "refreshDone": "更新しました",
+    "refreshFailed": "更新できませんでした。再試行してください。",
     "previous": "◀ 前へ",
     "next": "次へ ▶",
     "backList": "◀ コード一覧",
@@ -463,15 +472,16 @@ export function menuText(locale,key) {
   return value;
 }
 export const MENU_KEYS = Object.freeze([
-  ["browse","newest","search"],["submit","mine","report"],["notifications","watchlist","settings"],["refresh"]
+  ["browse","newest","search"],["submit","mine","report"],["notifications","watchlist","settings"]
 ]);
-// Entry is an intent choice, not user identity, ownership or an access-control role.
-export const ENTRY_MENU_KEYS = Object.freeze([["roleSeeker"],["roleContributor"],["languageButton"],["refresh"]]);
+// /start and Main menu render the latest deployed keyboard after feature updates.
+// Keep Refresh as an inline list/detail action, not a persistent menu row.
+export const ENTRY_MENU_KEYS = Object.freeze([["roleSeeker"],["roleContributor"],["languageButton"]]);
 export const ROLE_MENU_KEYS = Object.freeze({
   seeker:[["browse","newest","search"],["need","notifications","watchlist"],
-    ["report","settings","roleSwitch"],["refresh"]],
+    ["report","settings","roleSwitch"]],
   contributor:[["submit","mine","status"],["newest","browse","report"],
-    ["notifications","settings","roleSwitch"],["refresh"]]
+    ["notifications","settings","roleSwitch"]]
 });
 export function translationCoverage() {
   return LOCALES.map(language=>({language,
