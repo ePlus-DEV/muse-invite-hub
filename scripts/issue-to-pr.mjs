@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { validateCatalog } from "./validate.mjs";
+import { MAX_INVITES_PER_CODE } from "./invite-quota-policy.mjs";
 import { fetchGitHubCatalog, changedRecord, changedRecords } from "./catalog.mjs";
 import { parsePublicSource, listedPlatform, LISTING_PLATFORMS } from "./source-platform.mjs";
 import { isShareCodeIssue, issueCodes, originalIssueNumber, parseInviteCodes, withCanonicalIssueRefs } from "./code-issue-map.mjs";
@@ -125,10 +126,10 @@ function explicitlyNoSocialSource(value) {
   return /^(?:n\/?a|none|not applicable|no social (?:source|post|url)(?:[;,]\s*this is my own (?:referral )?code)?)[.!]?$/i
     .test(plainOptionalText(value));
 }
-function optionalInteger(value, name, max = 1000) {
+function optionalInteger(value, name, max = MAX_INVITES_PER_CODE) {
   const str = String(value ?? "").trim();
   if (!str || explicitlyUnreported(str)) return null;
-  if (!/^(?:0|[1-9][0-9]{0,3})$/.test(str)) throw Error(name + " must be a non-negative integer.");
+  if (!/^(?:0|[1-9][0-9]?)$/.test(str)) throw Error(name + " must be a non-negative integer.");
   const n = Number(str);
   if (n > max) throw Error(name + " is outside the supported range.");
   return n;
