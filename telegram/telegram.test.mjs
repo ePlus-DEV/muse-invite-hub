@@ -57,7 +57,7 @@ test("Telegram commands accept only public code patterns and known report outcom
   }}).type,"submit");
 });
 
-async function withApp(run,services={}) {
+async function withApp(run,services={},opts={}) {
   const dir=mkdtempSync(join(tmpdir(),"muse-telegram-test-"));
   const sent=[],calls={submit:[],report:[]};
   const defaults={
@@ -76,7 +76,11 @@ async function withApp(run,services={}) {
   const options={
     token,secret,githubToken:"issue-token-test",dataDir:dir,
     services:{...defaults,...services},
-    telegramApi:async (name,payload)=>sent.push({name,payload})
+    telegramApi:async (name,payload)=>{
+      sent.push({name,payload});
+      return opts.trackMessageIds&&name==="sendMessage"?
+        {message_id:1000+sent.length}:undefined;
+    }
   };
   const server=createTelegramApp(options);
   await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
@@ -95,8 +99,8 @@ async function withApp(run,services={}) {
 }
 const message=(id,text)=>({update_id:id,message:{text,from:{id:42,is_bot:false,username:"alice_dev"},
   chat:{id:42,type:"private"}}});
-const callback=(id,data)=>({update_id:id,callback_query:{id:"cb-"+id,data,
-  from:{id:42,username:"alice_dev"},message:{message_id:id+100,chat:{id:42,type:"private"}}}});
+const callback=(id,data,panelId=id+100)=>({update_id:id,callback_query:{id:"cb-"+id,data,
+  from:{id:42,username:"alice_dev"},message:{message_id:panelId,chat:{id:42,type:"private"}}}});
 
 test("webhook checks method, path, JSON and constant-time shared secret",async()=>{
   await withApp(async({origin,post})=>{
@@ -371,7 +375,7 @@ test("OCI Refresh re-fetches published codes without posting or changing prefere
     assert.equal((await post(message(500,"/start"))).status,200);
     assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
     assert.equal((await post(callback(501,"t:role:seeker"))).status,200);
-    assert.equal(sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard.length,3);
+    assert.equal(sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard.length,2);
     assert.equal(reads,1,"Selecting seeker must load the first code page");
     assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:DPNIHH");
     assert.equal((await post(message(502,"🔄 Refresh"))).status,200);
@@ -394,6 +398,47 @@ test("OCI Refresh re-fetches published codes without posting or changing prefere
   }});
 });
 
+test("OCI reply-keyboard actions reuse one panel for Settings, alerts and watched codes",async()=>{
+  await withApp(async({post,sent,dir})=>{
+    assert.equal((await post(message(900,"/language vi"))).status,200);
+    assert.equal((await post(message(901,"/start"))).status,200);
+    assert.equal((await post(message(902,"🙋 Tôi cần mã"))).status,200);
+    const list=sent.at(-1);
+    assert.equal(list.name,"sendMessage");
+    const panelId=1000+sent.length;
+    assert.equal(JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"].panelMessageId,panelId);
+    const initialMessages=sent.filter(x=>x.name==="sendMessage").length;
+    assert.equal((await post(message(903,"⚙️ Cài đặt"))).status,200);
+    assert.equal(sent.at(-1).name,"editMessageText");
+    assert.equal(sent.at(-1).payload.message_id,panelId);
+    assert.match(sent.at(-1).payload.text,/Cài đặt/);
+    assert.equal((await post(callback(904,"t:sub:on",panelId))).status,200);
+    assert.equal(sent.at(-1).name,"editMessageText");
+    assert.match(sent.at(-1).payload.text,/BẬT/);
+    assert.equal((await post(callback(905,"t:watchlist",panelId))).status,200);
+    assert.equal(sent.at(-1).name,"editMessageText");
+    assert.match(sent.at(-1).payload.text,/Danh sách theo dõi trống/);
+    assert.equal((await post(callback(906,"t:settings",panelId))).status,200);
+    assert.equal(sent.at(-1).name,"editMessageText");
+    assert.equal((await post(message(907,"🎟 Nhận mã"))).status,200);
+    assert.equal(sent.at(-1).name,"editMessageText");
+    assert.equal(sent.at(-1).payload.message_id,panelId);
+    assert.equal(sent.filter(x=>x.name==="sendMessage").length,initialMessages,
+      "settings and reply-keyboard navigation must not spam new bot messages");
+    assert.equal((await post(callback(908,"t:detail:DPNIHH",panelId))).status,200);
+    assert.equal((await post(callback(909,"t:watch:DPNIHH",panelId))).status,200);
+    assert.equal(sent.at(-1).name,"editMessageText");
+    assert.equal((await post(callback(910,"t:watchlist",panelId))).status,200);
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][1].callback_data,
+      "t:unwatch:DPNIHH");
+    assert.equal((await post(callback(911,"t:unwatch:DPNIHH",panelId))).status,200);
+    assert.match(sent.at(-1).payload.text,/Danh sách theo dõi trống/);
+    const profile=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"];
+    assert.equal(profile.subscribed,true);
+    assert.deepEqual(profile.watching,[]);
+  },{}, {trackMessageIds:true});
+});
+
 test("OCI bot navigates pages, detail and Back without public writes",async()=>{
   const items=Array.from({length:8},(_,i)=>({
     code:"PAGE"+String(i).padStart(2,"0"),status:"unverified",
@@ -412,7 +457,7 @@ test("OCI bot navigates pages, detail and Back without public writes",async()=>{
     assert.equal((await post(callback(513,"t:back-list"))).status,200);
     assert.match(sent.at(-1).payload.text,/Page 2/);
     assert.equal((await post(callback(514,"t:home"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:browse");
     assert.equal(calls.submit.length,0);
     assert.equal(calls.report.length,0);
   },{browseCodes:async({offset=0,limit=6,query=""})=>
@@ -442,9 +487,9 @@ test("OCI bot defaults to English and retains an explicit Japanese override",asy
     assert.equal(stored["42"].language,"ja");
     assert.equal(stored["42"].languageManual,true);
     assert.equal((await post(message(605,"/language"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,3);
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,4);
     assert.equal((await post(callback(606,"t:lang:en"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
+    assert.equal(sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
   });
 });
 
@@ -463,11 +508,15 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
 
     assert.equal((await post(callback(701,"t:role:seeker"))).status,200);
     const seeker=sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard.flat();
-    assert.equal(seeker.length,9);
+    assert.equal(seeker.length,5);
     assert.ok(!seeker.includes("🔄 Làm mới"));
     assert.ok(seeker.includes("🎟 Nhận mã"));
-    assert.ok(seeker.includes("🙋 Cần mã"));
-    assert.ok(seeker.includes("🔄 Đổi vai trò"));
+    assert.ok(seeker.includes("🆕 Mã mới"));
+    assert.ok(seeker.includes("⚙️ Cài đặt"));
+    assert.ok(!seeker.includes("🙋 Cần mã"));
+    assert.ok(!seeker.includes("🔔 Thông báo"));
+    assert.ok(!seeker.includes("✅ Báo cáo"));
+    assert.ok(!seeker.includes("🔄 Đổi vai trò"));
     const initialList=sent.at(-1).payload;
     assert.match(initialList.text,/Mã mời cộng đồng/);
     assert.equal(initialList.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:DPNIHH");
@@ -479,7 +528,7 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
     assert.match(directList.text,/Mã mời cộng đồng/);
     assert.equal(directList.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:DPNIHH");
     assert.equal(directList.reply_markup.inline_keyboard.length,3);
-    assert.equal(directList.reply_markup.inline_keyboard[2][1].callback_data,"t:home");
+    assert.equal(directList.reply_markup.inline_keyboard[2][2].callback_data,"t:home");
     assert.equal((await post(callback(708,"t:need"))).status,200);
     assert.match(sent.at(-1).payload.text,/Mã mời cộng đồng/,
       "Old inline Need code actions must also navigate directly to codes");
@@ -492,12 +541,15 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
     assert.equal(profile().subscribed,true,"explicit opt-in action registers alerts");
 
     assert.equal((await post(message(704,"🔄 Đổi vai trò"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[1][0],"🤝 Tôi muốn chia sẻ mã");
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[1][0].callback_data,"t:role:contributor");
     assert.equal((await post(callback(705,"t:role:contributor"))).status,200);
     const contributor=sent.at(-1).payload.reply_markup.keyboard.flat();
     assert.ok(contributor.includes("➕ Đóng góp"));
     assert.ok(contributor.includes("📍 Trạng thái mã"));
     assert.ok(contributor.includes("📋 Mã của tôi"));
+    assert.equal(contributor.length,5);
+    assert.ok(!contributor.includes("✅ Báo cáo"));
+    assert.ok(!contributor.includes("🔔 Thông báo"));
     assert.equal(profile().role,"contributor");
     assert.equal(profile().subscribed,true,"switching role must preserve consent and watchlists");
     assert.equal((await post(message(706,"📍 Trạng thái mã"))).status,200);

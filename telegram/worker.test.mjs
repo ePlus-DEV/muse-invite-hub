@@ -53,7 +53,7 @@ const webhook = (update, override = {}) => new Request("https://bot.example.com/
   body: typeof update === "string" ? update : JSON.stringify(update)
 });
 const message = (id, text) => ({ update_id: id, message: { text, from: { id: 42, is_bot: false, username: "alice_dev" }, chat: { id: 42, type: "private" } } });
-const callback = (id, data) => ({ update_id: id, callback_query: { id: "cb-" + id, data, from: { id: 42, username: "alice_dev" }, message: { message_id: id+100, chat: { id: 42, type: "private" } } } });
+const callback = (id, data, panelId = id+100) => ({ update_id: id, callback_query: { id: "cb-" + id, data, from: { id: 42, username: "alice_dev" }, message: { message_id: panelId, chat: { id: 42, type: "private" } } } });
 
 test("worker checks method, path, JSON and constant-time shared secret", async () => {
   const env = makeEnv();
@@ -135,7 +135,7 @@ test("Worker Refresh fetches current catalog and has no public write side effect
   assert.equal((await handleWebhookRequest(webhook(message(300,"/start")),env,deps)).status,200);
   assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
   assert.equal((await handleWebhookRequest(webhook(callback(301,"t:role:contributor")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,2);
   assert.equal((await handleWebhookRequest(webhook(message(302,"🔄 Refresh")),env,deps)).status,200);
   assert.equal(reads,1);
   assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/1 /);
@@ -192,7 +192,7 @@ test("Worker paging and code details are navigable without GitHub writes",async(
   assert.equal((await handleWebhookRequest(webhook(callback(313,"t:back-list")),env,deps)).status,200);
   assert.match(sent.at(-1).payload.text,/Page 2/);
   assert.equal((await handleWebhookRequest(webhook(callback(314,"t:home")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:browse");
   assert.equal(calls.submit.length,0);
   assert.equal(calls.report.length,0);
   assert.equal(await env.BOT_STATE.get("rl:42"),null);
@@ -357,7 +357,7 @@ test("Cloudflare Worker defaults to English and preserves manually chosen langua
   assert.equal((await handleWebhookRequest(webhook(message(601,"/status DPNIHH")),env,deps)).status,200);
   assert.match(sent.at(-1).payload.text,/published/);
   assert.equal((await handleWebhookRequest(webhook(callback(602,"t:lang:ja")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 コードが欲しい");
+  assert.equal(sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard[0][0],"🙋 コードが欲しい");
   const pref=JSON.parse(await env.BOT_STATE.get("profile:42"));
   assert.equal(pref.language,"ja");
   assert.equal(pref.languageManual,true);
@@ -378,6 +378,34 @@ test("Cloudflare Worker defaults to English and preserves manually chosen langua
     "Deleting preferences resets to English even if Telegram is Vietnamese");
 });
 
+test("Worker reply-keyboard Settings edits the saved inline panel in KV",async()=>{
+  const env=makeEnv(),{deps,sent,calls}=makeDeps();
+  deps.telegramApi=async(name,payload)=>{
+    sent.push({name,payload});
+    return name==="sendMessage"?{message_id:2000+sent.length}:undefined;
+  };
+  assert.equal((await handleWebhookRequest(webhook(message(860,"/language vi")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(message(861,"/start")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(message(862,"🙋 Tôi cần mã")),env,deps)).status,200);
+  const panelId=2000+sent.length;
+  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).panelMessageId,panelId);
+  const messages=sent.filter(x=>x.name==="sendMessage").length;
+  assert.equal((await handleWebhookRequest(webhook(message(863,"⚙️ Cài đặt")),env,deps)).status,200);
+  assert.equal(sent.at(-1).name,"editMessageText");
+  assert.equal(sent.at(-1).payload.message_id,panelId);
+  assert.equal((await handleWebhookRequest(webhook(callback(864,"t:sub:on",panelId)),env,deps)).status,200);
+  assert.equal(sent.at(-1).name,"editMessageText");
+  assert.match(sent.at(-1).payload.text,/BẬT/);
+  assert.equal((await handleWebhookRequest(webhook(callback(865,"t:watchlist",panelId)),env,deps)).status,200);
+  assert.equal(sent.at(-1).name,"editMessageText");
+  assert.equal((await handleWebhookRequest(webhook(message(866,"🎟 Nhận mã")),env,deps)).status,200);
+  assert.equal(sent.at(-1).name,"editMessageText");
+  assert.equal(sent.filter(x=>x.name==="sendMessage").length,messages);
+  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).subscribed,true);
+  assert.equal(calls.submit.length,0);
+  assert.equal(calls.report.length,0);
+});
+
 test("Worker onboarding lets seekers request community codes and switch to contributing safely",async()=>{
   const env=makeEnv();
   const {deps,sent,calls}=makeDeps();
@@ -389,21 +417,25 @@ test("Worker onboarding lets seekers request community codes and switch to contr
   assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 Tôi cần mã");
   assert.equal((await handleWebhookRequest(webhook(callback(701,"t:role:seeker")),env,deps)).status,200);
   const keyboard=sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard.flat();
-  assert.ok(keyboard.includes("🙋 Cần mã"));
+  assert.equal(keyboard.length,5);
+  assert.ok(keyboard.includes("🎟 Nhận mã"));
+  assert.ok(!keyboard.includes("🙋 Cần mã"));
   assert.match(sent.at(-1).payload.text,/Mã mời cộng đồng/);
   assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/Còn 23 lượt \(đã báo cáo\)/);
   assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[1][0].text,/30\/30 \(mặc định\)/);
   assert.equal((await handleWebhookRequest(webhook(message(702,"🙋 Cần mã")),env,deps)).status,200);
   assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,3);
-  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[2][1].callback_data,"t:home");
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[2][2].callback_data,"t:home");
   assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).subscribed,false);
   assert.equal(calls.submit.length,0);
   assert.equal((await handleWebhookRequest(webhook(callback(703,"t:need:alerts")),env,deps)).status,200);
   assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).subscribed,true);
   assert.equal((await handleWebhookRequest(webhook(message(704,"🔄 Đổi vai trò")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[1][0],"🤝 Tôi muốn chia sẻ mã");
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[1][0].callback_data,"t:role:contributor");
   assert.equal((await handleWebhookRequest(webhook(callback(705,"t:role:contributor")),env,deps)).status,200);
-  assert.ok(sent.at(-1).payload.reply_markup.keyboard.flat().includes("➕ Đóng góp"));
+  const contributor=sent.at(-1).payload.reply_markup.keyboard.flat();
+  assert.ok(contributor.includes("➕ Đóng góp"));
+  assert.equal(contributor.length,5);
   assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).role,"contributor");
   assert.equal((await handleWebhookRequest(webhook(message(706,"📍 Trạng thái mã")),env,deps)).status,200);
   assert.equal((await handleWebhookRequest(webhook(message(707,"DPNIHH")),env,deps)).status,200);

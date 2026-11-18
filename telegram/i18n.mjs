@@ -117,11 +117,12 @@ const STRINGS = {
     "subscribed": "New-code alerts enabled. Use /unsubscribe to stop.",
     "unsubscribed": "New-code alerts disabled. Use /subscribe to enable.",
     "watchlistTitle": "📌 Watched codes:",
-    "watchlistFooter": "Use /unwatch CODE to remove a code.",
+    "watchlistFooter": "Select a code to view it, or Remove to stop following.",
     "watchlistEmpty": "Your watchlist is empty. Use /watch CODE or Watch under any published code.",
     "watchDenied": "Only published or pending codes can be watched.",
     "watching": "📌 Watching {code} ({count} tracked). Use /unwatch {code} to stop. Publication is not Muse verification.",
     "unwatched": "Stopped watching {code}.",
+    "unwatchButton": "Remove",
     "deletePrompt": "Delete your private preferences, watchlist and submission history? This will NOT delete public GitHub Issues or comments already created.",
     "deleted": "Your private bot data was deleted. Public GitHub posts remain.",
     "privateOnly": "Please use this bot in a private chat to protect your reports.",
@@ -253,11 +254,12 @@ const STRINGS = {
     "subscribed": "Đã bật thông báo mã mới. Dùng /unsubscribe để tắt.",
     "unsubscribed": "Đã tắt thông báo mã mới. Dùng /subscribe để bật.",
     "watchlistTitle": "📌 Mã đang theo dõi:",
-    "watchlistFooter": "Dùng /unwatch CODE để bỏ theo dõi.",
+    "watchlistFooter": "Chọn mã để xem hoặc Bỏ theo dõi.",
     "watchlistEmpty": "Danh sách theo dõi trống. Dùng /watch CODE hoặc nút Theo dõi bên dưới mã công khai.",
     "watchDenied": "Chỉ có thể theo dõi mã đã công bố hoặc đang chờ xét duyệt.",
     "watching": "📌 Đang theo dõi {code} ({count} mã). Dùng /unwatch {code} để bỏ theo dõi. Công bố mã không có nghĩa Muse đã xác minh.",
     "unwatched": "Đã bỏ theo dõi {code}.",
+    "unwatchButton": "Bỏ theo dõi",
     "deletePrompt": "Xóa tùy chọn riêng tư, danh sách theo dõi và lịch sử mã đã gửi? Các Issue và bình luận GitHub CÔNG KHAI sẽ KHÔNG bị xóa.",
     "deleted": "Đã xóa dữ liệu bot riêng tư. Các bài đăng GitHub công khai vẫn được giữ lại.",
     "privateOnly": "Vui lòng nhắn tin riêng với bot để bảo vệ thông tin báo cáo.",
@@ -389,11 +391,12 @@ const STRINGS = {
     "subscribed": "新着通知をオンにしました。停止するには /unsubscribe を使用してください。",
     "unsubscribed": "新着通知をオフにしました。再開するには /subscribe を使用してください。",
     "watchlistTitle": "📌 フォロー中のコード：",
-    "watchlistFooter": "/unwatch CODE でフォローを解除できます。",
+    "watchlistFooter": "コードを選んで詳細を確認、または「解除」を押してください。",
     "watchlistEmpty": "フォロー中のコードはありません。/watch CODE またはコードの「フォロー」を使用してください。",
     "watchDenied": "公開済み、または審査待ちのコードのみフォローできます。",
     "watching": "📌 {code} をフォロー中（計{count}件）。/unwatch {code} で停止できます。公開はMuse認証を意味しません。",
     "unwatched": "{code} のフォローを解除しました。",
+    "unwatchButton": "解除",
     "deletePrompt": "プライベート設定・フォローリスト・投稿履歴を削除しますか？公開済みのGitHub Issueやコメントは削除されません。",
     "deleted": "ボットのプライベートデータを削除しました。GitHubの公開投稿は残ります。",
     "privateOnly": "プライバシー保護のため、ボットとのプライベートチャットをご利用ください。",
@@ -490,10 +493,10 @@ export const MENU_KEYS = Object.freeze([
 // Keep Refresh as an inline list/detail action, not a persistent menu row.
 export const ENTRY_MENU_KEYS = Object.freeze([["roleSeeker"],["roleContributor"],["languageButton"]]);
 export const ROLE_MENU_KEYS = Object.freeze({
-  seeker:[["browse","newest","search"],["need","notifications","watchlist"],
-    ["report","settings","roleSwitch"]],
-  contributor:[["submit","mine","status"],["newest","browse","report"],
-    ["notifications","settings","roleSwitch"]]
+  // Reports live on a code detail; alerts, language and role changes live in Settings.
+  // "Need a code" is identical to Browse, so do not repeat it on the keyboard.
+  seeker:[["browse","newest","search"],["watchlist","settings"]],
+  contributor:[["submit","mine","status"],["browse","settings"]]
 });
 export function translationCoverage() {
   return LOCALES.map(language=>({language,
