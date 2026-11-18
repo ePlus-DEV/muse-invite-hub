@@ -11,6 +11,7 @@
  */
 import { parseUpdate, keyboard } from "./bot.mjs";
 import { replyKeyboard } from "./menu.mjs";
+import { createMenuSync } from "./menu-sync.mjs";
 import { handleLegacy } from "./legacy.mjs";
 import { resolveInput, handleInteractive } from "./conversation.mjs";
 import { makeKvProfiles, syncTelegramLocale } from "./profiles.mjs";
@@ -143,9 +144,17 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
       const acknowledge=async text=>call("answerCallbackQuery",{
         callback_query_id:action.callbackId,...(text?{text}:{})
       });
+      // Capture pre-action state: a first-time user opening a new inline
+      // panel must not receive an unsolicited second message.
+      const priorProfile=await profiles.get(chatId);
       action=await resolveInput(action,profiles);
-      if(await handleInteractive({action,profiles,send,sendMenu,edit,
-        acknowledge,services,githubToken}))return;
+      const menuSync=createMenuSync({profiles,sendMenu,action,priorProfile});
+      if(await handleInteractive({action,profiles,send,
+        sendMenu:menuSync.trackedSendMenu,edit,
+        acknowledge,services,githubToken})) {
+        await menuSync.syncIfNeeded(chatId);
+        return;
+      }
       async function complete(message) {
         await send(chatId,message);
         if(action.callbackId&&action.messageId) {
@@ -154,10 +163,12 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
           }); } catch { /* UI cleanup failure must not repost GitHub feedback. */ }
         }
       }
-      return await handleLegacy({
+      const result=await handleLegacy({
         action,profiles,send,complete,services,githubToken,
         allowWrite:(id,code)=>state.allowWrite(id,action.updateId,action.type,code)
       });
+      await menuSync.syncIfNeeded(chatId);
+      return result;
     } catch(error) {
       if(action.callbackId&&["submit","report"].includes(action.type)) {
         try {
