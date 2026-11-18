@@ -53,7 +53,7 @@ const webhook = (update, override = {}) => new Request("https://bot.example.com/
   body: typeof update === "string" ? update : JSON.stringify(update)
 });
 const message = (id, text) => ({ update_id: id, message: { text, from: { id: 42, is_bot: false, username: "alice_dev" }, chat: { id: 42, type: "private" } } });
-const callback = (id, data) => ({ update_id: id, callback_query: { id: "cb-" + id, data, from: { id: 42, username: "alice_dev" }, message: { message_id: id+100, chat: { id: 42, type: "private" } } } });
+const callback = (id, data, panelId = id+100) => ({ update_id: id, callback_query: { id: "cb-" + id, data, from: { id: 42, username: "alice_dev" }, message: { message_id: panelId, chat: { id: 42, type: "private" } } } });
 
 test("worker checks method, path, JSON and constant-time shared secret", async () => {
   const env = makeEnv();
@@ -393,10 +393,10 @@ test("Worker reply-keyboard Settings edits the saved inline panel in KV",async()
   assert.equal((await handleWebhookRequest(webhook(message(863,"⚙️ Cài đặt")),env,deps)).status,200);
   assert.equal(sent.at(-1).name,"editMessageText");
   assert.equal(sent.at(-1).payload.message_id,panelId);
-  assert.equal((await handleWebhookRequest(webhook(callback(864,"t:sub:on")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(callback(864,"t:sub:on",panelId)),env,deps)).status,200);
   assert.equal(sent.at(-1).name,"editMessageText");
   assert.match(sent.at(-1).payload.text,/BẬT/);
-  assert.equal((await handleWebhookRequest(webhook(callback(865,"t:watchlist")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(callback(865,"t:watchlist",panelId)),env,deps)).status,200);
   assert.equal(sent.at(-1).name,"editMessageText");
   assert.equal((await handleWebhookRequest(webhook(message(866,"🎟 Nhận mã")),env,deps)).status,200);
   assert.equal(sent.at(-1).name,"editMessageText");
