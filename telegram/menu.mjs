@@ -28,6 +28,8 @@ for(const lang of LOCALES){
       actions.set(menuText(lang,key),type);
     }
   }
+  // Old Telegram clients can still send a stale Refresh keyboard label.
+  actions.set(menuText(lang,"refresh"),"refresh");
 }
 export function menuChoice(text) { return actions.get(text)||null; }
 export function codeButtons(code,language="en") {
