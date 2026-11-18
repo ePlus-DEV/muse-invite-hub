@@ -40,7 +40,7 @@ function jsonLd(data) {
 function reportedSlots(item) {
   const q=displayQuota(item);
   return q.remaining===null?null:{
-    remaining:q.remaining,capacity:q.capacity,
+    remaining:q.remaining,capacity:q.capacity,used:q.used,
     date:q.reportedAt?dateText(q.reportedAt):null,basis:q.basis
   };
 }
@@ -108,6 +108,13 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
   const totalUpdates = baseUpdates + reviewedUpdates;
   const updateLabel = totalUpdates > 0 ? totalUpdates + (totalUpdates === 1 ? " update" : " updates") : "—";
   const lastReported = quota?.date || "No report";
+  const usedText = quota
+    ? quota.used + (quota.basis==="default"
+      ? " (default estimate, unconfirmed)"
+      : quota.basis==="reported-remaining"
+        ? " (calculated from 30-slot maximum)"
+        : " (owner-reported)")
+    : "Not reported";
   const social = parsePublicSource(item.sourceUrl);
   const platform = social?.platform || "GitHub";
   const handle = social?.handle || item.submittedBy;
@@ -210,6 +217,7 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     '          <div class="detail-fold-body"><dl class="detail-meta"><div><dt>Contributor</dt><dd>' + escapeHtml(author) + '</dd></div>' +
     '            <div><dt>Source</dt><dd>' + sourceLink + '</dd></div>' +
     '            <div><dt>Listed</dt><dd>' + escapeHtml(dateText(item.addedAt)) + '</dd></div>' +
+    '            <div><dt>Used invites</dt><dd>' + escapeHtml(usedText) + '</dd></div>' +
     '            <div><dt>Muse redemption</dt><dd>' + escapeHtml(redemptionLine) + '</dd></div></dl></div>' +
     '        </details><div class="detail-info-card detail-feedback"><h2>Does this code work?</h2><p>Share your experience to help the community keep listings accurate.</p>' +
     '          <div class="detail-feedback-actions"><a class="detail-quick-feedback" data-feedback-outcome="worked" href="' + escapeHtml(feedbackUrl.href) + '" target="_blank" rel="noopener noreferrer"><i class="fa-regular fa-thumbs-up" aria-hidden="true"></i> Worked for me</a>' +
