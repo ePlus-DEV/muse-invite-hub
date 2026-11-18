@@ -38,7 +38,7 @@ body:
       description: "Enter 0–30 shown on your Muse Invite screen. This is the primary count; do not assume all 30 remain."
       placeholder: "e.g. 25"
     validations:
-      required: false
+      required: true
   - type: input
     id: used
     attributes:
