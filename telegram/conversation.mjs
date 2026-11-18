@@ -95,7 +95,6 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
         [{text:trn("watchedButton"),data:"t:watchlist"},
          {text:trn("languageButton")+" · "+LOCALE_NAMES[locale],data:"t:langs"}],
         [{text:trn("roleChange"),data:"t:roles"}],
-        [{text:trn("menuRefreshButton"),data:"t:menu:refresh"}],
         [{text:trn("deleteData"),data:"t:erase:ask"}],
         [{text:trn("backList"),data:"t:back-list"},
          {text:trn("backMenu"),data:"t:home"}]
@@ -194,9 +193,11 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
       await mutateProfile(profiles,chatId,p=>{
         p.role=role;
         p.pending=null; // Switching menus must not accidentally complete an earlier submission.
-        p.panelMessageId=null; // New role: show the first panel below its new keyboard.
         return p;
       });
+      // The tracked menu send below deletes the previous panel and clears
+      // its pointer: the first panel of the new role appears below the new
+      // keyboard instead of editing a card from the old session.
       await sendMenu(chatId,msg(role==="seeker"?"roleSeekerWelcome":"roleContributorWelcome"),language,role);
       // One tap on "I need a code" opens the published list immediately.
       // Keep the role keyboard, but do not require a second "Get codes" tap.

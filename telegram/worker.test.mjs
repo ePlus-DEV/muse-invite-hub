@@ -208,18 +208,18 @@ test("Worker lazily migrates old nine-key menus exactly once, without losing the
   const original=sent.length;
   assert.equal((await handleWebhookRequest(webhook(message(2801,"🎟 Nhận mã")),env,deps)).status,200);
   const changed=sent.slice(original);
-  assert.equal(changed.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
-  assert.equal(changed.filter(x=>x.payload?.reply_markup?.inline_keyboard).length,1);
-  const keys=changed.find(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard;
-  assert.deepEqual(keys.map(x=>x.length),[3,2]);
+  assert.equal(changed.filter(x=>x.payload?.reply_markup?.keyboard).length,0,
+    "Migration is silent: no standalone keyboard message is sent");
+  assert.equal(changed.filter(x=>x.payload?.reply_markup?.inline_keyboard).length,1,
+    "The tapped action itself is not lost");
   const profile=JSON.parse(await env.BOT_STATE.get("profile:42"));
   assert.match(profile.menuVersion,/^v1-[0-9a-f]{8}$/);
   assert.deepEqual(profile.watching,["DPNIHH"]);
   assert.equal(profile.subscribed,true);
   assert.equal((await handleWebhookRequest(webhook(message(2802,"🎟 Nhận mã")),env,deps)).status,200);
-  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,0);
   assert.equal((await handleWebhookRequest(webhook(message(2802,"🎟 Nhận mã")),env,deps)).status,200);
-  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,0);
 });
 
 test("Worker old menu Search refresh opens a visible new prompt, never an off-screen panel",async()=>{
@@ -235,11 +235,12 @@ test("Worker old menu Search refresh opens a visible new prompt, never an off-sc
   assert.equal((await handleWebhookRequest(webhook(message(2830,"🔎 Search")),env,deps)).status,200);
   assert.equal(sent.filter(x=>x.name==="editMessageText").length,0,
     "Never edit the previous panel at message 120 above the current chat");
+  assert.ok(sent.some(x=>x.name==="deleteMessage"&&x.payload.message_id===120),
+    "The stale panel is deleted instead of being left behind");
   const sentMessages=sent.filter(x=>x.name==="sendMessage");
-  assert.equal(sentMessages.length,2,"One keyboard update and one visible Search prompt");
-  assert.ok(sentMessages[0].payload.reply_markup.keyboard);
-  assert.match(sentMessages[1].payload.text,/Enter a code or contributor name/);
-  assert.equal(sentMessages[1].payload.reply_markup.inline_keyboard[0][0].callback_data,"t:home");
+  assert.equal(sentMessages.length,1,"Only the visible Search prompt is sent; menu sync is silent");
+  assert.match(sentMessages[0].payload.text,/Enter a code or contributor name/);
+  assert.equal(sentMessages[0].payload.reply_markup.inline_keyboard[0][0].callback_data,"t:home");
   const profile=JSON.parse(await env.BOT_STATE.get("profile:42"));
   assert.equal(profile.panelMessageId,7000+sent.length);
   assert.equal(profile.pending.type,"search");
@@ -248,19 +249,20 @@ test("Worker old menu Search refresh opens a visible new prompt, never an off-sc
   assert.equal(calls.submit.length,0);
   assert.equal(calls.report.length,0);
   assert.equal((await handleWebhookRequest(webhook(message(2831,"DPNIHH")),env,deps)).status,200);
-  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,0);
   assert.equal(sent.findLast(x=>x.name==="editMessageText").payload.message_id,profile.panelMessageId,
     "Subsequent navigation can reuse the new nearby panel");
 });
 
-test("Worker /start, Settings Refresh menu and role changes send one keyboard each",async()=>{
+test("Worker /start, Settings and role changes send one keyboard each; legacy Refresh-menu callback still works",async()=>{
   const env=makeEnv(),{deps,sent}=makeDeps();
   assert.equal((await handleWebhookRequest(webhook(message(2811,"/start")),env,deps)).status,200);
   assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
   assert.equal((await handleWebhookRequest(webhook(message(2812,"/settings")),env,deps)).status,200);
   const settings=sent.findLast(x=>x.payload?.reply_markup?.inline_keyboard);
-  assert.ok(settings.payload.reply_markup.inline_keyboard.some(row=>
-    row.some(btn=>btn.callback_data==="t:menu:refresh")));
+  assert.equal(settings.payload.reply_markup.inline_keyboard.some(row=>
+    row.some(btn=>btn.callback_data==="t:menu:refresh")),false,
+    "Settings no longer carries the Refresh menu workaround button");
   const count=sent.filter(x=>x.payload?.reply_markup?.keyboard).length;
   assert.equal((await handleWebhookRequest(webhook(callback(2813,"t:menu:refresh")),env,deps)).status,200);
   assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,count+1);
@@ -272,26 +274,22 @@ test("Worker /start, Settings Refresh menu and role changes send one keyboard ea
   assert.equal(profile.role,"seeker");
 });
 
-test("Worker failed automatic keyboard send keeps previous version and never replays the business action",async()=>{
+test("Worker stale menu version syncs silently and the tapped action still runs",async()=>{
   const env=makeEnv(),{deps,sent}=makeDeps();
   await env.BOT_STATE.put("profile:42",JSON.stringify({
     role:"seeker",language:"en",menuVersion:"v1-deadbeef",watching:["DPNIHH"]
   }));
-  let fail=true;
-  const original=deps.telegramApi;
-  deps.telegramApi=async(method,payload)=>{
-    if(method==="sendMessage"&&payload.reply_markup?.keyboard&&fail){
-      fail=false;throw Error("Telegram unavailable");
-    }
-    return original(method,payload);
-  };
   assert.equal((await handleWebhookRequest(webhook(message(2821,"🎟 Get codes")),env,deps)).status,200);
   assert.equal(await env.BOT_STATE.get("upd:2821"),"1");
-  assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).menuVersion,"v1-deadbeef");
-  assert.equal(sent.filter(x=>x.payload?.reply_markup?.inline_keyboard).length,1);
+  assert.notEqual(JSON.parse(await env.BOT_STATE.get("profile:42")).menuVersion,"v1-deadbeef",
+    "The stale fingerprint is recorded silently during the same update");
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.inline_keyboard).length,1,
+    "The browse panel is the only response to the tap");
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,0,
+    "No standalone 'menu updated' keyboard message is sent");
+  assert.equal(sent.filter(x=>x.name==="deleteMessage").length,0);
   assert.equal((await handleWebhookRequest(webhook(message(2822,"🎟 Get codes")),env,deps)).status,200);
-  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
-  assert.notEqual(JSON.parse(await env.BOT_STATE.get("profile:42")).menuVersion,"v1-deadbeef");
+  assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,0);
 });
 
 test("worker status and privacy are read-only",async()=>{
