@@ -46,8 +46,8 @@ const telegramBody=(code="ABC123",handle="alice_dev") => [
   "### Code source","","Telegram (community code shared through bot)","",
   "### Social post or profile URL (required for Threads, X or Facebook)","","_No response_","",
   "### Public confirmation or context (optional)","","https://t.me/"+handle,"",
-  "### Uses so far (optional; self-reported)","","_No response_","",
   "### Remaining invites (optional; self-reported)","","_No response_","",
+  "### Uses so far (optional; self-reported)","","_No response_","",
   "### Notes (optional)","","Submitted via Telegram by @"+handle+
     ". Human review required; public profile is not proof of code ownership, redemption or quota.","",
   "### Contributor checklist","",
