@@ -375,7 +375,7 @@ test("OCI Refresh re-fetches published codes without posting or changing prefere
     assert.equal((await post(message(500,"/start"))).status,200);
     assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
     assert.equal((await post(callback(501,"t:role:seeker"))).status,200);
-    assert.equal(sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard.length,3);
+    assert.equal(sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard.length,2);
     assert.equal(reads,1,"Selecting seeker must load the first code page");
     assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:DPNIHH");
     assert.equal((await post(message(502,"🔄 Refresh"))).status,200);
@@ -402,7 +402,7 @@ test("OCI reply-keyboard actions reuse one panel for Settings, alerts and watche
   await withApp(async({post,sent,dir})=>{
     assert.equal((await post(message(900,"/language vi"))).status,200);
     assert.equal((await post(message(901,"/start"))).status,200);
-    assert.equal((await post(callback(902,"t:role:seeker"))).status,200);
+    assert.equal((await post(message(902,"🙋 Tôi cần mã"))).status,200);
     const list=sent.at(-1);
     assert.equal(list.name,"sendMessage");
     const panelId=1000+sent.length;
@@ -487,7 +487,7 @@ test("OCI bot defaults to English and retains an explicit Japanese override",asy
     assert.equal(stored["42"].language,"ja");
     assert.equal(stored["42"].languageManual,true);
     assert.equal((await post(message(605,"/language"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,3);
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,4);
     assert.equal((await post(callback(606,"t:lang:en"))).status,200);
     assert.equal(sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
   });
