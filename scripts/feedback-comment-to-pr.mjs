@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { planIssueChange } from "./issue-to-pr.mjs";
+import { MAX_INVITES_PER_CODE } from "./invite-quota-policy.mjs";
 import { feedbackCodeForIssue } from "./reopen-code-feedback.mjs";
 import { REPO, withCanonicalIssueRefs } from "./code-issue-map.mjs";
 import { listedPlatform } from "./source-platform.mjs";
@@ -56,7 +57,7 @@ function narrativeOwnerCount(issue, comment, catalog, code, item) {
       return review("Owner-count fields must be non-negative whole numbers.");
     }
     const number = Number(match[2]);
-    if (number > 1000) return review("Owner-count value exceeds the supported range.");
+    if (number > MAX_INVITES_PER_CODE) return review("Invite count cannot exceed "+MAX_INVITES_PER_CODE+" per code.");
     values.set(key, number);
   }
   if (!["total invites","remaining invites","used invites"].every(key => values.has(key))) {
