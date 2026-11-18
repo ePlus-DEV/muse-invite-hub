@@ -67,8 +67,10 @@ test("quota update badge displays recorded revisions, not click counts", () => {
   const published=JSON.parse(read("data/invite-records/eplus-owner-dpnihh.json"));
   assert.equal(published.code,"DPNIHH");
   const baseline=JSON.parse(read("data/quota-update-baseline.json"));
-  assert.equal(published.quotaUpdateCount,undefined,
-    "The trusted main preview validator must accept the historical record");
+  assert.ok(published.quotaUpdateCount === undefined ||
+    (Number.isSafeInteger(published.quotaUpdateCount) &&
+     published.quotaUpdateCount >= 0),
+    "Historical records may omit the counter; reviewed newer owner revisions track a nonnegative count");
   assert.equal(baseline.DPNIHH,1,
     "Issue #14 and PR #157 document one approved update after the initial report");
   assert.match(app,/const tracked = Number\.isSafeInteger\(item\.quotaUpdateCount\)/);
