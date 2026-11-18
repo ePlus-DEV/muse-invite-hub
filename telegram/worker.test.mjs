@@ -192,7 +192,7 @@ test("Worker paging and code details are navigable without GitHub writes",async(
   assert.equal((await handleWebhookRequest(webhook(callback(313,"t:back-list")),env,deps)).status,200);
   assert.match(sent.at(-1).payload.text,/Page 2/);
   assert.equal((await handleWebhookRequest(webhook(callback(314,"t:home")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:browse");
   assert.equal(calls.submit.length,0);
   assert.equal(calls.report.length,0);
   assert.equal(await env.BOT_STATE.get("rl:42"),null);
@@ -401,9 +401,11 @@ test("Worker onboarding lets seekers request community codes and switch to contr
   assert.equal((await handleWebhookRequest(webhook(callback(703,"t:need:alerts")),env,deps)).status,200);
   assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).subscribed,true);
   assert.equal((await handleWebhookRequest(webhook(message(704,"🔄 Đổi vai trò")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[1][0],"🤝 Tôi muốn chia sẻ mã");
+  assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[1][0].callback_data,"t:role:contributor");
   assert.equal((await handleWebhookRequest(webhook(callback(705,"t:role:contributor")),env,deps)).status,200);
-  assert.ok(sent.at(-1).payload.reply_markup.keyboard.flat().includes("➕ Đóng góp"));
+  const contributor=sent.at(-1).payload.reply_markup.keyboard.flat();
+  assert.ok(contributor.includes("➕ Đóng góp"));
+  assert.equal(contributor.length,5);
   assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).role,"contributor");
   assert.equal((await handleWebhookRequest(webhook(message(706,"📍 Trạng thái mã")),env,deps)).status,200);
   assert.equal((await handleWebhookRequest(webhook(message(707,"DPNIHH")),env,deps)).status,200);
