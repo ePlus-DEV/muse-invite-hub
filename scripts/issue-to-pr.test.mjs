@@ -405,7 +405,7 @@ test("owner quota combinations, freshness, changes and incomplete reports",()=>{
     [{remaining:"20",total:"_No response_",used:"_No response_"},30,10],
     [{remaining:"_No response_",total:"30",used:"10"},30,10],
     [{remaining:"20",total:"30",used:"10"},30,10],
-    [{remaining:"20",total:"50",used:"30"},50,30],
+    [{remaining:"20",total:"25",used:"5"},25,5],
     [{remaining:"0",total:"30",used:"30"},30,30]
   ];
   for(const [fields,total,used] of cases) {
@@ -418,20 +418,24 @@ test("owner quota combinations, freshness, changes and incomplete reports",()=>{
   }
   assert.equal(change({remaining:"20",total:"_No response_",used:"_No response_"},partial).outcome,"proposal");
   assert.equal(change({remaining:"20",total:"_No response_",used:"_No response_"},item).outcome,"proposal");
-  const exceeds=change({remaining:"31",total:"_No response_",used:"_No response_"});
-  assert.equal(exceeds.outcome,"needs-review");
-  assert.match(exceeds.reason,/exceed.*total/);
+  assert.throws(()=>change({remaining:"31",total:"_No response_",used:"_No response_"}),/0 and 30/);
   for(const [remaining,total,used] of [
     ["20","30","9"],
     ["40","30","_No response_"],
     ["20","_No response_","10"],
     ["_No response_","_No response_","7"]
   ]) {
-    assert.throws(()=>change({remaining,total,used}),/inconsistent|requires Total invites/);
+    assert.throws(()=>change({remaining,total,used}),/inconsistent|requires Total invites|0 and 30/);
   }
   assert.equal(change({remaining:"20",total:"30",used:"10"},full,"2026-11-14T13:00:00Z").outcome,"needs-review");
   assert.match(change({remaining:"20",total:"30",used:"10"},full,"2026-11-14T13:00:00Z").reason,/Newer usage data/);
   assert.equal(change({remaining:"23",total:"30",used:"7"},full,"2026-11-15T13:00:00Z").outcome,"duplicate");
+  for(const fields of [
+    {remaining:"0",total:"31",used:"31"},
+    {remaining:"31",total:"30",used:"0"},
+    {remaining:"0",total:"30",used:"31"},
+    {remaining:"1000",total:"1000",used:"0"}
+  ])assert.throws(()=>change(fields),/0 and 30/);
   assert.deepEqual([full.reportedCapacity,full.reportedUses,full.usageReportedAt],[30,7,"2026-11-15"]);
 });
 
