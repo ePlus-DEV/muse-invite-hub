@@ -62,6 +62,12 @@ test("Telegram copy-text button is native and code actions are private callbacks
   const rows=codeButtons("DPNIHH");
   const payload=keyboard(rows);
   assert.deepEqual(payload.inline_keyboard[0][0].copy_text,{text:"DPNIHH"});
+  assert.equal(payload.inline_keyboard[0][0].style,"primary");
+  assert.equal(payload.inline_keyboard[0][1].style,"primary");
+  assert.equal(payload.inline_keyboard[1][1].style,"success");
+  assert.equal(payload.inline_keyboard[1][2].style,"danger");
+  assert.equal(payload.inline_keyboard[1][0].style,undefined,
+    "watching a code must not imply it works");
   assert.equal(payload.inline_keyboard[0][0].url,undefined);
   assert.equal(payload.inline_keyboard[1][0].callback_data,"t:watch:DPNIHH");
   assert.equal(payload.inline_keyboard[2][0].callback_data,"t:refresh-code:DPNIHH");
