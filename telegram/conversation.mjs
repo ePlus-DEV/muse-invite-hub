@@ -90,7 +90,8 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
          {text:trn("languageButton")+" · "+LOCALE_NAMES[locale],data:"t:langs"}],
         [{text:trn("roleChange"),data:"t:roles"}],
         [{text:trn("deleteData"),data:"t:erase:ask"}],
-        [{text:trn("backMenu"),data:"t:home"}]
+        [{text:trn("backList"),data:"t:back-list"},
+         {text:trn("backMenu"),data:"t:home"}]
       ]);
   };
   const watchlistPanel=async()=>{
@@ -156,6 +157,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
     if(nav.length)buttons.push(nav);
     buttons.push([
       {text:menuText(language,"refresh"),data:"t:refresh"},
+      {text:menuText(language,"settings"),data:"t:settings"},
       {text:msg("backMenu"),data:"t:home"}
     ]);
     const heading=msg(needle?"searchHeading":newest?"newestHeading":"browseHeading");
