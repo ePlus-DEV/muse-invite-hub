@@ -306,6 +306,7 @@ test("Telegram contributions keep closed Issues distinct and require human sourc
     assert.match(writes[0].body,/### Code source\n\nTelegram \(community code shared through bot\)/);
     assert.match(writes[0].body,/### Contributor checklist\n\n- \[x\]/);
     assert.match(writes[0].body,/### Notes \(optional\)\n\nSubmitted via Telegram by @alice_dev/);
+    assert.match(writes[0].body,/Community report; public profile is not proof/);
     assert.match(writes[0].body,/https:\/\/t\.me\/alice_dev/);
     assert.doesNotMatch(writes[0].body,/### Telegram contributor|### Maintainer review checklist/);
     assert.match(writes[0].body,/<!-- muse-telegram-submission:NEW123 -->/);
@@ -357,7 +358,7 @@ test("deployment sources never embed real credentials or auto-publish third-part
   const workflow=read("../.github/workflows/telegram-oci-image.yml");
   assert.match(github,/title:"\[Invite\] "/);
   assert.match(github,/muse-telegram-submission:/);
-  assert.match(github,/review-only Draft PR/);
+  assert.match(github,/Ready PR eligible for independent, trusted validation/);
   assert.match(github,/maintainer review only/);
   assert.match(server,/timingSafeEqual/);
   assert.match(server,/MAX_BODY=32\*1024/);
