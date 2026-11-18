@@ -99,8 +99,8 @@ async function withApp(run,services={},opts={}) {
 }
 const message=(id,text)=>({update_id:id,message:{text,from:{id:42,is_bot:false,username:"alice_dev"},
   chat:{id:42,type:"private"}}});
-const callback=(id,data)=>({update_id:id,callback_query:{id:"cb-"+id,data,
-  from:{id:42,username:"alice_dev"},message:{message_id:id+100,chat:{id:42,type:"private"}}}});
+const callback=(id,data,panelId=id+100)=>({update_id:id,callback_query:{id:"cb-"+id,data,
+  from:{id:42,username:"alice_dev"},message:{message_id:panelId,chat:{id:42,type:"private"}}}});
 
 test("webhook checks method, path, JSON and constant-time shared secret",async()=>{
   await withApp(async({origin,post})=>{
@@ -412,26 +412,26 @@ test("OCI reply-keyboard actions reuse one panel for Settings, alerts and watche
     assert.equal(sent.at(-1).name,"editMessageText");
     assert.equal(sent.at(-1).payload.message_id,panelId);
     assert.match(sent.at(-1).payload.text,/Cài đặt/);
-    assert.equal((await post(callback(904,"t:sub:on"))).status,200);
+    assert.equal((await post(callback(904,"t:sub:on",panelId))).status,200);
     assert.equal(sent.at(-1).name,"editMessageText");
     assert.match(sent.at(-1).payload.text,/BẬT/);
-    assert.equal((await post(callback(905,"t:watchlist"))).status,200);
+    assert.equal((await post(callback(905,"t:watchlist",panelId))).status,200);
     assert.equal(sent.at(-1).name,"editMessageText");
     assert.match(sent.at(-1).payload.text,/Danh sách theo dõi trống/);
-    assert.equal((await post(callback(906,"t:settings"))).status,200);
+    assert.equal((await post(callback(906,"t:settings",panelId))).status,200);
     assert.equal(sent.at(-1).name,"editMessageText");
     assert.equal((await post(message(907,"🎟 Nhận mã"))).status,200);
     assert.equal(sent.at(-1).name,"editMessageText");
     assert.equal(sent.at(-1).payload.message_id,panelId);
     assert.equal(sent.filter(x=>x.name==="sendMessage").length,initialMessages,
       "settings and reply-keyboard navigation must not spam new bot messages");
-    assert.equal((await post(callback(908,"t:detail:DPNIHH"))).status,200);
-    assert.equal((await post(callback(909,"t:watch:DPNIHH"))).status,200);
+    assert.equal((await post(callback(908,"t:detail:DPNIHH",panelId))).status,200);
+    assert.equal((await post(callback(909,"t:watch:DPNIHH",panelId))).status,200);
     assert.equal(sent.at(-1).name,"editMessageText");
-    assert.equal((await post(callback(910,"t:watchlist"))).status,200);
+    assert.equal((await post(callback(910,"t:watchlist",panelId))).status,200);
     assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][1].callback_data,
       "t:unwatch:DPNIHH");
-    assert.equal((await post(callback(911,"t:unwatch:DPNIHH"))).status,200);
+    assert.equal((await post(callback(911,"t:unwatch:DPNIHH",panelId))).status,200);
     assert.match(sent.at(-1).payload.text,/Danh sách theo dõi trống/);
     const profile=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"))["42"];
     assert.equal(profile.subscribed,true);
