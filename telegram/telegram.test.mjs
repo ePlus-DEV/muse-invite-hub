@@ -299,9 +299,9 @@ test("OCI Refresh re-fetches published codes without posting or changing prefere
   let reads=0;
   await withApp(async({post,sent,calls})=>{
     assert.equal((await post(message(500,"/start"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
     assert.equal((await post(callback(501,"t:role:seeker"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[3][0],"🔄 Refresh");
+    assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
     assert.equal((await post(message(502,"🔄 Refresh"))).status,200);
     assert.equal(reads,1);
     assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/1 /);
