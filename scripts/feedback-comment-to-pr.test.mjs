@@ -232,7 +232,7 @@ test("narrative owner count rejects mistaken, forged, ambiguous and inconsistent
   assert.equal(legacyWithoutUsed.outcome,"proposal");
   assert.deepEqual([legacyWithoutUsed.data[0].reportedCapacity,
     legacyWithoutUsed.data[0].reportedUses],[30,1]);
-  const remainingOnly=body.replace("- Total invites: 30\\n","")
+  const remainingOnly=body.replace("- Total invites: 30\n","")
     .replace("- Used invites: 1","");
   assert.equal(proposed(remainingOnly).outcome,"needs-review",
     "Without a prior reviewed total, do not assume 30.");
