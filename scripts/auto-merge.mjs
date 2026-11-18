@@ -1,6 +1,8 @@
 import {
   planIssueChange, isAutoPublishableNewGithubInvite, isAutoPublishableNewSocialInvite,
-  AUTO_PUBLISH_NEW_INVITE_MARKER, AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER
+  isAutoPublishableNewTelegramInvite,
+  AUTO_PUBLISH_NEW_INVITE_MARKER, AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER,
+  AUTO_PUBLISH_NEW_TELEGRAM_INVITE_MARKER
 } from "./issue-to-pr.mjs";
 import { changedRecord, changedRecords } from "./catalog.mjs";
 
@@ -202,6 +204,10 @@ export function verifyNewSocialInvitePR(args) {
   return verifyTrustedInvitePR(args,isAutoPublishableNewSocialInvite,AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER);
 }
 
+export function verifyNewTelegramInvitePR(args) {
+  return verifyTrustedInvitePR(args,isAutoPublishableNewTelegramInvite,AUTO_PUBLISH_NEW_TELEGRAM_INVITE_MARKER);
+}
+
 export function ciHasPassed({headSha,runs=[]}) {
   const relevant=(runs || [])
     .filter(run=>run.head_sha === headSha &&
@@ -247,13 +253,16 @@ export function autoMergeDecision({pr,comments=[],reviews=[],runs=[],files=[],ne
     return {eligible:false,reason:"Current head SHA has no successful Validate website and invite catalog run."};
   }
   return {eligible:true,sha,method:newInviteEligible && !authorization.authorized
-    ? "verified-new-github-invite" : safeDefault && !authorization.authorized
-      ? "default-safe-docs" : authorization.method};
+    ? String(pr.body||"").includes(AUTO_PUBLISH_NEW_TELEGRAM_INVITE_MARKER)
+      ? "verified-new-telegram-invite"
+      : String(pr.body||"").includes(AUTO_PUBLISH_NEW_SOCIAL_INVITE_MARKER)
+        ? "verified-new-social-invite" : "verified-new-github-invite"
+    : safeDefault && !authorization.authorized ? "default-safe-docs" : authorization.method};
 }
 
 
-// The independent @eplus-bot token may approve only a deterministic,
-// fully verified new GitHub invite record (not arbitrary code or workflows).
+// The independent @eplus-bot token may approve only deterministic,
+// fully verified new invite records (not arbitrary code or workflows).
 // The SHA-bound review is performed by the trusted workflow, never PR code.
 export function needsEplusBotReview({
   pr,comments=[],reviews=[],runs=[],files=[],newInviteEligible=false,
