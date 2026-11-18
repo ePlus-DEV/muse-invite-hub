@@ -141,12 +141,12 @@ test("detail page never represents an invalid >30 quota as available invites",()
   }
 });
 
-test("unreported community codes do not invent quota or update history", () => {
+test("unreported community codes show policy default but no owner report or update history", () => {
   const html=renderDetailPage(community());
-  assert.match(html, /class="detail-slots-number">Not reported<\/strong>/);
+  assert.match(html, /class="detail-slots-number">30 \/ 30<\/strong>/);
   assert.match(html, /class="detail-stat-date">No report<\/strong>/);
   assert.match(html, /class="detail-stat-updates">—<\/strong>/);
-  assert.match(html, /No confirmed remaining-slot data/);
+  assert.match(html, /Default 30-slot estimate · No owner report · Not live/);
   assert.equal((html.match(/class="detail-stats"/g)||[]).length,1);
   assert.equal((html.match(/<h1\b/g)||[]).length,1);
 });
@@ -164,7 +164,7 @@ test("mobile unreported quota has a full-width row and never overflows a 3-colum
   const foldStart = html.indexOf('class="detail-instructions detail-mobile-fold"',heroStart);
   assert.ok(statsStart > heroStart && noteStart > statsStart && noteStart < foldStart,
     "Community caveat must be visually attached to the invite card, not floating below it");
-  assert.match(html, /class="detail-slots-number">Not reported<\/strong>/);
+  assert.match(html, /class="detail-slots-number">30 \/ 30<\/strong>/);
   assert.match(html, /class="detail-stat-date">No report<\/strong>/);
   assert.match(css, /@media\(max-width:620px\)\{\s*\.detail-hero-unified \.detail-stats\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(css, /\.detail-hero-unified \.detail-stat:first-child\{[\s\S]*?grid-column:1\/-1/);
@@ -274,7 +274,7 @@ test("all published invite details, including unverified codes, are indexable an
   const html = renderDetailPage(community());
   assert.match(html, /<meta name="robots" content="index,follow">/);
   assert.match(html, /rel="canonical" href="https:\/\/muse.eplus.dev\/codes\/TEST42\/"/);
-  assert.match(html, /Not reported/);
+  assert.match(html, /30 of 30 invites by default/);
   assert.match(html, /redemption has not been verified/i);
   assert.equal(canIndexDetail(community()), true);
   const sitemap = generateSitemap([owner(), community()]);
