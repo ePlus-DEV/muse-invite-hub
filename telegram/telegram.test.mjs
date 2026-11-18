@@ -370,6 +370,30 @@ test("deployment sources never embed real credentials or auto-publish third-part
   assert.doesNotMatch(workflow,/push:\s*\n\s*branches:/);
 });
 
+test("OCI menu sync persists its version on disk and recognizes old buttons",async()=>{
+  await withApp(async({post,sent,dir})=>{
+    const before=sent.length;
+    assert.equal((await post(message(2900,"🎟 Get codes"))).status,200);
+    const changed=sent.slice(before);
+    assert.equal(changed.filter(x=>x.payload?.reply_markup?.inline_keyboard).length,1);
+    assert.equal(changed.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+    assert.equal(changed.find(x=>x.payload?.reply_markup?.keyboard)
+      .payload.reply_markup.keyboard.length,3);
+    const state=JSON.parse(readFileSync(join(dir,"private-profiles.json"),"utf8"));
+    assert.match(state["42"].menuVersion,/^v1-[0-9a-f]{8}$/);
+    assert.equal((await post(message(2901,"🎟 Get codes"))).status,200);
+    assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,1);
+    assert.equal((await post(message(2902,"/menu"))).status,200);
+    assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,2);
+    assert.equal((await post(message(2903,"/settings"))).status,200);
+    const settings=sent.findLast(x=>x.payload?.reply_markup?.inline_keyboard);
+    assert.ok(settings.payload.reply_markup.inline_keyboard.some(row=>
+      row.some(btn=>btn.callback_data==="t:menu:refresh")));
+    assert.equal((await post(callback(2904,"t:menu:refresh"))).status,200);
+    assert.equal(sent.filter(x=>x.payload?.reply_markup?.keyboard).length,3);
+  });
+});
+
 test("OCI Refresh re-fetches published codes without posting or changing preferences",async()=>{
   let reads=0;
   await withApp(async({post,sent,calls})=>{
