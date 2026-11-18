@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {MAX_INVITES_PER_CODE,validReportedQuota} from "./invite-quota-policy.mjs";
+import {MAX_INVITES_PER_CODE,validReportedQuota,displayQuota,withDisplayQuota} from "./invite-quota-policy.mjs";
 import {readFileSync} from "node:fs";
 import {fileURLToPath} from "node:url";
 import {dirname,resolve} from "node:path";
@@ -30,14 +30,39 @@ test("web, Telegram and trusted parsers use the same explicit cap",()=>{
   const folder=dirname(fileURLToPath(import.meta.url));
   for(const path of [
     "issue-to-pr.mjs","validate.mjs","feedback-comment-to-pr.mjs",
-    "close-published-comment-counts.mjs","site-pages.mjs"
+    "close-published-comment-counts.mjs"
   ]){
     const text=readFileSync(resolve(folder,path),"utf8");
     assert.match(text,/MAX_INVITES_PER_CODE/);
   }
+  assert.match(readFileSync(resolve(folder,"site-pages.mjs"),"utf8"),/displayQuota/);
   for(const path of ["../assets/directory-features.js","../assets/app.js",
     "../telegram/github.mjs"]){
     const text=readFileSync(resolve(folder,path),"utf8");
     assert.match(text,/MAX_INVITES_PER_CODE\s*=\s*30\s*;/);
   }
+});
+
+test("catalog output explicitly labels initial 30/30 without forging usage history",()=>{
+  const records=[
+    {id:"new",code:"NEW123",addedAt:"2026-11-18",status:"unverified"},
+    {id:"owner",code:"OWN123",reportedCapacity:30,reportedUses:11,usageReportedAt:"2026-11-18"},
+    {id:"smaller",code:"SMALL1",reportedCapacity:20,reportedUses:3,usageReportedAt:"2026-11-17"},
+    {id:"partial",code:"ONLY19",reportedRemaining:19,usageReportedAt:"2026-11-16"}
+  ];
+  const data=withDisplayQuota(records);
+  assert.deepEqual(data[0].quotaDisplay,
+    {capacity:30,remaining:30,basis:"default",reportedAt:null});
+  assert.deepEqual(data[1].quotaDisplay,
+    {capacity:30,remaining:19,basis:"reported",reportedAt:"2026-11-18"});
+  assert.deepEqual(data[2].quotaDisplay,
+    {capacity:20,remaining:17,basis:"reported",reportedAt:"2026-11-17"});
+  assert.deepEqual(data[3].quotaDisplay,
+    {capacity:30,remaining:19,basis:"reported-remaining",reportedAt:"2026-11-16"});
+  assert.equal(records[0].quotaDisplay,undefined,"Source catalog remains untouched");
+  assert.equal(data[0].reportedUses,undefined,"Never create usage from a default");
+  assert.equal(data[0].usageReportedAt,undefined,"No fabricated report date");
+  assert.equal(data[0].quotaUpdateCount,undefined,"No fabricated revision count");
+  assert.deepEqual(displayQuota({reportedCapacity:31,reportedUses:0,usageReportedAt:"2026-11-18"}),
+    {capacity:30,remaining:null,basis:"invalid",reportedAt:null});
 });
