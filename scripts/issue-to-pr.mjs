@@ -549,12 +549,39 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
     if (!ownerMatches(existing,issue)) {
       return { outcome:"needs-review",kind,code,reason:"Only the cataloged code owner may submit a quota proposal automatically." };
     }
-    const quota = actualQuota(f,date,{
+    let quota = actualQuota(f,date,{
       total:"Total invite quota shown by Muse (if known)",
       used:"Already used invites (if known)",
       remaining:"Remaining invites shown by Muse"
     });
     if (!quota) return { outcome:"needs-review",kind,code,reason:"Supply remaining invites or a consistent total and used count." };
+    // A same-owner, explicitly confirmed remaining-only report may reuse the
+    // previously published *known* capacity. Preserve that capacity rather
+    // than replacing a complete snapshot with reportedRemaining. Derive used
+    // arithmetically, and make the provenance explicit for human review.
+    // Missing or inconsistent historical capacity still needs manual review.
+    if (quota.reportedRemaining !== undefined &&
+        Number.isInteger(existing.reportedCapacity) &&
+        Number.isInteger(existing.reportedUses) &&
+        existing.reportedCapacity > 0 &&
+        existing.reportedUses >= 0 &&
+        existing.reportedUses <= existing.reportedCapacity &&
+        typeof existing.usageReportedAt === "string") {
+      if (quota.reportedRemaining > existing.reportedCapacity) {
+        return {outcome:"needs-review",kind,code,
+          reason:"Remaining invites exceed the previously published total. Confirm the new total before updating."};
+      }
+      const inheritedCapacity=existing.reportedCapacity;
+      quota={
+        reportedCapacity:inheritedCapacity,
+        reportedUses:inheritedCapacity-quota.reportedRemaining,
+        usageReportedAt:date
+      };
+      notice="The owner confirmed remaining invites from their Muse screen. "+
+        "Total "+inheritedCapacity+" was retained from the previous published snapshot; "+
+        "used "+quota.reportedUses+" was derived as total minus remaining. "+
+        "These are dated owner-reported figures, NOT a live Muse balance.";
+    }
     const target=data.find(item=>item.code===existing.code);
     const state=updateQuota(target,quota,date);
     if(state!=="updated") return quotaUpdateBlocked(state,kind,code);
