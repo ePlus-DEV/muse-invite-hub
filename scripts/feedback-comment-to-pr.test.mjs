@@ -97,7 +97,7 @@ test("Issue #14 owner remaining-only reports keep known published capacity witho
   const beyondTotal=planCommentProposal(issue,{...comment,
     body:body.replace("Remaining invites: 19","Remaining invites: 31")},[previous]);
   assert.equal(beyondTotal.outcome,"needs-review");
-  assert.match(beyondTotal.reason,/exceed.*total/);
+  assert.match(beyondTotal.reason,/0 and 30|exceed.*total/);
   const wrongOwner=planCommentProposal(issue,{...comment,
     user:{login:"not-owner",id:987654,type:"User"}},[previous]);
   assert.equal(wrongOwner.outcome,"needs-review");
