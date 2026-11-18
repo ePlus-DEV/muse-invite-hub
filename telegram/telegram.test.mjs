@@ -412,7 +412,7 @@ test("OCI bot navigates pages, detail and Back without public writes",async()=>{
     assert.equal((await post(callback(513,"t:back-list"))).status,200);
     assert.match(sent.at(-1).payload.text,/Page 2/);
     assert.equal((await post(callback(514,"t:home"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].callback_data,"t:browse");
     assert.equal(calls.submit.length,0);
     assert.equal(calls.report.length,0);
   },{browseCodes:async({offset=0,limit=6,query=""})=>
@@ -444,7 +444,7 @@ test("OCI bot defaults to English and retains an explicit Japanese override",asy
     assert.equal((await post(message(605,"/language"))).status,200);
     assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard.length,3);
     assert.equal((await post(callback(606,"t:lang:en"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
+    assert.equal(sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard[0][0],"🙋 I need a code");
   });
 });
 
@@ -463,11 +463,15 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
 
     assert.equal((await post(callback(701,"t:role:seeker"))).status,200);
     const seeker=sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard.flat();
-    assert.equal(seeker.length,9);
+    assert.equal(seeker.length,5);
     assert.ok(!seeker.includes("🔄 Làm mới"));
     assert.ok(seeker.includes("🎟 Nhận mã"));
-    assert.ok(seeker.includes("🙋 Cần mã"));
-    assert.ok(seeker.includes("🔄 Đổi vai trò"));
+    assert.ok(seeker.includes("🆕 Mã mới"));
+    assert.ok(seeker.includes("⚙️ Cài đặt"));
+    assert.ok(!seeker.includes("🙋 Cần mã"));
+    assert.ok(!seeker.includes("🔔 Thông báo"));
+    assert.ok(!seeker.includes("✅ Báo cáo"));
+    assert.ok(!seeker.includes("🔄 Đổi vai trò"));
     const initialList=sent.at(-1).payload;
     assert.match(initialList.text,/Mã mời cộng đồng/);
     assert.equal(initialList.reply_markup.inline_keyboard[0][0].callback_data,"t:detail:DPNIHH");
@@ -492,12 +496,15 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
     assert.equal(profile().subscribed,true,"explicit opt-in action registers alerts");
 
     assert.equal((await post(message(704,"🔄 Đổi vai trò"))).status,200);
-    assert.equal(sent.at(-1).payload.reply_markup.keyboard[1][0],"🤝 Tôi muốn chia sẻ mã");
+    assert.equal(sent.at(-1).payload.reply_markup.inline_keyboard[1][0].callback_data,"t:role:contributor");
     assert.equal((await post(callback(705,"t:role:contributor"))).status,200);
     const contributor=sent.at(-1).payload.reply_markup.keyboard.flat();
     assert.ok(contributor.includes("➕ Đóng góp"));
     assert.ok(contributor.includes("📍 Trạng thái mã"));
     assert.ok(contributor.includes("📋 Mã của tôi"));
+    assert.equal(contributor.length,5);
+    assert.ok(!contributor.includes("✅ Báo cáo"));
+    assert.ok(!contributor.includes("🔔 Thông báo"));
     assert.equal(profile().role,"contributor");
     assert.equal(profile().subscribed,true,"switching role must preserve consent and watchlists");
     assert.equal((await post(message(706,"📍 Trạng thái mã"))).status,200);
