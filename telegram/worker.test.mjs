@@ -135,7 +135,7 @@ test("Worker Refresh fetches current catalog and has no public write side effect
   assert.equal((await handleWebhookRequest(webhook(message(300,"/start")),env,deps)).status,200);
   assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
   assert.equal((await handleWebhookRequest(webhook(callback(301,"t:role:contributor")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,3);
+  assert.equal(sent.at(-1).payload.reply_markup.keyboard.length,2);
   assert.equal((await handleWebhookRequest(webhook(message(302,"🔄 Refresh")),env,deps)).status,200);
   assert.equal(reads,1);
   assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/1 /);
@@ -357,7 +357,7 @@ test("Cloudflare Worker defaults to English and preserves manually chosen langua
   assert.equal((await handleWebhookRequest(webhook(message(601,"/status DPNIHH")),env,deps)).status,200);
   assert.match(sent.at(-1).payload.text,/published/);
   assert.equal((await handleWebhookRequest(webhook(callback(602,"t:lang:ja")),env,deps)).status,200);
-  assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 コードが欲しい");
+  assert.equal(sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard[0][0],"🙋 コードが欲しい");
   const pref=JSON.parse(await env.BOT_STATE.get("profile:42"));
   assert.equal(pref.language,"ja");
   assert.equal(pref.languageManual,true);
@@ -386,7 +386,7 @@ test("Worker reply-keyboard Settings edits the saved inline panel in KV",async()
   };
   assert.equal((await handleWebhookRequest(webhook(message(860,"/language vi")),env,deps)).status,200);
   assert.equal((await handleWebhookRequest(webhook(message(861,"/start")),env,deps)).status,200);
-  assert.equal((await handleWebhookRequest(webhook(callback(862,"t:role:seeker")),env,deps)).status,200);
+  assert.equal((await handleWebhookRequest(webhook(message(862,"🙋 Tôi cần mã")),env,deps)).status,200);
   const panelId=2000+sent.length;
   assert.equal(JSON.parse(await env.BOT_STATE.get("profile:42")).panelMessageId,panelId);
   const messages=sent.filter(x=>x.name==="sendMessage").length;
@@ -417,7 +417,9 @@ test("Worker onboarding lets seekers request community codes and switch to contr
   assert.equal(sent.at(-1).payload.reply_markup.keyboard[0][0],"🙋 Tôi cần mã");
   assert.equal((await handleWebhookRequest(webhook(callback(701,"t:role:seeker")),env,deps)).status,200);
   const keyboard=sent.findLast(x=>x.payload?.reply_markup?.keyboard).payload.reply_markup.keyboard.flat();
-  assert.ok(keyboard.includes("🙋 Cần mã"));
+  assert.equal(keyboard.length,5);
+  assert.ok(keyboard.includes("🎟 Nhận mã"));
+  assert.ok(!keyboard.includes("🙋 Cần mã"));
   assert.match(sent.at(-1).payload.text,/Mã mời cộng đồng/);
   assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[0][0].text,/Còn 23 lượt \(đã báo cáo\)/);
   assert.match(sent.at(-1).payload.reply_markup.inline_keyboard[1][0].text,/30\/30 \(mặc định\)/);
