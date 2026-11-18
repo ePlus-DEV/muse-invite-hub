@@ -40,9 +40,14 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
     }
   };
   const panel=async(text,buttons)=>{
-    if(action.callbackId&&action.messageId&&typeof edit==="function"){
+    // Reply-keyboard actions do not include a callback message ID. Reuse the
+    // last bot-owned inline panel when possible, even across process restarts.
+    const target=action.callbackId? action.messageId:profile.panelMessageId;
+    if(target&&typeof edit==="function"){
       try {
-        const result=await edit(chatId,action.messageId,text,buttons);
+        const result=await edit(chatId,target,text,buttons);
+        if(profile.panelMessageId!==target)
+          await mutateProfile(profiles,chatId,p=>{p.panelMessageId=target;return p;});
         await feedback("refreshDone");
         return result;
       } catch(error) {
@@ -52,20 +57,68 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,ackn
         }
         if(isRefreshCallback){
           await feedback("refreshFailed");
-          return; // Never duplicate a failed or unchanged refresh card.
+          return; // Never duplicate a failed or unchanged Refresh card.
         }
-        // Non-refresh navigation may send another panel if the old one expired.
+        // Old/deleted messages cannot be edited: send one replacement panel.
       }
     }
     if(isRefreshCallback){await feedback("refreshFailed");return;}
-    return send(chatId,text,buttons);
+    const sent=await send(chatId,text,buttons);
+    if(Number.isSafeInteger(sent?.message_id)&&sent.message_id>0)
+      await mutateProfile(profiles,chatId,p=>{p.panelMessageId=sent.message_id;return p;});
+    return sent;
   };
   const prompt=async(kind,key)=>{
     await mutateProfile(profiles,chatId,p=>{p.pending={type:kind,until:Date.now()+10*60*1000};return p;});
-    return send(chatId,msg(key));
+    return panel(msg(key),[[{text:msg("backMenu"),data:"t:home"}]]);
   };
-  const languageButtons=()=>LOCALES.map(code=>
-    [{text:(language===code?"✅ ":"")+LOCALE_NAMES[code],data:"t:lang:"+code}]);
+  const languageButtons=(locale=language)=>LOCALES.map(code=>
+    [{text:(locale===code?"✅ ":"")+LOCALE_NAMES[code],data:"t:lang:"+code}]);
+  const settingsPanel=async(locale=language)=>{
+    const current=await profiles.get(chatId);
+    const trn=(key,params)=>tr(locale,key,params);
+    return panel(trn("settingsTitle")+
+      "\n"+trn("alertsLabel")+" "+trn(current.subscribed?"alertsOn":"alertsOff")+
+      "\n"+trn("watchedCount")+" "+current.watching.length+
+      "\n"+trn("roleCurrent")+" "+trn(current.role==="seeker"?"roleSeekerName":
+        current.role==="contributor"?"roleContributorName":"roleUnsetName")+
+      "\n"+trn("alertsNote"),[
+        [{text:trn(current.subscribed?"disableAlerts":"enableAlerts"),
+          data:"t:sub:"+(current.subscribed?"off":"on")}],
+        [{text:trn("watchedButton"),data:"t:watchlist"},
+         {text:trn("languageButton")+" · "+LOCALE_NAMES[locale],data:"t:langs"}],
+        [{text:trn("roleChange"),data:"t:roles"}],
+        [{text:trn("deleteData"),data:"t:erase:ask"}],
+        [{text:trn("backMenu"),data:"t:home"}]
+      ]);
+  };
+  const watchlistPanel=async()=>{
+    const current=await profiles.get(chatId);
+    const text=current.watching.length
+      ? msg("watchlistTitle")+"\n"+msg("watchlistFooter")
+      : msg("watchlistEmpty");
+    const rows=current.watching.map(code=>[
+      {text:"🎟 "+code,data:"t:detail:"+code},
+      {text:msg("unwatchButton"),data:"t:unwatch:"+code}
+    ]);
+    rows.push([{text:msg("settingsTitle"),data:"t:settings"},
+      {text:msg("backMenu"),data:"t:home"}]);
+    return panel(text,rows);
+  };
+  const homePanel=async()=>{
+    const current=await profiles.get(chatId);
+    const role=current.role;
+    const actions=role==="contributor"
+      ? [[{text:menuText(language,"submit"),data:"t:prompt-submit"},
+          {text:menuText(language,"browse"),data:"t:browse"}],
+         [{text:menuText(language,"mine"),data:"t:mine"},
+          {text:menuText(language,"settings"),data:"t:settings"}]]
+      : [[{text:menuText(language,"browse"),data:"t:browse"},
+          {text:menuText(language,"newest"),data:"t:newest"}],
+         [{text:menuText(language,"search"),data:"t:search"},
+          {text:menuText(language,"settings"),data:"t:settings"}]];
+    return panel(msg(role==="contributor"?"roleContributorWelcome":"roleSeekerWelcome"),actions);
+  };
   async function list(query="",newest=false,page=0) {
     // One concise message per page instead of five separate code cards.
     const needle=String(query||"").trim().slice(0,80);
