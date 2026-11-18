@@ -95,9 +95,11 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(10000)
     });
-    if (!response.ok) throw Error("Telegram API HTTP " + response.status);
-    const result = await response.json();
-    if (result.ok !== true) throw Error("Telegram rejected " + method);
+    const result=await response.json().catch(()=>null);
+    if(!response.ok||result?.ok!==true){
+      throw Error("Telegram "+method+" HTTP "+response.status+": "+
+        String(result?.description||"Unknown API error").slice(0,160));
+    }
   });
   async function send(chat_id, text, buttons) {
     const payload = { chat_id, text, disable_web_page_preview: true };
@@ -122,19 +124,27 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
     try {
       if(action.type!=="private-only")
         await syncTelegramLocale(profiles,chatId,action.telegramLanguage);
-      if(action.callbackId) {
+      const refreshCallback=Boolean(action.callbackId &&
+        ["refresh","refresh-code"].includes(action.type));
+      // Reply immediately for non-refresh callbacks. Refresh replies after
+      // the edit, allowing an "Already up to date" toast without a new card.
+      if(action.callbackId&&!refreshCallback){
         const language=(await profiles.get(chatId)).language||"en";
         const key=action.type==="submit"?"submitProcessing":
           action.type==="report"?"reportProcessing":null;
         try {
-          await call("answerCallbackQuery", {
+          await call("answerCallbackQuery",{
             callback_query_id:action.callbackId,
             ...(key?{text:tr(language,key)}:{})
           });
-        } catch { /* An expired callback acknowledgment must not block the GitHub operation. */ }
+        } catch { /* Expired callbacks must not block other work. */ }
       }
+      const acknowledge=async text=>call("answerCallbackQuery",{
+        callback_query_id:action.callbackId,...(text?{text}:{})
+      });
       action=await resolveInput(action,profiles);
-      if(await handleInteractive({action,profiles,send,sendMenu,edit,services,githubToken}))return;
+      if(await handleInteractive({action,profiles,send,sendMenu,edit,
+        acknowledge,services,githubToken}))return;
       async function complete(message) {
         await send(chatId,message);
         if(action.callbackId&&action.messageId) {
