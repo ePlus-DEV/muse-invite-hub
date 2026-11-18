@@ -125,9 +125,9 @@ export function matchesPublishedQuota(comment,record,{allowNarrative=false}={}) 
     if (value>MAX_INVITES_PER_CODE) return false;
     counts.set(key,value);
   }
-  if (!["total invites","remaining invites","used invites"].every(key=>counts.has(key))) return false;
-  const total=counts.get("total invites"), used=counts.get("used invites");
-  const remaining=counts.get("remaining invites");
+  if (!["remaining invites","used invites"].every(key=>counts.has(key))) return false;
+  const used=counts.get("used invites"),remaining=counts.get("remaining invites");
+  const total=counts.get("total invites") ?? remaining+used;
   return total===record.reportedCapacity && used===record.reportedUses &&
     remaining===total-used;
 }
