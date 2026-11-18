@@ -52,17 +52,17 @@ test("catalog output explicitly labels initial 30/30 without forging usage histo
   ];
   const data=withDisplayQuota(records);
   assert.deepEqual(data[0].quotaDisplay,
-    {capacity:30,remaining:30,basis:"default",reportedAt:null});
+    {capacity:30,remaining:30,used:0,basis:"default",reportedAt:null});
   assert.deepEqual(data[1].quotaDisplay,
-    {capacity:30,remaining:19,basis:"reported",reportedAt:"2026-11-18"});
+    {capacity:30,remaining:19,used:11,basis:"reported",reportedAt:"2026-11-18"});
   assert.deepEqual(data[2].quotaDisplay,
-    {capacity:20,remaining:17,basis:"reported",reportedAt:"2026-11-17"});
+    {capacity:20,remaining:17,used:3,basis:"reported",reportedAt:"2026-11-17"});
   assert.deepEqual(data[3].quotaDisplay,
-    {capacity:30,remaining:19,basis:"reported-remaining",reportedAt:"2026-11-16"});
+    {capacity:30,remaining:19,used:11,basis:"reported-remaining",reportedAt:"2026-11-16"});
   assert.equal(records[0].quotaDisplay,undefined,"Source catalog remains untouched");
   assert.equal(data[0].reportedUses,undefined,"Never create usage from a default");
   assert.equal(data[0].usageReportedAt,undefined,"No fabricated report date");
   assert.equal(data[0].quotaUpdateCount,undefined,"No fabricated revision count");
   assert.deepEqual(displayQuota({reportedCapacity:31,reportedUses:0,usageReportedAt:"2026-11-18"}),
-    {capacity:30,remaining:null,basis:"invalid",reportedAt:null});
+    {capacity:30,remaining:null,used:null,basis:"invalid",reportedAt:null});
 });
