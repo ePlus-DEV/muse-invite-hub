@@ -60,12 +60,21 @@ function notice(profile,newCodes) {
   return {codes:relevant,text:headline+"\n"+list+overflow+
     "\n"+tr(language,"notifyDisclaimer")};
 }
-/* state: getBaseline, setBaseline, listProfiles(cursor,limit), wasSent, markSent.
- * send: sends an ordinary private Telegram message and throws on failure.
- * One profile = at most one message per deployment batch, independent of how
- * many reasons they opted in. A retry skips recipients already acknowledged.
+// Edit a recent notification instead of generating a new chat bubble for
+// every separate Pages deployment. Fixed window (not sliding) so subsequent
+// codes eventually produce a fresh Telegram push as expected.
+export const DIGEST_WINDOW_MS=10*60*1000;
+const MAX_DIGEST_CODES=25;
+const EDIT_FALLBACK=/message to edit not found|message can't be edited|message identifier is not specified|message_id_invalid/i;
+const NOT_MODIFIED=/message is not modified/i;
+
+/* State optionally supports getDigest(chatId) and setDigest(chatId,digest).
+ * Adapter send returns Telegram Message {message_id}; edit returns the result
+ * from editMessageText. Missing digest support retains old send-once behavior.
+ * One profile gets at most one action per Pages event and all new codes retain
+ * per-chat, per-code markers. Partial delivery is retryable after failures.
  */
-export async function publishNotifications({event,state,catalog,send,logger=()=>{}}) {
+export async function publishNotifications({event,state,catalog,send,edit,now=Date.now(),logger=()=>{}}) {
   const current=normalizeCatalog(await catalog());
   const previous=await state.getBaseline();
   if(previous===null){
@@ -94,7 +103,44 @@ export async function publishNotifications({event,state,catalog,send,logger=()=>
     },due);
     if(!relevant)continue;
     try{
-      await send(chatId,relevant.text);
+      let prior=typeof state.getDigest==="function"
+        ? await state.getDigest(chatId):null;
+      // A digest is editable for at most ten minutes and 25 codes. Beyond
+      // that, send a fresh push so the user still sees subsequent releases.
+      const withinWindow=prior&&Number.isSafeInteger(prior.messageId)&&
+        prior.messageId>0&&Number.isSafeInteger(prior.at)&&
+        now>=prior.at&&now-prior.at<DIGEST_WINDOW_MS&&
+        Array.isArray(prior.codes)&&prior.codes.length>0&&
+        typeof edit==="function";
+      const combined=withinWindow
+        ? [...new Set([...prior.codes,...due])]:due;
+      const canEdit=withinWindow&&combined.length<=MAX_DIGEST_CODES;
+      const digestText=canEdit
+        ? notice({...profile,subscribed:true},combined).text:null;
+      let edited=false, messageId=null, codes=due, at=now;
+      if(canEdit) {
+        try {
+          await edit(chatId,prior.messageId,digestText);
+          edited=true;
+        } catch(error) {
+          if(NOT_MODIFIED.test(String(error.message||"")))edited=true;
+          else if(!EDIT_FALLBACK.test(String(error.message||"")))throw error;
+        }
+        if(edited) {
+          messageId=prior.messageId;codes=combined;at=prior.at;
+        }
+      }
+      if(!edited) {
+        // An obsolete/deleted notification is not fatal: a new notification
+        // still delivers every due code instead of silently skipping them.
+        const result=await send(chatId,relevant.text);
+        if(Number.isSafeInteger(result?.message_id)&&result.message_id>0)
+          messageId=result.message_id;
+      }
+      // Persist the digest before marking code delivery. If marking fails,
+      // a retry edits the same text; Telegram's "not modified" is success.
+      if(messageId&&typeof state.setDigest==="function")
+        await state.setDigest(chatId,{messageId,codes,at});
       for(const code of due)await state.markSent(chatId,code);
       sent++;
     }catch(error) {
@@ -108,12 +154,12 @@ export async function publishNotifications({event,state,catalog,send,logger=()=>
   return {sent,complete:true};
 }
 
-export async function notificationResponse(request,{secret,state,catalog,send,logger}) {
+export async function notificationResponse(request,{secret,state,catalog,send,edit,logger}) {
   if(typeof secret!=="string"||secret.length<24)return new Response("notifications not configured",{status:503});
   const event=await parseSignedEvent(request,secret);
   if(!event)return new Response("forbidden",{status:403});
   try {
-    const result=await publishNotifications({event,state,catalog,send,logger});
+    const result=await publishNotifications({event,state,catalog,send,edit,logger});
     return new Response(JSON.stringify(result),{
       status:200,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}
     });

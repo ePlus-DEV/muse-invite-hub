@@ -22,8 +22,10 @@ async function request({body={event:"pages-published",sha,cursor:null},ts=Date.n
 }
 function fakeState(profiles=[]) {
   let baseline=null;
-  const sent=new Set();
+  const sent=new Set(),digests=new Map();
   return {
+    async getDigest(id){return digests.get(id)||null;},
+    async setDigest(id,value){digests.set(id,{...value,codes:[...value.codes]});},
     async getBaseline(){return baseline;},
     async setBaseline(codes){baseline=[...codes];},
     async listProfiles(cursor,limit) {
@@ -72,6 +74,79 @@ test("first publication only initializes baseline, then opts in safely",async()=
   assert.match(sent[0].message,/NOT Muse-verified/);
   assert.deepEqual(await publishNotifications(args),{sent:0,complete:true});
   assert.equal(sent.length,3,"no duplicate notification on repeated deployment");
+});
+
+test("three rapid Pages publishes become one editable ten-minute notification",async()=>{
+  const state=fakeState([user(42,{subscribed:true})]);
+  let items=[{code:"AAA111"}],time=1_800_000_000_000;
+  let nextId=101;
+  const sent=[],edits=[];
+  const args={event,state,catalog:async()=>items,now:time,
+    send:async (id,message)=>{
+      sent.push({id,message});return {message_id:nextId++};
+    },
+    edit:async (id,messageId,message)=>{edits.push({id,messageId,message});}
+  };
+  assert.equal((await publishNotifications(args)).initialized,true);
+  items.push({code:"BBB222"});
+  assert.equal((await publishNotifications({...args,now:time+1000})).sent,1);
+  items.push({code:"CCC333"});
+  assert.equal((await publishNotifications({...args,now:time+120000})).sent,1);
+  items.push({code:"DDD444"});
+  assert.equal((await publishNotifications({...args,now:time+300000})).sent,1);
+  assert.equal(sent.length,1,"One push notification across three rapid deploys");
+  assert.equal(edits.length,2);
+  assert.equal(edits[0].messageId,101);
+  for(const code of ["BBB222","CCC333","DDD444"])
+    assert.ok(edits.at(-1).message.includes(code),code);
+  assert.deepEqual((await state.getDigest(42)).codes,["BBB222","CCC333","DDD444"]);
+  assert.equal((await publishNotifications({...args,now:time+300001})).sent,0,
+    "Repeat deployment must not re-deliver already acknowledged codes");
+  items.push({code:"EEE555"});
+  assert.equal((await publishNotifications({...args,now:time+602000})).sent,1);
+  assert.equal(sent.length,2,"New ten-minute window produces a new push");
+  assert.equal(edits.length,2);
+});
+
+test("expired/deleted Telegram digest falls back to a new message without losing codes",async()=>{
+  const state=fakeState([user(42,{subscribed:true})]);
+  let items=[{code:"AAA111"}];
+  const sent=[],args={event,state,catalog:async()=>items,now:1_800_000_000_000,
+    send:async(id,text)=>{sent.push(text);return {message_id:sent.length+100};},
+    edit:async()=>{throw Error("Bad Request: message to edit not found");}
+  };
+  await publishNotifications(args);
+  items.push({code:"BBB222"});
+  await publishNotifications({...args,now:args.now+1000});
+  items.push({code:"CCC333"});
+  await publishNotifications({...args,now:args.now+2000});
+  assert.equal(sent.length,2);
+  assert.match(sent[1],/CCC333/);
+  assert.equal(await state.wasSent(42,"CCC333"),true);
+});
+
+test("transient digest edit failure retries and accepts Telegram not-modified",async()=>{
+  const state=fakeState([user(42,{subscribed:true})]);
+  let items=[{code:"AAA111"}],edits=0,failMode="ok";
+  const sent=[];
+  const args={event,state,catalog:async()=>items,now:1_800_000_000_000,
+    send:async(_,text)=>{sent.push(text);return {message_id:141};},
+    edit:async()=>{edits++;if(failMode==="timeout")throw Error("network timeout");
+      if(failMode==="unchanged")throw Error("Bad Request: message is not modified");}
+  };
+  await publishNotifications(args);
+  items.push({code:"BBB222"});
+  await publishNotifications({...args,now:args.now+1000});
+  items.push({code:"CCC333"});
+  failMode="timeout";
+  await assert.rejects(()=>publishNotifications({...args,now:args.now+2000,
+    logger:()=>{}}),/network timeout/);
+  assert.equal(await state.wasSent(42,"CCC333"),false);
+  failMode="unchanged";
+  assert.equal((await publishNotifications({...args,now:args.now+3000})).sent,1);
+  assert.equal(await state.wasSent(42,"CCC333"),true);
+  assert.equal(sent.length,1,"Failed edit must never create duplicate push");
+  assert.equal(edits,2,"One failed edit and one idempotent retry");
 });
 
 test("pagination and retries preserve per-chat/code delivery markers",async()=>{
@@ -130,7 +205,9 @@ test("OCI notification state survives process restart without exposing private d
     await first.setBaseline(["AAA111"]);
     assert.deepEqual((await first.listProfiles(null,10)).profiles[0].chatId,42);
     await first.markSent(42,"BBB222");
+    await first.setDigest(42,{messageId:110,at:Date.now(),codes:["BBB222"]});
     const second=makeNodeNotifyState(dir);
+    assert.deepEqual(await second.getDigest(42),await first.getDigest(42));
     assert.deepEqual(await second.getBaseline(),["AAA111"]);
     assert.equal(await second.wasSent(42,"BBB222"),true);
   }finally{rmSync(dir,{recursive:true,force:true});}
@@ -161,4 +238,7 @@ test("Workers KV keeps subscriber records private and supports cursor paging",as
   assert.equal(await state.wasSent(42,"BBB222"),false);
   await state.markSent(42,"BBB222");
   assert.equal(await state.wasSent(42,"BBB222"),true);
+  const digest={messageId:140,at:Date.now(),codes:["BBB222"]};
+  await state.setDigest(42,digest);
+  assert.deepEqual(await state.getDigest(42),digest);
 });

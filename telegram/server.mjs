@@ -157,7 +157,7 @@ export function createTelegramApp({
       // so the response to the user's action remains the only new item.
       await menuSync.syncIfNeeded(chatId);
       if(await handleInteractive({action,profiles,send,
-        sendMenu:menuSync.trackedSendMenu,edit,
+        sendMenu:menuSync.trackedSendMenu,edit,removeMessage,
         acknowledge,services,githubToken})) return;
       async function complete(message) {
         await send(chatId,message);
@@ -229,6 +229,9 @@ export function createTelegramApp({
         secret:notifySecret,state:notifyState,
         catalog:async()=> (await import("./github.mjs")).publishedCatalog(),
         send:(chatId,text)=>call("sendMessage",{chat_id:chatId,text,disable_web_page_preview:true}),
+        edit:(chatId,messageId,text)=>call("editMessageText",{
+          chat_id:chatId,message_id:messageId,text,disable_web_page_preview:true
+        }),
         logger:msg=>console.error(msg)
       });
       res.writeHead(response.status,{"Content-Type":response.headers.get("content-type")||"text/plain","Cache-Control":"no-store"});

@@ -300,3 +300,29 @@ Webhook's actual host; publishing GitHub Pages alone is insufficient. No
 Telegram tokens or GitHub credentials need to change. A bot with old runtime
 cannot send new buttons. The menu fingerprint intentionally does not use the
 Git commit SHA, so catalog-only releases do not resend keyboards.
+
+## Telegram navigation and notification batching (2026-11-18)
+
+- A **Reply Keyboard** button (Get codes, New codes, Search, Settings, etc.)
+  creates a **fresh inline panel at the bottom of the chat**, best-effort
+  removing the previous bot-owned panel. The same applies to typed query
+  results and slash commands; this prevents editing content far above new
+  notifications and makes each tap visibly actionable.
+- An **Inline Keyboard** callback (pagination, code details, Refresh, settings
+  submenus) edits the message carrying that callback, not the global saved
+  panel. Unchanged Refresh produces a callback toast, not a duplicate card.
+- Opted-in new-code notifications from separate Pages deploys within a fixed
+  **10-minute window** coalesce by editing a recent bot notification.
+  The first event sends a normal push, later events update the same message
+  (Telegram may **not** push another alert for an edited notification).
+  After 10 minutes, or if editing fails because the message was deleted,
+  the next event sends a fresh message. Every published code retains its own
+  deduplication marker, and failed deliveries can be retried.
+- Digest state is private and bounded: Worker KV uses
+  `notify:digest:<chat-id>` with a one-hour TTL; OCI stores the last
+  digest in `notification-state.json`. No invite records, chat IDs or
+  subscriber preferences are published in GitHub.
+- **After merge:** deploy the actual Telegram Worker or OCI service. A
+  successful GitHub Pages deployment does not guarantee the Telegram
+  webhook runtime was updated. Verify the live runtime before testing.
+
