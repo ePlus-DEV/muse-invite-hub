@@ -1,7 +1,7 @@
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
-import { planIssueChange, resolvedInviteComment, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance, isAutoPublishableNewSocialInvite, isAutoPublishableNewGithubInvite } from "./issue-to-pr.mjs";
+import { planIssueChange, resolvedInviteComment, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance, isAutoPublishableNewSocialInvite, isAutoPublishableNewGithubInvite, isAutoPublishableNewTelegramInvite } from "./issue-to-pr.mjs";
 import { validateCatalog } from "./validate.mjs";
 import { changedRecords } from "./catalog.mjs";
 
@@ -70,7 +70,7 @@ test("Telegram and GitHub use the exact same Share Code Issue Form headings and 
   assert.equal(hasRequiredInviteConfirmations(body),true);
 });
 
-test("Telegram [Invite] Issue creates only a source-attributed, unverified human-review Draft PR",()=>{
+test("Telegram [Invite] Issue is eligible for guarded auto-publication as unverified",()=>{
   const source=issue(230,"[Invite] ABC123",telegramBody("ABC123","hoang_it"),"hoangsvit");
   const proposal=planIssueChange(source,[item]);
   assert.equal(proposal.outcome,"proposal");
@@ -88,6 +88,11 @@ test("Telegram [Invite] Issue creates only a source-attributed, unverified human
   assert.deepEqual(validateCatalog(proposal.data),[]);
   assert.equal(isAutoPublishableNewGithubInvite(source,proposal),false);
   assert.equal(isAutoPublishableNewSocialInvite(source,proposal),false);
+  assert.equal(isAutoPublishableNewTelegramInvite(source,proposal),true);
+  const newBotBody=telegramBody("ABC123","hoang_it").replace(
+    "Human review required;", "Community report;");
+  const updated={...source,body:newBotBody};
+  assert.equal(isAutoPublishableNewTelegramInvite(updated,planIssueChange(updated,[item])),true);
 });
 
 test("Telegram submissions reject mismatched identity, missing consent and owner quota claims",()=>{
@@ -106,9 +111,11 @@ test("Telegram submissions reject mismatched identity, missing consent and owner
   ]){
     const plan=planIssueChange(submitted,[item]);
     assert.notEqual(plan.outcome,"proposal",JSON.stringify(submitted).slice(0,160));
+    assert.equal(isAutoPublishableNewTelegramInvite(submitted,plan),false);
   }
   const published=[item,{id:"already-listed",code:"ABC123",status:"unverified",addedAt:"2026-11-11",sourceUrl:"https://t.me/alice_dev"}];
   assert.equal(planIssueChange(original,published).outcome,"already-listed");
+  assert.equal(isAutoPublishableNewTelegramInvite(original,planIssueChange(original,published)),false);
   const sameCanonical={...published[1],id:"community-issue-231",feedbackIssueNumber:231};
   assert.equal(planIssueChange(original,[item,sameCanonical]).outcome,"already-published");
   const changedSame={...sameCanonical,sourceUrl:"https://t.me/different_account"};
@@ -185,6 +192,7 @@ test("older [Telegram submission] issues retain backwards-compatible review-only
   assert.equal(proposal.outcome,"proposal");
   assert.equal(proposal.data.find(x=>x.code==="ABC123").sourceUrl,"https://t.me/alice_dev");
   assert.equal(isAutoPublishableNewGithubInvite(source,proposal),false);
+  assert.equal(isAutoPublishableNewTelegramInvite(source,proposal),true);
 });
 
 test("GitHub Issue Forms are parsed by headings, not arbitrary user code",()=>{
