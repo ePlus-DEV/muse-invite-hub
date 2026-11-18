@@ -129,9 +129,9 @@ function explicitlyNoSocialSource(value) {
 function optionalInteger(value, name, max = MAX_INVITES_PER_CODE) {
   const str = String(value ?? "").trim();
   if (!str || explicitlyUnreported(str)) return null;
-  if (!/^(?:0|[1-9][0-9]?)$/.test(str)) throw Error(name + " must be a non-negative integer.");
+  if (!/^(?:0|[1-9][0-9]{0,3})$/.test(str)) throw Error(name + " must be a non-negative integer.");
   const n = Number(str);
-  if (n > max) throw Error(name + " is outside the supported range.");
+  if (n > max) throw Error(name + " must be between 0 and " + max + ".");
   return n;
 }
 function reportDate(issue) {
