@@ -153,7 +153,7 @@ export function createBotHandler({ token, githubToken, telegramApi, services = {
       // so the response to the user's action remains the only new item.
       await menuSync.syncIfNeeded(chatId);
       if(await handleInteractive({action,profiles,send,
-        sendMenu:menuSync.trackedSendMenu,edit,
+        sendMenu:menuSync.trackedSendMenu,edit,removeMessage,
         acknowledge,services,githubToken})) return;
       async function complete(message) {
         await send(chatId,message);
