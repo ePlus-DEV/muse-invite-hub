@@ -319,9 +319,12 @@ export function planTelegramIssue(issue, current) {
   const listed=findCode(current,code);
   if(listed){
     const canonicalIssueNumber=originalIssueNumber(listed);
-    if (canonicalIssueNumber===issue.number && listed.sourceUrl!==source.url){
+    if (listed.sourceUrl!==source.url){
+      // Same code does not mean the same contributor. Never auto-close a
+      // Telegram report that conflicts with the published source, whether
+      // it is the canonical Issue or a later duplicate.
       return {outcome:"needs-review",kind:"invite",code,canonicalIssueNumber,
-        reason:"Original Telegram source differs from the catalog; manual review is required."};
+        reason:"Telegram source differs from the published catalog; manual review is required."};
     }
     return canonicalIssueNumber===issue.number
       ? {outcome:"already-published",kind:"invite",code,canonicalIssueNumber,
