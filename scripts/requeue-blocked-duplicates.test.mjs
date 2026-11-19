@@ -157,7 +157,10 @@ test("Issue #363 requeues only the same trusted Telegram profile as published #3
     telegramIssue({body:telegramBody.replace("@Betterbest222","@DifferentUser")}),
     telegramIssue({body:telegramBody.replace("- [x] I am authorized","- [ ] I am authorized")}),
     telegramIssue({body:telegramBody.replace("<!-- muse-telegram-submission:W9ENY3 -->","")}),
-    telegramIssue({body:telegramBody.replace("_No response_","12")}),
+    telegramIssue({body:telegramBody.replace(
+      "### Remaining invites (optional; self-reported)\n\n_No response_",
+      "### Remaining invites (optional; self-reported)\n\n12"
+    )}),
     telegramIssue({state:"closed"}),
     telegramIssue({number:362})
   ];
