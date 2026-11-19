@@ -120,6 +120,14 @@ test("Telegram submissions reject mismatched identity, missing consent and owner
   assert.equal(planIssueChange(original,[item,sameCanonical]).outcome,"already-published");
   const changedSame={...sameCanonical,sourceUrl:"https://t.me/different_account"};
   assert.equal(planIssueChange(original,[item,changedSame]).outcome,"needs-review");
+  // Regression #362/#363: preserve a duplicate from the same Telegram
+  // contributor, but do not silently close a conflicting attribution claim.
+  const duplicate=issue(363,"[Invite] ABC123",telegramBody("ABC123","alice_dev"),"hoangsvit");
+  const originalRecord={...sameCanonical,id:"community-issue-362",feedbackIssueNumber:362};
+  assert.equal(planIssueChange(duplicate,[item,originalRecord]).outcome,"already-listed");
+  assert.equal(planIssueChange(duplicate,[item,{
+    ...originalRecord,sourceUrl:"https://t.me/different_account"
+  }]).outcome,"needs-review");
   const general=issue(232,"[Invite] ABC123",body.replace("<!-- muse-telegram-submission:ABC123 -->",""),"hoangsvit");
   assert.equal(planIssueChange(general,[item]).outcome,"needs-review");
 });
