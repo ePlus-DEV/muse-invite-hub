@@ -1,11 +1,12 @@
 /* Requeue stale duplicate Issue reports only after a trusted Pages deploy.
- * The existing Issue-to-PR automation owns all duplicate/attribution checks
- * and decides whether to comment/close. This script never publishes records.
+ * The existing Issue-to-PR automation rechecks attribution, the canonical
+ * Issue and the live detail before closing. This script never publishes or
+ * closes anything itself.
  */
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { readCatalog } from "./catalog.mjs";
-import { hasRequiredInviteConfirmations, readIssueFields } from "./issue-to-pr.mjs";
+import { hasRequiredInviteConfirmations, planTelegramIssue, readIssueFields } from "./issue-to-pr.mjs";
 import { isShareCodeIssue, issueCodes, originalIssueNumber } from "./code-issue-map.mjs";
 
 const REPO="ePlus-DEV/muse-invite-hub";
@@ -21,9 +22,27 @@ export function retryableDuplicate(issue,records){
       !Array.isArray(records)) return null;
   const codes=issueCodes(issue);
   if(codes.length!==1)return null;
+  const canonical=records.find(item=>item.code===codes[0]);
+  const original=originalIssueNumber(canonical);
+  if(!canonical || !Number.isSafeInteger(original) ||
+      original<=0 || original===issue.number)return null;
   const f=readIssueFields(issue.body);
-  // Only requeue the previously blocked GitHub Issue route. A competing
-  // ownership/quota claim or a changed source must receive human review.
+  if(f["Code source"]==="Telegram (community code shared through bot)"){
+    // #362/#363: a second consented Telegram submission can be blocked while
+    // the first PR is still open. Only retry when both reports name the EXACT
+    // same validated public source and the trusted catalog points to the
+    // original bot submission. Different senders remain human-review cases.
+    const proposed=planTelegramIssue(issue,[]);
+    const entry=proposed.outcome==="proposal" &&
+      proposed.action==="add Telegram source" && proposed.code===codes[0] &&
+      proposed.data.find(item=>item.code===codes[0]);
+    if(!entry || canonical.id!=="community-issue-"+original ||
+        canonical.feedbackIssueNumber!==original ||
+        canonical.sourceUrl!==entry.sourceUrl)return null;
+    return {issueNumber:issue.number,code:codes[0],original};
+  }
+  // Preserve the existing cautious GitHub requeue: never auto-retry ownership
+  // disputes, reported quotas or other contributor-supplied source evidence.
   if(f["Code source"]!=="GitHub (my own code)")return null;
   if(["Invite limit (optional; self-reported)",
       "Uses so far (optional; self-reported)",
@@ -31,10 +50,6 @@ export function retryableDuplicate(issue,records){
       "Social post or profile URL (required for Threads, X or Facebook)",
       "Threads public post or profile URL (required for Threads)",
       "Public confirmation or context (optional)"].some(key=>Boolean(f[key])))return null;
-  const canonical=records.find(item=>item.code===codes[0]);
-  const original=originalIssueNumber(canonical);
-  if(!canonical || !Number.isSafeInteger(original) ||
-      original<=0 || original===issue.number)return null;
   return {issueNumber:issue.number,code:codes[0],original};
 }
 
