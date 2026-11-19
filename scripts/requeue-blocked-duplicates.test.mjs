@@ -46,10 +46,10 @@ const telegramBody=[
   "### Notes (optional)",
   "Submitted via Telegram by @Betterbest222. Community report; public profile is not proof of code ownership, redemption or quota.",
   "### Contributor checklist",
-  "- [x] I am authorized to share this code publicly; I understand this Issue is public.\\n"+
+  "- [x] I am authorized to share this code publicly; I understand this Issue is public.\n"+
   "- [x] This code is not a password, 2FA code, session token or private credential.",
   "<!-- muse-telegram-submission:W9ENY3 -->"
-].join("\\n\\n");
+].join("\n\n");
 const telegramIssue=(overrides={})=>issue({
   number:363,title:"[Invite] W9ENY3",user:{login:"hoangsvit"},
   created_at:"2026-11-19T14:01:40Z",body:telegramBody,...overrides
