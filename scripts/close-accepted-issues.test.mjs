@@ -44,7 +44,7 @@ function mock({pull=pr(),posted=false,reopened=false,live=true,comparison="ahead
       ? [
           ...(missingHistoricalSource ? [pr({
             number:385,title:"data: review JI0B4N invite (issue #384)",
-            body:"Prepared from public Issue #384 by @contributor.\\nCode: **JI0B4N**. Change: **add**.",
+            body:"Prepared from public Issue #384 by @contributor.\nCode: **JI0B4N**. Change: **add**.",
             head:{ref:"auto/issue-384-invite",repo:{full_name:repo}}
           })] : []),
           pull
