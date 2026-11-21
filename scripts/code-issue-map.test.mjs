@@ -114,6 +114,16 @@ test("an explicit conflicting root remains an error even with a reviewed mapping
     [canonical,duplicateRoot]),/Duplicate canonical feedback issues/);
 });
 
+test("deleted explicit source Issue needs an independently reviewed replacement feedback thread",()=>{
+  const orphan={id:"community-issue-384",code:"JI0B4N",feedbackIssueNumber:384};
+  const replacement={number:397,title:"[Code] JI0B4N — community feedback",
+    body:canonicalThreadBody(orphan),state:"open"};
+  assert.throws(()=>resolveExistingIssue(orphan,[replacement]),
+    /Explicit code Issue mapping not found/);
+  const repaired={...orphan,feedbackIssueNumber:397};
+  assert.equal(resolveExistingIssue(repaired,[replacement]),replacement);
+});
+
 test("readonly CI dry-run does not create Issues or invent thread numbers",async()=>{
   const created=[];
   const entries=[contributor,seeded,foreign];

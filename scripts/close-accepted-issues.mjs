@@ -135,7 +135,22 @@ export async function closeAcceptedIssues({
       seen.add(candidate.issueNumber);
       const {issueNumber,kind,code,prNumber,mergeSha} = candidate;
       const codes=candidate.codes || [code];
-      const issue = await api("GET","issues/" + issueNumber);
+      let issue;
+      try {
+        issue = await api("GET","issues/" + issueNumber);
+      } catch (error) {
+        // Contributors may delete a source Issue after its PR was merged.
+        // It can no longer be notified or closed, but must not block acceptance
+        // of unrelated contributions on future successful deployments.
+        // Never mask permission errors, rate limits, or temporary API failures.
+        if (error.message === "GitHub API GET issues/" + issueNumber + ": HTTP 404") {
+          summary.skipped++;
+          console.warn("Skipping missing original Issue #" + issueNumber +
+            "; no acceptance or closure was claimed.");
+          continue;
+        }
+        throw error;
+      }
       // A previously completed Telegram Issue may have been closed manually
       // before the broken acceptance matcher was fixed. Backfill its missing
       // detail-link comment without reopening or re-closing the discussion.

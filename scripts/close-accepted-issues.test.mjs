@@ -23,7 +23,7 @@ const html=(target=code)=>'<!doctype html><html><head><title>'+target+
   '/"></head><body>Community-shared, unverified.</body></html>';
 
 function mock({pull=pr(),posted=false,reopened=false,live=true,comparison="ahead",initialIssue=issue(),
-  failComment=false,files=[{filename:"data/invites.json"}]}={}) {
+  failComment=false,files=[{filename:"data/invites.json"}],missingHistoricalSource=false}={}) {
   const events=[], savedIssue=structuredClone(initialIssue);
   let accepted=posted;
   async function request(rawUrl,options={}) {
@@ -40,7 +40,18 @@ function mock({pull=pr(),posted=false,reopened=false,live=true,comparison="ahead
     const op=method+" "+path;
     events.push(op);
     let data;
-    if(method==="GET" && path==="pulls") data=url.searchParams.get("page")==="1"?[pull]:[];
+    if(method==="GET" && path==="pulls") data=url.searchParams.get("page")==="1"
+      ? [
+          ...(missingHistoricalSource ? [pr({
+            number:385,title:"data: review JI0B4N invite (issue #384)",
+            body:"Prepared from public Issue #384 by @contributor.\nCode: **JI0B4N**. Change: **add**.",
+            head:{ref:"auto/issue-384-invite",repo:{full_name:repo}}
+          })] : []),
+          pull
+        ] : [];
+    else if(op==="GET issues/384" && missingHistoricalSource) {
+      return {ok:false,status:404};
+    }
     else if(op==="GET issues/90") data=savedIssue;
     else if(op==="GET pulls/91/files") data=files;
     else if(op==="GET compare/"+merged+"..."+deployed) data={status:comparison};
@@ -95,6 +106,17 @@ test("after deployed merge and live detail verification, comment comes before cl
   assert.ok(commentIndex>0 && closeIndex>commentIndex);
   assert.ok(m.events.indexOf("live")<commentIndex);
   assert.equal(m.issue.state,"closed");
+});
+
+test("deleted original Issue does not prevent closing other published contributions",async()=>{
+  const m=mock({missingHistoricalSource:true});
+  const result=await closeAcceptedIssues({
+    request:m.request,token:"test-token",deployedSha:deployed,catalog:[{code}]
+  });
+  assert.deepEqual(result,{notified:1,closed:1,pending:0,skipped:1});
+  assert.ok(m.events.indexOf("GET issues/384")>=0);
+  assert.ok(m.events.indexOf("POST issues/90/comments")>m.events.indexOf("GET issues/384"));
+  assert.ok(!m.events.some(event=>event.startsWith("PATCH issues/384")));
 });
 
 test("bot-authored new invite PR is accepted after live deployment",async()=>{
