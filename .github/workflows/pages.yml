@@ -216,9 +216,18 @@ jobs:
         run: |
           DEPLOYED_SHA="$(git rev-parse HEAD)" node scripts/close-published-comment-counts.mjs
       - name: Notify opted-in Telegram users after verified production publication
+        id: telegram_notify
+        # A Telegram/Worker outage must not turn an already-live Pages release red.
+        continue-on-error: true
         if: ${{ vars.TELEGRAM_NOTIFY_URL != '' }}
         env:
           TELEGRAM_NOTIFY_URL: ${{ vars.TELEGRAM_NOTIFY_URL }}
           TELEGRAM_NOTIFY_SECRET: ${{ secrets.TELEGRAM_NOTIFY_SECRET }}
         run: |
           DEPLOYED_SHA="$(git rev-parse HEAD)" node scripts/notify-telegram-publish.mjs
+      - name: Report Telegram notification failure separately from Pages deploy
+        if: ${{ steps.telegram_notify.outcome == 'failure' }}
+        run: |
+          echo "::warning title=Telegram notifications pending::Pages is deployed, but Telegram delivery failed after retries. Check the Worker logs and rerun when fixed."
+          echo "### Telegram notifications pending" >> "$GITHUB_STEP_SUMMARY"
+          echo "GitHub Pages deployment succeeded; Telegram notification reconciliation failed. Review the Worker logs and retry the workflow after fixing the upstream service. Previously sent notifications are deduplicated in private bot state." >> "$GITHUB_STEP_SUMMARY"
