@@ -45,6 +45,8 @@ jobs:
         run: |
           for file in telegram/*.mjs; do node --check "$file"; done
           node --test telegram/*.test.mjs
+          node --check scripts/notify-telegram-publish.mjs
+          node --test scripts/notify-telegram-publish.test.mjs
       - name: Validate optional OCI Compose and ARM64 image build
         env:
           BOT_DOMAIN: bot.example.com

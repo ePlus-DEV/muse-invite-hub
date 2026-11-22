@@ -85,7 +85,9 @@ export async function publishNotifications({event,state,catalog,send,edit,now=Da
   const old=new Set(previous);
   const newCodes=current.filter(code=>!old.has(code));
   if(!newCodes.length)return {sent:0,complete:true};
-  const {profiles,cursor}=await state.listProfiles(event.cursor,10);
+  // Keep each Worker request short: Telegram API/KV latency can trigger 503
+  // when a single request attempts too many subscribers.
+  const {profiles,cursor}=await state.listProfiles(event.cursor,5);
   let sent=0;
   for(const {chatId,profile} of profiles) {
     const info=notice(profile,newCodes);

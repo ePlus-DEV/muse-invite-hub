@@ -158,10 +158,12 @@ test("pagination and retries preserve per-chat/code delivery markers",async()=>{
   await publishNotifications(args);
   items.push({code:"BBB222"});
   const first=await publishNotifications(args);
-  assert.equal(first.sent,10);
+  assert.equal(first.sent,5);
   assert.equal(first.complete,false);
-  assert.equal(first.nextCursor,"10");
-  const last=await publishNotifications({...args,event:{sha,cursor:first.nextCursor}});
+  assert.equal(first.nextCursor,"5");
+  const second=await publishNotifications({...args,event:{sha,cursor:first.nextCursor}});
+  assert.deepEqual(second,{sent:5,complete:false,nextCursor:"10"});
+  const last=await publishNotifications({...args,event:{sha,cursor:second.nextCursor}});
   assert.deepEqual(last,{sent:3,complete:true});
   assert.equal(delivered.length,13);
   assert.deepEqual(await publishNotifications(args),{sent:0,complete:true});
