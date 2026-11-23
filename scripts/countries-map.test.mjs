@@ -49,7 +49,7 @@ test("country recheck date and source list remain synchronized", () => {
   assert.ok(llms.includes("checked 23 November 2026"));
   assert.ok(audit.includes("Last checked: **23 November 2026**"));
   for (const code of expected) assert.ok(audit.includes("| " + code + " |"), code);
-  assert.match(audit, /UK.*press-reported expectation/);
+  assert.match(audit, /United Kingdom.*press-reported expectation/);
   assert.match(audit, /No verified announcement/);
   assert.match(page, /href="https:\/\/about\.fb\.com\/news\/tag\/muse\//);
   assert.ok(guide.includes("As rechecked 23 November 2026"));
