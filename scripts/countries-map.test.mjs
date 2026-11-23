@@ -30,7 +30,7 @@ test("map page and homepage retain the same six documented launch markets", () =
     assert.ok(home.includes('datetime="' + date + '"'));
     assert.ok(page.includes('datetime="' + date + '"'));
   }
-  assert.ok(page.includes('datetime="2026-11-18"'));
+  assert.ok(page.includes('datetime="2026-11-23"'));
   assert.match(page, /Countries without a confirmed announcement are not necessarily blocked/);
   assert.match(page, /Availability ≠ eligibility/);
   assert.ok(!/guaranteed access|live availability|globally available/i.test(page));
@@ -39,12 +39,20 @@ test("map page and homepage retain the same six documented launch markets", () =
 test("country recheck date and source list remain synchronized", () => {
   const guide=read("docs/PROJECT_GUIDE.md");
   const readme=read("README.md");
-  assert.ok(home.includes("6 confirmed markets · 1 press-reported · Updated 18 Nov 2026"));
-  assert.ok(home.includes('As of <time datetime="2026-11-18">18 Nov 2026</time>'));
-  assert.ok(page.includes('Last reviewed <time datetime="2026-11-18">18 Nov 2026</time>'));
-  assert.ok(page.includes("Updated 18 Nov 2026"));
-  assert.ok(readme.includes("as rechecked 18 November 2026"));
-  assert.ok(guide.includes("As rechecked 18 November 2026"));
+  const llms=read("llms.txt");
+  const audit=read("docs/COUNTRY_AVAILABILITY_SOURCES.md");
+  assert.ok(home.includes("6 confirmed markets · 1 press-reported · Updated 23 Nov 2026"));
+  assert.ok(home.includes('As of <time datetime="2026-11-23">23 Nov 2026</time>'));
+  assert.ok(page.includes('Last reviewed <time datetime="2026-11-23">23 Nov 2026</time>'));
+  assert.ok(page.includes("Updated 23 Nov 2026"));
+  assert.ok(readme.includes("as rechecked 23 November 2026"));
+  assert.ok(llms.includes("checked 23 November 2026"));
+  assert.ok(audit.includes("Last checked: **23 November 2026**"));
+  for (const code of expected) assert.ok(audit.includes("| " + code + " |"), code);
+  assert.match(audit, /United Kingdom.*press-reported expectation/);
+  assert.match(audit, /No verified announcement/);
+  assert.match(page, /href="https:\/\/about\.fb\.com\/news\/tag\/muse\//);
+  assert.ok(guide.includes("As rechecked 23 November 2026"));
   assert.equal(guide.split("# Project guide — Muse Invite Hub").length-1,1);
   assert.ok(guide.includes("`^[A-Z0-9]{6}$`"));
   assert.ok(guide.includes("UK timing remains press-reported and not an official announcement"));
@@ -52,7 +60,7 @@ test("country recheck date and source list remain synchronized", () => {
 
 test("press-reported UK is clearly separate from officially confirmed rollout", () => {
   const source = "https://www.thetimes.com/business/technology/article/mark-zuckerbergs-muse-ai-assistant-uk-launch-c5srqnkb8";
-  assert.match(home, /6 confirmed markets · 1 press-reported · Updated 18 Nov 2026/);
+  assert.match(home, /6 confirmed markets · 1 press-reported · Updated 23 Nov 2026/);
   assert.match(home, /availability-expected-label/);
   assert.match(home, /No official launch date or availability/);
   assert.ok(home.includes(source));
