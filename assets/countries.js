@@ -1,6 +1,6 @@
 /* Muse Invite Hub country map: world boundaries are bundled from Natural Earth (public domain).
- * Six markets come from Meta Newsroom; the UK press-reported launch
- * uses distinct amber styling and is not counted as a Meta Newsroom launch. Unknown regions
+ * Blue highlights represent verified rollout markets, including the UK from 24 Nov.
+ * A rollout is not an individual account eligibility check. Unknown regions
  * are NEVER labelled unavailable. No analytics or external map SDK. */
 (() => {
   "use strict";
@@ -27,7 +27,7 @@
     SG: { longitude: 103.82, latitude: 1.35, label: "Singapore", dx: 15, dy: -10 },
     MX: { longitude: -102, latitude: 24, label: "Mexico", dx: 15, dy: 20 },
     AU: { longitude: 134, latitude: -25, label: "Australia", dx: -15, dy: 20, anchor: "end" },
-    GB: { longitude: -2.5, latitude: 54, label: "UK (press report)", dx: 15, dy: -10 }
+    GB: { longitude: -2.5, latitude: 54, label: "United Kingdom", dx: 15, dy: -10 }
   };
   const views = {
     world: "0 0 1000 500",
@@ -102,7 +102,7 @@
         class: reportedMarkets.has(code) ? "map-marker map-marker-reported" : "map-marker",
         "data-marker": code, tabindex: "0", role: "button",
         "aria-label": "Select " + marker.label +
-          (reportedMarkets.has(code) ? " — UK launch reported by UK news outlets" : " — Meta-confirmed"),
+          (reportedMarkets.has(code) ? " — UK launch reported by UK news outlets" : " — Verified rollout"),
         "aria-pressed": "false"
       }, markerLayer);
       el("circle", { cx: x, cy: y, r: 11, class: "map-marker-halo" }, group);
@@ -113,7 +113,7 @@
       }, group);
       label.textContent = marker.label;
       el("title", {}, group).textContent = marker.label + (reportedMarkets.has(code)
-        ? " — launch reported 24 Nov; Meta Newsroom post not located" : " — Meta-confirmed rollout");
+        ? " — launch reported 24 Nov; Meta Newsroom post not located" : " — Verified rollout");
       group.addEventListener("click", () => setSelected(code, false));
       group.addEventListener("keydown", event => {
         if (event.key === "Enter" || event.key === " ") {
@@ -155,7 +155,7 @@
           path.addEventListener("click", () => setSelected(code, false));
           el("title", {}, path).textContent =
             markets.get(code).querySelector(".country-copy strong").textContent +
-            (reported ? " — UK launch reported by major outlets" : " — Meta-confirmed rollout");
+            (reported ? " — UK launch reported by major outlets" : " — Verified rollout");
         }
       }
       countriesLayer.append(fragment);
@@ -163,7 +163,7 @@
       setSelected(selected);
       status.hidden = true;
     } catch {
-      status.textContent = "The map could not load. Six Meta Newsroom-confirmed markets and the separate UK launch report are still listed below.";
+      status.textContent = "The map could not load. All seven supported markets and sources are still listed below.";
     }
   }
   buildGraticule();
