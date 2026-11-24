@@ -1,6 +1,6 @@
 /* Muse Invite Hub country map: world boundaries are bundled from Natural Earth (public domain).
- * Confirmed markets come only from Meta-sourced cards; press-reported expectations
- * use separate markup and colors and NEVER count as launched. Unknown regions
+ * Six markets come from Meta Newsroom; the UK press-reported launch
+ * uses distinct amber styling and is not counted as a Meta Newsroom launch. Unknown regions
  * are NEVER labelled unavailable. No analytics or external map SDK. */
 (() => {
   "use strict";
@@ -9,15 +9,15 @@
   const markerLayer = document.getElementById("map-markers");
   const gridLayer = document.getElementById("map-graticule");
   const status = document.getElementById("map-loading");
-  const confirmedCards = [...document.querySelectorAll(".country-card:not(.expected-card)[data-code]")];
-  const expectedCards = [...document.querySelectorAll(".expected-card[data-code]")];
-  const cards = [...confirmedCards, ...expectedCards];
+  const confirmedCards = [...document.querySelectorAll(".country-card:not(.reported-card)[data-code]")];
+  const reportedCards = [...document.querySelectorAll(".reported-card[data-code]")];
+  const cards = [...confirmedCards, ...reportedCards];
   if (!svg || !countriesLayer || !markerLayer || !status || !confirmedCards.length) return;
 
   const NS = "http://www.w3.org/2000/svg";
   const confirmedMarkets = new Map(confirmedCards.map(card => [card.dataset.code, card]));
-  const expectedMarkets = new Map(expectedCards.map(card => [card.dataset.code, card]));
-  const markets = new Map([...confirmedMarkets, ...expectedMarkets]);
+  const reportedMarkets = new Map(reportedCards.map(card => [card.dataset.code, card]));
+  const markets = new Map([...confirmedMarkets, ...reportedMarkets]);
   // Label placement only, NOT evidence of rollout. Rollout data stays in the
   // source-linked HTML list shared with the homepage editorial checks.
   const markers = {
@@ -27,7 +27,7 @@
     SG: { longitude: 103.82, latitude: 1.35, label: "Singapore", dx: 15, dy: -10 },
     MX: { longitude: -102, latitude: 24, label: "Mexico", dx: 15, dy: 20 },
     AU: { longitude: 134, latitude: -25, label: "Australia", dx: -15, dy: 20, anchor: "end" },
-    GB: { longitude: -2.5, latitude: 54, label: "UK (expected)", dx: 15, dy: -10 }
+    GB: { longitude: -2.5, latitude: 54, label: "UK (press report)", dx: 15, dy: -10 }
   };
   const views = {
     world: "0 0 1000 500",
@@ -99,10 +99,10 @@
       if (!markets.has(code)) continue;
       const [x, y] = project([marker.longitude, marker.latitude]);
       const group = el("g", {
-        class: expectedMarkets.has(code) ? "map-marker map-marker-expected" : "map-marker",
+        class: reportedMarkets.has(code) ? "map-marker map-marker-reported" : "map-marker",
         "data-marker": code, tabindex: "0", role: "button",
         "aria-label": "Select " + marker.label +
-          (expectedMarkets.has(code) ? " — press report, not launched" : " — Meta-confirmed"),
+          (reportedMarkets.has(code) ? " — UK launch reported by UK news outlets" : " — Meta-confirmed"),
         "aria-pressed": "false"
       }, markerLayer);
       el("circle", { cx: x, cy: y, r: 11, class: "map-marker-halo" }, group);
@@ -112,8 +112,8 @@
         "text-anchor": marker.anchor || "start", class: "map-marker-text"
       }, group);
       label.textContent = marker.label;
-      el("title", {}, group).textContent = marker.label + (expectedMarkets.has(code)
-        ? " — press-reported launch plans; not Meta-confirmed" : " — Meta-confirmed rollout");
+      el("title", {}, group).textContent = marker.label + (reportedMarkets.has(code)
+        ? " — launch reported 24 Nov; Meta Newsroom post not located" : " — Meta-confirmed rollout");
       group.addEventListener("click", () => setSelected(code, false));
       group.addEventListener("keydown", event => {
         if (event.key === "Enter" || event.key === " ") {
@@ -144,18 +144,18 @@
         if (!d) continue;
         const code = country.code;
         const confirmed = confirmedMarkets.has(code);
-        const expected = expectedMarkets.has(code);
+        const reported = reportedMarkets.has(code);
         const path = el("path", {
           d, "fill-rule": "evenodd",
           class: confirmed ? "map-land map-land-confirmed" :
-            expected ? "map-land map-land-expected" : "map-land",
-          ...(confirmed || expected ? { "data-market": code } : {})
+            reported ? "map-land map-land-reported" : "map-land",
+          ...(confirmed || reported ? { "data-market": code } : {})
         }, fragment);
-        if (confirmed || expected) {
+        if (confirmed || reported) {
           path.addEventListener("click", () => setSelected(code, false));
           el("title", {}, path).textContent =
             markets.get(code).querySelector(".country-copy strong").textContent +
-            (expected ? " — reported only, not yet launched" : " — Meta-confirmed rollout");
+            (reported ? " — UK launch reported by major outlets" : " — Meta-confirmed rollout");
         }
       }
       countriesLayer.append(fragment);
@@ -163,7 +163,7 @@
       setSelected(selected);
       status.hidden = true;
     } catch {
-      status.textContent = "The map could not load. The six Meta-confirmed markets and separate UK press report are still listed below.";
+      status.textContent = "The map could not load. Six Meta Newsroom-confirmed markets and the separate UK launch report are still listed below.";
     }
   }
   buildGraticule();
