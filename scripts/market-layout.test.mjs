@@ -25,19 +25,19 @@ test("mobile Search and Sort share one horizontal row, preserving keyboard-frien
   assert.equal((home.match(/id="sort-trigger"/g)||[]).length,1);
 });
 
-test("country disclosure summary is compact and lists the same six sourced countries",()=>{
+test("country disclosure summary is compact and lists the same seven sourced countries",()=>{
   assert.match(home, /<section class="availability-section" id="availability" aria-labelledby="availability-title">/);
   assert.match(home, /<details class="availability-disclosure">[\s\S]*?<summary>/);
   assert.match(home, /class="availability-summary-main"/);
   assert.match(home, /class="availability-summary-end"/);
   assert.match(home, /Where is Muse available\?/);
-  assert.match(home, /6 confirmed markets · 1 press-reported · Updated 23 Nov 2026/);
+  assert.match(home, /7 supported markets · Updated 24 Nov 2026/);
   assert.match(css, /\.availability-summary-main\{display:flex;align-items:center/);
   assert.match(css, /\.availability-market-list\{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(css, /\.availability-market-list\{grid-template-columns:1fr;gap:7px\}/);
   const codes=[...home.matchAll(/<li data-country="([A-Z]{2})">/g)].map(x=>x[1]);
-  assert.deepEqual(codes,["US","CA","JP","SG","MX","AU"]);
-  assert.equal((home.match(/class="availability-market"/g)||[]).length,6);
+  assert.deepEqual(codes,["US","CA","JP","SG","MX","AU","GB"]);
+  assert.equal((home.match(/class="availability-market"/g)||[]).length,7);
   assert.match(home, /Vietnam is not among these announced launch markets/);
   assert.match(home, /An invite code does not override geographic restrictions/);
   assert.equal((home.match(/class="availability-flags"/g)||[]).length,1);
@@ -52,7 +52,7 @@ test("detail pages reuse the exact homepage source list and flag assets with cor
     assert.match(html, /<section class="availability-section detail-market-section" id="detail-availability"/);
     assert.match(html, /aria-labelledby="detail-availability-title"/);
     assert.match(html, /id="detail-availability-title">Where is Muse available\?/);
-    assert.equal((html.match(/<li data-country="[A-Z]{2}">/g)||[]).length,6);
+    assert.equal((html.match(/<li data-country="[A-Z]{2}">/g)||[]).length,7);
     assert.ok(html.includes(markup),"Detail should show the trusted static country disclosure");
     assert.match(html, /src="\.\.\/\.\.\/assets\/flags\/jp\.svg"/);
     assert.match(html, /src="\.\.\/\.\.\/assets\/flags\/mx\.svg"/);
@@ -70,7 +70,7 @@ test("detail pages reuse the exact homepage source list and flag assets with cor
 
 test("every homepage flag and Meta confirmation is present exactly once in the detail disclosure",()=>{
   const detail=renderDetailMarketAvailability();
-  for(const code of ["us","ca","jp","sg","mx","au"]){
+  for(const code of ["us","ca","jp","sg","mx","au","gb"]){
     assert.equal((home.match(new RegExp('src="\\./assets/flags/'+code+'\\.svg"','g'))||[]).length,2);
     assert.equal((detail.match(new RegExp('src="\\.\\./\\.\\./assets/flags/'+code+'\\.svg"','g'))||[]).length,2);
   }
