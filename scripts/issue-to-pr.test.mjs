@@ -847,6 +847,44 @@ test("multiple code submissions reject duplicates, malformed tokens and shared q
 });
 
 
+
+test("Issue #589: ordered remaining-only reports produce six review-only independent records",()=>{
+  const body=share.replace("PNSMZZ","AC38UX，9GUDCK，KTOQUY，YJD98M，JEY3I2，1IUDDX")
+    .replace("### Public confirmation","### Code source\n\nGitHub (my own code)\n\n### Public confirmation")
+    .replace("### Invite limit (optional; self-reported)\n\n30",
+      "### Invite limit (optional; self-reported)\n\n_No response_")
+    .replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+      "### Remaining invites (optional; self-reported)\n\n24,30,30,30,30,30");
+  const source=issue(589,"[Invite]",body,"yy44582972-lang");
+  const result=planIssueChange(source,[item]);
+  assert.equal(result.outcome,"proposal");
+  assert.equal(isAutoPublishableNewGithubInvite(source,result),false);
+  assert.deepEqual(result.codes.map(code=>result.data.find(row=>row.code===code).reportedRemaining),[24,30,30,30,30,30]);
+  for(const code of result.codes){
+    const row=result.data.find(entry=>entry.code===code);
+    assert.equal(row.reportedCapacity,undefined);
+    assert.equal(row.reportedUses,undefined);
+    assert.equal(row.usageReportedAt,"2026-11-11");
+    assert.equal(row.feedbackIssueNumber,589);
+    assert.equal(row.status,"unverified");
+  }
+  assert.equal(changedRecords([item],result.data,result.codes).length,6);
+  assert.deepEqual(validateCatalog(result.data),[]);
+  assert.equal(planIssueChange(source,result.data).outcome,"already-published");
+  assert.equal(planIssueChange({...source,body:body.replace("24,30,30,30,30,30","23,30,30,30,30,30")},result.data).outcome,"needs-review");
+  for(const invalid of ["24","24,30","24,30,30,30,30,31","24,,30,30,30,30","24,30,30,30,30,unknown","24,30,30,30,30,-1"]){
+    assert.equal(planIssueChange({...source,body:body.replace("24,30,30,30,30,30",invalid)},[item]).outcome,"needs-review",invalid);
+  }
+  const boundary=planIssueChange({...source,body:body.replace("24,30,30,30,30,30","0，30，1，2，3，4")},[item]);
+  assert.equal(boundary.outcome,"proposal");
+  assert.equal(boundary.data.find(row=>row.code==="AC38UX").reportedRemaining,0);
+  for(const platform of ["Threads (public code I found)","Telegram (community code shared through bot)"]){
+    assert.equal(planIssueChange({...source,body:body.replace("GitHub (my own code)",platform)},[item]).outcome,"needs-review");
+  }
+  assert.throws(()=>planIssueChange({...source,body:body.replace("- [x] This code is not","- [ ] This code is not")},[item]),/confirmations/);
+  assert.equal(planIssueChange({...source,body:body.replace("### Notes (optional)\n\n_No response_","### Notes (optional)\n\n12 invites left")},[item]).outcome,"needs-review");
+});
+
 test("real eplus-bot Issue PR workflow never attempts to update legacy bot comments",()=>{
   const source=readFileSync(new URL("./issue-to-pr.mjs",import.meta.url),"utf8");
   assert.match(source,/entry\.user\?\.login==="eplus-bot"/);

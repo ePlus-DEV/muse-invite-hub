@@ -222,17 +222,46 @@ function summary(issue, code, action) {
 }
 
 function planMultiInvite(issue, current, codes, fields) {
-  const quotas = [
-    "Uses so far (optional; self-reported)",
-    "Invite limit (optional; self-reported)",
-    "Remaining invites (optional; self-reported)"
-  ];
-  if (quotas.some(name => field(fields, name).trim())) {
-    return {outcome:"needs-review",kind:"invite",code:codes.join(", "),
-      reason:"For multiple invite codes, leave per-code uses/limit/remaining fields blank; provide separate owner-count updates after publication."};
+  const remainingLabel = "Remaining invites (optional; self-reported)";
+  const rawRemaining = field(fields,remainingLabel).trim();
+  const needsReview = reason => ({outcome:"needs-review",kind:"invite",code:codes.join(", "),reason});
+  if (!hasRequiredInviteConfirmations(issue.body)) {
+    throw Error("Contributor permission and privacy confirmations are required.");
+  }
+  // Never apply one shared quota, including a legacy quota embedded in notes,
+  // to several codes. Only explicit, ordered remaining counts are supported.
+  if (["Uses so far (optional; self-reported)","Invite limit (optional; self-reported)"]
+      .some(name => field(fields,name).trim()) ||
+      /\b[0-9]+\s+(?:uses?|invites?)\s+(?:left|remaining)\b/i.test(field(fields,"Notes (optional)"))) {
+    return needsReview("For multiple invite codes, provide per-code remaining counts only; shared uses/limit or quota in notes is not supported.");
+  }
+  let remaining = null;
+  if (rawRemaining && !explicitlyUnreported(rawRemaining)) {
+    if (field(fields,"Code source").trim() !== GITHUB_OWN) {
+      return needsReview("Per-code remaining counts require GitHub (my own code); social and Telegram reports cannot claim owner quota.");
+    }
+    const values = rawRemaining.split(/[,，;；]/).map(value=>value.trim());
+    if (values.length !== codes.length || values.some(value=>!value)) {
+      return needsReview("Enter exactly one per-code remaining count (0–30) for each invite code, in the same order, separated by commas; do not use a shared quota.");
+    }
+    try {
+      remaining = values.map(value=>optionalInteger(value,"Remaining invites"));
+      if (remaining.some(value=>value===null)) throw Error("Every per-code remaining count must be a number.");
+    } catch (error) {
+      return needsReview(error.message);
+    }
   }
   const existing = codes.filter(code => findCode(current,code));
   if (existing.length===codes.length){
+    if (remaining && !codes.every((code,i)=>{
+      const record=findCode(current,code);
+      return originalIssueNumber(record)===issue.number &&
+        !record.sourceUrl && ownerMatches(record,issue) &&
+        record.reportedRemaining===remaining[i] &&
+        record.reportedCapacity===undefined && record.reportedUses===undefined;
+    })) {
+      return needsReview("Existing codes with per-code quota claims require separate owner-count review; no published quota was changed.");
+    }
     const canonicalIssueNumbers=[...new Set(codes.map(code=>originalIssueNumber(findCode(current,code)))
       .filter(Number.isSafeInteger))];
     // Multi-code Issues can be resolved as duplicates only when every code is
@@ -253,9 +282,14 @@ function planMultiInvite(issue, current, codes, fields) {
   if (index < 0) throw Error("Invite code field is missing.");
   let data = current;
   const notices = [];
-  for (const code of codes) {
+  for (const [position,code] of codes.entries()) {
     const fieldsForCode = [...parts];
     fieldsForCode[index] = "Invite code\n\n"+code+"\n\n";
+    if (remaining) {
+      const quotaIndex=fieldsForCode.findIndex(part=>part.split("\n",1)[0].trim()===remainingLabel);
+      if (quotaIndex<0) throw Error("Remaining invites field is missing.");
+      fieldsForCode[quotaIndex]=remainingLabel+"\n\n"+remaining[position]+"\n\n";
+    }
     const singleIssue = {...issue,body:fieldsForCode.join("### ")};
     const plan = planIssueChange(singleIssue,data,{deferValidation:true});
     if (plan.outcome !== "proposal" || plan.action.startsWith("update")) {
@@ -277,7 +311,9 @@ function planMultiInvite(issue, current, codes, fields) {
   return {
     outcome:"proposal",kind:"invite",code:codes[0],codes,
     action:"add "+codes.length+" codes",data,
-    notice:notices.join("\n") || "All codes remain unverified and require human review.",
+    notice:remaining
+      ? "Per-code remaining counts are dated contributor reports, not live Muse balances. Review required; no total or used count is assumed."
+      : notices.join("\n") || "All codes remain unverified and require human review.",
     branch:"auto/issue-"+issue.number+"-invite",
     summary:summary(issue,codes.join(", "),"add multiple")
   };
@@ -685,6 +721,10 @@ export function isAutoPublishableNewGithubInvite(issue,proposal) {
   if (field(fields,"Code source").trim() !== GITHUB_OWN ||
       !hasRequiredInviteConfirmations(issue.body)) return false;
   const codes = proposal.codes || [proposal.code];
+  // Grouped owner quota claims are review-only; ordinary quota-free batches
+  // keep the existing independent new-code automatic publication path.
+  if (codes.length>1 && field(fields,"Remaining invites (optional; self-reported)").trim() &&
+      !explicitlyUnreported(field(fields,"Remaining invites (optional; self-reported)"))) return false;
   if (codes.length < 1 || codes.length > 10 ||
       new Set(codes).size !== codes.length) return false;
   return codes.every(code => {
