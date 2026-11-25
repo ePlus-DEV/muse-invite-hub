@@ -51,8 +51,8 @@ body:
     id: remaining
     attributes:
       label: Remaining invites (optional; self-reported)
-      description: "Enter only the actual remaining invites (0–30) shown in your own Muse account; maximum 30 is not an assumed available balance. If an earlier verified total is known, used is calculated automatically."
-      placeholder: "e.g. 17"
+      description: "For your own GitHub codes only: enter actual remaining invites (0–30). For multiple new codes, enter one number per code in the same order, separated by commas (e.g. 17, 30). Leave blank if unknown. Never enter a shared total."
+      placeholder: "e.g. 17 or 17, 30"
     validations:
       required: false
   - type: textarea
