@@ -11,6 +11,11 @@ on:
         description: "Open GitHub Issue number to reprocess"
         required: true
         type: number
+  # Issues created by GITHUB_TOKEN automation do not fire `issues` events,
+  # and a single failed run used to strand an Issue forever. Reconcile
+  # provably stale open invite Issues on the same cadence as triage.
+  schedule:
+    - cron: "*/30 * * * *"
 
 permissions:
   contents: write
@@ -19,13 +24,14 @@ permissions:
   actions: write
 
 concurrency:
-  group: muse-issue-automation-${{ github.event.issue.number || inputs.issue_number }}
+  group: muse-issue-automation-${{ github.event.issue.number || inputs.issue_number || 'reconcile' }}
   cancel-in-progress: false
 
 jobs:
   propose:
     if: >
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'schedule' ||
       (github.event.issue.pull_request == null &&
        (startsWith(github.event.issue.title, '[Invite]') ||
         startsWith(github.event.issue.title, '[Count update]') ||
@@ -36,7 +42,7 @@ jobs:
          contains(github.event.issue.body, '### Code source') &&
          contains(github.event.issue.body, '### Contributor checklist'))))
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - name: Checkout trusted main
         uses: actions/checkout@v6
@@ -51,7 +57,9 @@ jobs:
       - name: Verify automation and catalog
         run: |
           node --check scripts/issue-to-pr.mjs
+          node --check scripts/reconcile-stuck-issues.mjs
           node --test scripts/issue-to-pr.test.mjs
+          node --test scripts/reconcile-stuck-issues.test.mjs
           node scripts/validate.mjs
       - name: Verify existing ePlus Bot credential
         env:
@@ -63,7 +71,13 @@ jobs:
             exit 1
           }
       - name: Create or update Issue proposal as eplus-bot
+        if: github.event_name != 'schedule'
         env:
           GH_TOKEN: ${{ secrets.EPLUS_BOT_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
         run: node scripts/issue-to-pr.mjs
+      - name: Reconcile stuck Issues as eplus-bot
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.EPLUS_BOT_TOKEN }}
+        run: node scripts/reconcile-stuck-issues.mjs
