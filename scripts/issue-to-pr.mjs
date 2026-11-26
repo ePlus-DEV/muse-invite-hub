@@ -458,6 +458,26 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
       return {outcome:"needs-review",kind,code,
         reason:"GitHub fallback cannot treat Telegram-selected quota figures as owner-confirmed; remove the quota claim or request maintainer review."};
     }
+    // Duplicate resolution runs BEFORE source-URL validation. A repeat
+    // submission of an already-listed code must close as a duplicate even
+    // when its own source fields are invalid (Issue #718: the code was
+    // already published via Issue #716, yet the reporter was told to fix a
+    // Facebook URL). Quota claims from a different Issue still require
+    // manual review, exactly as in the detailed duplicate handling below.
+    if (existing) {
+      const canonicalIssueNumber = originalIssueNumber(existing);
+      if (Number.isSafeInteger(canonicalIssueNumber) &&
+          canonicalIssueNumber !== issue.number) {
+        const hasQuotaClaim = ["Invite limit (optional; self-reported)",
+          "Uses so far (optional; self-reported)",
+          "Remaining invites (optional; self-reported)"]
+          .some(label => field(f,label).trim());
+        if (!hasQuotaClaim) {
+          return {outcome:"already-listed",kind,code,canonicalIssueNumber,
+            reason:"Invite code is already listed; duplicate submissions are resolved before source validation."};
+        }
+      }
+    }
     const socialSubmission = sourcePlatform !== "GitHub";
     const urlField = field(f,SOCIAL_FIELD).trim() || field(f,THREADS_FIELD).trim();
     // Legacy issues omitted source selection; never claim public social URLs

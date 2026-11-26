@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { planTelegramIssue } from "./issue-to-pr.mjs";
 import { readCatalog, recordPath } from "./catalog.mjs";
-import { isShareCodeIssue, issueCodes, parseInviteCodes } from "./code-issue-map.mjs";
+import { isShareCodeIssue, issueCodes, originalIssueNumber, parseInviteCodes } from "./code-issue-map.mjs";
 
 const REPO = "ePlus-DEV/muse-invite-hub";
 const ORIGIN = "https://muse.eplus.dev";
@@ -176,12 +176,31 @@ export async function closeAcceptedIssues({
           checked.data.find(row=>row.code===code);
         const record=records.find(row=>row.code===code);
         if (!verified || !record ||
-            verified.id!==record.id ||
-            verified.feedbackIssueNumber!==issueNumber ||
             verified.sourceUrl!==record.sourceUrl ||
             !pr.body?.includes("GitHub Issue author @"+issue.user.login+
               " is the bot credential, not the code owner.")) {
           summary.pending++; continue;
+        }
+        if (verified.id!==record.id ||
+            verified.feedbackIssueNumber!==issueNumber) {
+          // Duplicate Telegram submission (e.g. Issue #641 for a code first
+          // accepted from Issue #640): planning this Issue generates a
+          // record keyed to this Issue, while the published record stays
+          // keyed to the original. Accept-close the duplicate only when
+          // the canonical Issue is already closed and carries this code;
+          // the merged PR's exact files are still verified below.
+          const canonicalNumber=originalIssueNumber(record);
+          let canonicalClosed=false;
+          if (Number.isSafeInteger(canonicalNumber) && canonicalNumber>0 &&
+              canonicalNumber!==issueNumber) {
+            try {
+              const canonicalIssue=await api("GET","issues/"+canonicalNumber);
+              canonicalClosed=canonicalIssue.state==="closed" &&
+                !canonicalIssue.pull_request &&
+                issueCodes(canonicalIssue).includes(code);
+            } catch { canonicalClosed=false; }
+          }
+          if (!canonicalClosed) { summary.pending++; continue; }
         }
       }
       const files = await api("GET","pulls/" + prNumber + "/files?per_page=100");
