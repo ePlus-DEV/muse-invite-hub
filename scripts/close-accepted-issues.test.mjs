@@ -23,8 +23,9 @@ const html=(target=code)=>'<!doctype html><html><head><title>'+target+
   '/"></head><body>Community-shared, unverified.</body></html>';
 
 function mock({pull=pr(),posted=false,reopened=false,live=true,comparison="ahead",initialIssue=issue(),
-  failComment=false,files=[{filename:"data/invites.json"}],missingHistoricalSource=false}={}) {
+  failComment=false,files=[{filename:"data/invites.json"}],missingHistoricalSource=false,extraIssues=null}={}) {
   const events=[], savedIssue=structuredClone(initialIssue);
+  const issueNo=savedIssue.number, prNo=pull.number;
   let accepted=posted;
   async function request(rawUrl,options={}) {
     const url=new URL(rawUrl), method=options.method || "GET";
@@ -52,23 +53,27 @@ function mock({pull=pr(),posted=false,reopened=false,live=true,comparison="ahead
     else if(op==="GET issues/384" && missingHistoricalSource) {
       return {ok:false,status:404};
     }
-    else if(op==="GET issues/90") data=savedIssue;
-    else if(op==="GET pulls/91/files") data=files;
+    else if(op==="GET issues/"+issueNo) data=savedIssue;
+    else if(extraIssues && op.startsWith("GET issues/") &&
+      extraIssues[op.slice("GET issues/".length)]) {
+      data=extraIssues[op.slice("GET issues/".length)];
+    }
+    else if(op==="GET pulls/"+prNo+"/files") data=files;
     else if(op==="GET compare/"+merged+"..."+deployed) data={status:comparison};
-    else if(op==="GET issues/90/comments") data=[
+    else if(op==="GET issues/"+issueNo+"/comments") data=[
       ...(accepted?[{user:{login:"eplus-bot"},
         body:"<!-- muse-accepted-contribution -->"}]:[]),
       ...(reopened?[{user:{login:"github-actions[bot]"},
         body:"<!-- muse-code-feedback-reopened -->"}]:[])
     ];
-    else if(op==="POST issues/90/comments") {
+    else if(op==="POST issues/"+issueNo+"/comments") {
       if(failComment) return {ok:false,status:500,text:async()=>"failure"};
       const body=JSON.parse(options.body).body;
       assert.match(body,/https:\/\/muse.eplus.dev\/codes\/ALFA12\//);
       assert.match(body,/does \*\*not\*\* mean Muse has verified/);
       accepted=true;
       data={id:7};
-    } else if(op==="PATCH issues/90") {
+    } else if(op==="PATCH issues/"+issueNo) {
       assert.equal(accepted,true,"never close Issue before commenting");
       assert.deepEqual(JSON.parse(options.body),{state:"closed",state_reason:"completed"});
       savedIssue.state="closed";data=savedIssue;
@@ -187,6 +192,43 @@ test("closed reviewed Telegram Issue receives missing detail comment without reo
   });
   assert.equal(again.notified,0);
   assert.equal(duplicate.events.includes("POST issues/90/comments"),false);
+});
+
+test("duplicate Telegram Issue is accept-closed once the canonical Issue is closed (#641 shape)",async()=>{
+  const canonical=telegramIssue();
+  canonical.state="closed";canonical.state_reason="completed";
+  const duplicateIssue=issue({number:92,user:{login:"hoangsvit"},
+    created_at:"2026-11-12T00:01:00Z",body:telegramBody});
+  const duplicatePR=pr({
+    number:93,user:{login:"eplus-bot"},
+    title:"data: review ALFA12 invite (issue #92)",
+    body:"## Automated draft proposal\n"+
+      "Prepared from consented Telegram contributor undefined in public Issue #92. "+
+      "GitHub Issue author @hoangsvit is the bot credential, not the code owner.\n"+
+      "Code: **ALFA12**. Change: **add Telegram source**.",
+    head:{ref:"auto/issue-92-invite",repo:{full_name:repo}}
+  });
+  const m=mock({pull:duplicatePR,initialIssue:duplicateIssue,files:telegramFile,
+    extraIssues:{90:canonical}});
+  const result=await closeAcceptedIssues({
+    request:m.request,token:"test-token",deployedSha:deployed,
+    catalog:[telegramRecord()]
+  });
+  assert.deepEqual(result,{notified:1,closed:1,pending:0,skipped:0});
+  assert.ok(m.events.includes("GET issues/90"));
+  assert.ok(m.events.indexOf("POST issues/92/comments")<
+    m.events.indexOf("PATCH issues/92"));
+  assert.equal(m.issue.state,"closed");
+  // While the canonical Issue is still open, the duplicate stays pending.
+  const openCanonical=telegramIssue();
+  const m2=mock({pull:duplicatePR,initialIssue:duplicateIssue,files:telegramFile,
+    extraIssues:{90:openCanonical}});
+  const pending=await closeAcceptedIssues({
+    request:m2.request,token:"test-token",deployedSha:deployed,
+    catalog:[telegramRecord()]
+  });
+  assert.equal(pending.closed,0);
+  assert.equal(pending.pending,1);
 });
 
 test("Telegram acceptance never bypasses source, consent, merge, deployment or file checks",async()=>{

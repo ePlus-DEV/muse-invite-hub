@@ -720,6 +720,27 @@ test("reprocessing Issue #240 after its reviewed merge is already-listed, not re
   assert.equal(isAutoPublishableNewSocialInvite(original,replay),false);
 });
 
+test("issue #718 shape: a duplicate with an invalid social URL resolves as already-listed, not a URL error", () => {
+  const body=updatedShare("Facebook (public code I found)","https://facebook.com")
+    .replace("18I70N","2CJPVS")
+    .replace("I own this public code or am reporting a code explicitly shared publicly at the source URL above; this issue is public.",
+      "I am authorized to share this code publicly; I understand this Issue is public.");
+  const published={
+    id:"community-issue-716",code:"2CJPVS",status:"unverified",
+    addedAt:"2026-11-25",feedbackIssueNumber:716,submittedBy:"firstreporter"
+  };
+  const duplicate=planIssueChange(issue(718,"[Invite] 2CJPVS",body,"secondreporter"),[item,published]);
+  assert.equal(duplicate.outcome,"already-listed");
+  assert.equal(duplicate.canonicalIssueNumber,716);
+  // A quota claim from the duplicate still requires manual review.
+  const quota=body.replace("### Remaining invites (optional; self-reported)\n\n_No response_",
+    "### Remaining invites (optional; self-reported)\n\n5");
+  assert.equal(planIssueChange(issue(718,"[Invite] 2CJPVS",quota,"secondreporter"),[item,published]).outcome,"needs-review");
+  // The original Issue itself is never short-circuited by the early check.
+  const original=planIssueChange(issue(716,"[Invite] 2CJPVS",body,"firstreporter"),[item,published]);
+  assert.notEqual(original.outcome,"already-listed");
+});
+
 test("a duplicate invite shows only actual published detail and canonical Issue links",()=>{
   const comment=resolvedInviteComment({codes:["FT4SHN"],canonicalIssueNumbers:[240],
     liveCodes:["FT4SHN"],canonical:false});
