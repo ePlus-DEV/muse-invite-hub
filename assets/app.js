@@ -250,8 +250,10 @@
     if (typeof value !== "string") return null;
     try {
       const url = new URL(value);
-      if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) return null;
+      if (url.protocol !== "https:" || url.username || url.password) return null;
       const host = url.hostname.toLowerCase(), path = url.pathname;
+      const facebookHost = ["facebook.com","www.facebook.com","m.facebook.com","mbasic.facebook.com","web.facebook.com","fb.com","www.fb.com","fb.watch"].includes(host);
+      if (!facebookHost && (url.search || url.hash)) return null;
       let found, platform, key, iconName, group = false;
       if (["threads.com", "www.threads.com"].includes(host)) {
         found = /^\/@([A-Za-z0-9_.]{1,30})(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.exec(path);
@@ -264,12 +266,17 @@
         found = /^\/([A-Za-z][A-Za-z0-9_]{4,31})(?:\/[1-9][0-9]{0,18})?\/?$/.exec(path);
         if (found && ["share","joinchat","login","addstickers","proxy","socks","addemoji"].includes(found[1].toLowerCase())) return null;
         [platform,key,iconName] = ["Telegram","telegram","fa-brands fa-telegram"];
-      } else if (["facebook.com","www.facebook.com","m.facebook.com"].includes(host)) {
-        found = /^\/groups\/([A-Za-z0-9][A-Za-z0-9._-]{1,79})\/posts\/([1-9][0-9]{9,24})\/?$/.exec(path);
+      } else if (facebookHost) {
+        if (url.username || url.password || url.port || /^(?:\/(?:l\.php|flx\/warn|login(?:\.php)?|checkpoint)(?:\/|$))/i.test(path) || [...url.searchParams.keys()].some(key => /^(?:access_token|token|auth|auth_token|session|session_id|password|code|signed_request)$/i.test(key))) return null;
+        found = /^\/groups\/([A-Za-z0-9][A-Za-z0-9._-]{0,79})(?:\/(?:posts|permalink)\/[^/]+)?\/?$/.exec(path);
         group = Boolean(found);
-        if (!group) found = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/[A-Za-z0-9_-]{4,120})?\/?$/.exec(path);
-        if (found && ["share","groups","watch","reel","reels","events","marketplace","people","pages","profile.php","permalink.php","photo.php","login"].includes(found[1].toLowerCase())) return null;
+        if (!group) {
+          found = /^\/([A-Za-z0-9.]{2,50})\/posts\/[A-Za-z0-9_-]{4,120}\/?$/.exec(path);
+          if (!["facebook.com","www.facebook.com","m.facebook.com"].includes(host) || url.search || url.hash ||
+              (found && ["share","groups","watch","reel","reels","events","marketplace","people","pages","profile.php","permalink.php","photo.php","story.php","login"].includes(found[1].toLowerCase()))) found = null;
+        }
         [platform,key,iconName] = ["Facebook","facebook","fa-brands fa-facebook-f"];
+        if (!found) return {platform,key,handle:null,url:url.href,icon:iconName,group:false};
       }
       return found ? {platform,key,handle:found[1],url:url.href,icon:iconName,group} : null;
     } catch { return null; }
@@ -318,15 +325,15 @@
     const sourceTag = el("span", "card-source" + (source.key === "github" ? "" : " card-source-" + source.key));
     sourceTag.append(icon(source.icon), document.createTextNode(" " + source.platform));
     contributor.append(sourceTag);
-    if (source.handle && source.url) {
-      const author = el("a", "card-author", (source.group ? "Group: " : "@") + source.handle);
+    if (source.url) {
+      const author = el("a", "card-author", source.handle ? (source.group ? "Group: " : "@") + source.handle : "Source reference");
       author.href = source.url;
       author.rel = "noopener noreferrer";
       author.target = "_blank";
-      author.setAttribute("aria-label", source.group
+      author.setAttribute("aria-label", !source.handle ? "View source reference" : source.group
         ? "View Facebook group post in " + source.handle
         : "View " + source.platform + " profile of " + source.handle);
-      author.title = source.group
+      author.title = !source.handle ? source.platform + " source reference" : source.group
         ? "Facebook group post: " + source.handle
         : source.platform + " source: " + source.handle;
       contributor.append(author);

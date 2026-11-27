@@ -12,7 +12,7 @@ Each accepted code contribution is stored as an independent reviewed JSON record
 
 1. Open [Share a Muse invite code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml).
 2. Select **GitHub (my own code)** if you own the code, or **Threads**, **X (Twitter)** or **Facebook** if you found a public code posted by another person. **Telegram** is also supported as a consented community source through the private Telegram bot; valid new codes can auto-publish as unverified.
-3. Enter a public code (exactly 6 letters (A–Z) or digits (0–9), without hyphens (lowercase is normalized)). For social submissions include the **original public post URL** (`threads.com/@user/post/ID`, `x.com/user/status/123456789` or `facebook.com/user/posts/ID`). Facebook group post permalinks (`facebook.com/groups/GROUP/posts/POST_ID/`) are accepted as **group-level references only** and require a review-only Draft PR; the group is not the poster's identity. A profile-only, Facebook share-shortlink or ambiguous URL is held for manual review. The handle in the post URL is the social source, **not** the reporter's GitHub account.
+3. Enter a public code (exactly 6 letters (A–Z) or digits (0–9), without hyphens (lowercase is normalized)). For social submissions include the **original public post URL** (`threads.com/@user/post/ID`, `x.com/user/status/123456789` or `facebook.com/user/posts/ID`). Facebook group posts, permalinks, share links, profiles and other HTTPS Facebook references are accepted; ambiguous or group links create review-only Draft PRs without claiming authorship. The handle in the post URL is the social source, **not** the reporter's GitHub account.
 4. Enter quota figures **only for your own GitHub-owned code** from your Muse account; never infer them from a social post. Add optional non-sensitive notes.
 5. Check both public sharing/privacy confirmations, then submit.
 
@@ -160,7 +160,7 @@ Each accepted code contribution is stored as an independent reviewed JSON record
 
 1. Open [Share a Muse invite code](https://github.com/ePlus-DEV/muse-invite-hub/issues/new?template=share-code.yml).
 2. Select **GitHub (my own code)** if you own the code, or **Threads**, **X (Twitter)** or **Facebook** if you found a public code posted by another person.
-3. Enter a public code (exactly 6 letters (A–Z) or digits (0–9), without hyphens (lowercase is normalized)). For social submissions include the **original public post URL** (`threads.com/@user/post/ID`, `x.com/user/status/123456789` or `facebook.com/user/posts/ID`). A profile-only, Facebook share-shortlink or ambiguous URL is held for manual review. The handle in the post URL is the social source, **not** the reporter's GitHub account.
+3. Enter a public code (exactly 6 letters (A–Z) or digits (0–9), without hyphens (lowercase is normalized)). For social submissions include the **original public post URL** (`threads.com/@user/post/ID`, `x.com/user/status/123456789` or `facebook.com/user/posts/ID`). Facebook group, share, profile and other ambiguous references create review-only Draft PRs. The handle in the post URL is the social source, **not** the reporter's GitHub account.
 4. Enter quota figures **only for your own GitHub-owned code** from your Muse account; never infer them from a social post. Add optional non-sensitive notes.
 5. Check both public sharing/privacy confirmations, then submit.
 

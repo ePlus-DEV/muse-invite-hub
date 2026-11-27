@@ -500,7 +500,7 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
       return {outcome:"needs-review",kind,code,
         reason:"Provide an HTTPS public profile or post URL matching the selected social platform."};
     }
-    if (socialSubmission && !social.post) {
+    if (socialSubmission && !social.post && social.platform !== "Facebook") {
       return {outcome:"needs-review",kind,code,
         reason:"A social profile alone cannot prove a code was posted. Supply the original public post URL for maintainer review."};
     }
@@ -626,6 +626,8 @@ export function planIssueChange(issue, current, {deferValidation=false}={}) {
           if (reported) Object.assign(entry,reported);
           else notice="Usage numbers were absent or incomplete; no available-slot count has been guessed.";
         }
+      } else if (social.reviewOnly) {
+        notice="Facebook source URL supplied by the contributor; the author and original post are not established. A maintainer must review the reference before publication.";
       } else if (social.group) {
         notice="Facebook group "+social.handle+" is the cited source, NOT the post author's identity or a verified code owner. "+
           "The submitted group post has not been independently verified; a maintainer must check it manually before publication.";
@@ -779,7 +781,7 @@ export function isAutoPublishableNewSocialInvite(issue,proposal) {
   const social=parsePublicSource(urlField);
   // Group permalinks identify the group but cannot establish the post author.
   // Do not auto-publish them, even when the URL and submitter checklist are valid.
-  if (!social?.post || social.group || social.platform!==platform ||
+  if (!social?.post || social.group || social.reviewOnly || social.platform!==platform ||
       proposal.action!=="add "+platform+" source") return false;
   if (["Invite limit (optional; self-reported)","Uses so far (optional; self-reported)",
        "Remaining invites (optional; self-reported)"].some(k=>field(f,k).trim())) return false;

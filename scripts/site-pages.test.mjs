@@ -430,3 +430,11 @@ test("X and Facebook social codes use correct links and appear in production sit
   assert.match(app, /"Facebook","facebook","fa-brands fa-facebook-f"/);
   assert.match(app, /sourceInfo\(item\)\.key === sourceFilter/);
 });
+
+test("Facebook share links render a source reference without inventing an author", () => {
+  const url="https://www.facebook.com/share/p/example/";
+  const html=renderDetailPage({...community(),code:"52LSG4",sourceUrl:url});
+  assert.match(html,/Facebook · Source reference/);
+  assert.ok(html.includes(url));
+  assert.doesNotMatch(html,/@share/);
+});
