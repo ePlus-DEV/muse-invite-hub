@@ -12,7 +12,7 @@ export function notificationSettings(profile={}) {
     personal:v.personal!==false,
     watched:v.watched!==false,
     quota:v.quota===true,
-    minutes:[0,10,60].includes(v.minutes)?v.minutes:10
+    minutes:[0,30,60].includes(v.minutes)?v.minutes:30
   };
 }
 export function emptyProfile() {
