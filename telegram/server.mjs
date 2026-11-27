@@ -78,8 +78,8 @@ export function createTelegramApp({
     });
     const result=await response.json().catch(()=>null);
     if(!response.ok||result?.ok!==true){
-      throw Error("Telegram "+method+" HTTP "+response.status+": "+
-        String(result?.description||"Unknown API error").slice(0,160));
+      throw Object.assign(Error("Telegram "+method+" HTTP "+response.status+": "+
+        String(result?.description||"Unknown API error").slice(0,160)),{status:result?.error_code||response.status});
     }
     return result.result;
   });
