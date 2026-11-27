@@ -95,6 +95,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,remo
     const current=await profiles.get(chatId);
     const trn=(key,params)=>tr(locale,key,params);
     return panel(trn("settingsTitle")+
+      "\n"+trn("notifyMaster")+": "+trn(notificationSettings(current).enabled?"alertsOn":"alertsOff")+
       "\n"+trn("alertsLabel")+" "+trn(current.subscribed?"alertsOn":"alertsOff")+
       "\n"+trn("watchedCount")+" "+current.watching.length+
       "\n"+trn("roleCurrent")+" "+trn(current.role==="seeker"?"roleSeekerName":
@@ -124,8 +125,10 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,remo
       toggle("quota","notifyQuotaOption",settings.quota),
       [0,10,60].map(minutes=>({text:(settings.minutes===minutes?"✅ ":"")+msg("notifyFrequency"+minutes),
         data:"t:notify:minutes:"+minutes})),
-      [{text:msg("settingsTitle"),data:"t:settings"}]];
-    return panel(msg("notifySettingsTitle")+"\n"+msg("notifySettingsNote")+"\n"+msg("notifyFrequencyNote"),buttons);
+      [{text:msg("watchedButton"),data:"t:watchlist"},{text:msg("settingsTitle"),data:"t:settings"}]];
+    return panel(msg("notifySettingsTitle")+"\n"+msg("notifyMaster")+": "+msg(settings.enabled?"alertsOn":"alertsOff")+
+      "\n"+msg("alertsLabel")+" "+msg(current.subscribed?"alertsOn":"alertsOff")+
+      "\n"+msg("notifySettingsNote")+"\n"+msg("notifyFrequencyNote"),buttons);
   };
   const watchlistPanel=async()=>{
     const current=await profiles.get(chatId);
