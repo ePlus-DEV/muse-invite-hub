@@ -356,3 +356,22 @@ test("Muse invite field uses exactly six letters or digits, with uppercase norma
   assert.throws(()=>issueMarker("ABC-12"),/Invalid invite code/);
   assert.deepEqual(issueCodes({...oldIssue,body:"### Invite code\n\nABC-12"}),[]);
 });
+
+
+test("production mapping preflight reports all broken explicit refs before creating any threads", async () => {
+  const a={id:"community-issue-768",code:"EFWYUL",feedbackIssueNumber:768};
+  const b={id:"community-issue-999",code:"ABC123",feedbackIssueNumber:999};
+  const other={id:"manual-code",code:"DEF456"};
+  let writes=0;
+  await assert.rejects(syncCodeIssueMap([other,a,b],async()=>[],async()=>{
+    writes++; throw Error("Unexpected write");
+  }), error=>error.message.includes("EFWYUL (#768)") &&
+    error.message.includes("ABC123 (#999)"));
+  assert.equal(writes,0);
+  const replacement={number:786,title:"[Code] EFWYUL",body:canonicalThreadBody(a)};
+  const competing={number:770,title:"[Invite] EFWYUL",
+    body:"### Invite code\n\nEFWYUL"};
+  const map=await syncCodeIssueMap([{...a,feedbackIssueNumber:786}],
+    async()=>[replacement,competing],async()=>{throw Error("Unexpected write");});
+  assert.deepEqual(map,{EFWYUL:786});
+});

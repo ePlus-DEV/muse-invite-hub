@@ -143,6 +143,21 @@ export async function syncCodeIssueMap(items, listIssues, createIssue, {allowMis
   }
   const issues = await listIssues();
   if (!Array.isArray(issues)) throw Error("Expected GitHub Issues array");
+  // Preflight all explicit mappings before creating any feedback threads.
+  // Report every broken reference in one deploy failure; never auto-rebind an
+  // existing attribution to a different contributor or hide an API failure.
+  if (!allowMissing) {
+    const errors = [];
+    for (const item of items) {
+      if (!item?.feedbackIssueNumber) continue;
+      try {
+        resolveExistingIssue(item, issues);
+      } catch (error) {
+        errors.push(item.code + " (#" + item.feedbackIssueNumber + "): " + error.message);
+      }
+    }
+    if (errors.length) throw Error("Canonical Issue mapping preflight failed: " + errors.join("; "));
+  }
   const map = {};
   for (const item of items) {
     if (!CODE.test(item?.code || "") || Object.hasOwn(map, item.code)) {

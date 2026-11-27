@@ -8,8 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       issue_number:
-        description: "Open GitHub Issue number to reprocess"
-        required: true
+        description: "Issue number to reprocess (0 = reconcile all eligible stuck Issues)"
+        required: false
+        default: 0
         type: number
   # Issues created by GITHUB_TOKEN automation do not fire `issues` events,
   # and a single failed run used to strand an Issue forever. Reconcile
@@ -74,13 +75,13 @@ jobs:
             exit 1
           }
       - name: Create or update Issue proposal as eplus-bot
-        if: github.event_name != 'schedule'
+        if: github.event_name == 'issues' || (github.event_name == 'workflow_dispatch' && inputs.issue_number > 0)
         env:
           GH_TOKEN: ${{ secrets.EPLUS_BOT_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
         run: node scripts/issue-to-pr.mjs
       - name: Reconcile stuck Issues as eplus-bot
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.issue_number == 0)
         env:
           GH_TOKEN: ${{ secrets.EPLUS_BOT_TOKEN }}
         run: node scripts/reconcile-stuck-issues.mjs
