@@ -1,3 +1,4 @@
+import { isNotificationKey } from "./notifications.mjs";
 /* Worker KV notifications: private, paginated, per-recipient delivery markers.
  * Pages concurrency is serialized; KV has eventual consistency, so in rare
  * failures delivery is at-least-once. Never claim strong exactly-once semantics.
@@ -29,7 +30,7 @@ export function makeWorkerNotifyState(kv) {
         return Number.isSafeInteger(value.messageId)&&value.messageId>0&&
           Number.isSafeInteger(value.at)&&value.at>0&&
           Array.isArray(value.codes)&&value.codes.length<=25&&
-          value.codes.every(code=>/^[A-Z0-9]{6}$/.test(code))
+          value.codes.every(isNotificationKey)
           ? value:null;
       } catch {return null;}
     },
