@@ -424,7 +424,7 @@ test("eplus-bot CI dispatch wakes the trusted merge gate after branch synchroniz
   const workflow=readFileSync(new URL("../.github/workflows/auto-merge.yml",import.meta.url),"utf8");
   assert.match(workflow,/await dispatchBotValidation\(/);
   assert.match(workflow,/workflow_run:/);
-  assert.match(workflow,/cron: "10-59\/20 \* \* \* \*"/);
+  assert.match(workflow,/cron: "\*\/5 \* \* \* \*"/);
   assert.match(workflow,/workflow_id:"validate\.yml"/,
     "retain a safe GITHUB_TOKEN fallback for validation");
 
