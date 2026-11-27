@@ -76,7 +76,7 @@ test("first publication only initializes baseline, then opts in safely",async()=
   assert.equal(sent.length,3,"no duplicate notification on repeated deployment");
 });
 
-test("three rapid Pages publishes become one editable ten-minute notification",async()=>{
+test("three rapid Pages publishes become one editable thirty-minute notification",async()=>{
   const state=fakeState([user(42,{subscribed:true})]);
   let items=[{code:"AAA111"}],time=1_800_000_000_000;
   let nextId=101;
@@ -93,18 +93,18 @@ test("three rapid Pages publishes become one editable ten-minute notification",a
   items.push({code:"CCC333"});
   assert.equal((await publishNotifications({...args,now:time+120000})).sent,1);
   items.push({code:"DDD444"});
-  assert.equal((await publishNotifications({...args,now:time+300000})).sent,1);
+  assert.equal((await publishNotifications({...args,now:time+1799000})).sent,1);
   assert.equal(sent.length,1,"One push notification across three rapid deploys");
   assert.equal(edits.length,2);
   assert.equal(edits[0].messageId,101);
   for(const code of ["BBB222","CCC333","DDD444"])
     assert.ok(edits.at(-1).message.includes(code),code);
   assert.deepEqual((await state.getDigest(42)).codes,["BBB222","CCC333","DDD444"]);
-  assert.equal((await publishNotifications({...args,now:time+300001})).sent,0,
+  assert.equal((await publishNotifications({...args,now:time+1799001})).sent,0,
     "Repeat deployment must not re-deliver already acknowledged codes");
   items.push({code:"EEE555"});
-  assert.equal((await publishNotifications({...args,now:time+602000})).sent,1);
-  assert.equal(sent.length,2,"New ten-minute window produces a new push");
+  assert.equal((await publishNotifications({...args,now:time+1801000})).sent,1);
+  assert.equal(sent.length,2,"New thirty-minute window produces a new push");
   assert.equal(edits.length,2);
 });
 
