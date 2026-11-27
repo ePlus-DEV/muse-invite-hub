@@ -217,8 +217,8 @@ export async function handleWebhookRequest(request, env, deps = {}) {
       });
       const data=await response.json().catch(()=>null);
       if(!response.ok||data?.ok!==true)
-        throw Error("Telegram notification "+method+" failed: "+
-          String(data?.description||"Unknown API error").slice(0,110));
+        throw Object.assign(Error("Telegram notification "+method+" failed: "+
+          String(data?.description||"Unknown API error").slice(0,110)),{status:data?.error_code||response.status});
       return data.result;
     };
     return notificationResponse(request,{
