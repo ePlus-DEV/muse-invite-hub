@@ -72,6 +72,7 @@ export function parseCommand(text) {
   if (command==="/new") return {type:"newest"};
   if (command==="/my") return {type:"my-codes"};
   if (command==="/settings") return {type:"settings"};
+  if (command==="/notifications") return {type:"notifications"};
   if (command==="/language"||command==="/lang") {
     if(parts.length===1)return {type:"choose-language"};
     const requested=parts[1]?.toLowerCase()||"";
@@ -137,12 +138,14 @@ export function parseUpdate(update) {
   const matchRefreshCode=/^t:refresh-code:([A-Z0-9]{6})$/.exec(data);
   const matchDetail=/^t:detail:([A-Z0-9]{6})$/.exec(data);
   const matchPage=/^t:page:(0|[1-9][0-9]?)$/.exec(data);
+  const matchNotify=/^t:notify:(enabled|personal|watched|quota):(on|off)$/.exec(data);
+  const matchFrequency=/^t:notify:minutes:(0|10|60)$/.exec(data);
   const matchSubscription=/^t:sub:(on|off)$/.exec(data);
   const matchLanguage=/^t:lang:(en|vi|ja)$/.exec(data);
   const matchRole=/^t:role:(seeker|contributor)$/.exec(data);
   const matchReport=/^t:report:([A-Z0-9]{6}):(worked|failed)$/.exec(data);
   return {
-    type:matchSubmit?"submit":matchReport?"report":matchPick?"confirm-report":
+    type:matchNotify||matchFrequency?"notification-option":data==="t:notify"?"notifications":matchSubmit?"submit":matchReport?"report":matchPick?"confirm-report":
       matchWatch?"watch":matchUnwatch?"unwatch":matchRefreshCode?"refresh-code":
       matchDetail?"detail":matchPage?"page":matchSubscription?(matchSubscription[1]==="on"?"subscribe":"unsubscribe"):
       matchLanguage?"set-language":data==="t:langs"?"choose-language":
@@ -158,6 +161,8 @@ export function parseUpdate(update) {
       data==="t:refresh"?"refresh":data==="t:browse"?"browse":
       data==="t:watchlist"?"watchlist":data==="t:erase:ask"?"delete-data":
       data==="t:erase:confirm"?"delete-confirm":"cancel",
+    ...(matchNotify?{option:matchNotify[1],value:matchNotify[2]==="on"}:{}),
+    ...(matchFrequency?{option:"minutes",value:Number(matchFrequency[1])}:{}),
     ...(matchLanguage?{language:matchLanguage[1]}:{}),
     code:matchSubmit?.[1]||matchReport?.[1]||matchPick?.[1]||matchWatch?.[1]||matchRefreshCode?.[1]||matchDetail?.[1]||matchUnwatch?.[1],
     ...(matchPage?{page:Number(matchPage[1])}:{}),
