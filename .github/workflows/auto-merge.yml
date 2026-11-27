@@ -16,7 +16,7 @@ on:
     workflows: ["Validate website and invite catalog"]
     types: [completed]
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "10-59/20 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -387,9 +387,10 @@ jobs:
               }
               // Re-read just before merging. SHA-bound authorizations and
               // GitHub's merge endpoint reject post-approval head changes.
-              const latest = (await github.rest.pulls.get({
+              const readLatest = async () => (await github.rest.pulls.get({
                 owner,repo,pull_number:number
               })).data;
+              const latest = await awaitMergeability(await readLatest(),readLatest);
               if (latest.head.sha !== decision.sha ||
                   latest.base.sha !== pr.base.sha ||
                   latest.state !== "open" || latest.draft ||
