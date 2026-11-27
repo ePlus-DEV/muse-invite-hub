@@ -3,14 +3,27 @@ import { LOCALES, normalizeLocale } from "./i18n.mjs";
 const CODE=/^[A-Z0-9]{6}$/;
 const INTENTS=new Set(["search","submit","report","status"]);
 const MENU_VERSION=/^v[1-9][0-9]*-[0-9a-f]{8}$/;
+// Legacy profiles retain their previous behavior. New-code broadcasts remain
+// opt-in through subscribed; watch/contribution alerts are independently configurable.
+export function notificationSettings(profile={}) {
+  const v=profile.notifications||{};
+  return {
+    enabled:v.enabled!==false,
+    personal:v.personal!==false,
+    watched:v.watched!==false,
+    quota:v.quota===true,
+    minutes:[0,10,60].includes(v.minutes)?v.minutes:10
+  };
+}
 export function emptyProfile() {
-  return {subscribed:false,watching:[],submitted:[],pending:null,language:null,languageManual:false,role:null,browse:null,panelMessageId:null,menuVersion:null};
+  return {subscribed:false,notifications:notificationSettings(),watching:[],submitted:[],pending:null,language:null,languageManual:false,role:null,browse:null,panelMessageId:null,menuVersion:null};
 }
 export function cleanProfile(value) {
   const base=emptyProfile();
   if(!value||typeof value!=="object")return base;
   return {
     subscribed:value.subscribed===true,
+    notifications:notificationSettings(value),
     role:value.role==="seeker"||value.role==="contributor"?value.role:null,
     language:LOCALES.includes(value.language)?value.language:null,
     languageManual:value.languageManual===true&&LOCALES.includes(value.language),
