@@ -244,3 +244,67 @@ test("Workers KV keeps subscriber records private and supports cursor paging",as
   await state.setDigest(42,digest);
   assert.deepEqual(await state.getDigest(42),digest);
 });
+
+
+test("master switch and each category are evaluated per recipient",async()=>{
+  const state=fakeState([
+    user(1,{subscribed:true,notifications:{enabled:false},watching:["BBB222"]}),
+    user(2,{subscribed:false,notifications:{personal:false,watched:false},watching:["BBB222"],submitted:[{code:"BBB222"}]}),
+    user(3,{watching:["BBB222"],notifications:{watched:true}}),
+    user(4,{submitted:[{code:"BBB222"}],notifications:{personal:true}}),
+    user(5,{subscribed:true,notifications:{watched:false,personal:false}})
+  ]);
+  let items=[{code:"AAA111"}];
+  const delivered=[],args={event,state,catalog:async()=>items,send:async(id)=>{delivered.push(id);}};
+  await publishNotifications(args);
+  items.push({code:"BBB222"});
+  assert.equal((await publishNotifications(args)).sent,3);
+  assert.deepEqual(delivered,[3,4,5]);
+});
+
+test("quota changes notify opted-in watchers only, not defaults or repeat deploys",async()=>{
+  const state=fakeState([
+    user(1,{watching:["AAA111"],notifications:{quota:true}}),
+    user(2,{subscribed:true,watching:["AAA111"]}),
+    user(3,{watching:["AAA111"],notifications:{enabled:false,quota:true}})
+  ]);
+  let items=[{code:"AAA111",reportedRemaining:10,usageReportedAt:"2026-11-25"}];
+  const delivered=[],args={event,state,catalog:async()=>items,send:async(id,text)=>{delivered.push({id,text});}};
+  await publishNotifications(args);
+  items=[{...items[0],reportedRemaining:7,usageReportedAt:"2026-11-26",quotaUpdateCount:1}];
+  assert.equal((await publishNotifications(args)).sent,1);
+  assert.equal(delivered[0].id,1);
+  assert.match(delivered[0].text,/Reported remaining: 7/);
+  assert.equal((await publishNotifications(args)).sent,0);
+  items=[{...items[0],usageReportedAt:"2026-11-27"}];
+  assert.equal((await publishNotifications(args)).sent,0,"same remaining is not a quota change");
+});
+
+test("frequency is private: immediate sends, one-hour window edits",async()=>{
+  const state=fakeState([user(1,{subscribed:true,notifications:{minutes:0}}),
+    user(2,{subscribed:true,notifications:{minutes:60}})]);
+  let items=[{code:"AAA111"}];
+  const sent=[],edited=[],t=1_800_000_000_000;
+  const args={event,state,catalog:async()=>items,send:async(id)=>{sent.push(id);return {message_id:sent.length};},
+    edit:async(id)=>{edited.push(id);}};
+  await publishNotifications({...args,now:t});
+  items.push({code:"BBB222"});await publishNotifications({...args,now:t+1000});
+  items.push({code:"CCC333"});await publishNotifications({...args,now:t+1800000});
+  assert.deepEqual(sent,[1,2,1]);
+  assert.deepEqual(edited,[2]);
+});
+
+test("blocked Telegram recipient never stalls other users or baseline advancement",async()=>{
+  const state=fakeState([user(1,{subscribed:true}),user(2,{subscribed:true})]);
+  let items=[{code:"AAA111"}];
+  const delivered=[],args={event,state,catalog:async()=>items,send:async(id)=>{
+    if(id===1)throw Object.assign(Error("Forbidden: bot was blocked by the user"),{status:403});
+    delivered.push(id);
+  }};
+  await publishNotifications(args);
+  items.push({code:"BBB222"});
+  assert.deepEqual(await publishNotifications(args),{sent:1,complete:true});
+  assert.deepEqual(delivered,[2]);
+  assert.equal(await state.wasSent(1,"BBB222"),false);
+  assert.equal((await publishNotifications(args)).sent,0);
+});
