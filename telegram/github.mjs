@@ -6,6 +6,7 @@ const API="https://api.github.com/repos/"+REPO+"/";
 const SITE="https://muse.eplus.dev";
 // Read-only bot mirrors the catalog's 30-slot per-code maximum.
 const MAX_INVITES_PER_CODE=30;
+const submissionLocks=new Map();
 
 async function request(url, options={}) {
   const response=await fetch(url,{
@@ -110,23 +111,33 @@ export async function getCodeStatus(code,token) {
   return {kind:"unknown",url:SITE+"/#codes"};
 }
 
+export function submissionContainsCode(issue,code) {
+  if(issue?.pull_request)return false;
+  const body=String(issue?.body||"");
+  const title=String(issue?.title||"");
+  if(/^\[(?:Count update|Code feedback)\]/i.test(title))return false;
+  const canonical=/<!-- (?:muse-code-feedback-thread:\s*|muse-code-feedback-root:)([A-Z0-9]{6})\s*-->/.exec(body)?.[1];
+  if(canonical===code)return true;
+  if((title==="[Telegram submission] "+code||title==="[Invite] "+code)&&
+      body.includes("<!-- muse-telegram-submission:"+code+" -->"))return true;
+  if(!/^### Code source[ \t]*\r?$/m.test(body)||!/^### Contributor checklist[ \t]*\r?$/m.test(body))return false;
+  const heading=/^### Invite code[ \t]*\r?$/m.exec(body);
+  if(!heading)return false;
+  const rest=body.slice(heading.index+heading[0].length).replace(/^\r?\n/,"");
+  const next=rest.search(/^### /m);
+  const value=(next<0?rest:rest.slice(0,next)).trim();
+  const tokens=value.toUpperCase().split(/[\s,;，；]+/).filter(Boolean);
+  if(tokens.length>=1&&tokens.length<=10&&tokens.every(x=>CODE_PATTERN.test(x))&&new Set(tokens).size===tokens.length)
+    return tokens.includes(code);
+  const labels=value.split(/\r?\n/).filter(line=>/^\s*(?:Invite\s+code|Code|C[oó]digo)\s*:/iu.test(line));
+  return labels.length===1&&/^\s*(?:Invite\s+code|Code|C[oó]digo)\s*:\s*([A-Z0-9]{6})\s*$/iu.exec(labels[0])?.[1].toUpperCase()===code;
+}
 async function findExistingTelegramSubmission(code,token) {
   // GitHub's /issues collection includes PRs; skip those. Fail closed rather
   // than creating a duplicate when the repo grows beyond our scan budget.
   for(let page=1;page<=20;page++){
     const batch=await github("issues?state=all&per_page=100&page="+page,token);
-    const match=batch.find(issue=>{
-      if(issue.pull_request)return false;
-      const title=String(issue.title||"");
-      const body=String(issue.body||"");
-      const original=/^### Invite code\s*\r?\n\s*([A-Z0-9]{6})\s*(?:\r?\n|$)/m.exec(body)?.[1];
-      const canonical=/<!-- (?:muse-code-feedback-thread:\s*|muse-code-feedback-root:)([A-Z0-9]{6})\s*-->/.exec(body)?.[1];
-      return (title==="[Telegram submission] "+code&&body.includes("<!-- muse-telegram-submission:"+code+" -->"))||
-        (title==="[Invite] "+code&&body.includes("<!-- muse-telegram-submission:"+code+" -->"))||
-        (title.startsWith("[Invite]")&&original===code)||
-        (title.startsWith("[Code discussion]")&&canonical===code)||
-        (canonical===code);
-    });
+    const match=batch.find(issue=>submissionContainsCode(issue,code));
     if(match)return match;
     if(batch.length<100)return null;
   }
@@ -135,6 +146,15 @@ async function findExistingTelegramSubmission(code,token) {
 export async function submitNewCode(code,updateId,token,username) {
   if(!CODE_PATTERN.test(code)||!Number.isSafeInteger(updateId)||
       !TELEGRAM_USERNAME.test(username||""))throw Error("Invalid public contribution identity");
+  // Serialize repeated submissions within this process.
+  const previous=submissionLocks.get(code)||Promise.resolve();
+  const work=previous.catch(()=>{}).then(()=>submitNewCodeUnlocked(code,token,username));
+  submissionLocks.set(code,work);
+  try{return await work;}finally{
+    if(submissionLocks.get(code)===work)submissionLocks.delete(code);
+  }
+}
+async function submitNewCodeUnlocked(code,token,username) {
   const existing=(await publishedCatalog()).find(item=>item.code===code);
   if(existing)return {kind:"listed",url:SITE+"/codes/"+encodeURIComponent(code)+"/"};
   const prior=await findExistingTelegramSubmission(code,token);

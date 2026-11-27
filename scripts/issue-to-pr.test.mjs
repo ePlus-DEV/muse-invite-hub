@@ -1,7 +1,7 @@
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
-import { planIssueChange, resolvedInviteComment, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance, isAutoPublishableNewSocialInvite, isAutoPublishableNewGithubInvite, isAutoPublishableNewTelegramInvite } from "./issue-to-pr.mjs";
+import { planIssueChange, isRepeatedPendingInvite, resolvedInviteComment, readIssueFields, hasRequiredInviteConfirmations, inviteNeedsConfirmationReview, missingInviteConfirmationGuidance, isAutoPublishableNewSocialInvite, isAutoPublishableNewGithubInvite, isAutoPublishableNewTelegramInvite } from "./issue-to-pr.mjs";
 import { validateCatalog } from "./validate.mjs";
 import { changedRecords } from "./catalog.mjs";
 
@@ -1017,4 +1017,18 @@ test("GitHub-own social URL still cannot be smuggled as an absence statement", (
     "### Invite limit (optional; self-reported)\n\n_No response_",
     "### Invite limit (optional; self-reported)\n\nabout 30");
   assert.throws(()=>planIssueChange(issue(209,"[Invite]",invalidQuota),[item]),/integer/);
+});
+
+
+test("identical pending invite duplicates close without replacing attribution or quota",()=>{
+  const root=issue(774,"[Invite] ABC123",telegramBody(),"hoangsvit");
+  const repeat={...root,number:775};
+  assert.equal(isRepeatedPendingInvite(repeat,root,["ABC123"]),true);
+  assert.equal(isRepeatedPendingInvite({...repeat,body:telegramBody("ABC123","other_dev")},root,["ABC123"]),false);
+  assert.equal(isRepeatedPendingInvite({...repeat,user:{login:"another-user"}},root,["ABC123"]),false);
+  assert.equal(isRepeatedPendingInvite({...repeat,body:repeat.body.replace("_No response_","new evidence")},root,["ABC123"]),false);
+  assert.equal(isRepeatedPendingInvite(repeat,root,["ABC123","DEF456"]),false);
+  assert.equal(isRepeatedPendingInvite({...repeat,state:"closed"},root,["ABC123"]),false);
+  const gh=issue(800,"[Invite] PNSMZZ",share.replace("### Public confirmation","### Code source\n\nGitHub (my own code)\n\n### Public confirmation"));
+  assert.equal(isRepeatedPendingInvite({...gh,number:801,title:"Custom title"},gh,["PNSMZZ"]),true);
 });
