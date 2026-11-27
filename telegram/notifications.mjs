@@ -93,7 +93,7 @@ function recipientUnavailable(error){
 // Edit a recent notification instead of generating a new chat bubble for
 // every separate Pages deployment. Fixed window (not sliding) so subsequent
 // codes eventually produce a fresh Telegram push as expected.
-export const DIGEST_WINDOW_MS=10*60*1000;
+export const DIGEST_WINDOW_MS=30*60*1000;
 const MAX_DIGEST_CODES=25;
 const EDIT_FALLBACK=/message to edit not found|message can't be edited|message identifier is not specified|message_id_invalid/i;
 const NOT_MODIFIED=/message is not modified/i;
@@ -141,7 +141,7 @@ export async function publishNotifications({event,state,catalog,send,edit,now=Da
     try{
       let prior=typeof state.getDigest==="function"
         ? await state.getDigest(chatId):null;
-      // A digest is editable for at most ten minutes and 25 codes. Beyond
+      // A digest is editable within the recipient's chosen window and up to 25 codes. Beyond
       // that, send a fresh push so the user still sees subsequent releases.
       const withinWindow=prior&&Number.isSafeInteger(prior.messageId)&&
         prior.messageId>0&&Number.isSafeInteger(prior.at)&&
