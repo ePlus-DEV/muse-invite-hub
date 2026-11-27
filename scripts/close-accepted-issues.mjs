@@ -65,7 +65,7 @@ export function acceptanceComment({ code, codes=[code], prNumber }) {
 
 function githubApi(request, token) {
   return async (method, path, body) => {
-    const response = await request("https://api.github.com/repos/" + REPO + "/" + path, {
+    const options = {
       method,
       headers:{
         "Accept":"application/vnd.github+json",
@@ -74,8 +74,17 @@ function githubApi(request, token) {
         ...(body === undefined ? {} : {"Content-Type":"application/json"})
       },
       ...(body === undefined ? {} : {body:JSON.stringify(body)}),
-      signal: AbortSignal.timeout(25000)
-    });
+    };
+    // Only retry reads; never replay a potentially committed comment or state
+    // mutation. A transient 502 during comment lookup used to abort closure
+    // of every subsequent contribution in the batch.
+    let response;
+    for (let attempt=0; attempt<3; attempt++) {
+      response=await request("https://api.github.com/repos/" + REPO + "/" + path,
+        {...options,signal:AbortSignal.timeout(25000)});
+      if (method !== "GET" || ![502,503,504].includes(response.status) || attempt===2) break;
+      await new Promise(resolve=>setTimeout(resolve,500*(attempt+1)));
+    }
     if (!response.ok) throw Error("GitHub API " + method + " " + path + ": HTTP " + response.status);
     return response.status === 204 ? null : response.json();
   };
