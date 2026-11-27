@@ -38,3 +38,19 @@ test("wrong filenames and identity changes are blocked",()=>{
   assert.throws(()=>assemble([],{["data/invite-records/../bad.json"]:"{}"}),/Invalid invite record path/);
   assert.throws(()=>changedRecord([a],[a],a.code),/exactly its own/);
 });
+
+test("stale independently valid PRs fail on their combined catalog with both paths",()=>{
+  const a=entry("community-issue-764","0V7GB3");
+  const b=entry("community-issue-765","0V7GB3");
+  assert.deepEqual(assemble([],{[recordPath(a)]:JSON.stringify(a)}),[a]);
+  assert.deepEqual(assemble([],{[recordPath(b)]:JSON.stringify(b)}),[b]);
+  assert.throws(()=>assemble([],{[recordPath(a)]:JSON.stringify(a),
+    [recordPath(b)]:JSON.stringify(b)}),error=>
+      error.message.includes("Duplicate invite code: 0V7GB3") &&
+      error.message.includes(recordPath(a)) && error.message.includes(recordPath(b)));
+});
+test("duplicate diagnostics also identify the legacy seed and normalize case",()=>{
+  const a=entry("legacy-code","ABC123"), b=entry("community-issue-999","abc123");
+  assert.throws(()=>assemble([a],{[recordPath(b)]:JSON.stringify(b)}),
+    /Duplicate invite code: ABC123 in data\/invites.json \(id: legacy-code\) and data\/invite-records\/community-issue-999.json/);
+});
