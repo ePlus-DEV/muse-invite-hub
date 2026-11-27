@@ -1,6 +1,6 @@
 import { CODE_PATTERN, formatCodeStatus } from "./bot.mjs";
 import { codeButtons, codeDescription } from "./menu.mjs";
-import { mutateProfile } from "./profiles.mjs";
+import { mutateProfile, notificationSettings } from "./profiles.mjs";
 import { LOCALES, LOCALE_NAMES, menuText, tr } from "./i18n.mjs";
 
 const SITE="https://muse.eplus.dev";
@@ -100,6 +100,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,remo
       "\n"+trn("roleCurrent")+" "+trn(current.role==="seeker"?"roleSeekerName":
         current.role==="contributor"?"roleContributorName":"roleUnsetName")+
       "\n"+trn("alertsNote"),[
+        [{text:trn("notifySettingsTitle"),data:"t:notify"}],
         [{text:trn(current.subscribed?"disableAlerts":"enableAlerts"),
           data:"t:sub:"+(current.subscribed?"off":"on")}],
         [{text:trn("watchedButton"),data:"t:watchlist"},
@@ -109,6 +110,22 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,remo
         [{text:trn("backList"),data:"t:back-list"},
          {text:trn("backMenu"),data:"t:home"}]
       ]);
+  };
+  const notificationPanel=async()=>{
+    const current=await profiles.get(chatId);
+    const settings=notificationSettings(current);
+    const toggle=(key,label,value)=>[{text:(value?"✅ ":"⬜ ")+msg(label),
+      data:"t:notify:"+key+":"+(value?"off":"on")}];
+    const buttons=[toggle("enabled","notifyMaster",settings.enabled),
+      [{text:(current.subscribed?"✅ ":"⬜ ")+msg("notifyAllNew"),
+        data:"t:sub:"+(current.subscribed?"off":"on")}],
+      toggle("personal","notifyOwn",settings.personal),
+      toggle("watched","notifyFollowed",settings.watched),
+      toggle("quota","notifyQuotaOption",settings.quota),
+      [0,10,60].map(minutes=>({text:(settings.minutes===minutes?"✅ ":"")+msg("notifyFrequency"+minutes),
+        data:"t:notify:minutes:"+minutes})),
+      [{text:msg("settingsTitle"),data:"t:settings"}]];
+    return panel(msg("notifySettingsTitle")+"\n"+msg("notifySettingsNote")+"\n"+msg("notifyFrequencyNote"),buttons);
   };
   const watchlistPanel=async()=>{
     const current=await profiles.get(chatId);
@@ -291,6 +308,17 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,remo
       return true;
     }
     case "notifications":
+      await notificationPanel();
+      return true;
+    case "notification-option": {
+      const {option,value}=action;
+      if((["enabled","personal","watched","quota"].includes(option)&&typeof value==="boolean")||
+          (option==="minutes"&&[0,10,60].includes(value))){
+        await mutateProfile(profiles,chatId,p=>{p.notifications={...notificationSettings(p),[option]:value};return p;});
+      }
+      await notificationPanel();
+      return true;
+    }
     case "settings":
       await settingsPanel();
       return true;
@@ -312,7 +340,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,remo
     case "subscribe":
     case "unsubscribe":
       await mutateProfile(profiles,chatId,p=>{p.subscribed=type==="subscribe";return p;});
-      await settingsPanel();
+      await notificationPanel();
       return true;
     case "watchlist":
       await watchlistPanel();
