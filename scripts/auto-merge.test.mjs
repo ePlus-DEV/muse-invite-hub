@@ -7,7 +7,7 @@ import {
   AUTO_MERGE_MAINTAINER, AUTO_MERGE_BLOCK_LABEL,
   getMaintainerAuthorization, ciHasPassed, autoMergeDecision,
   qualifiesForDefaultAutoMerge, AUTO_MERGE_DEFAULT_AUTHOR, AUTO_MERGE_MAX_DOC_FILES, verifyNewGithubInvitePR, verifyNewSocialInvitePR, verifyNewTelegramInvitePR, needsEplusBotReview,
-  isTransientMergeError, confirmedMergeAfterError, shouldDispatchPagesRecovery, dispatchBotValidation
+  isTransientMergeError, confirmedMergeAfterError, shouldDispatchPagesRecovery, dispatchBotValidation, awaitMergeability
 } from "./auto-merge.mjs";
 
 const HEAD="a".repeat(40);
@@ -591,4 +591,20 @@ test("scheduled Pages recovery dispatches only when main lacks a recent or succe
   assert.equal(shouldDispatchPagesRecovery([result(null,"in_progress")],now),false);
   assert.equal(shouldDispatchPagesRecovery([result("success"),result("failure")],now),false);
   assert.equal(shouldDispatchPagesRecovery(null,now),false);
+});
+
+
+test("unknown GitHub mergeability is polled, real conflicts remain blocked",async()=>{
+  let reads=0;
+  const result=await awaitMergeability(pr({mergeable:null}),async()=>{
+    reads++; return pr({mergeable:reads===2?true:null,mergeable_state:"behind"});
+  },async()=>{});
+  assert.equal(result.mergeable,true);
+  assert.equal(reads,2);
+  const conflict=await awaitMergeability(pr({mergeable:false}),async()=>{throw Error("must not poll conflict");});
+  assert.equal(conflict.mergeable,false);
+  reads=0;
+  const unknown=await awaitMergeability(pr({mergeable:null}),async()=>{reads++;return pr({mergeable:null});},async()=>{});
+  assert.equal(unknown.mergeable,null);
+  assert.equal(reads,4);
 });

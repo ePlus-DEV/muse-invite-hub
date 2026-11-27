@@ -16,7 +16,7 @@ on:
     workflows: ["Validate website and invite catalog"]
     types: [completed]
   schedule:
-    - cron: "10-59/20 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -55,7 +55,7 @@ jobs:
               verifyNewTelegramInvitePR,
               ciHasPassed, getMaintainerAuthorization, qualifiesForDefaultAutoMerge,
               needsEplusBotReview, dispatchBotValidation, isTransientMergeError,
-              confirmedMergeAfterError, shouldDispatchPagesRecovery } = await import(
+              confirmedMergeAfterError, shouldDispatchPagesRecovery, awaitMergeability } = await import(
               process.env.GITHUB_WORKSPACE + "/scripts/auto-merge.mjs"
             );
             const { readCatalog } = await import(
@@ -105,9 +105,9 @@ jobs:
               }
             }
 
-            // In issue_comment and PR events, scan only the relevant PR.
-            // In workflow_run, restrict to the completed validation head.
-            // Scheduled reconciliation catches GITHUB_TOKEN-created PRs.
+            // PR events target that PR. Green CI and explicit/scheduled runs
+            // also reconcile other open candidates; a merge makes all other
+            // heads stale and must not strand them until the next schedule.
             const eventPr = (event === "issue_comment" ||
                 event === "pull_request_review" ||
                 event === "pull_request_target")
@@ -127,10 +127,10 @@ jobs:
             });
             const candidates = open.filter(pr =>
               (!eventPr || pr.number === eventPr) &&
-              (!validatedHead || pr.head.sha === validatedHead) &&
               !pr.draft && pr.base.ref === "main" &&
               pr.head.repo?.full_name === fullName
-            );
+            ).sort((a,b)=>Number(b.head.sha===validatedHead)-
+              Number(a.head.sha===validatedHead) || a.number-b.number);
 
             for (const candidate of candidates) {
               const number = candidate.number;
@@ -143,7 +143,13 @@ jobs:
                 github.paginate(github.rest.pulls.listFiles,
                   {owner,repo,pull_number:number,per_page:100})
               ]);
-              const pr = fetched.data;
+              const pr = await awaitMergeability(fetched.data, async ()=>
+                (await github.rest.pulls.get({owner,repo,pull_number:number})).data);
+              // A changed head invalidates the concurrently fetched review/files.
+              if (pr.head.sha !== fetched.data.head.sha || pr.base.sha !== fetched.data.base.sha) {
+                core.info("PR #" + number + " changed while computing mergeability; retry next pass.");
+                continue;
+              }
               // A deleted canonical Issue invalidates even explicitly authorized
               // bot data PRs; never let an orphan merge before cleanup runs.
               const originalIssue=automatedSourceIssueNumber(pr,fullName);
@@ -228,7 +234,9 @@ jobs:
                 continue;
               }
               if (pr.mergeable !== true) {
-                core.info("PR #" + number + ": GitHub reports a merge conflict.");
+                core.info("PR #" + number + (pr.mergeable === false
+                  ? ": GitHub reports a merge conflict."
+                  : ": GitHub is still calculating mergeability; retry next pass."));
                 continue;
               }
               const compared = await github.rest.repos.compareCommits({
@@ -477,7 +485,14 @@ jobs:
                 core.warning("PR #" + number + " was merged, but Pages dispatch " +
                   "failed: " + error.message + ". The scheduled reconciler will retry.");
               }
-              // Main moved. Never merge another PR in the same run without
-              // fresh mergeability and CI evaluation.
+              // Main moved. Start a fresh trusted pass instead of leaving all
+              // remaining PRs stale until the next scheduled run.
+              try {
+                await github.rest.actions.createWorkflowDispatch({
+                  owner,repo,workflow_id:"auto-merge.yml",ref:"main"
+                });
+              } catch (error) {
+                core.warning("Next merge pass dispatch failed; schedule will recover: "+error.message);
+              }
               break;
             }
