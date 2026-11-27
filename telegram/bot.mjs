@@ -139,7 +139,7 @@ export function parseUpdate(update) {
   const matchDetail=/^t:detail:([A-Z0-9]{6})$/.exec(data);
   const matchPage=/^t:page:(0|[1-9][0-9]?)$/.exec(data);
   const matchNotify=/^t:notify:(enabled|personal|watched|quota):(on|off)$/.exec(data);
-  const matchFrequency=/^t:notify:minutes:(0|10|60)$/.exec(data);
+  const matchFrequency=/^t:notify:minutes:(0|30|60)$/.exec(data);
   const matchSubscription=/^t:sub:(on|off)$/.exec(data);
   const matchLanguage=/^t:lang:(en|vi|ja)$/.exec(data);
   const matchRole=/^t:role:(seeker|contributor)$/.exec(data);
