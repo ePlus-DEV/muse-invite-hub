@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseCommand, parseUpdate, BOT_COMMANDS, formatCodeStatus } from "./bot.mjs";
-import { browseCodes, getCodeStatus, submitNewCode } from "./github.mjs";
+import { browseCodes, getCodeStatus, submitNewCode, submissionContainsCode } from "./github.mjs";
 import { createTelegramApp } from "./server.mjs";
 import { codeDescription } from "./menu.mjs";
 
@@ -621,4 +621,39 @@ test("OCI onboarding differentiates invite seekers and contributors without publ
     assert.match(sent.at(-1).payload.text,/đã được công bố/);
     assert.equal(calls.submit.length,0,"role is a menu preference, not proof of ownership");
   });
+});
+
+
+test("structured GitHub submissions block duplicate Telegram codes regardless of title",()=>{
+  const issue={title:"custom title",body:"### Invite code\n\nabc123, DEF456\n\n### Code source\n\nGitHub (my own code)\n\n### Contributor checklist\n\n- [x] consent"};
+  assert.equal(submissionContainsCode(issue,"ABC123"),true);
+  assert.equal(submissionContainsCode(issue,"DEF456"),true);
+  assert.equal(submissionContainsCode(issue,"ABC124"),false);
+  assert.equal(submissionContainsCode({...issue,title:"[Code feedback] ABC123"},"ABC123"),false);
+  assert.equal(submissionContainsCode({...issue,pull_request:{}},"ABC123"),false);
+  assert.equal(submissionContainsCode({...issue,body:issue.body.replace("abc123, DEF456","Referral text\nCode: abc123")},"ABC123"),true);
+});
+test("parallel Telegram submissions of the same code only create one Issue",async()=>{
+  const original=globalThis.fetch;
+  const issues=[];
+  try{
+    globalThis.fetch=async(url,options={})=>{
+      const path=String(url);
+      if(path.includes("/data/invites.json"))return Response.json([]);
+      if(path.includes("/issues?"))return Response.json(issues);
+      if(path.endsWith("/issues")&&options.method==="POST"){
+        await new Promise(resolve=>setTimeout(resolve,5));
+        const item={...JSON.parse(options.body),state:"open",html_url:"https://github.com/ePlus-DEV/muse-invite-hub/issues/999"};
+        issues.push(item);
+        return Response.json(item,{status:201});
+      }
+      throw Error("Unexpected request");
+    };
+    const result=await Promise.all([
+      submitNewCode("DUP123",91,"test-token","alice_dev"),
+      submitNewCode("DUP123",92,"test-token","other_dev")
+    ]);
+    assert.equal(issues.length,1);
+    assert.deepEqual(result.map(x=>x.kind),["submitted","pending"]);
+  }finally{globalThis.fetch=original;}
 });
