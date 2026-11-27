@@ -382,8 +382,10 @@
       const entry = entries.find(item => item?.code === code.textContent.trim());
       if (!entry || typeof entry.sourceUrl !== "string") return;
       const url = new URL(entry.sourceUrl);
-      if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) return;
+      if (url.protocol !== "https:" || url.username || url.password) return;
       const host = url.hostname.toLowerCase(), path = url.pathname;
+      const facebookHost = ["facebook.com","www.facebook.com","m.facebook.com","mbasic.facebook.com","web.facebook.com","fb.com","www.fb.com","fb.watch"].includes(host);
+      if (!facebookHost && (url.search || url.hash)) return;
       let match, platform, group = false;
       if (["threads.com","www.threads.com"].includes(host)) {
         match = /^\/@([A-Za-z0-9_.]{1,30})(?:\/post\/[A-Za-z0-9_-]+)?\/?$/.exec(path);
@@ -396,15 +398,19 @@
         match = /^\/([A-Za-z][A-Za-z0-9_]{4,31})(?:\/[1-9][0-9]{0,18})?\/?$/.exec(path);
         if (match && ["share","joinchat","login","addstickers","proxy","socks","addemoji"].includes(match[1].toLowerCase())) return;
         platform = "Telegram";
-      } else if (["facebook.com","www.facebook.com","m.facebook.com"].includes(host)) {
-        match = /^\/groups\/([A-Za-z0-9][A-Za-z0-9._-]{1,79})\/posts\/([1-9][0-9]{9,24})\/?$/.exec(path);
+      } else if (facebookHost) {
+        if (url.username || url.password || url.port || /^(?:\/(?:l\.php|flx\/warn|login(?:\.php)?|checkpoint)(?:\/|$))/i.test(path) || [...url.searchParams.keys()].some(key => /^(?:access_token|token|auth|auth_token|session|session_id|password|code|signed_request)$/i.test(key))) return;
+        match = /^\/groups\/([A-Za-z0-9][A-Za-z0-9._-]{0,79})(?:\/(?:posts|permalink)\/[^/]+)?\/?$/.exec(path);
         group = Boolean(match);
-        if (!group) match = /^\/([A-Za-z0-9.]{2,50})(?:\/posts\/[A-Za-z0-9_-]{4,120})?\/?$/.exec(path);
-        if (match && ["share","groups","watch","reel","reels","events","marketplace","people","pages","profile.php","permalink.php","photo.php","login"].includes(match[1].toLowerCase())) return;
+        if (!group) {
+          match = /^\/([A-Za-z0-9.]{2,50})\/posts\/[A-Za-z0-9_-]{4,120}\/?$/.exec(path);
+          if (!["facebook.com","www.facebook.com","m.facebook.com"].includes(host) || url.search || url.hash ||
+              (match && ["share","groups","watch","reel","reels","events","marketplace","people","pages","profile.php","permalink.php","photo.php","story.php","login"].includes(match[1].toLowerCase()))) match = null;
+        }
         platform = "Facebook";
       }
-      if (!match) return;
-      const handle = (group ? "Group: " : "@") + match[1];
+      if (!match && !facebookHost) return;
+      const handle = match ? (group ? "Group: " : "@") + match[1] : "Source reference";
       const owner = document.querySelector(".detail-owner");
       if (owner) owner.textContent = handle;
       const meta = document.querySelector(".detail-meta");

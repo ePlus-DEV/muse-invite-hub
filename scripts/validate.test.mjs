@@ -159,11 +159,6 @@ test("Facebook group post permalinks identify groups, not individual authors", (
     url,post:true,group:true
   });
   for (const invalid of [
-    "https://www.facebook.com/groups/referralcodeshare/",
-    "https://www.facebook.com/groups/referralcodeshare/posts/",
-    "https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/?foo=bar",
-    "https://www.facebook.com/groups/referralcodeshare/posts/not-a-number/",
-    "https://www.facebook.com/groups/referralcodeshare/posts/1169239249161106/extra",
     "https://www.facebook.com.evil.test/groups/referralcodeshare/posts/1169239249161106/"
   ]) {
     assert.equal(parsePublicSource(invalid),null,invalid);
@@ -176,8 +171,6 @@ test("reject malformed and impersonating X or Facebook source URLs", () => {
     "https://twitter.com/someone/status/not-a-number",
     "https://x.com/i/status/123456789",
     "https://x.com/someone/status/123456789?redirect=https://evil.invalid",
-    "https://www.facebook.com/share/p/abc123",
-    "https://www.facebook.com/groups/public/posts/123456",
     "https://www.facebook.com/someone/posts/a?token=secret",
     "https://www.facebook.com.evil.invalid/someone/posts/abcdef",
     "http://www.facebook.com/someone/posts/abc123"
@@ -224,7 +217,7 @@ test("social parser differentiates identical handles across networks", () => {
     assert.equal(parsed.handle, "sameperson");
     assert.equal(parsed.post, true);
   }
-  assert.equal(parsePublicSource("https://www.facebook.com/share/p/123"),null);
+  assert.equal(parsePublicSource("https://www.facebook.com/share/p/123").reviewOnly,true);
   assert.equal(parsePublicSource("https://x.com/home"),null);
 });
 
@@ -245,4 +238,19 @@ test("multi-code records may share one Issue only with matching source and safe 
     code:"CODE"+String(i).padStart(2,"0")
   }));
   assert.ok(validateCatalog(tooMany).some(e=>e.includes("at most 10")));
+});
+
+ test("Facebook accepts noncanonical references while retaining safe attribution", () => {
+  const groupUrl="https://facebook.com/groups/940508922461482/permalink/1011091968736510/";
+  assert.equal(parsePublicSource(groupUrl).group,true);
+  assert.equal(parsePublicSource(groupUrl).handle,"940508922461482");
+  for(const url of [groupUrl, "https://www.facebook.com/share/p/abc123/?mibextid=example", "https://facebook.com/story.php?story_fbid=123&id=456", "https://facebook.com/profile.php?id=123", "https://fb.watch/example/", "https://facebook.com/someone"]) {
+    assert.equal(parsePublicSource(url).platform,"Facebook",url);
+    assert.deepEqual(validateCatalog([{...sample(),submittedBy:undefined,sourceUrl:url}]),[],url);
+  }
+  for(const url of ["https://facebook.com/share/p/example","https://fb.watch/example/","https://facebook.com/someone"]) {
+    assert.equal(parsePublicSource(url).handle,null);
+    assert.equal(parsePublicSource(url).reviewOnly,true);
+  }
+  for(const url of ["https://facebook.com.evil.test/share/p/example","https://facebook.com@evil.test/share/p/example","http://facebook.com/share/p/example","https://facebook.com/l.php?u=https://evil.test","https://facebook.com/share/p/example?access_token=secret"]) assert.equal(parsePublicSource(url),null,url);
 });

@@ -780,7 +780,7 @@ test("reject wrong social source, profile-only links and third-party quota claim
   assert.equal(planIssueChange(issue(86,"[Invite]",xBody.replace(link,"https://x.com/sameperson")),[item]).outcome,"needs-review");
   assert.equal(planIssueChange(issue(87,"[Invite]",xBody.replace(link,"https://www.facebook.com/sameperson/posts/pfbid12345")),[item]).outcome,"needs-review");
   assert.equal(planIssueChange(issue(88,"[Invite]",updatedShare("X (Twitter) (public code I found)",link,true)),[item]).outcome,"needs-review");
-  assert.equal(planIssueChange(issue(89,"[Invite]",updatedShare("Facebook (public code I found)","https://www.facebook.com/share/p/example")),[item]).outcome,"needs-review");
+  assert.equal(planIssueChange(issue(89,"[Invite]",updatedShare("Facebook (public code I found)","https://www.facebook.com/share/p/example")),[item]).outcome,"proposal");
 });
 
 test("X and Facebook reports cannot hijack same-named GitHub or Threads accounts", () => {
@@ -1031,4 +1031,19 @@ test("identical pending invite duplicates close without replacing attribution or
   assert.equal(isRepeatedPendingInvite({...repeat,state:"closed"},root,["ABC123"]),false);
   const gh=issue(800,"[Invite] PNSMZZ",share.replace("### Public confirmation","### Code source\n\nGitHub (my own code)\n\n### Public confirmation"));
   assert.equal(isRepeatedPendingInvite({...gh,number:801,title:"Custom title"},gh,["PNSMZZ"]),true);
+});
+
+test("Issue #829 and flexible Facebook references create review-only proposals", () => {
+  for(const url of ["https://facebook.com/groups/940508922461482/permalink/1011091968736510/","https://www.facebook.com/share/p/example/?mibextid=abc","https://facebook.com/story.php?story_fbid=123&id=456","https://fb.watch/example/","https://facebook.com/profile.php?id=123"]) {
+    const body=updatedShare("Facebook (public code I found)",url).replace("18I70N","52LSG4");
+    const report=issue(829,"[Invite] 52LSG4",body,"aletrbyoffers");
+    const proposal=planIssueChange(report,[item]);
+    assert.equal(proposal.outcome,"proposal",url);
+    const row=proposal.data.find(entry=>entry.code==="52LSG4");
+    assert.equal(row.sourceUrl,url);
+    assert.equal(row.submittedBy,undefined);
+    assert.equal(row.status,"unverified");
+    assert.deepEqual(validateCatalog(proposal.data),[]);
+    assert.equal(isAutoPublishableNewSocialInvite(report,proposal),false,url);
+  }
 });

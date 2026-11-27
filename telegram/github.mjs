@@ -68,7 +68,7 @@ export async function browseCodes({query="",newest=false,limit=5,offset=0}={}) {
           const host=new URL(row.sourceUrl).hostname.toLowerCase();
           if(["threads.com","www.threads.com","threads.net","www.threads.net"].includes(host))platform="Threads";
           else if(["x.com","www.x.com","twitter.com","www.twitter.com"].includes(host))platform="X";
-          else if(["facebook.com","www.facebook.com","m.facebook.com"].includes(host))platform="Facebook";
+          else if(["facebook.com","www.facebook.com","m.facebook.com","mbasic.facebook.com","web.facebook.com","fb.com","www.fb.com","fb.watch"].includes(host))platform="Facebook";
           else if(["t.me","www.t.me"].includes(host))platform="Telegram";
         } catch { /* Ignore malformed catalog provenance. */ }
       }

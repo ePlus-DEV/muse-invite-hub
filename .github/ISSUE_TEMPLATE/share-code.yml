@@ -9,7 +9,7 @@ body:
 
         **Prefer Telegram?** [Open @muse_invite_hub_bot](https://t.me/muse_invite_hub_bot) to submit a code or report feedback without GitHub sign-in.
 
-        Using GitHub? Share 1–10 codes (6 letters or digits each). For a code found on Threads, X or Facebook, include its original public post link. Issues are public. Share only codes you are allowed to publish; never include passwords, OTPs or private data.
+        Using GitHub? Share 1–10 codes (6 letters or digits each). For a code found on Threads or X, include its original public post link. For Facebook, any safe HTTPS Facebook source reference is accepted; prefer the original post. Issues are public. Share only codes you are allowed to publish; never include passwords, OTPs or private data.
   - type: textarea
     id: invite_code
     attributes:
@@ -35,7 +35,7 @@ body:
     id: social_url
     attributes:
       label: Social post or profile URL (required for Threads, X or Facebook)
-      description: "Link to the original public post containing the code. Profile-only or ambiguous links need manual review."
+      description: "Prefer the original public post. Facebook group, share, profile and other Facebook link formats are accepted for review."
       placeholder: "https://x.com/username/status/123456789..."
     validations:
       required: false

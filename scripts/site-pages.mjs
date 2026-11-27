@@ -117,9 +117,9 @@ function detailHtml(item, { origin = SITE_ORIGIN, basePath = "/", preview = fals
     : "Not reported";
   const social = parsePublicSource(item.sourceUrl);
   const platform = social?.platform || "GitHub";
-  const handle = social?.handle || item.submittedBy;
+  const handle = social ? social.handle : item.submittedBy;
   const author = social?.group ? "Group: " + social.handle :
-    handle ? "@" + handle : "Community contributor";
+    handle ? "@" + handle : social?.platform === "Facebook" ? "Source reference" : "Community contributor";
   const sourceUrl = social?.url || (handle ? "https://github.com/" + encodeURIComponent(handle) : null);
   const sourceLink = sourceUrl
     ? '<a href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener noreferrer">' +
