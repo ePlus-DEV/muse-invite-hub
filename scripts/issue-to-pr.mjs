@@ -940,6 +940,34 @@ async function resolveListedInvite(issue,result,token){
   return {...result,outcome:canonical?"closed-completed":"closed-duplicate"};
 }
 
+// Identical repeats can close before the original PR is deployed.
+export function isRepeatedPendingInvite(issue,original,codes){
+  if(!issue||!original||issue.pull_request||original.pull_request||
+      issue.state!=="open"||original.state!=="open"||issue.number===original.number||
+      !isShareCodeIssue(issue)||!isShareCodeIssue(original)||
+      !hasRequiredInviteConfirmations(issue.body)||!hasRequiredInviteConfirmations(original.body)||
+      issue.body!==original.body||!issue.user?.login||
+      issue.user.login!==original.user?.login||
+      (issue.user.id!==undefined&&original.user.id!==undefined&&issue.user.id!==original.user.id))return false;
+  const a=issueCodes(issue),b=issueCodes(original);
+  return a.length>0&&a.length===b.length&&a.length===codes.length&&
+    a.every(code=>b.includes(code)&&codes.includes(code));
+}
+async function resolvePendingRepeat(issue,pr,codes,token){
+  const match=/^auto\/issue-([1-9][0-9]*)-invite$/.exec(pr.head?.ref||"");
+  if(!match||!["eplus-bot","github-actions[bot]"].includes(pr.user?.login))return null;
+  const original=await api("GET","issues/"+match[1],token,undefined,true);
+  if(!isRepeatedPendingInvite(issue,original,codes))return null;
+  const latest=await api("GET","issues/"+issue.number,token);
+  if(!isRepeatedPendingInvite(latest,original,codes)||latest.body!==issue.body)return null;
+  const comments=await api("GET","issues/"+issue.number+"/comments?per_page=100",token);
+  if(comments.length>=100||comments.some(c=>!["eplus-bot","github-actions[bot]"].includes(c.user?.login)))return null;
+  await comment(latest,token,"Duplicate invite submission — already tracked in #"+original.number+
+    " ([PR #"+pr.number+"]("+pr.html_url+")). Closing this identical repeat; the original remains in its normal review and deployment flow. No new attribution, quota or catalog record was created.");
+  await api("PATCH","issues/"+issue.number,token,{state:"closed",state_reason:"duplicate"});
+  return {outcome:"closed-duplicate",code:codes.join(", "),url:original.html_url};
+}
+
 async function propose(issue,token) {
   if(issue.state!=="open" || issue.pull_request) return {outcome:"skipped",reason:"Issue not open."};
   const ref=await api("GET","git/ref/heads/main",token);
@@ -961,6 +989,10 @@ async function propose(issue,token) {
     const title=/^data: review (.+) (?:invite|count|feedback) \(issue #[1-9][0-9]*\)$/.exec(String(pr.title || ""));
     const listed=title ? title[1].split(", ") : [];
     if (codes.some(code=>listed.includes(code))) {
+      if(proposed.kind==="invite"&&listed.length===codes.length&&codes.every(code=>listed.includes(code))){
+        const duplicate=await resolvePendingRepeat(issue,pr,codes,token);
+        if(duplicate)return duplicate;
+      }
       return {outcome:"needs-review",code:codesLabel,
         reason:"Another open automated PR already changes one of these codes: "+pr.html_url};
     }
