@@ -281,3 +281,14 @@ export function needsEplusBotReview({
   }
   return {required:true,sha:decision.sha};
 }
+
+
+// GitHub REST returns null while computing mergeability. Never confuse this
+// transient state with a genuine conflict or relax any later CI/ruleset gate.
+export async function awaitMergeability(pr, get, wait = ms=>new Promise(r=>setTimeout(r,ms))) {
+  for (let attempt=0; pr?.mergeable == null && attempt<4; attempt++) {
+    await wait(1000*(attempt+1));
+    pr=await get();
+  }
+  return pr;
+}
