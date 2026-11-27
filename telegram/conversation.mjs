@@ -123,7 +123,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,remo
       toggle("personal","notifyOwn",settings.personal),
       toggle("watched","notifyFollowed",settings.watched),
       toggle("quota","notifyQuotaOption",settings.quota),
-      [0,10,60].map(minutes=>({text:(settings.minutes===minutes?"✅ ":"")+msg("notifyFrequency"+minutes),
+      [0,30,60].map(minutes=>({text:(settings.minutes===minutes?"✅ ":"")+msg("notifyFrequency"+minutes),
         data:"t:notify:minutes:"+minutes})),
       [{text:msg("watchedButton"),data:"t:watchlist"},{text:msg("settingsTitle"),data:"t:settings"}]];
     return panel(msg("notifySettingsTitle")+"\n"+msg("notifyMaster")+": "+msg(settings.enabled?"alertsOn":"alertsOff")+
@@ -316,7 +316,7 @@ export async function handleInteractive({action,profiles,send,sendMenu,edit,remo
     case "notification-option": {
       const {option,value}=action;
       if((["enabled","personal","watched","quota"].includes(option)&&typeof value==="boolean")||
-          (option==="minutes"&&[0,10,60].includes(value))){
+          (option==="minutes"&&[0,30,60].includes(value))){
         await mutateProfile(profiles,chatId,p=>{p.notifications={...notificationSettings(p),[option]:value};return p;});
       }
       await notificationPanel();
