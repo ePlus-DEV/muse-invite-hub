@@ -133,7 +133,8 @@ test("every card uses the same status, source, availability and original listing
   assert.match(app,/amount\.title = remaining/);
   assert.match(app,/remaining\.date \+ "; " \+ remaining\.used/);
   assert.match(app,/amount\.setAttribute\("aria-label", "Availability: " \+ availability/);
-  assert.match(app,/author\.title = source\.group/);
+  assert.match(app,/author\.title = !source\.handle \? source\.platform \+ " source reference" : source\.group/);
+  assert.match(app,/source\.handle \? \(source\.group \? "Group: " : "@"\) \+ source\.handle : "Source reference"/);
   assert.match(css,/\.card-status-row\{display:flex;align-items:center;justify-content:space-between/);
   assert.match(css,/\.card-contributor\{[^}]*flex-wrap:nowrap/);
   assert.match(css,/\.card-author\{[^}]*text-overflow:ellipsis;white-space:nowrap/);
