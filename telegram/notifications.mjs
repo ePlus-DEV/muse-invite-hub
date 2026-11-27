@@ -59,9 +59,10 @@ function normalizeCatalog(catalog) {
   const codes=catalog.map(row=>row?.code);
   if(codes.some(code=>!CODE.test(code||""))||
      new Set(codes).size!==codes.length)throw Error("Invalid/duplicate published code");
-  return catalog.map(row=>quotaKey(row)||row.code);
+  return catalog.map(row=>quotaKey(row)||"U:"+row.code);
 }
-const codeOf=key=>QUOTA.exec(key)?.[1]||key;
+const UNKNOWN=/^U:([A-Z0-9]{6})$/;
+const codeOf=key=>QUOTA.exec(key)?.[1]||UNKNOWN.exec(key)?.[1]||key;
 function notice(profile,keys) {
   const settings=notificationSettings(profile);
   if(!settings.enabled)return null;
@@ -110,12 +111,13 @@ export async function publishNotifications({event,state,catalog,send,edit,now=Da
     await state.setBaseline(current);
     return {initialized:true,sent:0,complete:true};
   }
-  if(!Array.isArray(previous)||previous.some(x=>!isNotificationKey(x)))throw Error("Invalid notification baseline");
+  if(!Array.isArray(previous)||previous.some(x=>!isNotificationKey(x)&&!(typeof x==="string"&&UNKNOWN.test(x))))throw Error("Invalid notification baseline");
   const old=new Map(previous.map(key=>[codeOf(key),key]));
   const newCodes=current.flatMap(key=>{
     const code=codeOf(key),prior=old.get(code);
     if(!prior)return [code]; // first listing, not a quota change
-    if(QUOTA.test(key)&&QUOTA.test(prior)&&QUOTA.exec(key)[2]!==QUOTA.exec(prior)[2])return [key];
+    if(QUOTA.test(key)&&(UNKNOWN.test(prior)||
+      (QUOTA.test(prior)&&QUOTA.exec(key)[2]!==QUOTA.exec(prior)[2])))return [key];
     return [];
   });
   if(!newCodes.length){
