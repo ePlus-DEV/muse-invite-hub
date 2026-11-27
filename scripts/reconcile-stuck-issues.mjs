@@ -19,7 +19,7 @@ import { runIssueAutomation } from "./issue-to-pr.mjs";
 const REPO = "ePlus-DEV/muse-invite-hub";
 const MARKER = "<!-- muse-issue-draft-pr -->";
 const BOT_LOGIN = "eplus-bot";
-const TRANSIENT = /returned HTTP 5\d\d|Server Error|rate limit|timed? ?out|fetch failed/i;
+const TRANSIENT = /returned HTTP 5\d\d|Server Error|rate limit|timed? ?out|fetch failed|main changed during proposal preparation/i;
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -60,6 +60,12 @@ export function stuckReason(issue, comments, now = Date.now()) {
     // A hard automation error may have been fixed by a later deploy of
     // the parser/planner; retry on a slow cadence instead of never.
     return now - botAt >= 6 * HOUR ? "error-retry" : null;
+  }
+  // A competing PR may merge or close shortly; do not strand this Issue for
+  // a week. Re-run the trusted planner, never bypass attribution or consent.
+  if (body.includes("Another open automated PR already changes one of these codes:") ||
+      body.includes("Keeping this Issue open until a published")) {
+    return now - botAt >= HOUR ? "publication-retry" : null;
   }
   if (body.includes("No automatic Draft PR was created")) {
     // Deliberate planner verdicts (needs-review) are retried only on a

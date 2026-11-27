@@ -1067,6 +1067,12 @@ async function propose(issue,token) {
       latestIssue.title!==issue.title || latestIssue.body!==issue.body){
     return {outcome:"skipped",reason:"Source Issue changed or closed before PR creation."};
   }
+  // main may move while the branch is prepared. Re-run on a fresh snapshot
+  // instead of opening a stale proposal (the reconciler retries the Issue).
+  const currentMain=await api("GET","git/ref/heads/main",token);
+  if(currentMain.object.sha!==mainSHA){
+    throw Error("main changed during proposal preparation; retry on the current catalog");
+  }
   let pr;
   try {
     pr=await api("POST","pulls",token,{

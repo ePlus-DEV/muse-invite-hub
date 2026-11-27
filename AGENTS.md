@@ -112,3 +112,10 @@ Copying a code is not the same as redeeming it.
 - Blue map highlights mean a verified supported rollout, not individual signup success. The UK is included from 24 November 2026 based on attributed Meta statements and credible launch coverage. Countries with no announcement are "No verified announcement" rather than "Unavailable"; an invite never bypasses region or account restrictions.
 - Keep country-list text/links rendered without JavaScript. Map geography comes from the locally bundled, public-domain Natural Earth 1:110m data, with a separate pin for Singapore (not visible as a polygon at this scale). No paid mapping services or API keys.
 - The map page must support mobile layout, country/region selection, keyboard use, and graceful fallback if boundaries fail to load. New routes and assets must be supported by safe PR previews, the trusted Pages copy, the local server, tests, and production sitemap without changing homepage SEO.
+
+
+## Catalog merge safety
+
+- Keep `assembleCatalog` fail-closed on duplicate codes. Do not hide duplicates by silently discarding records.
+- All Issue-to-PR writers share one concurrency group. Scheduled reconciliation recovers replaced pending jobs and retries overlapping/pending-publication Issues without weakening consent, attribution or publication checks.
+- Repository admin: in Settings → Rules → Rulesets → main, require a pull request before merging and require the `validate` status check from **Validate website and invite catalog**; enable **Require branches to be up to date before merging**, leave bypass actors empty, and do not manually merge stale green PRs. The GitHub PR check uses the synthetic merge commit; merge queues are supported by the `merge_group` trigger. Workflow code alone cannot enforce protection against manual merges.

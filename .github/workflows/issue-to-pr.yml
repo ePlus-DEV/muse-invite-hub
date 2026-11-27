@@ -24,7 +24,10 @@ permissions:
   actions: write
 
 concurrency:
-  group: muse-issue-automation-${{ github.event.issue.number || inputs.issue_number || 'reconcile' }}
+  # Issue-specific locks allowed two submissions of the same code to race.
+  # Serialize all proposal writers. GitHub may replace pending runs; the
+  # scheduled reconciler recovers Issues which never received a bot reply.
+  group: muse-issue-proposal-writer
   cancel-in-progress: false
 
 jobs:

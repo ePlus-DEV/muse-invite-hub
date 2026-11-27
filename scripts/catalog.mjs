@@ -43,11 +43,17 @@ export function assembleCatalog(paths, readFile) {
       merged.push(item);
     }
   }
-  const codes = new Set();
+  const codes = new Map();
+  const overlayIds = new Set(overlays.map(path => RECORD_PATH.exec(path)[1]));
+  const location = entry => overlayIds.has(entry.id) ? recordPath(entry) : "data/invites.json (id: " + entry.id + ")";
   for (const entry of merged) {
     if (!entry || typeof entry.code !== "string") throw Error("Invalid invite record");
-    if (codes.has(entry.code.toUpperCase())) throw Error("Duplicate invite code: " + entry.code);
-    codes.add(entry.code.toUpperCase());
+    const code = entry.code.toUpperCase();
+    if (codes.has(code)) {
+      throw Error("Duplicate invite code: " + code + " in " +
+        location(codes.get(code)) + " and " + location(entry));
+    }
+    codes.set(code, entry);
   }
   return merged.sort((a,b) =>
     Number(Boolean(b.featured)) - Number(Boolean(a.featured)) ||

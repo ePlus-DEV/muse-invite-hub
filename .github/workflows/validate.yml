@@ -3,6 +3,9 @@ name: Validate website and invite catalog
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
 
@@ -39,7 +42,8 @@ jobs:
           node --check assets/site-ui.js
           node --check assets/countries.js
       - name: Validate public invite catalog
-        run: node scripts/validate.mjs
+        run: |
+          node scripts/validate.mjs
           node --test scripts/catalog.test.mjs
       - name: Test optional Telegram bot and webhook
         run: |

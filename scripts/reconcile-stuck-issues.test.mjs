@@ -124,3 +124,15 @@ test("reconcile reprocesses only stuck Issues and reports a summary", async () =
   assert.equal(summary.reprocessed, 1);
   assert.equal(summary.reasons["never-processed"], 1);
 });
+
+test("overlapping proposal and pending publication retry after an hour", () => {
+  for (const message of [
+    "No automatic Draft PR was created for this Issue: Another open automated PR already changes one of these codes: https://github.com/ePlus-DEV/muse-invite-hub/pull/769.",
+    "The invite code is already in the main catalog. Keeping this Issue open until a published detail or original discussion can be verified; no new PR was created."
+  ]) {
+    const issue=inviteIssue({updated_at:iso(NOW-HOUR)});
+    assert.equal(stuckReason(issue,[botComment(message,NOW-HOUR)],NOW),"publication-retry");
+    issue.updated_at=iso(NOW-HOUR/2);
+    assert.equal(stuckReason(issue,[botComment(message,NOW-HOUR/2)],NOW),null);
+  }
+});
