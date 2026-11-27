@@ -2,6 +2,7 @@
  * A signed Pages event never establishes Muse validity or code ownership.
  */
 import { tr } from "./i18n.mjs";
+import { notificationSettings } from "./profiles.mjs";
 export const NOTIFY_PATH="/telegram/notify";
 const CODE=/^[A-Z0-9]{6}$/;
 const SHA=/^[a-f0-9]{40}$/;
@@ -39,31 +40,60 @@ export async function parseSignedEvent(request,secret,now=Date.now()) {
       (typeof input.cursor!=="string"||input.cursor.length>512)))return null;
   return {sha:input.sha,cursor:input.cursor||undefined};
 }
+// Existing baselines are arrays of bare codes. Keep accepting them and
+// initialize quota snapshots silently on the first upgraded publication.
+const QUOTA=/^Q:([A-Z0-9]{6}):([0-9]|[12][0-9]|30):(\d{4}-\d{2}-\d{2}):([0-9]+)$/;
+export function isNotificationKey(value){return typeof value==="string"&&(CODE.test(value)||QUOTA.test(value));}
+function quotaKey(row){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(row.usageReportedAt||""))return null;
+  const valid=v=>Number.isSafeInteger(v)&&v>=0&&v<=30;
+  const remaining=valid(row.reportedRemaining)?row.reportedRemaining:
+    valid(row.reportedCapacity)&&valid(row.reportedUses)&&row.reportedCapacity>=row.reportedUses
+      ?row.reportedCapacity-row.reportedUses:null;
+  if(remaining===null)return null;
+  const revision=Number.isSafeInteger(row.quotaUpdateCount)&&row.quotaUpdateCount>=0?row.quotaUpdateCount:0;
+  return "Q:"+row.code+":"+remaining+":"+row.usageReportedAt+":"+revision;
+}
 function normalizeCatalog(catalog) {
   if(!Array.isArray(catalog))throw Error("Invalid published catalog");
   const codes=catalog.map(row=>row?.code);
   if(codes.some(code=>!CODE.test(code||""))||
      new Set(codes).size!==codes.length)throw Error("Invalid/duplicate published code");
-  return codes;
+  return catalog.map(row=>quotaKey(row)||"U:"+row.code);
 }
-function notice(profile,newCodes) {
-  const personal=newCodes.filter(code=>profile.submitted?.some(x=>x.code===code));
-  const watched=newCodes.filter(code=>profile.watching?.includes(code));
-  const relevant=newCodes.filter(code=>profile.subscribed===true||
-    personal.includes(code)||watched.includes(code));
+const UNKNOWN=/^U:([A-Z0-9]{6})$/;
+const codeOf=key=>QUOTA.exec(key)?.[1]||UNKNOWN.exec(key)?.[1]||key;
+function notice(profile,keys) {
+  const settings=notificationSettings(profile);
+  if(!settings.enabled)return null;
+  const personal=key=>settings.personal&&profile.submitted?.some(x=>x.code===key);
+  const watched=key=>profile.watching?.includes(key);
+  const relevant=keys.filter(key=>QUOTA.test(key)
+    ?settings.quota&&watched(codeOf(key))
+    :profile.subscribed===true||personal(key)||(settings.watched&&watched(key)));
   if(!relevant.length)return null;
   const language=profile.language||"en";
-  const headline=tr(language,personal.length?"notifyPersonal":watched.length?"notifyWatched":"notifyNew");
-  const list=relevant.slice(0,25).map(code=>
-    "• "+code+" — https://muse.eplus.dev/codes/"+code+"/").join("\n");
+  const headline=tr(language,relevant.some(key=>QUOTA.test(key))?"notifyQuotaHeadline":
+    relevant.some(personal)?"notifyPersonal":settings.watched&&relevant.some(watched)?"notifyWatched":"notifyNew");
+  const list=relevant.slice(0,25).map(key=>{
+    const q=QUOTA.exec(key),code=codeOf(key);
+    return "• "+code+(q?" — "+tr(language,"notifyQuotaRemaining",{count:q[2]})+" ("+q[3]+")":"")+
+      " — https://muse.eplus.dev/codes/"+code+"/";
+  }).join("\n");
   const overflow=relevant.length>25?"\n"+tr(language,"notifyMore",{count:relevant.length-25}):"";
-  return {codes:relevant,text:headline+"\n"+list+overflow+
-    "\n"+tr(language,"notifyDisclaimer")};
+  return {codes:relevant,text:headline+"\n"+list+overflow+"\n"+tr(language,"notifyDisclaimer")};
+}
+function recipientUnavailable(error){
+  // Only recipient-specific permanent failures, not generic auth errors,
+  // rate limits, network failures or other Telegram API failures.
+  const message=String(error?.message||"");
+  return /bot was blocked by the user|user is deactivated|bot can.t initiate conversation with a user|chat not found/i.test(message)&&
+    (error?.status===403||error?.status===400||/\b(?:403|400)\b|Forbidden:|Bad Request:/i.test(message));
 }
 // Edit a recent notification instead of generating a new chat bubble for
 // every separate Pages deployment. Fixed window (not sliding) so subsequent
 // codes eventually produce a fresh Telegram push as expected.
-export const DIGEST_WINDOW_MS=10*60*1000;
+export const DIGEST_WINDOW_MS=30*60*1000;
 const MAX_DIGEST_CODES=25;
 const EDIT_FALLBACK=/message to edit not found|message can't be edited|message identifier is not specified|message_id_invalid/i;
 const NOT_MODIFIED=/message is not modified/i;
@@ -81,10 +111,19 @@ export async function publishNotifications({event,state,catalog,send,edit,now=Da
     await state.setBaseline(current);
     return {initialized:true,sent:0,complete:true};
   }
-  if(!Array.isArray(previous)||previous.some(x=>!CODE.test(x)))throw Error("Invalid notification baseline");
-  const old=new Set(previous);
-  const newCodes=current.filter(code=>!old.has(code));
-  if(!newCodes.length)return {sent:0,complete:true};
+  if(!Array.isArray(previous)||previous.some(x=>!isNotificationKey(x)&&!(typeof x==="string"&&UNKNOWN.test(x))))throw Error("Invalid notification baseline");
+  const old=new Map(previous.map(key=>[codeOf(key),key]));
+  const newCodes=current.flatMap(key=>{
+    const code=codeOf(key),prior=old.get(code);
+    if(!prior)return [code]; // first listing, not a quota change
+    if(QUOTA.test(key)&&(UNKNOWN.test(prior)||
+      (QUOTA.test(prior)&&QUOTA.exec(key)[2]!==QUOTA.exec(prior)[2])))return [key];
+    return [];
+  });
+  if(!newCodes.length){
+    if(JSON.stringify(current)!==JSON.stringify(previous))await state.setBaseline(current);
+    return {sent:0,complete:true};
+  }
   // Keep each Worker request short: Telegram API/KV latency can trigger 503
   // when a single request attempts too many subscribers.
   const {profiles,cursor}=await state.listProfiles(event.cursor,5);
@@ -97,28 +136,23 @@ export async function publishNotifications({event,state,catalog,send,edit,now=Da
       if(!await state.wasSent(chatId,code))due.push(code);
     }
     if(!due.length)continue;
-    const relevant=notice({
-      language:profile.language,
-      subscribed:profile.subscribed,
-      watching:(profile.watching||[]).filter(x=>due.includes(x)),
-      submitted:(profile.submitted||[]).filter(x=>due.includes(x.code))
-    },due);
+    const relevant=notice(profile,due);
     if(!relevant)continue;
     try{
       let prior=typeof state.getDigest==="function"
         ? await state.getDigest(chatId):null;
-      // A digest is editable for at most ten minutes and 25 codes. Beyond
+      // A digest is editable within the recipient's chosen window and up to 25 codes. Beyond
       // that, send a fresh push so the user still sees subsequent releases.
       const withinWindow=prior&&Number.isSafeInteger(prior.messageId)&&
         prior.messageId>0&&Number.isSafeInteger(prior.at)&&
-        now>=prior.at&&now-prior.at<DIGEST_WINDOW_MS&&
+        now>=prior.at&&now-prior.at<notificationSettings(profile).minutes*60*1000&&
         Array.isArray(prior.codes)&&prior.codes.length>0&&
         typeof edit==="function";
       const combined=withinWindow
-        ? [...new Set([...prior.codes,...due])]:due;
+        ? (notice(profile,[...new Set([...prior.codes,...due])])?.codes||due):due;
       const canEdit=withinWindow&&combined.length<=MAX_DIGEST_CODES;
       const digestText=canEdit
-        ? notice({...profile,subscribed:true},combined).text:null;
+        ? notice(profile,combined).text:null;
       let edited=false, messageId=null, codes=due, at=now;
       if(canEdit) {
         try {
@@ -147,6 +181,10 @@ export async function publishNotifications({event,state,catalog,send,edit,now=Da
       sent++;
     }catch(error) {
       // Do not log Telegram identity. An aborted send can be retried.
+      if(recipientUnavailable(error)){
+        logger("Notification skipped: recipient unavailable.");
+        continue;
+      }
       logger("Notification delivery failed: "+String(error.message).slice(0,120));
       throw error;
     }

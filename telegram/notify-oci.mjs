@@ -1,7 +1,7 @@
 /* OCI private state. Profile format is shared with the interactive-menu PR. */
 import { existsSync,readFileSync,writeFileSync,renameSync } from "node:fs";
 import { join } from "node:path";
-const CODE=/^[A-Z0-9]{6}$/;
+import { isNotificationKey } from "./notifications.mjs";
 export function makeNodeNotifyState(dataDir) {
   const filename=join(dataDir,"notification-state.json");
   let saved=existsSync(filename)?JSON.parse(readFileSync(filename,"utf8")):
@@ -19,7 +19,7 @@ export function makeNodeNotifyState(dataDir) {
        !Number.isSafeInteger(value?.messageId)||value.messageId<=0||
        !Number.isSafeInteger(value?.at)||value.at<=0||
        !Array.isArray(value.codes)||value.codes.length>25||
-       value.codes.some(code=>!CODE.test(code))){
+       value.codes.some(code=>!isNotificationKey(code))){
       delete digest[id];
     }
   }
@@ -53,7 +53,7 @@ export function makeNodeNotifyState(dataDir) {
     },
     async wasSent(id,code){return sent.has(id+":"+code);},
     async markSent(id,code) {
-      if(!CODE.test(code))throw Error("Bad delivered code");
+      if(!isNotificationKey(code))throw Error("Bad delivered code");
       sent.add(id+":"+code);save();
     }
   };

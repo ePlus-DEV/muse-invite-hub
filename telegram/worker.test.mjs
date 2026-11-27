@@ -548,3 +548,22 @@ test("Worker onboarding lets seekers request community codes and switch to contr
   assert.match(sent.at(-1).payload.text,/đã được công bố/);
   assert.equal(calls.submit.length,0);
 });
+
+
+test("notification controls persist privately and master switch preserves choices",async()=>{
+  const env=makeEnv(),{deps}=makeDeps();
+  const call=async(id,data)=>handleWebhookRequest(webhook(callback(id,data)),env,deps);
+  await handleWebhookRequest(webhook(message(9200,"/notifications")),env,deps);
+  await call(9201,"t:sub:on");
+  await call(9202,"t:notify:quota:on");
+  await call(9203,"t:notify:minutes:60");
+  await call(9204,"t:notify:enabled:off");
+  let profile=JSON.parse(await env.BOT_STATE.get("profile:42"));
+  assert.equal(profile.subscribed,true);
+  assert.deepEqual(profile.notifications,{enabled:false,personal:true,watched:true,quota:true,minutes:60});
+  await call(9205,"t:notify:enabled:on");
+  profile=JSON.parse(await env.BOT_STATE.get("profile:42"));
+  assert.equal(profile.notifications.enabled,true);
+  assert.equal(profile.notifications.quota,true);
+  assert.equal(profile.notifications.minutes,60);
+});
