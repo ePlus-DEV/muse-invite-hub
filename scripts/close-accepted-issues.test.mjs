@@ -373,3 +373,19 @@ test("batch PR reconciles both codes together and waits for every published deta
   assert.equal(incomplete.closed,0);
   assert.equal(incomplete.pending,1);
 });
+
+
+test("transient comment lookup HTTP 502 is retried before a single acceptance write",async()=>{
+  const m=mock();
+  let attempts=0;
+  const request=async (url,options)=>{
+    if(options.method==="GET" && new URL(url).pathname.endsWith("/issues/90/comments") && ++attempts===1) {
+      return {ok:false,status:502};
+    }
+    return m.request(url,options);
+  };
+  const result=await closeAcceptedIssues({request,token:"test-token",deployedSha:deployed,catalog:[{code}]});
+  assert.equal(attempts,2);
+  assert.equal(result.closed,1);
+  assert.equal(m.events.filter(e=>e==="POST issues/90/comments").length,1);
+});

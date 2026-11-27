@@ -24,12 +24,13 @@ permissions:
   pages: write
   id-token: write
 
-# Keep each queued publish: GitHub's default single pending slot can silently
-# cancel the only post-merge deployment while an older deployment is running.
+# Every invocation checks out the current main, not the event's historical
+# SHA. Coalesce pending builds instead of accumulating dozens of redundant
+# deploys. Never interrupt an active publish/acceptance pass; the trusted
+# auto-merge schedule recovers a missing deployment for the latest main.
 concurrency:
   group: muse-invite-hub-pages-publish
   cancel-in-progress: false
-  queue: max
 
 jobs:
   deploy:
