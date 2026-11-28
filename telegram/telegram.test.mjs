@@ -212,6 +212,36 @@ test("GitHub code status distinguishes published, pending, closed and unknown",a
   } finally {globalThis.fetch=original;}
 });
 
+test("GitHub code status degrades to unavailable when the Issue scan fails",async()=>{
+  const original=globalThis.fetch;
+  try {
+    globalThis.fetch=async url=>{
+      const u=String(url);
+      if(u.includes("/data/invites.json"))
+        return new Response(JSON.stringify([{code:"DPNIHH",status:"unverified"}]),{status:200});
+      if(u.includes("/issues?"))return new Response("{}",{status:401});
+      return new Response("[]",{status:200});
+    };
+    const entry=await getCodeStatus("UNSEEN","bad-token");
+    assert.equal(entry.kind,"unavailable");
+    assert.match(formatCodeStatus("UNSEEN",entry),/temporarily unavailable/);
+    assert.match(formatCodeStatus("UNSEEN",entry,"vi"),/tạm thời không truy cập được/);
+    // Listed codes never touch the Issue scan, so they keep working.
+    assert.equal((await getCodeStatus("DPNIHH","bad-token")).kind,"listed");
+  } finally {globalThis.fetch=original;}
+});
+
+test("a permanently failing update is dropped after bounded retries (OCI)",async()=>{
+  let statusCalls=0;
+  await withApp(async({post})=>{
+    const statuses=[];
+    for(let i=0;i<6;i++)
+      statuses.push((await post(message(900,"/status ZZZZZZ"))).status);
+    assert.deepEqual(statuses,[503,503,503,503,200,200]);
+    assert.equal(statusCalls,5,"the dropped update is deduplicated, not reprocessed");
+  },{getCodeStatus:async()=>{statusCalls++;throw Error("Upstream API HTTP 401");}});
+});
+
 test("Telegram browse and status distinguish 30/30 default from owner reports in three locales",async()=>{
   const old=globalThis.fetch;
   const rows=[

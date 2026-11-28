@@ -106,7 +106,17 @@ export async function getCodeStatus(code,token) {
       usageReportedAt:dated?entry.usageReportedAt:null,
       url:SITE+"/codes/"+encodeURIComponent(code)+"/"};
   }
-  const issue=await findExistingTelegramSubmission(code,token);
+  // Read-only lookup: a failed Issue scan (upstream GitHub error, bad
+  // credential) must degrade to "unavailable" instead of throwing. Throwing
+  // here makes the webhook return 503, Telegram retries the same update
+  // forever and every later update queues behind it (2026-11-17 outage).
+  // Write paths keep failing closed inside findExistingTelegramSubmission.
+  let issue;
+  try {
+    issue=await findExistingTelegramSubmission(code,token);
+  } catch {
+    return {kind:"unavailable",url:SITE+"/#codes"};
+  }
   if(issue)return {kind:issue.state==="open"?"pending":"closed",url:issue.html_url};
   return {kind:"unknown",url:SITE+"/#codes"};
 }

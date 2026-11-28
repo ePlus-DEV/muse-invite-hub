@@ -2,6 +2,11 @@
 import { menuChoice } from "./menu.mjs";
 import { normalizeLocale, tr } from "./i18n.mjs";
 export const CODE_PATTERN = /^[A-Z0-9]{6}$/;
+// A webhook update that keeps failing is acknowledged and dropped after
+// this many consecutive processing failures, so one poison update can
+// never block every later update behind it (2026-11-17 outage). Shared by
+// the Workers and OCI runtimes so both behave identically.
+export const MAX_UPDATE_ATTEMPTS = 5;
 // Telegram @username is public only after explicit consent; never expose numeric IDs.
 export const TELEGRAM_USERNAME = /^[A-Za-z][A-Za-z0-9_]{4,31}$/;
 const publicUsername = name => typeof name==="string"&&TELEGRAM_USERNAME.test(name)?name:null;
@@ -53,7 +58,8 @@ export function formatCodeStatus(code,entry,language="en") {
       tr(language,status)+".\n"+remaining+"\n"+tr(language,"listedDisclaimer")+"\n"+url;
   }
   const key=entry.kind==="pending"?"codePending":
-    entry.kind==="closed"?"codeClosed":"codeUnknown";
+    entry.kind==="closed"?"codeClosed":
+    entry.kind==="unavailable"?"codeUnavailable":"codeUnknown";
   return tr(language,key,{code})+"\n"+url;
 }
 

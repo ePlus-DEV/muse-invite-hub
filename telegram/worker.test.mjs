@@ -567,3 +567,18 @@ test("notification controls persist privately and master switch preserves choice
   assert.equal(profile.notifications.quota,true);
   assert.equal(profile.notifications.minutes,60);
 });
+
+test("a permanently failing update is dropped after bounded retries (Workers)", async () => {
+  const env = makeEnv();
+  let statusCalls = 0;
+  const { deps } = makeDeps({
+    getCodeStatus: async () => { statusCalls++; throw Error("Upstream API HTTP 401"); }
+  });
+  const statuses = [];
+  for (let i = 0; i < 6; i++)
+    statuses.push((await handleWebhookRequest(webhook(message(777, "/status ZZZZZZ")), env, deps)).status);
+  assert.deepEqual(statuses, [503, 503, 503, 503, 200, 200]);
+  assert.equal(statusCalls, 5, "the dropped update is deduplicated, not reprocessed");
+  // Other updates are unaffected by the dropped poison update.
+  assert.equal((await handleWebhookRequest(webhook(message(778, "/start")), env, deps)).status, 200);
+});
