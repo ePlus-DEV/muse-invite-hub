@@ -3,7 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve, join } from "node:path";
-import { parseUpdate, keyboard } from "./bot.mjs";
+import { parseUpdate, keyboard, MAX_UPDATE_ATTEMPTS } from "./bot.mjs";
 import { replyKeyboard } from "./menu.mjs";
 import { createMenuSync } from "./menu-sync.mjs";
 import { handleLegacy } from "./legacy.mjs";
@@ -52,6 +52,34 @@ export function createTelegramApp({
     processed=disk.slice(-1000);
   }
   const handled=new Set(processed);
+  // Consecutive per-update failure counts, persisted separately from the
+  // dedup state: after MAX_UPDATE_ATTEMPTS failures an update is dropped
+  // instead of retried forever (Workers parity; see worker.mjs).
+  const failurePath=join(dataDir,"failed-updates.json");
+  let failures=Object.create(null);
+  if(existsSync(failurePath)){
+    const disk=JSON.parse(readFileSync(failurePath,"utf8"));
+    if(!disk||typeof disk!=="object"||Array.isArray(disk)||
+      Object.values(disk).some(x=>!Number.isSafeInteger(x)||x<1))throw Error("Corrupt Telegram failure state");
+    failures=Object.assign(Object.create(null),disk);
+  }
+  function persistFailures(){
+    const temp=failurePath+".tmp";
+    writeFileSync(temp,JSON.stringify(failures),{mode:0o600});
+    renameSync(temp,failurePath);
+  }
+  function noteFailure(updateId){
+    failures[updateId]=(failures[updateId]||0)+1;
+    const ids=Object.keys(failures);
+    if(ids.length>1000)for(const id of ids.slice(0,ids.length-1000))delete failures[id];
+    persistFailures();
+    return failures[updateId];
+  }
+  function clearFailure(updateId){
+    if(!(updateId in failures))return;
+    delete failures[updateId];
+    persistFailures();
+  }
   const profiles=fileProfiles(dataDir);
   // Abuse budgets live in a separate private file so /delete_data cannot
   // reset spam protection; only non-public numeric chat/update IDs are stored.
@@ -267,12 +295,29 @@ export function createTelegramApp({
     queue=processing;
     try{
       await processing;
+      try{clearFailure(update.update_id);}catch{/* Best effort. */}
       res.writeHead(200);res.end("ok");
     }catch(error){
-      // Do not acknowledge failed updates; Telegram will retry. Never log
-      // message content, account identifiers, tokens or full upstream URLs.
+      // Do not acknowledge failed updates at first; Telegram will retry.
+      // Never log message content, account identifiers, tokens or full
+      // upstream URLs. Retries are bounded exactly like the Workers
+      // runtime: after MAX_UPDATE_ATTEMPTS consecutive failures the
+      // update is acknowledged and dropped so it cannot jam the queue.
       console.error("Telegram update processing failed:",String(error.message).slice(0,130));
-      res.writeHead(503);res.end("retry");
+      let attempts=0;
+      try{attempts=noteFailure(update.update_id);}catch{/* Disk failure: keep retrying. */}
+      if(attempts>=MAX_UPDATE_ATTEMPTS){
+        try{
+          mark(update.update_id);
+          clearFailure(update.update_id);
+          console.error("Telegram update dropped after repeated failures");
+          res.writeHead(200);res.end("dropped");
+        }catch{
+          res.writeHead(503);res.end("retry");
+        }
+      }else{
+        res.writeHead(503);res.end("retry");
+      }
     }
   });
   return server;

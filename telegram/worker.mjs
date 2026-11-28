@@ -9,7 +9,7 @@
  * - github.mjs keeps its own idempotency markers as a second layer.
  * Secrets arrive only as Worker secrets (env), never from repository files.
  */
-import { parseUpdate, keyboard } from "./bot.mjs";
+import { parseUpdate, keyboard, MAX_UPDATE_ATTEMPTS } from "./bot.mjs";
 import { replyKeyboard } from "./menu.mjs";
 import { createMenuSync } from "./menu-sync.mjs";
 import { handleLegacy } from "./legacy.mjs";
@@ -42,6 +42,13 @@ export function createKvState(kv) {
     },
     async add(updateId) {
       await kv.put("upd:" + updateId, "1", { expirationTtl: DEDUP_TTL_SECONDS });
+    },
+    async noteFailure(updateId) {
+      const raw = await kv.get("fail-count:" + updateId);
+      const parsed = Number.parseInt(raw ?? "", 10);
+      const next = (Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 0) + 1;
+      await kv.put("fail-count:" + updateId, String(next), { expirationTtl: DEDUP_TTL_SECONDS });
+      return next;
     },
     async wasFailureNotified(updateId) {
       return (await kv.get("fail-notice:" + updateId)) !== null;
@@ -269,9 +276,22 @@ export async function handleWebhookRequest(request, env, deps = {}) {
     await state.add(update.update_id);
     return respond(200, "ok");
   } catch (error) {
-    // Do not acknowledge failed updates; Telegram will retry. Never log
-    // message content, account identifiers, tokens or full upstream URLs.
+    // Do not acknowledge failed updates at first; Telegram will retry.
+    // Never log message content, account identifiers, tokens or full
+    // upstream URLs. But retries are bounded: after MAX_UPDATE_ATTEMPTS
+    // consecutive failures the update is acknowledged and dropped, so a
+    // single poison update cannot jam the queue for everyone. Write
+    // actions have already sent their one "uncertain" notice by then.
     console.error("Telegram update processing failed:", String(error.message).slice(0, 130));
+    let attempts = 0;
+    try {
+      attempts = await state.noteFailure(update.update_id);
+    } catch { /* State store unreachable: keep asking Telegram to retry. */ }
+    if (attempts >= MAX_UPDATE_ATTEMPTS) {
+      try { await state.add(update.update_id); } catch { /* Best effort. */ }
+      console.error("Telegram update dropped after repeated failures");
+      return respond(200, "dropped");
+    }
     return respond(503, "retry");
   }
 }
